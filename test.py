@@ -30,6 +30,28 @@ def loadSession():
     session = Session()
     return session
 
+def getCommitsQuery (start, end):
+    """
+    Get commits
+
+    Get all commits between starting date and end date
+      (exactly: start <= date < end
+    - Start: string, starting date, such as "2013-06-01"
+    - End: string, end date, such as "2014-01-01"
+
+# SELECT count(distinct(s.id)) as commits
+# FROM scmlog s, actions a
+# WHERE s.date >= "2013-06-01" and
+# 	s.date < "2014-01-01" and 
+# 	s.id = a.commit_id
+"""
+
+    res = session.query(func.count(func.distinct(SCMLog.id))).\
+        join(Actions).\
+        filter(SCMLog.date >= start).\
+        filter(SCMLog.date < end)
+    return res
+
 if __name__ == "__main__":
     session = loadSession()
     res = session.query(SCMLog).first()
@@ -41,57 +63,5 @@ if __name__ == "__main__":
     res = session.query(Actions.id).distinct(Actions.type)
     print res.first()
     
-# SELECT count(distinct(s.id)) as commits
-# FROM scmlog s, actions a
-# WHERE s.date >= "2013-06-01" and
-# 	s.date < "2014-01-01" and 
-# 	s.id = a.commit_id
-
-    print 
-    print "Next one"
-    print
-    res = session.query(func.count(func.distinct(SCMLog.id))).\
-        join(Actions).\
-        filter(SCMLog.date >= "2013-06-01").\
-        filter(SCMLog.date < "2014-01-01")
+    res = getCommitsQuery(start="2013-06-01", end="2014-01-01")
     print res.first()
-
-# from sqlalchemy import MetaData
-# from sqlalchemy import orm
-
-# class SCMLog (object):
-#     pass
-# class Actions (object):
-#     pass
-
-# meta = MetaData(bind=engine, reflect=True)
-# orm.mapper(SCMLog, meta.tables["scmlog"])
-# orm.mapper(Actions, meta.tables["actions"])
-# session = orm.Session (bind=engine)
-# q = session.query(SCMLog.id, SCMLog.date).filter(SCMLog.id == 2).first()
-# print (q)
-
-
-# Base = declarative_base()
-# class Commit(Base):
-#     __tablename__ = 'scmlog'
-
-#     id = Column(Integer, primary_key=True, display_width=11)
-#     rev = Column(MEDIUMTEXT)
-#     committer_id = Column(Integer, key=True, display_width=11)
-#     author_id = Column(Integer, key=True, display_width=11)
-#     date = Column(DateTime)
-#     message = Column(LongText)
-#     composed_rev = Column(TINYINT)
-#     repository_id = Column(Integer, key=True, display_width=11)
-
-#     def __repr__(self):
-#         return "<Commit(id='%d', rev='%s', committer_id='%d', " + \
-#             "author_id='%d', composed_rev='%s', repository_id='%s', " + \
-#             "date='%s', message='%s')>" % \
-#             (self.id, self.rev, self.committer_id,
-#              self.author_id, self.composed_rev, self.repository_id,
-#              self.date, self.message)
-
-
-    
