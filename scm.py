@@ -72,6 +72,28 @@ def getNCommitsQuery (start, end):
         filter(SCMLog.date < end)
     return res
 
+def getTSCommitsQuery (start, end):
+    """
+    Get time series of commits (by month)
+
+    - start: string, starting date, such as "2013-06-01"
+    - end: string, end date, such as "2014-01-01"
+
+    Returns: list of tuples, each tuple is (ncommits, month)
+
+    Get time series of commits between starting date and end date
+      (exactly: start <= date < end)
+    """
+
+    res = session.query(func.count(func.distinct(SCMLog.id)).label("ncommits"),
+                        func.month(SCMLog.date).label("month"),
+                        func.year(SCMLog.date).label("year")).\
+        join(Actions).\
+        filter(SCMLog.date >= start).\
+        filter(SCMLog.date < end).\
+        group_by("month", "year").order_by("year", "month")
+    return res
+
 def getCommitsQuery (start, end):
     """
     Get commits
@@ -85,7 +107,8 @@ def getCommitsQuery (start, end):
       (exactly: start <= date < end)
     """
 
-    res = session.query(func.distinct(SCMLog.id).label("id"), SCMLog.date).\
+    res = session.query(func.distinct(SCMLog.id).label("id"),
+                        SCMLog.date.label("date")).\
         join(Actions).\
         filter(SCMLog.date >= start).\
         filter(SCMLog.date < end)
@@ -97,9 +120,15 @@ if __name__ == "__main__":
         database='mysql://jgb:XXX@localhost/vizgrimoire_cvsanaly',
         echo=False)
 
-    res = getNCommitsQuery(start="2013-06-01", end="2014-01-01")
+    # Number of commits
+    res = getNCommitsQuery(start="2012-09-01", end="2014-01-01")
     print res.scalar()
-
-    res = getCommitsQuery(start="2013-06-01", end="2014-01-01")
+    # Time series of commits
+    res = getTSCommitsQuery(start="2012-09-01", end="2014-01-01")
+    for row in res.all():
+        print row.ncommits, row.year, row.month
+    # List of commits
+    res = getCommitsQuery(start="2012-09-01", end="2014-01-01")
     for row in res.limit(10).all():
         print row.id, row.date
+
