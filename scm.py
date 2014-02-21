@@ -66,10 +66,10 @@ def getNCommitsQuery (start, end):
       (exactly: start <= date < end)
     """
 
-    res = session.query(func.count(func.distinct(SCMLog.id))).\
-        join(Actions).\
-        filter(SCMLog.date >= start).\
-        filter(SCMLog.date < end)
+    res = session.query(func.count(func.distinct(SCMLog.id))) \
+        .join(Actions) \
+        .filter(SCMLog.date >= start) \
+        .filter(SCMLog.date < end)
     return res
 
 def getTSCommitsQuery (start, end):
@@ -87,11 +87,11 @@ def getTSCommitsQuery (start, end):
 
     res = session.query(func.count(func.distinct(SCMLog.id)).label("ncommits"),
                         func.month(SCMLog.date).label("month"),
-                        func.year(SCMLog.date).label("year")).\
-        join(Actions).\
-        filter(SCMLog.date >= start).\
-        filter(SCMLog.date < end).\
-        group_by("month", "year").order_by("year", "month")
+                        func.year(SCMLog.date).label("year")) \
+        .join(Actions) \
+        .filter(SCMLog.date >= start) \
+        .filter(SCMLog.date < end) \
+        .group_by("month", "year").order_by("year", "month")
     return res
 
 def getCommitsQuery (start, end):
@@ -109,9 +109,9 @@ def getCommitsQuery (start, end):
 
     res = session.query(func.distinct(SCMLog.id).label("id"),
                         SCMLog.date.label("date")).\
-        join(Actions).\
-        filter(SCMLog.date >= start).\
-        filter(SCMLog.date < end)
+        join(Actions) \
+        .filter(SCMLog.date >= start) \
+        .filter(SCMLog.date < end)
     return res
 
 
