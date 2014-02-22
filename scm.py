@@ -27,6 +27,7 @@ from sqlalchemy import create_engine, func, Column, Integer, ForeignKey
 from sqlalchemy.ext.declarative import declarative_base, DeferredReflection
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.schema import ForeignKeyConstraint
+from sqlalchemy.sql import label
 
 Base = declarative_base(cls=DeferredReflection)
 
@@ -85,9 +86,9 @@ def getTSCommitsQuery (start, end):
       (exactly: start <= date < end)
     """
 
-    res = session.query(func.count(func.distinct(SCMLog.id)).label("ncommits"),
-                        func.month(SCMLog.date).label("month"),
-                        func.year(SCMLog.date).label("year")) \
+    res = session.query(label("ncommits", func.count(func.distinct(SCMLog.id))),
+                        label("month", func.month(SCMLog.date)),
+                        label("year", func.year(SCMLog.date))) \
         .join(Actions) \
         .filter(SCMLog.date >= start) \
         .filter(SCMLog.date < end) \
@@ -107,8 +108,8 @@ def getCommitsQuery (start, end):
       (exactly: start <= date < end)
     """
 
-    res = session.query(func.distinct(SCMLog.id).label("id"),
-                        SCMLog.date.label("date")).\
+    res = session.query(label("id", func.distinct(SCMLog.id)),
+                        label("date", SCMLog.date)).\
         join(Actions) \
         .filter(SCMLog.date >= start) \
         .filter(SCMLog.date < end)
