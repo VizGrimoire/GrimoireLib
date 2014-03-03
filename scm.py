@@ -26,6 +26,7 @@
 from sqlalchemy import create_engine, func, Column, Integer, ForeignKey
 from sqlalchemy.ext.declarative import declarative_base, DeferredReflection
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm.query import Query
 from sqlalchemy.schema import ForeignKeyConstraint
 from sqlalchemy.sql import label
 
@@ -56,64 +57,97 @@ def buildSession(database, echo):
     session = Session()
     return (session)
 
-def getNCommitsQuery (start, end):
-    """
-    Get number of commits
+class CommitsQuery:
+    """Base class for queries asking for commits
 
+    Constructor:
+    - session: session object, usually produced by
+         Session = sessionmaker(bind=engine)
+         session = Session()
     - start: string, starting date, such as "2013-06-01"
     - end: string, end date, such as "2014-01-01"
 
-    Get number of commits between starting date and end date
+    Commits considered are between starting date and end date
       (exactly: start <= date < end)
     """
 
-    res = session.query(func.count(func.distinct(SCMLog.id))) \
-        .join(Actions) \
-        .filter(SCMLog.date >= start) \
-        .filter(SCMLog.date < end)
-    return res
+    def filter_period(self, start = None, end = None):
+        """Filter commits for a period"""
 
-def getTSCommitsQuery (start, end):
+        if start is not None:
+            self.q = self.q.filter(SCMLog.date >= start)
+        if end is not None:
+            self.q = self.q.filter(SCMLog.date < end)
+
+    def selectors(self):
+        """Selectors: what to extract from selected rows"""
+
+        self.q = self.session.query(func.count(func.distinct(SCMLog.id)))
+
+    def result(self):
+        """Evaluate query"""
+
+        return self.q.scalar()
+
+    def query(self):
+        """Return query"""
+
+        return self.q
+
+    def __init__ (self, session, start = None, end = None):
+        self.session = session
+        self.selectors()
+        self.q = self.q.join(Actions)
+        self.filter_period(start, end)
+
+class NumCommitsQuery (CommitsQuery):
+    """Get number of commits
+
+    Returns: integer (number of commits)
+    
+    This is exactly like the root class"""
+
+    pass
+    
+class TSCommitsQuery (CommitsQuery):
     """
     Get time series of commits (by month)
 
-    - start: string, starting date, such as "2013-06-01"
-    - end: string, end date, such as "2014-01-01"
-
     Returns: list of tuples, each tuple is (ncommits, month)
-
-    Get time series of commits between starting date and end date
-      (exactly: start <= date < end)
     """
 
-    res = session.query(label("ncommits", func.count(func.distinct(SCMLog.id))),
-                        label("month", func.month(SCMLog.date)),
-                        label("year", func.year(SCMLog.date))) \
-        .join(Actions) \
-        .filter(SCMLog.date >= start) \
-        .filter(SCMLog.date < end) \
-        .group_by("month", "year").order_by("year", "month")
-    return res
+    def selectors(self):
+        """Selectors: what to extract from selected rows"""
 
-def getCommitsQuery (start, end):
+        self.q = self.session.query(
+            label("ncommits", func.count(func.distinct(SCMLog.id))),
+            label("month", func.month(SCMLog.date)),
+            label("year", func.year(SCMLog.date))) \
+            .group_by("month", "year").order_by("year", "month")
+
+    def result(self):
+        """Evaluate query"""
+
+        return self.q.all()
+
+class ListCommitsQuery (CommitsQuery):
     """
     Get commits
 
-    - start: string, starting date, such as "2013-06-01"
-    - end: string, end date, such as "2014-01-01"
-
     Returns: list of tuples, each tuple is (id, date)
-
-    Get all commits between starting date and end date
-      (exactly: start <= date < end)
     """
 
-    res = session.query(label("id", func.distinct(SCMLog.id)),
-                        label("date", SCMLog.date)).\
-        join(Actions) \
-        .filter(SCMLog.date >= start) \
-        .filter(SCMLog.date < end)
-    return res
+    def selectors(self):
+        """Selectors: what to extract from selected rows"""
+
+        self.q = self.session.query(
+            label("id", func.distinct(SCMLog.id)),
+            label("date", SCMLog.date))
+
+    def result(self):
+        """Evaluate query"""
+
+        return self.q.all()
 
 
 if __name__ == "__main__":
@@ -122,14 +156,20 @@ if __name__ == "__main__":
         echo=False)
 
     # Number of commits
-    res = getNCommitsQuery(start="2012-09-01", end="2014-01-01")
-    print res.scalar()
-    # Time series of commits
-    res = getTSCommitsQuery(start="2012-09-01", end="2014-01-01")
-    for row in res.all():
-        print row.ncommits, row.year, row.month
-    # List of commits
-    res = getCommitsQuery(start="2012-09-01", end="2014-01-01")
-    for row in res.limit(10).all():
-        print row.id, row.date
+    res = NumCommitsQuery (session=session,
+                           start="2012-09-01", end="2014-01-01")
+    print res.result()
+    res = NumCommitsQuery (session=session, end="2014-01-01")
+    print res.result()
 
+    # Time series of commits
+    res = TSCommitsQuery (session=session,
+                          start="2012-09-01", end="2014-01-01")
+    for row in res.result():
+        print str(row.year) + ", " + str(row.month) + ": " + str(row.ncommits)
+
+    # List of commits
+    res = ListCommitsQuery(session=session,
+                           start="2012-09-01", end="2014-01-01")
+    for row in res.query().limit(10).all():
+        print row.id, row.date
