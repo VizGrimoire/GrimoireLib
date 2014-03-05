@@ -29,6 +29,8 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm.query import Query
 from sqlalchemy.schema import ForeignKeyConstraint
 from sqlalchemy.sql import label
+from datetime import datetime
+from dateutil.relativedelta import relativedelta
 
 Base = declarative_base(cls=DeferredReflection)
 
@@ -47,8 +49,8 @@ class SCMQuery (Query):
     def filter_period(self, start = None, end = None):
         """Filter commits for a period
 
-        - start: string, starting date, such as "2013-06-01"
-        - end: string, end date, such as "2014-01-01"
+        - start: datetime, starting date
+        - end: datetime, end date
 
         Commits considered are between starting date and end date
         (exactly: start <= date < end)
@@ -56,9 +58,11 @@ class SCMQuery (Query):
 
         query = self
         if start is not None:
-            query = query.filter(SCMLog.date >= start)
+            self.start = start
+            query = query.filter(SCMLog.date >= start.isoformat())
         if end is not None:
-            query = query.filter(SCMLog.date < end)
+            self.end = end
+            query = query.filter(SCMLog.date < end.isoformat())
         return query
 
     def select_ncommits(self):
@@ -69,13 +73,27 @@ class SCMQuery (Query):
             ) \
             .join(Actions)
 
-    def timeseries(self):
-        """Select timeseries (per month)"""
+    def group_by_period (self):
+        """Group by time period (per month)"""
 
         return self \
             .add_columns (label("month", func.month(SCMLog.date)),
                           label("year", func.year(SCMLog.date))) \
             .group_by("month", "year").order_by("year", "month")
+
+    def timeseries (self):
+        """Return a TimeSeries object.
+
+        The query has to include a group_by_period filter
+        """
+
+        data = []
+        for row in self.all():
+            data.append ((datetime (row.year, row.month, 1),
+                         (row.ncommits,)))
+        return TimeSeries (period = "months",
+                           start = self.start, end = self.end,
+                           data = data)
 
     def list(self):
         """Select a list of commits"""
@@ -83,6 +101,147 @@ class SCMQuery (Query):
         return self \
             .add_columns (label("id", func.distinct(SCMLog.id)),
                           label("date", SCMLog.date))
+
+    def __repr__ (self):
+
+        if self.start is not None:
+            start = self.start.isoformat()
+        else:
+            start = "ever"
+        if self.end is not None:
+            end = self.end.isoformat()
+        else:
+            end = "ever"
+        repr = "SCMQuery from %s to %s\n" % (start, end)
+        repr += Query.__str__(self)
+        return repr
+
+    def __str__ (self):
+
+        return self.__repr__()
+
+    def __init__ (self, entities, session):
+        """Initialize the object
+        
+        self.start and self.end will be used in case there are temporal
+        limits for the query (useful to produce TimeSeries objects,
+        which needs those.
+        """
+
+        self.start = None
+        self.end = None
+        Query.__init__(self, entities, session)
+
+class TimeSeries:
+    """Abstract data type for time series.
+
+    Internally, a time series is a data structure with:
+
+    - start: starting date for the time series (datetime)
+    - end: end date for the time series (datetime)
+    - period: sampling period (string)
+    - data: list of tuples, each tuple being:
+       - time for the beginning of the period (datetime)
+       - string for representing the name of the period (datetime)
+       - tuple with the values for that period
+       The index in data is the period number, starting with 0.
+    """
+
+    def _min_date (self, data):
+        """Calculate min date for all items in data
+
+        - data list of tuples, each tuple of the form
+            (date, values).
+        """
+
+        min = data[0][0]
+        for (date, value) in data:
+            if date < min:
+                min = date
+        return min
+
+    def _max_date (self, data):
+        """Calculate mxn date for all items in data
+
+        - data list of tuples, each tuple of the form
+            (date, values).
+        """
+
+        max = data[0][0]
+        for (date, value) in data:
+            if date > max:
+                max = date
+        return max
+
+    def _period (self, date):
+        """Get period id (from self.start) corresponding to a date
+
+        period ids are integers, starting at 0
+        """
+
+        return date.year * 12 + date.month - \
+            self.start.year * 12 - self.start.month
+
+    def _normalize (self, data, novalue = None):
+        """Normalize data intended to store as data in the class.
+
+        - data: list of tuples, each tuple of the form
+            (date, values), being values also a tuple of values
+        - novalue: value to use for tuples with no value
+
+        Produces data suitable for self.data, with
+        tuples for those periods with no tuples,
+        and sorts the result in ascending time order.
+        """
+
+        periods = self._period(self.end) + 1
+        # Fill in result to return with dates and novalue
+        result = [(self.start + relativedelta(months=period), novalue)
+                  for period in xrange(periods)]
+        # Fill in the values for the dates received in data
+        for (date, value) in data:
+            period = self._period(date)
+            if result [period] == novalue:
+                raise Exception("Dup period")
+            else:
+                result [period] = (result[period][0], value)
+        return result
+
+    def __repr__ (self):
+
+        repr = "TimeSeries object (%s) " % (self.period)
+        repr += "from %s to %s\n" % (self.start, self.end)
+        repr += "data:\n"
+        for item in self.data:
+            repr += " %s: %s\n" % item
+        return repr
+
+    def __init__ (self, period, start, end, data, zerovalue = 0L):
+        """Intialize a TimeSeries object
+        
+        - period: period for the time series (for now, "months")
+        - start: starting time for the time series
+        - end: ending time for the time series
+        - data: list of tuples, each tuple of the form
+            (date, values), being values also a tuple of values
+        - zerovalue: value to use as "zero" for novalue tuples
+            (those correspnding to periods without a value)
+
+        start and/or end could be None
+        """
+
+        self.period = period
+        if start is None:
+            self.start = self._min_date(data)
+        else:
+            self.start = start
+        if end is None:
+            self.end = self._max_date(data)
+        else:
+            self.end = end
+        # Use tuple of 0s for no values, same length as tuples in data
+        novalue = (zerovalue,) * len (data[0][1])
+        self.data = self._normalize(data, novalue)
 
 def buildSession(database, echo):
     """Create a session with the database
@@ -109,22 +268,26 @@ if __name__ == "__main__":
 
     # Number of commits
     res = session.query().select_ncommits() \
-        .filter_period(start="2012-09-01", end="2014-01-01")
+        .filter_period(start=datetime(2012,9,1),
+                       end=datetime(2014,1,1))
     print res.scalar()
     res = session.query().select_ncommits() \
-        .filter_period(end="2014-01-01")
+        .filter_period(end=datetime(2014,1,1))
     print res.scalar()
 
     # Time series of commits
     res = session.query().select_ncommits() \
-        .timeseries() \
-        .filter_period(end="2014-01-01")
+        .group_by_period() \
+        .filter_period(end=datetime(2014,1,1))
     for row in res.all():
         print str(row.year) + ", " + str(row.month) + ": " + str(row.ncommits)
+    ts = res.timeseries ()
+    print (ts)
 
     # List of commits
     res = session.query() \
         .list() \
-        .filter_period(start="2012-09-01", end="2014-01-01")
+        .filter_period(start=datetime(2012,9,1),
+                       end=datetime(2014,1,1))
     for row in res.limit(10).all():
         print row.id, row.date
