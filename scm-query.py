@@ -17,7 +17,8 @@
 ## along with this program; if not, write to the Free Software
 ## Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 ##
-## Package to deal with SCM data from *Grimoire (CVSAnalY databases)
+## Package to deal with queries for SCM data from *Grimoire
+##  (CVSAnalY databases)
 ##
 ## Authors:
 ##   Jesus M. Gonzalez-Barahona <jgb@bitergia.com>
@@ -96,12 +97,14 @@ class SCMQuery (Query):
                            start = self.start, end = self.end,
                            data = data)
 
-    def list(self):
+    def select_listcommits(self):
         """Select a list of commits"""
         
         return self \
             .add_columns (label("id", func.distinct(SCMLog.id)),
-                          label("date", SCMLog.date))
+                          label("date", SCMLog.date)) \
+            .join(Actions)
+                        
 
     def __repr__ (self):
 
@@ -175,7 +178,7 @@ if __name__ == "__main__":
 
     # List of commits
     res = session.query() \
-        .list() \
+        .select_listcommits() \
         .filter_period(start=datetime(2012,9,1),
                        end=datetime(2014,1,1))
     for row in res.limit(10).all():
