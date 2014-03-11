@@ -24,6 +24,14 @@
 
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
+from json import dumps
+
+def json_serial(obj):
+    """JSON serializer for objects not serializable by default json code"""
+
+    if isinstance(obj, datetime):
+        serial = obj.isoformat()
+    return serial
 
 class TimeSeries:
     """Abstract data type for time series.
@@ -100,6 +108,24 @@ class TimeSeries:
                 result [period] = (result[period][0], value)
         return result
 
+    def json (self, pretty=False):
+
+        data = {"period": self.period,
+                "first_date": self.start,
+                "last_date": self.end,
+                "values": self.data}
+        separators=(',', ': ')
+        encoding="utf-8"
+        if pretty:
+            sort_keys=True
+            indent=4
+        else:
+            sort_keys=False
+            indent=None
+        return dumps(data, sort_keys=sort_keys,
+                     indent=indent, separators=separators,
+                     default=json_serial, encoding=encoding)
+    
     def __repr__ (self):
 
         repr = "TimeSeries object (%s) " % (self.period)
@@ -149,3 +175,4 @@ if __name__ == "__main__":
     end = datetime(2014,8,1)
     ts = TimeSeries ("months", start=start, end=end, data=data, zerovalue=0)
     print ts
+    print ts.json(pretty=True)
