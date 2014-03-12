@@ -33,6 +33,7 @@ from sqlalchemy.sql import label
 from datetime import datetime
 from timeseries import TimeSeries
 
+Base = declarative_base(cls=DeferredReflection)
 
 def buildSession(database, echo):
     """Create a session with the database
@@ -45,7 +46,6 @@ def buildSession(database, echo):
     """
 
     engine = create_engine(database, encoding='utf8', echo=echo)
-    Base = declarative_base(cls=DeferredReflection)
     Base.prepare(engine)
     # Create a session linked to the SCMQuery class
     Session = sessionmaker(bind=engine, query_cls=SCMQuery)
