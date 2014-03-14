@@ -9,8 +9,8 @@ Bitergia's present business model is one of consulting and analysis, so they giv
 ## Description
 
 The Metrics Grimoire tool set is composed of 3 tool sets, Metrics
-Grimoire, VizGrimoireR and VizGrimoireJS.  Metrics Grimoire is the
-most mature and stable of the tools sets.  VizGrimoireR is mostly
+Grimoire, GrimoireLib and VizGrimoireJS.  Metrics Grimoire is the
+most mature and stable of the tools sets.  GrimoireLib is mostly
 stable, but there are defects that affect the ability to create
 results.  VizGrimoireJS is the least stable, but is usable with just a
 little set up.
@@ -24,7 +24,7 @@ MetricsGrimoire is broken up into several different components:
 * **MailingListStats** \- Collect information from project mailing lists, can use raw mail mbox files, or talk to a web-based Mailman instance
 * **CMetrics** \- Extracts some code metrics (size, complexity, etc) from C code
 
-### VizGrimoireR
+### GrimoireLib
 
 The second set of tools is used to parse the data in the data base and
 create more data base tables and entries.  Finally the tool set
@@ -33,7 +33,7 @@ creates a set of json files for use in visualizing the results.
 ### VizGrimoireJS
 
 The final tool set is used to display the results.  The tools are
-exported to the web root and json data collected by VizGrimoireR is
+exported to the web root and json data collected by GrimoireLib is
 displayed.  This tool set is the most recent.
 
 ## Documentation, where?
