@@ -34,7 +34,6 @@
 
 
 import logging
-from rpy2.robjects.packages import importr
 import sys
 
 import GrimoireUtils, GrimoireSQL
@@ -42,24 +41,17 @@ from GrimoireUtils import dataFrame2Dict, createJSON, completePeriodIds
 from GrimoireUtils import valRtoPython, read_options, getPeriod
 import IRC
 
-# isoweek = importr("ISOweek")
-# vizr = importr("vizgrimoire")
-
-
 def aggData(period, startdate, enddate, idb, destdir):
     agg_data = {}
 
     # Tendencies
     for i in [7,30,365]:
-        # period_data = dataFrame2Dict(vizr.GetIRCDiffSentDays(period, enddate, i))
         period_data = IRC.GetIRCDiffSentDays(period, enddate, i)
         agg_data = dict(agg_data.items() + period_data.items())
-        # period_data = dataFrame2Dict(vizr.GetIRCDiffSendersDays(period, enddate, idb, i))
         period_data = IRC.GetIRCDiffSendersDays(period, enddate, idb, i)
         agg_data = dict(agg_data.items() + period_data.items())
 
     # Global aggregated data
-    # static_data = vizr.GetStaticDataIRC(period, startdate, enddate, idb)
     static_data = IRC.GetStaticDataIRC(period, startdate, enddate, idb, None)
     agg_data = dict(agg_data.items() + static_data.items())
 
@@ -67,7 +59,6 @@ def aggData(period, startdate, enddate, idb, destdir):
 
 def tsData(period, startdate, enddate, idb, destdir):
     ts_data = {}
-    # ts_data = dataFrame2Dict(vizr.GetEvolDataIRC(period, startdate, enddate, idb))
     ts_data = IRC.GetEvolDataIRC(period, startdate, enddate, idb, None)
     ts_data = completePeriodIds(ts_data)
     createJSON (ts_data, destdir+"/irc-evolutionary.json")
@@ -77,9 +68,8 @@ def peopleData(period, startdate, enddate, idb, destdir, top_data):
     top += top_data['senders.last year']["id"]
     top += top_data['senders.last month']["id"]
     # remove duplicates
-    people = list(set(top))
-    # the order is not the same than in R json 
-    createJSON(people, destdir+"/irc-people.json", False)
+    people = list(set(top)) 
+    createJSON(people, destdir+"/irc-people.json")
 
     for upeople_id in people:
         # evol = dataFrame2Dict(vizr.GetEvolPeopleIRC(upeople_id, period, startdate, enddate))
@@ -95,21 +85,17 @@ def peopleData(period, startdate, enddate, idb, destdir, top_data):
 
 # TODO: pretty similar to peopleData. Unify?
 def reposData(period, startdate, enddate, idb, destdir):
-    # repos = valRtoPython(vizr.GetReposNameIRC())
     repos = IRC.GetReposNameIRC()
     repos_file = destdir+"/irc-repos.json"
     createJSON(repos, repos_file)
 
     for repo in repos:
-        # evol = vizr.GetRepoEvolSentSendersIRC(repo, period, startdate, enddate)
         evol = IRC.GetRepoEvolSentSendersIRC(repo, period, startdate, enddate)
-        # evol = completePeriodIds(dataFrame2Dict(evol))
         evol = completePeriodIds(evol)
         repo_file = destdir+"/"+repo+"-irc-rep-evolutionary.json"
         createJSON(evol, repo_file)
 
         repo_file = destdir+"/"+repo+"-irc-rep-static.json"
-        # aggdata = dataFrame2Dict(vizr.GetRepoStaticSentSendersIRC(repo, startdate, enddate))
         aggdata = IRC.GetRepoStaticSentSendersIRC(repo, startdate, enddate)
         createJSON(aggdata, repo_file)
 
@@ -117,13 +103,10 @@ def topData(period, startdate, enddate, idb, destdir, bots, npeople):
     top_senders = {}
     top_senders['senders.'] = \
         IRC.GetTopSendersIRC(0, startdate, enddate, idb, bots, npeople)
-        # dataFrame2Dict(vizr.GetTopSendersIRC(0, startdate, enddate, idb, bots))
     top_senders['senders.last year'] = \
         IRC.GetTopSendersIRC(365, startdate, enddate, idb, bots, npeople)
-        # dataFrame2Dict(vizr.GetTopSendersIRC(365, startdate, enddate, idb, bots))
     top_senders['senders.last month'] = \
         IRC.GetTopSendersIRC(31, startdate, enddate, idb, bots, npeople)
-        # dataFrame2Dict(vizr.GetTopSendersIRC(31, startdate, enddate, idb, bots))
     top_file = destdir+"/irc-top.json"
     createJSON (top_senders, top_file)
 
@@ -141,8 +124,6 @@ if __name__ == '__main__':
     startdate = "'"+opts.startdate+"'"
     enddate = "'"+opts.enddate+"'"
 
-    # Working at the same time with VizR and VizPy yet
-    # vizr.SetDBChannel (database=opts.dbname, user=opts.dbuser, password=opts.dbpassword)
     GrimoireSQL.SetDBChannel (database=opts.dbname, user=opts.dbuser, password=opts.dbpassword)
 
     aggData (period, startdate, enddate, opts.identities_db, opts.destdir)
@@ -153,3 +134,4 @@ if __name__ == '__main__':
     if ('repositories' in reports):
         reposData (period, startdate, enddate, opts.identities_db, opts.destdir)
 
+    logging.info("Done IRC data source analysis")
