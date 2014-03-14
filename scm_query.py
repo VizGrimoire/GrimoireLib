@@ -78,24 +78,34 @@ class UPeople(Base):
 class SCMQuery (Query):
     """Class for dealing with SCM queries"""
 
-    def select_nscmlog(self, variable):
+    def select_nscmlog(self, variables):
         """Select a variable which is a field in Scmlog.
 
-        - variable (string): variable to select
+        - variables (list): variables to select
             Currently supported: "commits", "authors", "committers"
         """
 
-        if variable == "commits":
-            field = SCMLog.id
-        elif variable == "authors":
-            field = SCMLog.author_id
-        elif variable == "committers":
-            field = SCMLog.committer_id
-        else:
-            raise Exception ("select_nscmlog: Unknown variable %s." % variable)
-        return self.add_columns (
-            label("ncommits", func.count(func.distinct(field)))
-            )
+        if not isinstance(variables, (list, tuple)):
+            raise Exception ("select_nscmlog: Argument is not list or tuple")
+        elif len (variables) == 0:
+            raise Exception ("select_nscmlog: No variables")
+        fields = []
+        for variable in variables:
+            if variable == "commits":
+                name = "nocommits"
+                field = SCMLog.id
+            elif variable == "authors":
+                name = "nauthors"
+                field = SCMLog.author_id
+            elif variable == "committers":
+                name = "ncommitters"
+                field = SCMLog.committer_id
+            else:
+                raise Exception ("select_nscmlog: Unknown variable %s." \
+                                     % variable)
+            fields.append (label (name,
+                                  func.count(func.distinct(field))))
+        return self.add_columns (*fields)
 
     def select_ncommits(self):
         """Select number (count) of commits"""
@@ -227,6 +237,10 @@ if __name__ == "__main__":
 
     # Number of commits
     res = session.query().select_ncommits() \
+        .filter_period(start=datetime(2012,9,1),
+                       end=datetime(2014,1,1))
+    print res.scalar()
+    res = session.query().select_nscmlog(["commits",]) \
         .filter_period(start=datetime(2012,9,1),
                        end=datetime(2014,1,1))
     print res.scalar()
