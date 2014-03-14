@@ -107,26 +107,12 @@ class SCMQuery (Query):
                                   func.count(func.distinct(field))))
         return self.add_columns (*fields)
 
-    def select_ncommits(self):
-        """Select number (count) of commits"""
-
-        return self.add_columns (
-            label("ncommits", func.count(func.distinct(SCMLog.id)))
-            )
-
     def select_listcommits(self):
         """Select a list of commits"""
         
         return self \
             .add_columns (label("id", func.distinct(SCMLog.id)),
                           label("date", SCMLog.date))
-
-    def select_nauthors(self):
-        """Select number (count) of authors"""
-
-        return self.add_columns (
-            label("nauthors", func.count(func.distinct(SCMLog.author_id)))
-            )
 
     def select_listauthors(self):
         """Select a list of authors"""
