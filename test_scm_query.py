@@ -44,67 +44,72 @@ class TestSCMQuery (unittest.TestCase):
         self.database = database
         self.session = buildSession(database=self.database, echo=False)
 
-    def test_query_ncommits (self):
+    def _test_select_nscmlog (self, variables, results):
+        """Test select_nscmlog with different variables
 
-        res = self.session.query().select_ncommits().all()
-        self.assertEqual (res, [(4465L,)])
+        - variables (list): variables to test
+        - results (list): expected results
+            Each item in results corresponds to an item in variable
+        """
 
-    def test_query_ncommits_nomerge (self):
-
-        res = self.session.query().select_ncommits().filter_nomerges().all()
-        self.assertEqual (res, [(4206L,)])
-
-    def test_query_authors_nomerge (self):
-
-        res = self.session.query().select_nauthors().filter_nomerges().all()
-        self.assertEqual (res, [(14L,)])
-
-    def test_query_authors (self):
-
-        res = self.session.query().select_nauthors().all()
-        self.assertEqual (res, [(14L,)])
-
-
-    def _test_select_nscmlog (self, variable):
-
-        # Number of commits
-        res = self.session.query().select_nscmlog(variable).all()
-        self.assertEqual (res, [(4465L,)])
-        # Number of commits, except those that don't touch files (merges)
+        # Number (count)
+        res = self.session.query().select_nscmlog(variables).all()
+        self.assertEqual (res, results[0])
+        # Number (count), except those that correspond to commits that
+        #   doesn't touch files (merges)
         res = self.session.query() \
-            .select_nscmlog(variable) \
+            .select_nscmlog(variables) \
             .filter_nomerges() \
             .all()
-        self.assertEqual (res, [(4206L,)])
+        self.assertEqual (res, results[1])
 
     def test_select_ncsmlog (self):
         """Test select_ncsmlog"""
 
-        self._test_select_nscmlog ("commits")
+        self._test_select_nscmlog (["commits",],
+                                   [[(4465L,)], [(4206L,)]])
+        self._test_select_nscmlog (["authors",],
+                                   [[(14L,)], [(14L,)]])
+        self._test_select_nscmlog (["committers",],
+                                   [[(14L,)], [(14L,)]])
 
-    def test_query_authors_period (self):
-        """Test nauthors with period."""
+    def _test_select_nscmlog_period (self, variables, results):
+        """Test select_nscmlog with different variables and periods
 
+        - variables (list): variables to test
+        - results (list): expected results
+            Each item in results corresponds to an item in variables
+        """
+
+        start = datetime(2014,1,1)
+        end = datetime(2014,2,1)
         # Test for nauthors
-        res = self.session.query().select_nauthors() \
-            .filter_period(start=datetime(2014,1,1), \
-                           end=datetime(2014,2,1)) \
-            .all()
-        self.assertEqual (res, [(8L,)])
+        res = self.session.query().select_nscmlog(variables) \
+            .filter_period(start=start,end=end).all()
+        self.assertEqual (res, results[0])
         # Test for nauthors that "touch files" (merges are excluded)
-        res = self.session.query().select_nauthors() \
+        res = self.session.query().select_nscmlog(variables) \
             .filter_nomerges() \
-            .filter_period(start=datetime(2014,1,1), \
-                           end=datetime(2014,2,1)) \
+            .filter_period(start=start, end=end) \
             .all()
-        self.assertEqual (res, [(7L,)])
+        self.assertEqual (res, results[1])
         # Test for nauthors, using authoring date
-        res = self.session.query().select_nauthors() \
+        res = self.session.query().select_nscmlog(variables) \
             .filter_period(start=datetime(2014,1,1), \
                            end=datetime(2014,2,1),
                            date="author") \
             .all()
-        self.assertEqual (res, [(8L,)])
+        self.assertEqual (res, results[2])
+
+    def test_select_ncsmlog_period (self):
+        """Test select_ncsmlog"""
+
+        self._test_select_nscmlog_period (["commits",],
+                                          [[(310L,)], [(288,)], [(310,)]])
+        self._test_select_nscmlog_period (["authors",],
+                                          [[(8L,)], [(7,)], [(8,)]])
+        self._test_select_nscmlog_period (["committers",],
+                                          [[(8L,)], [(7,)], [(8,)]])
 
 
 if __name__ == "__main__":

@@ -236,25 +236,21 @@ if __name__ == "__main__":
         echo=False)
 
     # Number of commits
-    res = session.query().select_ncommits() \
-        .filter_period(start=datetime(2012,9,1),
-                       end=datetime(2014,1,1))
-    print res.scalar()
     res = session.query().select_nscmlog(["commits",]) \
         .filter_period(start=datetime(2012,9,1),
                        end=datetime(2014,1,1))
     print res.scalar()
-    res = session.query().select_ncommits() \
+    res = session.query().select_nscmlog(["commits",]) \
         .filter_nomerges() \
         .filter_period(start=datetime(2012,9,1),
                        end=datetime(2014,1,1))
     print res.scalar()
-    res = session.query().select_ncommits() \
+    res = session.query().select_nscmlog(["commits",]) \
         .filter_period(end=datetime(2014,1,1))
     print res.scalar()
 
     # Time series of commits
-    res = session.query().select_ncommits() \
+    res = session.query().select_nscmlog(["commits",]) \
         .group_by_period() \
         .filter_period(end=datetime(2014,1,1))
     ts = res.timeseries ()
@@ -269,7 +265,7 @@ if __name__ == "__main__":
         print row.id, row.date
 
     # Number of authors
-    res = session.query().select_nauthors() \
+    res = session.query().select_nscmlog(["authors",]) \
         .filter_period(start=datetime(2012,9,1),
                        end=datetime(2014,1,1))
     print res.scalar()

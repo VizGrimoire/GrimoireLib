@@ -60,11 +60,11 @@ class SCM:
             database=database,
             echo=echo)
         if var == "ncommits":
-            self.query = self.session.query().select_ncommits()
+            self.query = self.session.query().select_nscmlog(["commits",])
         elif var == "listcommits":
             self.query = self.session.query().select_listcommits()
         elif var == "nauthors":
-            self.query = self.session.query().select_nauthors()
+            self.query = self.session.query().select_nscmlog(["authors",])
         elif var == "listauthors":
             self.query = self.session.query().select_listauthors()
         self.query = self.query.filter_period(start = dates[0],
