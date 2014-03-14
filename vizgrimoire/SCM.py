@@ -31,6 +31,7 @@ from GrimoireSQL import GetSQLGlobal, GetSQLPeriod
 from GrimoireSQL import GetSQLReportWhere, ExecuteQuery, BuildQuery
 from GrimoireUtils import GetPercentageDiff, GetDates, completePeriodIds
 
+
 ##########
 # Meta-functions to automatically call metrics functions and merge them
 ##########
@@ -72,8 +73,8 @@ def GetSCMStaticData (period, startdate, enddate, i_db, type_analysis):
     avg_commits_period = StaticAvgCommitsPeriod(period, startdate, enddate, i_db, type_analysis)
     avg_files_period = StaticAvgFilesPeriod(period, startdate, enddate, i_db, type_analysis)
     avg_commits_author = StaticAvgCommitsAuthor(period, startdate, enddate, i_db, type_analysis)
-    avg_authors_period = StaticAvgAuthorPeriod(period, startdate, enddate, i_db, type_analysis)
-    avg_committer_period = StaticAvgCommitterPeriod(period, startdate, enddate, i_db, type_analysis)
+    # avg_authors_period = StaticAvgAuthorPeriod(period, startdate, enddate, i_db, type_analysis)
+    # avg_committer_period = StaticAvgCommitterPeriod(period, startdate, enddate, i_db, type_analysis)
     avg_files_author = StaticAvgFilesAuthor(period, startdate, enddate, i_db, type_analysis)
 
     # 2- Merging information
@@ -160,7 +161,7 @@ def GetSQLReportFrom (identities_db, type_analysis):
     if (type_analysis is None or len(type_analysis) != 2): return From
 
     analysis = type_analysis[0]
-    value = type_analysis[1]
+    # value = type_analysis[1]
 
     if analysis == 'repository': From = GetSQLRepositoriesFrom()
     elif analysis == 'company': From = GetSQLCompaniesFrom(identities_db)
@@ -669,7 +670,7 @@ def GetAvgAuthorPeriod (period, startdate, enddate, identities_db, type_analysis
 
     fields = " count(distinct(pup.upeople_id))/timestampdiff("+period+",min(s.date),max(s.date)) as avg_authors_"+period 
     tables = " scmlog s "
-    filters = ""
+    # filters = ""
 
     filters = GetSQLReportWhere(type_analysis, "author")
 
@@ -710,7 +711,7 @@ def GetAvgCommitterPeriod (period, startdate, enddate, identities_db, type_analy
 
     fields = " count(distinct(pup.upeople_id))/timestampdiff("+period+",min(s.date),max(s.date)) as avg_authors_"+period
     tables = " scmlog s "
-    filters = ""
+    # filters = ""
 
     filters = GetSQLReportWhere(type_analysis, "committer")
 
@@ -1014,16 +1015,16 @@ def top_people (days, startdate, enddate, role, filters, limit) :
 
 
 def top_files_modified () :
-      # Top 10 modified files
+    # Top 10 modified files
 
-      #FIXME: to be updated to use stardate and enddate values
-      q = "select file_name, count(commit_id) as modifications "+\
-          "from action_files a join files f on a.file_id = f.id  "+\
-          "where action_type='M'  "+\
-          "group by f.id  "+\
-          "order by modifications desc limit 10; "	
-      data = ExecuteQuery(q)
-      return (data)	
+    #FIXME: to be updated to use stardate and enddate values
+    q = "select file_name, count(commit_id) as modifications "+\
+        "from action_files a join files f on a.file_id = f.id  "+\
+        "where action_type='M'  "+\
+        "group by f.id  "+\
+        "order by modifications desc limit 10; "	
+    data = ExecuteQuery(q)
+    return (data)	
 
 
 ## TODO: Follow top_committers implementation
@@ -1085,8 +1086,8 @@ def top_authors_wo_affiliations (list_affs, startdate, enddate, limit) :
 
 
 def top_authors_year (year, limit) :
-   # Given a year, this functions provides the top 10 authors 
-   # of such year
+    # Given a year, this functions provides the top 10 authors 
+    # of such year
     q = "SELECT u.id as id, u.identifier as authors, "+\
         "       count(distinct(s.id)) as commits "+\
         "FROM scmlog s, "+\
@@ -1115,7 +1116,7 @@ def companies_name_wo_affs (affs_list, startdate, enddate) :
     #List of companies without certain affiliations
     affiliations = ""
     for aff in affs_list:
-       affiliations += " c.name<>'"+aff+"' and "
+        affiliations += " c.name<>'"+aff+"' and "
 
     q = "select c.name "+\
                "  from companies c, "+\
@@ -1156,7 +1157,7 @@ def companies_name (startdate, enddate) :
          "      s.date < "+ enddate+ " "+\
          "group by c.name "+\
          "order by count(distinct(s.id)) desc"
-         # order by count(distinct(s.id)) desc LIMIT ", companies_limit
+        # order by count(distinct(s.id)) desc LIMIT ", companies_limit
 
     data = ExecuteQuery(q)	
     return (data)
@@ -1166,7 +1167,7 @@ def companies_name (startdate, enddate) :
 def evol_info_data_companies (startdate, enddate) :
     # DEPRECATED FUNCTION; TO BE REMOVED	
 
-	q = "select count(distinct(c.id)) as companies "+\
+    q = "select count(distinct(c.id)) as companies "+\
          "from companies c, "+\
          "     upeople_companies upc, "+\
          "     people_upeople pup, "+\
@@ -1176,10 +1177,10 @@ def evol_info_data_companies (startdate, enddate) :
          "      pup.people_id = s.author_id and "+\
          "      s.date >="+ startdate+ " and "+\
          "      s.date < "+ enddate
-	
-	data13 = ExecuteQuery(q)
-	
-	q = "select count(distinct(c.id)) as companies_2006 "+\
+
+    data13 = ExecuteQuery(q)
+
+    q = "select count(distinct(c.id)) as companies_2006 "+\
         "from scmlog s, "+\
         "  people_upeople pup, "+\
         "  upeople_companies upc, "+\
@@ -1190,10 +1191,10 @@ def evol_info_data_companies (startdate, enddate) :
         "  s.date < upc.end and "+\
         "  upc.company_id = c.id and "+\
         "  year(s.date) = 2006"
-	
-	data14 = ExecuteQuery(q)
-	
-	q = "select count(distinct(c.id)) as companies_2009 "+\
+
+    data14 = ExecuteQuery(q)
+
+    q = "select count(distinct(c.id)) as companies_2009 "+\
         "from scmlog s, "+\
         "  people_upeople pup, "+\
         "  upeople_companies upc, "+\
@@ -1204,10 +1205,10 @@ def evol_info_data_companies (startdate, enddate) :
         "  s.date < upc.end and "+\
         "  upc.company_id = c.id and "+\
         "  year(s.date) = 2009"
-	
-	data15 = ExecuteQuery(q)
-	
-	q = "select count(distinct(c.id)) as companies_2012 "+\
+
+    data15 = ExecuteQuery(q)
+
+    q = "select count(distinct(c.id)) as companies_2012 "+\
         "from scmlog s, "+\
         "  people_upeople pup, "+\
         "  upeople_companies upc, "+\
@@ -1218,16 +1219,16 @@ def evol_info_data_companies (startdate, enddate) :
         "  s.date < upc.end and "+\
         "  upc.company_id = c.id and "+\
         "  year(s.date) = 2012"
-	
-	data16 = ExecuteQuery(q)
-	
-	
-	agg_data = dict(data13.items() + data14.items() + data15.items() + data16.items())
-	return (agg_data)
+
+    data16 = ExecuteQuery(q)
+
+
+    agg_data = dict(data13.items() + data14.items() + data15.items() + data16.items())
+    return (agg_data)
 
 
 def evol_info_data_countries (startdate, enddate) :
-	
+
     q = "select count(distinct(upc.country_id)) as countries "+\
          "from upeople_countries upc, "+\
          "     people_upeople pup, "+\
@@ -1272,7 +1273,7 @@ def company_top_authors (company_name, startdate, enddate, limit) :
 
 def company_top_authors_year (company_name, year, limit):
     # Top 10 authors per company and in a given year
-	
+
     q = "select u.id as id, u.identifier as authors, "+\
         "        count(distinct(s.id)) as commits "+\
         " from people p, "+\
@@ -1300,7 +1301,7 @@ def company_top_authors_year (company_name, year, limit):
 
 def evol_companies (period, startdate, enddate):	
     # Evolution of companies, also deprecated function
-	
+
     q = "select ((to_days(s.date) - to_days("+startdate+")) div "+period+") as id, "+\
         "       count(distinct(upc.company_id)) as companies "+\
         "from   scmlog s, "+\
@@ -1432,83 +1433,83 @@ def scm_domains_names (identities_db, startdate, enddate) :
 ##############
 
 def GetCodeCommunityStructure (period, startdate, enddate, identities_db):
-  # This function provides information about the general structure of the community.
-  # This is divided into core, regular and ocassional authors
-  # Core developers are defined as those doing up to a 80% of the total commits
-  # Regular developers are defind as those doing from the 80% to a 99% of the total commits
-  # Occasional developers are defined as those doing from the 99% to the 100% of the commits
+    # This function provides information about the general structure of the community.
+    # This is divided into core, regular and ocassional authors
+    # Core developers are defined as those doing up to a 80% of the total commits
+    # Regular developers are defind as those doing from the 80% to a 99% of the total commits
+    # Occasional developers are defined as those doing from the 99% to the 100% of the commits
 
-  # Init of structure to be returned
-  community = {}
-  community['core'] = None
-  community['regular'] = None
-  community['occasional'] = None
+    # Init of structure to be returned
+    community = {}
+    community['core'] = None
+    community['regular'] = None
+    community['occasional'] = None
 
-  q = "select count(distinct(s.id)) as total "+\
-       "from scmlog s, people p, actions a "+\
-       "where s.author_id = p.id and "+\
-       "      p.email <> '%gerrit@%' and "+\
-       "      p.email <> '%jenkins@%' and "+\
-       "      s.id = a.commit_id and "+\
-       "      s.date>="+startdate+" and "+\
-       "      s.date<="+enddate+";"
+    q = "select count(distinct(s.id)) as total "+\
+         "from scmlog s, people p, actions a "+\
+         "where s.author_id = p.id and "+\
+         "      p.email <> '%gerrit@%' and "+\
+         "      p.email <> '%jenkins@%' and "+\
+         "      s.id = a.commit_id and "+\
+         "      s.date>="+startdate+" and "+\
+         "      s.date<="+enddate+";"
 
-  total = ExecuteQuery(q)
-  total_commits = float(total['total'])
+    total = ExecuteQuery(q)
+    total_commits = float(total['total'])
 
-  # Database access: developer, %commits
-  q = " select pup.upeople_id, "+\
-      "        (count(distinct(s.id))) as commits "+\
-      " from scmlog s, "+\
-      "      actions a, "+\
-      "      people_upeople pup, "+\
-      "      people p "+\
-      " where s.id = a.commit_id and "+\
-      "       s.date>="+startdate+" and "+\
-      "       s.date<="+enddate+" and "+\
-      "       s.author_id = pup.people_id and "+\
-      "       s.author_id = p.id and "+\
-      "       p.email <> '%gerrit@%' and "+\
-      "       p.email <> '%jenkins@%' "+\
-      " group by pup.upeople_id "+\
-      " order by commits desc; "
+    # Database access: developer, %commits
+    q = " select pup.upeople_id, "+\
+        "        (count(distinct(s.id))) as commits "+\
+        " from scmlog s, "+\
+        "      actions a, "+\
+        "      people_upeople pup, "+\
+        "      people p "+\
+        " where s.id = a.commit_id and "+\
+        "       s.date>="+startdate+" and "+\
+        "       s.date<="+enddate+" and "+\
+        "       s.author_id = pup.people_id and "+\
+        "       s.author_id = p.id and "+\
+        "       p.email <> '%gerrit@%' and "+\
+        "       p.email <> '%jenkins@%' "+\
+        " group by pup.upeople_id "+\
+        " order by commits desc; "
 
-  people = ExecuteQuery(q)
-  # this is a list. Operate over the list
-  people['commits'] = [((commits / total_commits) * 100) for commits in people['commits']]
-  # people['commits'] = (people['commits'] / total_commits) * 100
+    people = ExecuteQuery(q)
+    # this is a list. Operate over the list
+    people['commits'] = [((commits / total_commits) * 100) for commits in people['commits']]
+    # people['commits'] = (people['commits'] / total_commits) * 100
 
-  # Calculating number of core, regular and occasional developers
-  cont = 0
-  core = 0
-  core_f = True # flag
-  regular = 0
-  regular_f = True  # flag
-  occasional = 0
-  devs = 0
+    # Calculating number of core, regular and occasional developers
+    cont = 0
+    core = 0
+    core_f = True # flag
+    regular = 0
+    regular_f = True  # flag
+    occasional = 0
+    devs = 0
 
-  for value in people['commits']:
-    cont = cont + value
-    devs = devs + 1
+    for value in people['commits']:
+        cont = cont + value
+        devs = devs + 1
 
-    if (core_f and cont >= 80):
-      #core developers number reached
-      core = devs
-      core_f = False
+        if (core_f and cont >= 80):
+            #core developers number reached
+            core = devs
+            core_f = False
 
-    if (regular_f and cont >= 95):
-      regular = devs
-      regular_f = False
+        if (regular_f and cont >= 95):
+            regular = devs
+            regular_f = False
 
-  occasional = devs - regular
-  regular = regular - core
+    occasional = devs - regular
+    regular = regular - core
 
-  # inserting values in variable
-  community['core'] = core
-  community['regular'] = regular
-  community['occasional'] = occasional
+    # inserting values in variable
+    community['core'] = core
+    community['regular'] = regular
+    community['occasional'] = occasional
 
-  return(community)
+    return(community)
 
 
 def GetCommitsSummaryCompanies (period, startdate, enddate, identities_db, num_companies):
