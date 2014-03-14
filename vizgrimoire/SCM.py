@@ -26,13 +26,10 @@
 ##   Daniel Izquierdo <dizquierdo@bitergia.com>
 ##   Alvaro del Castillo <acs@bitergia.com>
 
-import re, sys
-
 from GrimoireSQL import GetSQLGlobal, GetSQLPeriod
 # TODO integrate: from GrimoireSQL import  GetSQLReportFrom 
 from GrimoireSQL import GetSQLReportWhere, ExecuteQuery, BuildQuery
 from GrimoireUtils import GetPercentageDiff, GetDates, completePeriodIds
-import GrimoireUtils
 
 ##########
 # Meta-functions to automatically call metrics functions and merge them
@@ -399,7 +396,8 @@ def EvolLines (period, startdate, enddate, identities_db, type_analysis) :
     return (GetLines(period, startdate, enddate, identities_db, type_analysis, True))
 
 
-def StaticNumLines (period, startdate, enddate, identities_db, type_analysis):
+# TODO: two version of this funcion. Unify.
+def StaticNumLines2 (period, startdate, enddate, identities_db, type_analysis):
     # returns the aggregate number of lines in the specified timeperiod (enddate - startdate)
     return (GetLines(period, startdate, enddate, identities_db, type_analysis, False))
 
