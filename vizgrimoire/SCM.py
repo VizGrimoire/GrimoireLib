@@ -30,11 +30,42 @@ from GrimoireSQL import GetSQLGlobal, GetSQLPeriod
 # TODO integrate: from GrimoireSQL import  GetSQLReportFrom 
 from GrimoireSQL import GetSQLReportWhere, ExecuteQuery, BuildQuery
 from GrimoireUtils import GetPercentageDiff, GetDates, completePeriodIds
+from DataSource import DataSource
+
+
+class SCM(DataSource):
+
+    @staticmethod
+    def getName():
+        return "SCM"
+
+    @staticmethod
+    def GetEvolutionaryData (period, startdate, enddate, i_db, type_analysis):
+        # Meta function that includes basic evolutionary metrics from the source code
+        # management system. Those are merged and returned.
+
+        # 1- Retrieving information
+        commits = completePeriodIds(EvolCommits(period, startdate, enddate, i_db, type_analysis))
+        authors = completePeriodIds(EvolAuthors(period, startdate, enddate, i_db, type_analysis))
+        committers = completePeriodIds(EvolCommitters(period, startdate, enddate, i_db, type_analysis))
+        files = completePeriodIds(EvolFiles(period, startdate, enddate, i_db, type_analysis))
+        lines = completePeriodIds(EvolLines(period, startdate, enddate, i_db, type_analysis))
+        branches = completePeriodIds(EvolBranches(period, startdate, enddate, i_db, type_analysis))
+        repositories = completePeriodIds(EvolRepositories(period, startdate, enddate, i_db, type_analysis))
+
+        # 2- Merging information
+        evol = dict(commits.items() + repositories.items() + committers.items())
+        evol = dict(evol.items() + authors.items() + files.items())
+        evol = dict(evol.items() + lines.items() + branches.items())
+
+        return (evol)
+
 
 
 ##########
 # Meta-functions to automatically call metrics functions and merge them
 ##########
+
 
 def GetSCMEvolutionaryData (period, startdate, enddate, i_db, type_analysis):
     # Meta function that includes basic evolutionary metrics from the source code
