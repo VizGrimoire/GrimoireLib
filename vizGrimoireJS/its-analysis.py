@@ -95,7 +95,6 @@ class Backend(object):
 
 
 def aggData(period, startdate, enddate, identities_db, destdir, closed_condition):
-#    data = dataFrame2Dict(vizr.AggITSInfo(period, startdate, enddate, identities_db, closed_condition = closed_condition))
     data = ITS.AggITSInfo(period, startdate, enddate, identities_db, [], closed_condition)
     agg = data
     data = ITS.AggAllParticipants(startdate, enddate)
@@ -117,7 +116,6 @@ def aggData(period, startdate, enddate, identities_db, destdir, closed_condition
 
     # Tendencies    
     for i in [7,30,365]:
-        # period_data = dataFrame2Dict(vizr.GetDiffSentDays(period, enddate, i))
         period_data = ITS.GetDiffClosedDays(period, identities_db, enddate, i, [], closed_condition)
         agg = dict(agg.items() + period_data.items())
         period_data = ITS.GetDiffOpenedDays(period, identities_db, enddate, i, [])
@@ -138,8 +136,6 @@ def tsData(period, startdate, enddate, identities_db, destdir, granularity,
            conf, backend):
 
     closed_condition = backend.closed_condition
-#    data = vizr.EvolITSInfo(period, startdate, enddate, identities_db, closed_condition = closed_condition)
-#    evol = completePeriodIds(dataFrame2Dict(data))
     data = ITS.EvolITSInfo(period, startdate, enddate, identities_db, [], closed_condition)
     evol = completePeriodIds(data)
     if ('companies' in reports) :
@@ -173,7 +169,7 @@ def peopleData(period, startdate, enddate, identities_db, destdir, closed_condit
     # remove duplicates
     people = list(set(top))
     # the order is not the same than in R json
-    createJSON(people, destdir+"/its-people.json", False)
+    createJSON(people, destdir+"/its-people.json")
 
     for upeople_id in people :
         evol = ITS.GetPeopleEvolITS(upeople_id, period, startdate, enddate, closed_condition)
@@ -184,31 +180,24 @@ def peopleData(period, startdate, enddate, identities_db, destdir, closed_condit
         createJSON (data, destdir+"/people-"+str(upeople_id)+"-its-static.json")
 
 def reposData(period, startdate, enddate, identities_db, destdir, conf, closed_condition):
-    # repos  = dataFrame2Dict(vizr.GetReposNameITS(startdate, enddate))
     repos  = ITS.GetReposNameITS(startdate, enddate)
     repos = repos['name']
     if not isinstance(repos, (list)): 
         repos = [repos]
-        createJSON(repos, destdir+"/its-repos.json", False)
-    else:
-        createJSON(repos, destdir+"/its-repos.json")
+    createJSON(repos, destdir+"/its-repos.json")
 
     for repo in repos :
         repo_name = "'"+ repo+ "'"
         repo_file = repo.replace("/","_")
         evol = ITS.EvolITSInfo(period, startdate, enddate, identities_db, ['repository', repo_name], closed_condition)
         evol = completePeriodIds(evol)
-        if (repo_file == "http:__tracker.ceph.com_projects_rados-java_"):
-            createJSON(evol, destdir+"/"+repo_file+"-its-rep-evolutionary.json", False)
-        else:
-            createJSON(evol, destdir+"/"+repo_file+"-its-rep-evolutionary.json")
+        createJSON(evol, destdir+"/"+repo_file+"-its-rep-evolutionary.json")
 
         agg = ITS.AggITSInfo(period, startdate, enddate, identities_db, ['repository', repo_name], closed_condition)
 
         createJSON(agg, destdir+"/"+repo_file+"-its-rep-static.json")
 
 def companiesData(period, startdate, enddate, identities_db, destdir, closed_condition, bots, npeople):
-    # companies  = dataFrame2Dict(vizr.GetCompaniesNameITS(startdate, enddate, identities_db, closed_condition, bots))
     companies  = ITS.GetCompaniesNameITS(startdate, enddate, identities_db, closed_condition, bots)
     companies = companies['name']
     createJSON(companies, destdir+"/its-companies.json")
@@ -219,10 +208,7 @@ def companiesData(period, startdate, enddate, identities_db, destdir, closed_con
 
         evol = ITS.EvolITSInfo(period, startdate, enddate, identities_db, ['company', company_name], closed_condition)
         evol = completePeriodIds(evol)
-        if company in ['IBM','Internap']:
-            createJSON(evol, destdir+"/"+company+"-its-com-evolutionary.json", False)
-        else:
-            createJSON(evol, destdir+"/"+company+"-its-com-evolutionary.json")
+        createJSON(evol, destdir+"/"+company+"-its-com-evolutionary.json")
 
         agg = ITS.AggITSInfo(period, startdate, enddate, identities_db, ['company', company_name], closed_condition)
         createJSON(agg, destdir+"/"+company+"-its-com-static.json")
@@ -234,7 +220,6 @@ def companiesData(period, startdate, enddate, identities_db, destdir, closed_con
     createJSON (closed, opts.destdir+"/its-closed-companies-summary.json")
 
 def countriesData(period, startdate, enddate, identities_db, destdir, closed_condition):
-    # countries  = dataFrame2Dict(vizr.GetCountriesNamesITS(startdate, enddate, identities_db, closed_condition))
     countries  = ITS.GetCountriesNamesITS(startdate, enddate, identities_db, closed_condition)
     countries = countries['name']
     createJSON(countries, destdir+"/its-countries.json")
@@ -251,7 +236,6 @@ def countriesData(period, startdate, enddate, identities_db, destdir, closed_con
         createJSON (data, destdir+"/"+country+"-its-cou-static.json")
 
 def domainsData(period, startdate, enddate, identities_db, destdir, closed_condition, bots, npeople):
-    # domains = dataFrame2Dict(vizr.GetDomainsNameITS(startdate, enddate, identities_db, closed_condition, bots))
     domains = ITS.GetDomainsNameITS(startdate, enddate, identities_db, closed_condition, bots)
     domains = domains['name']
     createJSON(domains, destdir+"/its-domains.json")
@@ -268,10 +252,9 @@ def domainsData(period, startdate, enddate, identities_db, destdir, closed_condi
         createJSON(agg, destdir+"/"+domain+"-its-dom-static.json")
 
         top = ITS.GetDomainTopClosers(domain_name, startdate, enddate, identities_db, bots, closed_condition, npeople)
-        createJSON(top, destdir+"/"+domain+"-its-dom-top-closers.json", False)
+        createJSON(top, destdir+"/"+domain+"-its-dom-top-closers.json")
 
 def topData(period, startdate, enddate, identities_db, destdir, bots, closed_condition, npeople):
-
     # Top closers
     top_closers_data = {}
     # top_closers_data['closers.']=dataFrame2Dict(vizr.GetTopClosers(0, startdate, enddate,identities_db, bots, closed_condition))
@@ -287,7 +270,7 @@ def topData(period, startdate, enddate, identities_db, destdir, bots, closed_con
 
 
     all_top = dict(top_closers_data.items() + top_openers_data.items())
-    createJSON (all_top, destdir+"/its-top.json", False)
+    createJSON (all_top, destdir+"/its-top.json")
 
     return all_top
 
@@ -327,9 +310,10 @@ if __name__ == '__main__':
     opts = read_options()
     period = getPeriod(opts.granularity)
     reports = opts.reports.split(",")
-    # filtered bots
 
+    # filtered bots
     bots = ['-Bot']
+
     # TODO: hack because VizR library needs. Fix in lib in future
     startdate = "'"+opts.startdate+"'"
     enddate = "'"+opts.enddate+"'"
