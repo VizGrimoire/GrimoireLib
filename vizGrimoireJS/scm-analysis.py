@@ -228,6 +228,10 @@ def microStudies(enddate, destdir):
     vizr.ReportDemographicsAgingSCM(enddate, destdir)
     vizr.ReportDemographicsBirthSCM(enddate, destdir)
 
+def testClass(period, startdate, enddate, identities_db, destdir, granularity, conf):
+    scm = SCM.SCM()
+    data = scm.GetEvolutionaryData(period, startdate, enddate, identities_db, None)
+    print(data)
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO,format='%(asctime)s %(message)s')
@@ -246,6 +250,10 @@ if __name__ == '__main__':
     # Working at the same time with VizR and VizPy yet
     vizr.SetDBChannel (database=opts.dbname, user=opts.dbuser, password=opts.dbpassword)
     GrimoireSQL.SetDBChannel (database=opts.dbname, user=opts.dbuser, password=opts.dbpassword)
+
+    # Testing conversion to class
+    testClass (period, startdate, enddate, opts.identities_db, opts.destdir, opts.granularity, opts)
+    sys.exit()
 
     aggData(period, startdate, enddate, opts.identities_db, opts.destdir)
     tsData (period, startdate, enddate, opts.identities_db, opts.destdir, opts.granularity, opts)
