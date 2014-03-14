@@ -23,6 +23,7 @@
 ##
 
 from scm_query import buildSession
+from datetime import datetime
 import unittest
 
 database = 'mysql://jgb:XXX@localhost/vizgrimoire_cvsanaly'
@@ -43,10 +44,68 @@ class TestSCMQuery (unittest.TestCase):
         self.database = database
         self.session = buildSession(database=self.database, echo=False)
 
-    def test_query_simple (self):
+    def test_query_ncommits (self):
 
         res = self.session.query().select_ncommits().all()
+        self.assertEqual (res, [(4465L,)])
+
+    def test_query_ncommits_nomerge (self):
+
+        res = self.session.query().select_ncommits().filter_nomerges().all()
         self.assertEqual (res, [(4206L,)])
+
+    def test_query_authors_nomerge (self):
+
+        res = self.session.query().select_nauthors().filter_nomerges().all()
+        self.assertEqual (res, [(14L,)])
+
+    def test_query_authors (self):
+
+        res = self.session.query().select_nauthors().all()
+        self.assertEqual (res, [(14L,)])
+
+
+    def _test_select_nscmlog (self, variable):
+
+        # Number of commits
+        res = self.session.query().select_nscmlog(variable).all()
+        self.assertEqual (res, [(4465L,)])
+        # Number of commits, except those that don't touch files (merges)
+        res = self.session.query() \
+            .select_nscmlog(variable) \
+            .filter_nomerges() \
+            .all()
+        self.assertEqual (res, [(4206L,)])
+
+    def test_select_ncsmlog (self):
+        """Test select_ncsmlog"""
+
+        self._test_select_nscmlog ("commits")
+
+    def test_query_authors_period (self):
+        """Test nauthors with period."""
+
+        # Test for nauthors
+        res = self.session.query().select_nauthors() \
+            .filter_period(start=datetime(2014,1,1), \
+                           end=datetime(2014,2,1)) \
+            .all()
+        self.assertEqual (res, [(8L,)])
+        # Test for nauthors that "touch files" (merges are excluded)
+        res = self.session.query().select_nauthors() \
+            .filter_nomerges() \
+            .filter_period(start=datetime(2014,1,1), \
+                           end=datetime(2014,2,1)) \
+            .all()
+        self.assertEqual (res, [(7L,)])
+        # Test for nauthors, using authoring date
+        res = self.session.query().select_nauthors() \
+            .filter_period(start=datetime(2014,1,1), \
+                           end=datetime(2014,2,1),
+                           date="author") \
+            .all()
+        self.assertEqual (res, [(8L,)])
+
 
 if __name__ == "__main__":
     unittest.main()

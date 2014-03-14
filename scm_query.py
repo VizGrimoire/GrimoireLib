@@ -78,30 +78,45 @@ class UPeople(Base):
 class SCMQuery (Query):
     """Class for dealing with SCM queries"""
 
+    def select_nscmlog(self, variable):
+        """Select a variable which is a field in Scmlog.
+
+        - variable (string): variable to select
+            Currently supported: "commits", "authors", "committers"
+        """
+
+        if variable == "commits":
+            field = SCMLog.id
+        elif variable == "authors":
+            field = SCMLog.author_id
+        elif variable == "committers":
+            field = SCMLog.committer_id
+        else:
+            raise Exception ("select_nscmlog: Unknown variable %s." % variable)
+        return self.add_columns (
+            label("ncommits", func.count(func.distinct(field)))
+            )
 
     def select_ncommits(self):
         """Select number (count) of commits"""
 
         return self.add_columns (
             label("ncommits", func.count(func.distinct(SCMLog.id)))
-            ) \
-            .join(Actions)
+            )
 
     def select_listcommits(self):
         """Select a list of commits"""
         
         return self \
             .add_columns (label("id", func.distinct(SCMLog.id)),
-                          label("date", SCMLog.date)) \
-            .join(Actions)
+                          label("date", SCMLog.date))
 
     def select_nauthors(self):
         """Select number (count) of authors"""
 
         return self.add_columns (
             label("nauthors", func.count(func.distinct(SCMLog.author_id)))
-            ) \
-            .join(Actions)
+            )
 
     def select_listauthors(self):
         """Select a list of authors"""
@@ -112,23 +127,38 @@ class SCMQuery (Query):
             .join (PeopleUPeople, UPeople.id == PeopleUPeople.upeople_id) \
             .join (SCMLog, PeopleUPeople.people_id == SCMLog.author_id)
 
-    def filter_period(self, start = None, end = None):
+    def filter_nomerges (self):
+        """Consider only commits that touch files (no merges)
+
+        For considering only those commits, join with Actions,
+        where merge commits are not represented.
+        """
+
+        return self.join(Actions)
+
+    def filter_period(self, start = None, end = None, date = "commit"):
         """Filter variable for a period
 
         - start: datetime, starting date
         - end: datetime, end date
+        - date: "commit" or "author"
+            Git maintains "commit" and "author" date
 
         Commits considered are between starting date and end date
         (exactly: start <= date < end)
         """
 
         query = self
+        if date == "author":
+            scmlog_date = SCMLog.author_date
+        elif date == "commit":
+            scmlog_date = SCMLog.date
         if start is not None:
             self.start = start
-            query = query.filter(SCMLog.date >= start.isoformat())
+            query = query.filter(scmlog_date >= start.isoformat())
         if end is not None:
             self.end = end
-            query = query.filter(SCMLog.date < end.isoformat())
+            query = query.filter(scmlog_date < end.isoformat())
         return query
 
     def group_by_period (self):
@@ -197,6 +227,11 @@ if __name__ == "__main__":
 
     # Number of commits
     res = session.query().select_ncommits() \
+        .filter_period(start=datetime(2012,9,1),
+                       end=datetime(2014,1,1))
+    print res.scalar()
+    res = session.query().select_ncommits() \
+        .filter_nomerges() \
         .filter_period(start=datetime(2012,9,1),
                        end=datetime(2014,1,1))
     print res.scalar()
