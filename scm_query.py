@@ -148,17 +148,8 @@ class SCMQuery (Query):
         data = []
         for row in self.all():
             # Extract real values (entries which are not year or month)
-            # FIXME: this could be done much better, probably the
-            # intermediary dict is not needed. The keyt is to extract
-            # the tuple of real data, excluding year and month.
-            values = []
-            # doctRow used because row is KeyedTuple, and does not
-            # support doctRow[key]
-            dictRow = row._asdict()
-            for key in row.keys():
-                if key not in ("year", "month"):
-                    print key, type(row), dictRow[key]
-                    values.append (dictRow[key])
+            values = tuple(row[i] for i, k in enumerate(row.keys())
+                           if not k in ("year", "month"))
             data.append ((datetime (row.year, row.month, 1),
                          values))
         return TimeSeries (period = "months",
