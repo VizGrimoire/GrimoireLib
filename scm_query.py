@@ -55,18 +55,65 @@ def buildSession(database, echo):
 class SCMLog(Base):
     """scmlog table"""
     __tablename__ = 'scmlog'
+    author_id = Column(Integer, ForeignKey('people_upeople.people_id'))
 
 class Actions(Base):
     """actions table"""
+
     __tablename__ = 'actions'
     commit_id = Column(Integer, ForeignKey('scmlog.id'))
+
+class PeopleUPeople(Base):
+    """people_upeople"""
+
+    __tablename__ = 'people_upeople'
+    upeople_id = Column(Integer, ForeignKey('upeople.id'))
+
+class UPeople(Base):
+    """upeople"""
+
+    __tablename__ = 'upeople'
 
 
 class SCMQuery (Query):
     """Class for dealing with SCM queries"""
 
+
+    def select_ncommits(self):
+        """Select number (count) of commits"""
+
+        return self.add_columns (
+            label("ncommits", func.count(func.distinct(SCMLog.id)))
+            ) \
+            .join(Actions)
+
+    def select_listcommits(self):
+        """Select a list of commits"""
+        
+        return self \
+            .add_columns (label("id", func.distinct(SCMLog.id)),
+                          label("date", SCMLog.date)) \
+            .join(Actions)
+
+    def select_nauthors(self):
+        """Select number (count) of authors"""
+
+        return self.add_columns (
+            label("nauthors", func.count(func.distinct(SCMLog.author_id)))
+            ) \
+            .join(Actions)
+
+    def select_listauthors(self):
+        """Select a list of authors"""
+        
+        return self \
+            .add_columns (label("id", func.distinct(UPeople.id)),
+                          label("name", UPeople.identifier)) \
+            .join (PeopleUPeople, UPeople.id == PeopleUPeople.upeople_id) \
+            .join (SCMLog, PeopleUPeople.people_id == SCMLog.author_id)
+
     def filter_period(self, start = None, end = None):
-        """Filter commits for a period
+        """Filter variable for a period
 
         - start: datetime, starting date
         - end: datetime, end date
@@ -84,14 +131,6 @@ class SCMQuery (Query):
             query = query.filter(SCMLog.date < end.isoformat())
         return query
 
-    def select_ncommits(self):
-        """Select number (count) of commits"""
-
-        return self.add_columns (
-            label("ncommits", func.count(func.distinct(SCMLog.id)))
-            ) \
-            .join(Actions)
-
     def group_by_period (self):
         """Group by time period (per month)"""
 
@@ -108,19 +147,23 @@ class SCMQuery (Query):
 
         data = []
         for row in self.all():
+            # Extract real values (entries which are not year or month)
+            # FIXME: this could be done much better, probably the
+            # intermediary dict is not needed. The keyt is to extract
+            # the tuple of real data, excluding year and month.
+            values = []
+            # doctRow used because row is KeyedTuple, and does not
+            # support doctRow[key]
+            dictRow = row._asdict()
+            for key in row.keys():
+                if key not in ("year", "month"):
+                    print key, type(row), dictRow[key]
+                    values.append (dictRow[key])
             data.append ((datetime (row.year, row.month, 1),
-                         (row.ncommits,)))
+                         values))
         return TimeSeries (period = "months",
                            start = self.start, end = self.end,
                            data = data)
-
-    def select_listcommits(self):
-        """Select a list of commits"""
-        
-        return self \
-            .add_columns (label("id", func.distinct(SCMLog.id)),
-                          label("date", SCMLog.date)) \
-            .join(Actions)
                         
 
     def __repr__ (self):
@@ -184,3 +227,17 @@ if __name__ == "__main__":
                        end=datetime(2014,1,1))
     for row in res.limit(10).all():
         print row.id, row.date
+
+    # Number of authors
+    res = session.query().select_nauthors() \
+        .filter_period(start=datetime(2012,9,1),
+                       end=datetime(2014,1,1))
+    print res.scalar()
+    # List of authors
+    res = session.query() \
+        .select_listauthors() \
+        .filter_period(start=datetime(2013,12,1),
+                       end=datetime(2014,2,1))
+    print res
+    for row in res.limit(10).all():
+        print row.id, row.name

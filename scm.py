@@ -26,30 +26,35 @@
 from scm_query import buildSession, SCMQuery
 
 class SCM:
-    
+    """High level interface to variables from the SCM (CVSAnalY database).
+
+    The variable to be managed is specified when instantiating.
+    The class provides functions to return different kinds of aggeregation
+    (timeseries, total, list) and selection (dates, etc.)
+    """
+
     def timeseries (self):
+        """Return a timeseries for the specified variable"""
 
         return self.query.group_by_period().timeseries()
 
-    # def _buildSession(self, database, echo):
-    #     """Create a session with the database
-        
-    #     - database: string, url of the database, in the format
-    #         mysql://user:passwd@host:port/database
-    #     - echo: boolean, output SQL to stdout or not
+    def total (self):
+        """Return the total count for the specified variable"""
 
-    #     Instantiatates an engine and a session to work with it
-    #     """
+        return self.query.scalar()
 
-    #     engine = create_engine(database, encoding='utf8', echo=echo)
-    #     Base = declarative_base(cls=DeferredReflection)
-    #     Base.prepare(engine)
-    #     # Create a session linked to the SCMQuery class
-    #     Session = sessionmaker(bind=engine, query_cls=SCMQuery)
-    #     session = Session()
-    #     return (session)
+    def list (self, limit = 10):
+        """Return a list for the specified variable"""
+
+        return self.query.limit(limit).all()
 
     def __init__ (self, database, var, dates = (None, None), echo = False):
+        """Instantiation of the object.
+
+        - var (string): variable ("commits", "listcommits")
+        - dates (tuple of datetime): (begin, end)
+        - echo: write SQL queries to output stream
+        """
 
         self.session = buildSession(
             database=database,
@@ -58,11 +63,32 @@ class SCM:
             self.query = self.session.query().select_ncommits()
         elif var == "listcommits":
             self.query = self.session.query().select_listcommits()
+        elif var == "nauthors":
+            self.query = self.session.query().select_nauthors()
+        elif var == "listauthors":
+            self.query = self.session.query().select_listauthors()
         self.query = self.query.filter_period(start = dates[0],
                                               end = dates[1])
 
 if __name__ == "__main__":
 
-    datos = SCM (database = 'mysql://jgb:XXX@localhost/vizgrimoire_cvsanaly',
-                 var = "ncommits", dates = (None, None))
-    print datos.timeseries()
+    from datetime import datetime
+
+    data = SCM (database = 'mysql://jgb:XXX@localhost/vizgrimoire_cvsanaly',
+                var = "ncommits", dates = (None, None))
+    print data.timeseries()
+    print data.total()
+
+    data = SCM (database = 'mysql://jgb:XXX@localhost/vizgrimoire_cvsanaly',
+                var = "ncommits", dates = (datetime(2013,1,1), None))
+    print data.timeseries()
+    print data.total()
+
+    data = SCM (database = 'mysql://jgb:XXX@localhost/vizgrimoire_cvsanaly',
+                var = "listcommits", dates = (None, None))
+    print data.list()
+
+    data = SCM (database = 'mysql://jgb:XXX@localhost/vizgrimoire_cvsanaly',
+                var = "nauthors", dates = (datetime(2013,1,1), None))
+    print data.timeseries()
+    print data.total()
