@@ -43,6 +43,8 @@ class TestSCMQuery (unittest.TestCase):
 
         self.database = database
         self.session = buildSession(database=self.database, echo=False)
+        self.start = datetime(2014,1,1)
+        self.end = datetime(2014,2,1)
 
     def _test_select_nscmlog (self, variables, results):
         """Test select_nscmlog with different variables
@@ -81,23 +83,19 @@ class TestSCMQuery (unittest.TestCase):
             Each item in results corresponds to an item in variables
         """
 
-        start = datetime(2014,1,1)
-        end = datetime(2014,2,1)
         # Test for nauthors
         res = self.session.query().select_nscmlog(variables) \
-            .filter_period(start=start,end=end).all()
+            .filter_period(start=self.start,end=self.end).all()
         self.assertEqual (res, results[0])
         # Test for nauthors that "touch files" (merges are excluded)
         res = self.session.query().select_nscmlog(variables) \
             .filter_nomerges() \
-            .filter_period(start=start, end=end) \
+            .filter_period(start=self.start, end=self.end) \
             .all()
         self.assertEqual (res, results[1])
         # Test for nauthors, using authoring date
         res = self.session.query().select_nscmlog(variables) \
-            .filter_period(start=datetime(2014,1,1), \
-                           end=datetime(2014,2,1),
-                           date="author") \
+            .filter_period(start=self.start, end=self.end, date="author") \
             .all()
         self.assertEqual (res, results[2])
 
@@ -111,6 +109,34 @@ class TestSCMQuery (unittest.TestCase):
         self._test_select_nscmlog_period (["committers",],
                                           [[(8L,)], [(7,)], [(8,)]])
 
+    def test_select_listauthors (self):
+        """Test select_listauthors"""
+
+        correct = [(1L, 'Alvaro del Castillo', 'acs@bitergia.com'),
+                   (3L, 'Jesus M. Gonzalez-Barahona', 'jgb@gsyc.es'),
+                   (4L, 'Daniel Izquierdo', 'dizquierdo@bitergia.com'),
+                   (5L, 'Daniel Izquierdo Cortazar', 'dizquierdo@bitergia.com'),
+                   (6L, 'Luis Cañas-Díaz', 'lcanas@bitergia.com')]
+        res = self.session.query() \
+            .select_listauthors() \
+            .filter_period(start=self.start, end=self.end) \
+            .limit(5).all()
+        self.assertEqual (res, correct)
+
+    def test_select_listauthors_uid (self):
+        """Test select_listauthors_uid"""
+
+        correct = [(1L, 'Alvaro del Castillo'),
+                   (3L, 'Jesus M. Gonzalez-Barahona'),
+                   (4L, 'Daniel Izquierdo'),
+                   (6L, 'Luis Cañas-Díaz'),
+                   (7L, 'Santiago Dueñas')]
+        res = self.session.query() \
+            .select_listauthors_uid() \
+            .filter_period(start=self.start, end=self.end) \
+            .limit(5).all()
+        print res
+        self.assertEqual (res, correct)
 
 if __name__ == "__main__":
     unittest.main()

@@ -56,6 +56,12 @@ class SCMLog(Base):
     """scmlog table"""
     __tablename__ = 'scmlog'
     author_id = Column(Integer, ForeignKey('people_upeople.people_id'))
+    author_id = Column(Integer, ForeignKey('people.id'))
+
+class People(Base):
+    """upeople"""
+
+    __tablename__ = 'people'
 
 class Actions(Base):
     """actions table"""
@@ -114,7 +120,7 @@ class SCMQuery (Query):
             .add_columns (label("id", func.distinct(SCMLog.id)),
                           label("date", SCMLog.date))
 
-    def select_listauthors(self):
+    def select_listauthors_uid(self):
         """Select a list of authors"""
         
         return self \
@@ -122,6 +128,15 @@ class SCMQuery (Query):
                           label("name", UPeople.identifier)) \
             .join (PeopleUPeople, UPeople.id == PeopleUPeople.upeople_id) \
             .join (SCMLog, PeopleUPeople.people_id == SCMLog.author_id)
+
+    def select_listauthors(self):
+        """Select a list of authors"""
+        
+        return self \
+            .add_columns (label("id", func.distinct(People.id)),
+                          label("name", People.name),
+                          label('email', People.email)) \
+            .join (SCMLog, People.id == SCMLog.author_id)
 
     def filter_nomerges (self):
         """Consider only commits that touch files (no merges)
