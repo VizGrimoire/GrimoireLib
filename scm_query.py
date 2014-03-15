@@ -57,6 +57,8 @@ class SCMLog(Base):
     __tablename__ = 'scmlog'
     author_id = Column(Integer, ForeignKey('people_upeople.people_id'))
     author_id = Column(Integer, ForeignKey('people.id'))
+    committer_id = Column(Integer, ForeignKey('people_upeople.people_id'))
+    committer_id = Column(Integer, ForeignKey('people.id'))
 
 class People(Base):
     """upeople"""
@@ -137,6 +139,29 @@ class SCMQuery (Query):
                           label("name", People.name),
                           label('email', People.email)) \
             .join (SCMLog, People.id == SCMLog.author_id)
+
+    def select_listpersons(self, kind = "all"):
+        """Select a list of persons (authors, committers)
+
+        - kind: kind of person to select
+           authors: authors of commits
+           committers: committers of commits
+           all: authors and committers
+        """
+
+        query = self.add_columns (label("id", func.distinct(People.id)),
+                                  label("name", People.name),
+                                  label('email', People.email))
+        if kind == "authors":
+            return query.join (SCMLog, People.id == SCMLog.author_id)    
+        elif kind == "committers":
+            return query.join (SCMLog, People.id == SCMLog.committer_id)    
+        elif kind == "all":
+            return query.join (SCMLog, People.id == SCMLog.author_id or
+                              People.id == SCMLog.committer_id)
+        else:
+            raise Exception ("select_listpersons: Unknown kind %s." \
+                             % kind)
 
     def filter_nomerges (self):
         """Consider only commits that touch files (no merges)

@@ -123,6 +123,20 @@ class TestSCMQuery (unittest.TestCase):
             .limit(5).all()
         self.assertEqual (res, correct)
 
+    def test_select_listpersons (self):
+        """Test select_listpersons"""
+
+        correct = [(1L, 'Alvaro del Castillo', 'acs@bitergia.com'),
+                   (3L, 'Jesus M. Gonzalez-Barahona', 'jgb@gsyc.es'),
+                   (4L, 'Daniel Izquierdo', 'dizquierdo@bitergia.com'),
+                   (5L, 'Daniel Izquierdo Cortazar', 'dizquierdo@bitergia.com'),
+                   (6L, 'Luis Cañas-Díaz', 'lcanas@bitergia.com')]
+        res = self.session.query() \
+            .select_listpersons("authors") \
+            .filter_period(start=self.start, end=self.end) \
+            .limit(5).all()
+        self.assertEqual (res, correct)
+
     def test_select_listauthors_uid (self):
         """Test select_listauthors_uid"""
 
