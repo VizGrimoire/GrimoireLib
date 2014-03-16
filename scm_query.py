@@ -131,15 +131,6 @@ class SCMQuery (Query):
             .join (PeopleUPeople, UPeople.id == PeopleUPeople.upeople_id) \
             .join (SCMLog, PeopleUPeople.people_id == SCMLog.author_id)
 
-    def select_listauthors(self):
-        """Select a list of authors"""
-        
-        return self \
-            .add_columns (label("id", func.distinct(People.id)),
-                          label("name", People.name),
-                          label('email', People.email)) \
-            .join (SCMLog, People.id == SCMLog.author_id)
-
     def select_listpersons(self, kind = "all"):
         """Select a list of persons (authors, committers)
 
@@ -297,7 +288,7 @@ if __name__ == "__main__":
     print res.scalar()
     # List of authors
     res = session.query() \
-        .select_listauthors() \
+        .select_listpersons("authors") \
         .filter_period(start=datetime(2013,12,1),
                        end=datetime(2014,2,1))
     print res
