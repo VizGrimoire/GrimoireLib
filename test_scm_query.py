@@ -112,38 +112,30 @@ class TestSCMQuery (unittest.TestCase):
         self._test_select_nscmlog_period (["committers",],
                                           [[(8L,)], [(7,)], [(8,)]])
 
-    def test_select_listauthors (self):
-        """Test select_listauthors"""
-
-        correct = [(1L, 'Alvaro del Castillo', 'acs@bitergia.com'),
-                   (3L, 'Jesus M. Gonzalez-Barahona', 'jgb@gsyc.es'),
-                   (4L, 'Daniel Izquierdo', 'dizquierdo@bitergia.com'),
-                   (5L, 'Daniel Izquierdo Cortazar', 'dizquierdo@bitergia.com'),
-                   (6L, 'Luis Cañas-Díaz', 'lcanas@bitergia.com')]
-        res = self.session.query() \
-            .select_listauthors() \
-            .filter_period(start=self.start, end=self.end) \
-            .limit(5).all()
-        self.assertEqual (res, correct)
-
-    def _test_select_listpersons (self, kind, correct):
+    def _test_select_listpersons (self, kind, uid, correct):
         """Test select_listpersons, for a specific kind of persons
 
         - kind (string): kind of person: authors, committers, all
+        - uid (boolean): to use or not to use unique ids
         - correct (list): correct results
         """
 
-        res = self.session.query() \
-            .select_listpersons(kind) \
-            .filter_period(start=self.start, end=self.end) \
+        if uid:
+            res = self.session.query() \
+                .select_listpersons_uid(kind)
+        else:
+            res = self.session.query() \
+                .select_listpersons(kind)
+        res = res.filter_period(start=self.start, end=self.end) \
             .limit(5).all()
+        print kind
         print res
         self.assertEqual (res, correct)
 
     def test_select_listpersons (self):
         """Test select_listpersons"""
 
-        correct = {
+        correct_nouid = {
             "authors":
                 [(1L, 'Alvaro del Castillo', 'acs@bitergia.com'),
                  (3L, 'Jesus M. Gonzalez-Barahona', 'jgb@gsyc.es'),
@@ -162,10 +154,37 @@ class TestSCMQuery (unittest.TestCase):
                  (4L, 'Daniel Izquierdo', 'dizquierdo@bitergia.com'),
                  (5L, 'Daniel Izquierdo Cortazar', 'dizquierdo@bitergia.com'),
                  (6L, 'Luis Cañas-Díaz', 'lcanas@bitergia.com')]}
+        correct_uid = {
+            "authors":
+                [(1L, 'Alvaro del Castillo'), 
+                 (3L, 'Jesus M. Gonzalez-Barahona'),
+                 (4L, 'Daniel Izquierdo'),
+                 (6L, 'Luis Cañas-Díaz'),
+                 (7L, 'Santiago Dueñas')],
+            "committers": 
+                [(1L, 'Alvaro del Castillo'), 
+                 (3L, 'Jesus M. Gonzalez-Barahona'),
+                 (4L, 'Daniel Izquierdo'),
+                 (6L, 'Luis Cañas-Díaz'),
+                 (7L, 'Santiago Dueñas')],
+            "all":
+                [(1L, 'Alvaro del Castillo'), 
+                 (3L, 'Jesus M. Gonzalez-Barahona'),
+                 (4L, 'Daniel Izquierdo'),
+                 (6L, 'Luis Cañas-Díaz'),
+                 (7L, 'Santiago Dueñas')]}
 
-        self._test_select_listpersons ("authors", correct["authors"])
-        self._test_select_listpersons ("committers", correct["committers"])
-        self._test_select_listpersons ("all", correct["all"])
+        for uid in (False, True):
+            if uid:
+                correct = correct_uid
+            else:
+                correct = correct_nouid
+            self._test_select_listpersons (kind = "authors", uid = uid,
+                                           correct = correct["authors"])
+            self._test_select_listpersons (kind = "committers", uid = uid,
+                                           correct = correct["committers"])
+            self._test_select_listpersons (kind = "all", uid = uid,
+                                           correct = correct["all"])
 
 if __name__ == "__main__":
     unittest.main()

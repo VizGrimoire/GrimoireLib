@@ -122,14 +122,25 @@ class SCMQuery (Query):
             .add_columns (label("id", func.distinct(SCMLog.id)),
                           label("date", SCMLog.date))
 
-    def select_listauthors_uid(self):
-        """Select a list of authors"""
+    def select_listpersons_uid(self, kind = "all"):
+        """Select a list of persons (authors, committers), using uids"""
         
-        return self \
-            .add_columns (label("id", func.distinct(UPeople.id)),
-                          label("name", UPeople.identifier)) \
-            .join (PeopleUPeople, UPeople.id == PeopleUPeople.upeople_id) \
-            .join (SCMLog, PeopleUPeople.people_id == SCMLog.author_id)
+        query = self.add_columns (label("id", func.distinct(UPeople.id)),
+                                  label("name", UPeople.identifier)) \
+                .join (PeopleUPeople, UPeople.id == PeopleUPeople.upeople_id)
+        if kind == "authors":
+            return query.join (SCMLog,
+                               PeopleUPeople.people_id == SCMLog.author_id)
+        elif kind == "committers":
+            return query.join (SCMLog,
+                               PeopleUPeople.people_id == SCMLog.committer_id)
+        elif kind == "all":
+            return query.join (SCMLog,
+                               PeopleUPeople.people_id == SCMLog.author_id or
+                               PeopleUPeople.people_id == SCMLog.committer_id)
+        else:
+            raise Exception ("select_listpersons_uid: Unknown kind %s." \
+                             % kind)
 
     def select_listpersons(self, kind = "all"):
         """Select a list of persons (authors, committers)
@@ -148,8 +159,9 @@ class SCMQuery (Query):
         elif kind == "committers":
             return query.join (SCMLog, People.id == SCMLog.committer_id)    
         elif kind == "all":
-            return query.join (SCMLog, People.id == SCMLog.author_id or
-                              People.id == SCMLog.committer_id)
+            return query.join (SCMLog,
+                               People.id == SCMLog.author_id or
+                               People.id == SCMLog.committer_id)
         else:
             raise Exception ("select_listpersons: Unknown kind %s." \
                              % kind)
