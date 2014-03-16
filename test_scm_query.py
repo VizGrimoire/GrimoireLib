@@ -184,6 +184,17 @@ class TestSCMQuery (unittest.TestCase):
             self._test_select_listpersons (kind = "all", uid = uid,
                                            correct = correct["all"])
 
+    def test_select_nbranches (self):
+        """Test select_nbranches"""
+
+        correct = [[(17L,)],
+                   [(2L,)]]
+        res = self.session.query().select_nbranches()
+        self.assertEqual (res.all(), correct[0])
+        res = res.join(SCMLog) \
+            .filter_period(start=self.start, end=self.end)
+        self.assertEqual (res.all(), correct[1])
+
     def test_select_listbranches (self):
         """Test select_listbranches"""
 

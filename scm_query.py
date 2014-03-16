@@ -172,6 +172,19 @@ class SCMQuery (Query):
             raise Exception ("select_listpersons: Unknown kind %s." \
                              % kind)
 
+    def select_nbranches(self):
+        """Select number of branches in repo.
+
+        The Actions table is used, instead of the Branches table,
+        so that some filters, such as filter_period() can be used
+        """
+
+        query = self.add_columns (
+            label("nbranches",
+                  func.count(func.distinct(Actions.branch_id)))
+            )
+        return query
+
     def select_listbranches(self):
         """Select list of branches in repo
 
