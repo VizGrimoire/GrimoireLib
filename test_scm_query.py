@@ -126,34 +126,46 @@ class TestSCMQuery (unittest.TestCase):
             .limit(5).all()
         self.assertEqual (res, correct)
 
-    def test_select_listpersons (self):
-        """Test select_listpersons"""
+    def _test_select_listpersons (self, kind, correct):
+        """Test select_listpersons, for a specific kind of persons
 
-        correct = [(1L, 'Alvaro del Castillo', 'acs@bitergia.com'),
-                   (3L, 'Jesus M. Gonzalez-Barahona', 'jgb@gsyc.es'),
-                   (4L, 'Daniel Izquierdo', 'dizquierdo@bitergia.com'),
-                   (5L, 'Daniel Izquierdo Cortazar', 'dizquierdo@bitergia.com'),
-                   (6L, 'Luis Cañas-Díaz', 'lcanas@bitergia.com')]
+        - kind (string): kind of person: authors, committers, all
+        - correct (list): correct results
+        """
+
         res = self.session.query() \
-            .select_listpersons("authors") \
-            .filter_period(start=self.start, end=self.end) \
-            .limit(5).all()
-        self.assertEqual (res, correct)
-
-    def test_select_listauthors_uid (self):
-        """Test select_listauthors_uid"""
-
-        correct = [(1L, 'Alvaro del Castillo'),
-                   (3L, 'Jesus M. Gonzalez-Barahona'),
-                   (4L, 'Daniel Izquierdo'),
-                   (6L, 'Luis Cañas-Díaz'),
-                   (7L, 'Santiago Dueñas')]
-        res = self.session.query() \
-            .select_listauthors_uid() \
+            .select_listpersons(kind) \
             .filter_period(start=self.start, end=self.end) \
             .limit(5).all()
         print res
         self.assertEqual (res, correct)
+
+    def test_select_listpersons (self):
+        """Test select_listpersons"""
+
+        correct = {
+            "authors":
+                [(1L, 'Alvaro del Castillo', 'acs@bitergia.com'),
+                 (3L, 'Jesus M. Gonzalez-Barahona', 'jgb@gsyc.es'),
+                 (4L, 'Daniel Izquierdo', 'dizquierdo@bitergia.com'),
+                 (5L, 'Daniel Izquierdo Cortazar','dizquierdo@bitergia.com'),
+                 (6L, 'Luis Cañas-Díaz', 'lcanas@bitergia.com')],
+            "committers":
+                [(1L, 'Alvaro del Castillo', 'acs@bitergia.com'),
+                 (3L, 'Jesus M. Gonzalez-Barahona', 'jgb@gsyc.es'),
+                 (4L, 'Daniel Izquierdo', 'dizquierdo@bitergia.com'),
+                 (5L, 'Daniel Izquierdo Cortazar', 'dizquierdo@bitergia.com'),
+                 (6L, 'Luis Cañas-Díaz', 'lcanas@bitergia.com')],
+            "all":
+                [(1L, 'Alvaro del Castillo', 'acs@bitergia.com'),
+                 (3L, 'Jesus M. Gonzalez-Barahona', 'jgb@gsyc.es'),
+                 (4L, 'Daniel Izquierdo', 'dizquierdo@bitergia.com'),
+                 (5L, 'Daniel Izquierdo Cortazar', 'dizquierdo@bitergia.com'),
+                 (6L, 'Luis Cañas-Díaz', 'lcanas@bitergia.com')]}
+
+        self._test_select_listpersons ("authors", correct["authors"])
+        self._test_select_listpersons ("committers", correct["committers"])
+        self._test_select_listpersons ("all", correct["all"])
 
 if __name__ == "__main__":
     unittest.main()
