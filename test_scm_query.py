@@ -27,6 +27,9 @@ from datetime import datetime
 import unittest
 
 database = 'mysql://jgb:XXX@localhost/vizgrimoire_cvsanaly'
+# Set UTF-8, and avoid the DBAPI Unicode support, to use SQLAlchemy's,
+# which is said to be more efficient
+database += '?charset=utf8&use_unicode=0'
 
 class TestBuildSession (unittest.TestCase):
 
