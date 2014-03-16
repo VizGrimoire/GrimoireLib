@@ -22,7 +22,7 @@
 ##   Jesus M. Gonzalez-Barahona <jgb@bitergia.com>
 ##
 
-from scm_query import buildSession
+from scm_query import buildSession, SCMLog
 from datetime import datetime
 import unittest
 
@@ -128,8 +128,6 @@ class TestSCMQuery (unittest.TestCase):
                 .select_listpersons(kind)
         res = res.filter_period(start=self.start, end=self.end) \
             .limit(5).all()
-        print kind
-        print res
         self.assertEqual (res, correct)
 
     def test_select_listpersons (self):
@@ -185,6 +183,25 @@ class TestSCMQuery (unittest.TestCase):
                                            correct = correct["committers"])
             self._test_select_listpersons (kind = "all", uid = uid,
                                            correct = correct["all"])
+
+    def test_select_listbranches (self):
+        """Test select_listbranches"""
+
+        correct = [
+            [(1L, 'master'), (2L, 'tinycolor'), (3L, 'webkit-companies'),
+             (4L, 'openstack-bootstrap'), (5L, 'openstack'),
+             (6L, 'apiClean'), (7L, 'puppet'), (8L, 'redhat'),
+             (9L, 'mediawiki'), (10L, '1.x'), (11L, 'issue-4'),
+             (12L, 'minJSONfiles'), (13L, 'restapi'),
+             (14L, 'unique-ids'), (15L, 'newperiodR'),
+             (16L, 'newperiod'), (17L, 'gerrit')],
+            [(1L, 'master'), (13L, 'restapi')]
+            ]
+        res = self.session.query().select_listbranches()
+        self.assertEqual (res.all(), correct[0])
+        res = res.join(SCMLog) \
+            .filter_period(start=self.start, end=self.end)
+        self.assertEqual (res.all(), correct[1])
 
 if __name__ == "__main__":
     unittest.main()

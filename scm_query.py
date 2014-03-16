@@ -70,6 +70,7 @@ class Actions(Base):
 
     __tablename__ = 'actions'
     commit_id = Column(Integer, ForeignKey('scmlog.id'))
+    branch_id = Column(Integer, ForeignKey('branches.id'))
 
 class PeopleUPeople(Base):
     """people_upeople"""
@@ -81,6 +82,11 @@ class UPeople(Base):
     """upeople"""
 
     __tablename__ = 'upeople'
+
+class Branches(Base):
+    """branches"""
+
+    __tablename__ = 'branches'
 
 
 class SCMQuery (Query):
@@ -165,6 +171,21 @@ class SCMQuery (Query):
         else:
             raise Exception ("select_listpersons: Unknown kind %s." \
                              % kind)
+
+    def select_listbranches(self):
+        """Select list of branches in repo
+
+        Returns a list with a tuple (id, name) per branch
+        The Actions table is used, instead of the Branches table,
+        so that some filters, such as filter_period() can be used
+        """
+
+        query = self.add_columns (label("id",
+                                        func.distinct(Actions.branch_id)),
+                                  label("name",
+                                        Branches.name))
+        query = query.join(Branches)
+        return query
 
     def filter_nomerges (self):
         """Consider only commits that touch files (no merges)
@@ -306,3 +327,11 @@ if __name__ == "__main__":
     print res
     for row in res.limit(10).all():
         print row.id, row.name
+    # List of branches
+    res = session.query().select_listbranches()
+    print res.all()
+    res = session.query().select_listbranches() \
+        .join(SCMLog) \
+        .filter_period(start=datetime(2013,12,1),
+                       end=datetime(2014,2,1))
+    print res.all()
