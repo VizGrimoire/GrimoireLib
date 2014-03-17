@@ -30,15 +30,12 @@ from GrimoireUtils import createJSON, completePeriodIds
 from GrimoireUtils import read_options, getPeriod, read_main_conf
 from SCM import GetPeopleListSCM
 from data_source import DataSource
-
-# All data sources
-import SCM, ITS, MLS, SCR, Mediawiki, IRC
-data_sources = [SCM.SCM, ITS.ITS, MLS.MLS, SCR.SCR, Mediawiki.Mediawiki, IRC.IRC]
+from report import Report
 
 def get_evol_report(startdate, enddate, identities_db, bots, type_analysis):
     all_ds = {}
 
-    for ds in data_sources:
+    for ds in Report.get_data_sources():
         if not ds.get_db_name() in automator['generic']: continue
         db = automator['generic'][ds.get_db_name()]
         GrimoireSQL.SetDBChannel (database=db, user=opts.dbuser, password=opts.dbpassword)
@@ -48,7 +45,7 @@ def get_evol_report(startdate, enddate, identities_db, bots, type_analysis):
 def get_agg_report(startdate, enddate, identities_db, bots, type_analysis):
     all_ds = {}
 
-    for ds in data_sources:
+    for ds in Report.get_data_sources():
         if not ds.get_db_name() in automator['generic']: continue
         db = automator['generic'][ds.get_db_name()]
         GrimoireSQL.SetDBChannel (database=db, user=opts.dbuser, password=opts.dbpassword)
