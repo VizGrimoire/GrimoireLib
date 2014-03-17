@@ -54,17 +54,17 @@ if __name__ == '__main__':
     ips = EvolIPs(period, startdate, enddate)
     evol = dict(downloads.items() + packages.items() + protocols.items() + ips.items())
     evol = completePeriodIds(evol)
-    createJSON (evol, destdir+"/downs-evolutionary.json")
+    createJSON (evol, destdir+"/downloads-evolutionary.json")
 
     downloads = AggDownloads(period, startdate, enddate)
     packages = AggPackages(period, startdate, enddate)
     protocols = AggProtocols(period, startdate, enddate)
     ips = AggIPs(period, startdate, enddate)
     agg = dict(downloads.items() + packages.items() + protocols.items() + ips.items())
-    createJSON(agg, destdir+"/downs-static.json")
+    createJSON(agg, destdir+"/downloads-static.json")
 
-    top20ips = TopIPs(startdate, enddate, 20)
-    createJSON(top20ips, destdir+"/downs-top-ips.json")
-    top20packages = TopPackages(startdate, enddate, 20)
-    createJSON(top20packages, destdir+"/downs-top-packages.json")
+    top20 = {}
+    top20['ips.'] = TopIPs(startdate, enddate, 20)
+    top20['packages.'] = TopPackages(startdate, enddate, 20)
+    createJSON(top20, destdir+"/downloads-top.json")
 
