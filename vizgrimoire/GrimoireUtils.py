@@ -24,6 +24,7 @@
 # Misc utils to be distributed in specific modules
 
 import calendar
+from ConfigParser import SafeConfigParser
 from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
 from dateutil import parser
@@ -432,3 +433,21 @@ def checkFloatArray(data):
         data[i] = float(val)
         if (val == 0): data[i] = 0
     return data
+
+def read_main_conf(config_file):
+    options = {}
+    parser = SafeConfigParser()
+    fd = open(config_file, 'r')
+    parser.readfp(fd)
+    fd.close()
+
+    sec = parser.sections()
+    # we'll read "generic" for db information and "r" for start_date
+    for s in sec:
+        if not((s == "generic") or (s == "r")):
+            continue
+        options[s] = {}
+        opti = parser.options(s)
+        for o in opti:
+            options[s][o] = parser.get(s, o)
+    return options
