@@ -38,7 +38,7 @@ class IRC(DataSource):
 
     @staticmethod
     def get_evolutionary_data (period, startdate, enddate, i_db, type_analysis):
-        GetEvolDataIRC (period, startdate, enddate, i_db, type_analysis)
+        return GetEvolDataIRC (period, startdate, enddate, i_db, type_analysis)
 
 # SQL Metaqueries
 def GetIRCSQLRepositoriesFrom ():

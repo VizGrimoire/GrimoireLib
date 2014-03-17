@@ -41,7 +41,7 @@ class Mediawiki(DataSource):
 
     @staticmethod
     def get_evolutionary_data (period, startdate, enddate, i_db, type_analysis):
-        GetEvolDataMediaWiki (period, startdate, enddate, i_db, type_analysis)
+        return GetEvolDataMediaWiki (period, startdate, enddate, i_db, type_analysis)
 
 # SQL Metaqueries
 

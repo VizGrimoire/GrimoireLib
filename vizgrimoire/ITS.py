@@ -29,10 +29,9 @@
 
 import re
 
-from GrimoireSQL import GetSQLGlobal, GetSQLPeriod, GetSQLReportFrom
-from GrimoireSQL import GetSQLReportWhere, ExecuteQuery, BuildQuery
-from GrimoireUtils import GetPercentageDiff, GetDates, completePeriodIds
-import GrimoireUtils
+from GrimoireSQL import GetSQLGlobal, GetSQLPeriod
+from GrimoireSQL import ExecuteQuery, BuildQuery
+from GrimoireUtils import GetPercentageDiff, GetDates, completePeriodIds, read_options, read_main_conf
 
 from data_source import DataSource
 
@@ -46,8 +45,14 @@ class ITS(DataSource):
     def get_name(): return "ITS"
 
     @staticmethod
-    def get_evolutionary_data (period, startdate, enddate, i_db, type_analysis, closed_condition):
-        return EvolITSInfo (period, startdate, enddate, i_db, type_analysis, closed_condition)
+    def get_evolutionary_data (period, startdate, enddate, i_db, type_analysis):
+        opts = read_options()
+        # TODO: DRY
+        opts.config_file = "../../../conf/main.conf"
+        automator = read_main_conf(opts.config_file)
+        its_backend = automator['generic']['bicho_backend']
+        backend = Backend(its_backend)
+        return EvolITSInfo (period, startdate, enddate, i_db, type_analysis,  backend.closed_condition)
 
 ##############
 # Specific FROM and WHERE clauses per type of report

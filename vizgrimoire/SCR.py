@@ -31,7 +31,7 @@ from numpy import median, average
 
 from GrimoireSQL import GetSQLGlobal, GetSQLPeriod
 from GrimoireSQL import ExecuteQuery
-from GrimoireUtils import GetPercentageDiff, GetDates, completePeriodIds, checkListArray, removeDecimals
+from GrimoireUtils import GetPercentageDiff, GetDates, completePeriodIds, checkListArray, removeDecimals, read_options
 
 from data_source import DataSource
 
@@ -45,7 +45,8 @@ class SCR(DataSource):
     def get_name(): return "Mediawiki"
 
     @staticmethod
-    def get_evolutionary_data (period, startdate, enddate, i_db, type_analysis, conf):
+    def get_evolutionary_data (period, startdate, enddate, i_db, type_analysis):
+        conf = read_options()
         evol = {}
         data = EvolReviewsSubmitted(period, startdate, enddate)
         evol = dict(evol.items() + completePeriodIds(data).items())
@@ -94,6 +95,7 @@ class SCR(DataSource):
                 data['review_time_days_avg'][i] = float(val)
                 if (val == 0): data['review_time_days_avg'][i] = 0
             evol = dict(evol.items() + completePeriodIds(data).items())
+        return evol
 
 ##########
 # Specific FROM and WHERE clauses per type of report
