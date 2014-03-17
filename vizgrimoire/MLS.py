@@ -44,8 +44,9 @@ class MLS(DataSource):
     def get_name(): return "MLS"
 
     @staticmethod
-    def get_evolutionary_data (period, startdate, enddate, i_db, type_analysis, rfield = ""):
-        EvolMLSInfo (period, startdate, enddate, i_db, rfield, type_analysis)
+    def get_evolutionary_data (period, startdate, enddate, i_db, type_analysis):
+        rfield = "mailing_list_url"
+        return EvolMLSInfo (period, startdate, enddate, i_db, rfield, type_analysis)
 
 ##############
 # Specific FROM and WHERE clauses per type of report
