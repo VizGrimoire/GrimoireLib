@@ -25,7 +25,7 @@
 
 import MySQLdb
 import logging
-import re
+import re, sys
 
 
 # global vars to be moved to specific classes
@@ -44,7 +44,7 @@ def GetSQLReportFrom (identities_db, type_analysis):
     if (type_analysis is None or len(type_analysis) != 2): return ""
 
     analysis = type_analysis[0]
-    value = type_analysis[1]
+    # value = type_analysis[1]
 
     tables = ""
 
@@ -94,7 +94,7 @@ def GetSQLGlobal(date, fields, tables, filters, start, end):
     return(sql)
 
 def GetSQLPeriod(period, date, fields, tables, filters, start, end):
-    kind = ['year','month','week','day']
+    # kind = ['year','month','week','day']
     iso_8601_mode = 3
     if (period == 'day'):
         # Remove time so unix timestamp is start of day    
@@ -144,57 +144,57 @@ def GetSQLRepositoriesFrom():
 
 def GetSQLRepositoriesWhere(repository):
     #fields necessaries to match info among tables
-    filter = " and r.name ="+ repository + \
+    filter_ = " and r.name ="+ repository + \
              " and r.id = s.repository_id"
-    return (filter)
+    return (filter_)
 
 def GetSQLCompaniesFrom(identities_db):
     #tables necessaries for companies
-    filter = " , "+identities_db+".people_upeople pup,"+\
+    filter_ = " , "+identities_db+".people_upeople pup,"+\
                   identities_db+".upeople_companies upc,"+ \
                   identities_db+".companies c"
-    return (filter)
+    return (filter_)
 
 def GetSQLCompaniesWhere (company, role):
     #fields necessaries to match info among tables
-    filter = "and s."+role+"_id = pup.people_id "+\
+    filter_ = "and s."+role+"_id = pup.people_id "+\
              "and pup.upeople_id = upc.upeople_id "+\
              "and s.date >= upc.init "+\
              "and s.date < upc.end "+\
              "and upc.company_id = c.id "+\
              "and c.name ="+ company
-    return(filter)
+    return(filter_)
 
 def GetSQLCountriesFrom (identities_db):
     #tables necessaries for companies
-    filter = " , "+identities_db+".people_upeople pup," +\
+    filter_ = " , "+identities_db+".people_upeople pup," +\
                   identities_db+"upeople_countries upc",+\
                   identities_db+".countries c"
-    return(filter)
+    return(filter_)
 
 
 def GetSQLCountriesWhere (country, role):
     #fields necessaries to match info among tables
-    filter = "and s."+role+"_id = pup.people_id "+\
+    filter_ = "and s."+role+"_id = pup.people_id "+\
              "and pup.upeople_id = upc.upeople_id "+\
              "and upc.country_id = c.id "+\
              "and c.name ="+country
-    return(filter)
+    return(filter_)
 
 def GetSQLDomainsFrom (identities_db):
     #tables necessaries for domains
-    filter = " , "+identities_db+".people_upeople pup, "+\
+    filter_ = " , "+identities_db+".people_upeople pup, "+\
                    identities_db+".upeople_domains upd "+\
                    identities_db+".domains d"
-    return(filter)
+    return(filter_)
 
 def GetSQLDomainsWhere (domain, role):
     #fields necessaries to match info among tables
-    filter = "and s."+role+"_id = pup.people_id " +\
+    filter_ = "and s."+role+"_id = pup.people_id " +\
              " and pup.upeople_id = upd.upeople_id "+\
              " and upd.domain_id = d.id "+\
              " and d.name ="+ domain
-    return(filter)
+    return(filter_)
 ############
 #Generic functions to check evolutionary or static info and for the execution of the final query
 ###########
@@ -204,25 +204,25 @@ def BuildQuery (period, startdate, enddate, date_field, fields, tables, filters,
     q = ""
 
     if (evolutionary):
-         q = GetSQLPeriod(period, date_field, fields, tables, filters,
+        q = GetSQLPeriod(period, date_field, fields, tables, filters,
                           startdate, enddate)
     else:
-         q = GetSQLGlobal(date_field, fields, tables, filters,
+        q = GetSQLGlobal(date_field, fields, tables, filters,
                           startdate, enddate)
 
     return(q)
 
 def SetDBChannel (user=None, password=None, database=None,
                   host="127.0.0.1", port=3306, group=None):
-  global cursor
-  if (group == None):
-      db = MySQLdb.connect(user=user, passwd=password,
-                           db=database, host=host, port=port)
-  else:
-    db = MySQLdb.connect(read_default_group=group, db=database)
+    global cursor
+    if (group == None):
+        db = MySQLdb.connect(user=user, passwd=password,
+                             db=database, host=host, port=port)
+    else:
+        db = MySQLdb.connect(read_default_group=group, db=database)
 
-  cursor = db.cursor()
-  cursor.execute("SET NAMES 'utf8'")
+    cursor = db.cursor()
+    cursor.execute("SET NAMES 'utf8'")
 
 def ExecuteQuery (sql):
     result = {}
