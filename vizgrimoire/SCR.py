@@ -33,6 +33,67 @@ from GrimoireSQL import GetSQLGlobal, GetSQLPeriod
 from GrimoireSQL import ExecuteQuery
 from GrimoireUtils import GetPercentageDiff, GetDates, completePeriodIds, checkListArray, removeDecimals
 
+from data_source import DataSource
+
+class SCR(DataSource):
+
+    @staticmethod
+    def get_db_name():
+        return "db_gerrit"
+
+    @staticmethod
+    def get_name(): return "Mediawiki"
+
+    @staticmethod
+    def get_evolutionary_data (period, startdate, enddate, i_db, type_analysis, conf):
+        evol = {}
+        data = EvolReviewsSubmitted(period, startdate, enddate)
+        evol = dict(evol.items() + completePeriodIds(data).items())
+        data = EvolReviewsOpened(period, startdate, enddate)
+        evol = dict(evol.items() + completePeriodIds(data).items())
+        data = EvolReviewsNew(period, startdate, enddate)
+        evol = dict(evol.items() + completePeriodIds(data).items())
+        data = EvolReviewsNewChanges(period, startdate, enddate)
+        evol = dict(evol.items() + completePeriodIds(data).items())
+        # data = EvolReviewsInProgress(period, startdate, enddate)
+        # evol = dict(evol.items() + completePeriodIds(data).items())
+        data = EvolReviewsClosed(period, startdate, enddate)
+        evol = dict(evol.items() + completePeriodIds(data).items())
+        data = EvolReviewsMerged(period, startdate, enddate)
+        evol = dict(evol.items() + completePeriodIds(data).items())
+        data = EvolReviewsMergedChanges(period, startdate, enddate)
+        evol = dict(evol.items() + completePeriodIds(data).items())
+        data = EvolReviewsAbandoned(period, startdate, enddate)
+        evol = dict(evol.items() + completePeriodIds(data).items())
+        data = EvolReviewsAbandonedChanges(period, startdate, enddate)
+        evol = dict(evol.items() + completePeriodIds(data).items())
+        data = EvolReviewsPending(period, startdate, enddate, conf, [])
+        evol = dict(evol.items() + completePeriodIds(data).items())
+        #Patches info
+        data = EvolPatchesVerified(period, startdate, enddate)
+        evol = dict(evol.items() + completePeriodIds(data).items())
+        # data = SCR.EvolPatchesApproved(period, startdate, enddate)
+        # evol = dict(evol.items() + completePeriodIds(data).items())
+        data = EvolPatchesCodeReview(period, startdate, enddate)
+        evol = dict(evol.items() + completePeriodIds(data).items())
+        data = EvolPatchesSent(period, startdate, enddate)
+        evol = dict(evol.items() + completePeriodIds(data).items())
+        #Waiting for actions info
+        data = EvolWaiting4Reviewer(period, startdate, enddate)
+        evol = dict(evol.items() + completePeriodIds(data).items())
+        data = EvolWaiting4Submitter(period, startdate, enddate)
+        evol = dict(evol.items() + completePeriodIds(data).items())
+        #Reviewers info
+        data = EvolReviewers(period, startdate, enddate)
+        evol = dict(evol.items() + completePeriodIds(data).items())
+        # Time to Review info
+        if period == "month": # only month supported now
+            data = EvolTimeToReviewSCR (period, startdate, enddate)
+            for i in range(0,len(data['review_time_days_avg'])):
+                val = data['review_time_days_avg'][i] 
+                data['review_time_days_avg'][i] = float(val)
+                if (val == 0): data['review_time_days_avg'][i] = 0
+            evol = dict(evol.items() + completePeriodIds(data).items())
 
 ##########
 # Specific FROM and WHERE clauses per type of report
@@ -441,14 +502,14 @@ def GetWaiting4Reviewer (period, startdate, enddate, identities_db, type_analysi
                "  and (c.field='CRVW' or c.field='Code-Review' or c.field='Verified' or c.field='VRIF') "+\
                "  and (c.new_value=1 or c.new_value=2) "
     filters = filters + GetSQLReportWhereSCR(type_analysis)
-    
+
     if (evolutionary):
         q = GetSQLPeriod(period, " c.changed_on", fields, tables, filters,
                           startdate, enddate)
     else:
         q = GetSQLGlobal(" c.changed_on ", fields, tables, filters,
                           startdate, enddate)
-    
+
     return(ExecuteQuery(q))
 
 

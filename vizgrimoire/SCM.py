@@ -30,10 +30,14 @@ from GrimoireSQL import GetSQLGlobal, GetSQLPeriod
 # TODO integrate: from GrimoireSQL import  GetSQLReportFrom 
 from GrimoireSQL import GetSQLReportWhere, ExecuteQuery, BuildQuery
 from GrimoireUtils import GetPercentageDiff, GetDates, completePeriodIds
-from DataSource import DataSource
+from data_source import DataSource
 
 
 class SCM(DataSource):
+
+    @staticmethod
+    def get_db_name():
+        return "db_cvsanaly"
 
     @staticmethod
     def get_name():

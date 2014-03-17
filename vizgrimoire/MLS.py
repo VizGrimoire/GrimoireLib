@@ -32,6 +32,21 @@ from GrimoireSQL import GetSQLGlobal, GetSQLPeriod
 from GrimoireSQL import ExecuteQuery, BuildQuery
 from GrimoireUtils import GetPercentageDiff, GetDates, completePeriodIds
 
+from data_source import DataSource
+
+class MLS(DataSource):
+
+    @staticmethod
+    def get_db_name():
+        return "db_mlstats"
+
+    @staticmethod
+    def get_name(): return "MLS"
+
+    @staticmethod
+    def get_evolutionary_data (period, startdate, enddate, i_db, type_analysis, rfield = ""):
+        EvolMLSInfo (period, startdate, enddate, i_db, rfield, type_analysis)
+
 ##############
 # Specific FROM and WHERE clauses per type of report
 ##############

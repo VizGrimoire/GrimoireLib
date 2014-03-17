@@ -25,13 +25,16 @@
 from GrimoireSQL import GetSQLGlobal, GetSQLPeriod, GetSQLReportFrom
 from GrimoireSQL import GetSQLReportWhere, ExecuteQuery, BuildQuery
 from GrimoireUtils import GetPercentageDiff, GetDates
-import DataSource
+from data_source import DataSource
 
 class IRC(DataSource):
 
     @staticmethod
-    def get_name():
-        return "IRC"
+    def get_db_name():
+        return "db_irc"
+
+    @staticmethod
+    def get_name(): return "IRC"
 
     @staticmethod
     def get_evolutionary_data (period, startdate, enddate, i_db, type_analysis):
