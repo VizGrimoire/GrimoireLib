@@ -25,52 +25,26 @@
 import logging
 import sys
 
-from ConfigParser import SafeConfigParser
-
 import GrimoireUtils, GrimoireSQL
 from GrimoireUtils import createJSON, completePeriodIds
-from GrimoireUtils import read_options, getPeriod
+from GrimoireUtils import read_options, getPeriod, read_main_conf
 from SCM import GetPeopleListSCM
 from data_source import DataSource
 
-def read_main_conf(config_file):
-    options = {}
-    parser = SafeConfigParser()
-    fd = open(config_file, 'r')
-    parser.readfp(fd)
-    fd.close()
-
-    sec = parser.sections()
-    # we'll read "generic" for db information and "r" for start_date
-    for s in sec:
-        if not((s == "generic") or (s == "r")):
-            continue
-        options[s] = {}
-        opti = parser.options(s)
-        for o in opti:
-            options[s][o] = parser.get(s, o)
-    return options
-
-def create_evol_report(startdate, enddate, identities_db, bots, type_analysis, its_backend):
+def get_evol_report(startdate, enddate, identities_db, bots, type_analysis):
     # TODO: DRY this options
-    opts = read_options()
-    opts.config_file = "../../../conf/main.conf"
-    automator = read_main_conf(opts.config_file)
+
+    all_ds = {}
 
     import SCM, ITS, MLS, SCR, Mediawiki, IRC
-    from ITS import Backend
-    backend = Backend(its_backend)
     data_sources = [SCM.SCM, ITS.ITS, MLS.MLS, SCR.SCR, Mediawiki.Mediawiki, IRC.IRC]
 
     for ds in data_sources:
         if not ds.get_db_name() in automator['generic']: continue
         db = automator['generic'][ds.get_db_name()]
         GrimoireSQL.SetDBChannel (database=db, user=opts.dbuser, password=opts.dbpassword)
-        if (ds == ITS.ITS):
-            ds.get_evolutionary_data (period, startdate, enddate, identities_db, type_analysis, backend.closed_condition)
-        else:
-            ds.get_evolutionary_data (period, startdate, enddate, identities_db, type_analysis)
-
+        all_ds[ds.get_name()] = ds.get_evolutionary_data (period, startdate, enddate, identities_db, type_analysis)
+    return all_ds
 
 
 if __name__ == '__main__':
@@ -89,6 +63,6 @@ if __name__ == '__main__':
 
     opts.config_file = "../../../conf/main.conf"
     automator = read_main_conf(opts.config_file)
-    create_evol_report(startdate, enddate, opts.identities_db, [], [], automator['generic']['bicho_backend'])
+    print(get_evol_report(startdate, enddate, opts.identities_db, [], []))
 
     logging.info("Report data source analysis OK")
