@@ -44,6 +44,9 @@ class IRC(DataSource):
     def get_agg_data (period, startdate, enddate, i_db, type_analysis):
         return GetStaticDataIRC (period, startdate, enddate, i_db, type_analysis)
 
+    @staticmethod
+    def create_filter_report(period, startdate, enddate, identities_db, filter_):
+        pass
 
 # SQL Metaqueries
 def GetIRCSQLRepositoriesFrom ():

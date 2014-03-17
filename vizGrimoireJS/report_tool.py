@@ -25,11 +25,9 @@
 import logging
 import sys
 
-import GrimoireUtils, GrimoireSQL
-from GrimoireUtils import createJSON, completePeriodIds
+import GrimoireSQL
+from GrimoireUtils import createJSON
 from GrimoireUtils import read_options, getPeriod, read_main_conf
-from SCM import GetPeopleListSCM
-from data_source import DataSource
 from report import Report
 
 def get_evol_report(startdate, enddate, identities_db, bots, type_analysis):
@@ -48,8 +46,18 @@ def get_agg_report(startdate, enddate, identities_db, bots, type_analysis):
         all_ds[ds.get_name()] = ds.get_agg_data (period, startdate, enddate, identities_db, type_analysis)
     return all_ds
 
+def create_reports(startdate, enddate, identities_db, bots):
+    for ds in Report.get_data_sources():
+        Report.connect_ds(ds)
+        logging.info("Creating reports for " + ds.get_name())
+        for filter_ in Report.get_filters():
+            logging.info("-> " + filter_.get_name())
+            ds.create_filter_report(filter_, startdate, enddate, identities_db, bots)
 
 if __name__ == '__main__':
+
+    Report.init()
+
     logging.basicConfig(level=logging.INFO,format='%(asctime)s %(message)s')
     logging.info("Starting Report analysis")
     opts = read_options()
@@ -59,13 +67,10 @@ if __name__ == '__main__':
     startdate = "'"+opts.startdate+"'"
     enddate = "'"+opts.enddate+"'"
 
-    # Working at the same time with VizR and VizPy yet
-    # vizr.SetDBChannel (database=opts.dbname, user=opts.dbuser, password=opts.dbpassword)
-    GrimoireSQL.SetDBChannel (database=opts.dbname, user=opts.dbuser, password=opts.dbpassword)
-
     opts.config_file = "../../../conf/main.conf"
     automator = read_main_conf(opts.config_file)
-    print(get_evol_report(startdate, enddate, opts.identities_db, [], []))
-    print(get_agg_report(startdate, enddate, opts.identities_db, [], []))
+    evol = get_evol_report(startdate, enddate, opts.identities_db, [], [])
+    agg = get_agg_report(startdate, enddate, opts.identities_db, [], [])
+    create_reports(startdate, enddate, opts.identities_db, [])
 
     logging.info("Report data source analysis OK")

@@ -53,6 +53,10 @@ class MLS(DataSource):
         rfield = "mailing_list_url"
         return StaticMLSInfo (period, startdate, enddate, i_db, rfield, type_analysis)
 
+    @staticmethod
+    def create_filter_report(period, startdate, enddate, identities_db, filter_):
+        pass
+
 ##############
 # Specific FROM and WHERE clauses per type of report
 ##############

@@ -144,6 +144,11 @@ class SCR(DataSource):
             period_data = GetSCRDiffAbandonedDays(period, enddate, i, i_db)
             agg = dict(agg.items() + period_data.items())
 
+    @staticmethod
+    def create_filter_report(period, startdate, enddate, identities_db, filter_):
+        pass
+
+
 ##########
 # Specific FROM and WHERE clauses per type of report
 ##########

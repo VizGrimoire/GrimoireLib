@@ -29,11 +29,14 @@
 from GrimoireSQL import GetSQLGlobal, GetSQLPeriod
 # TODO integrate: from GrimoireSQL import  GetSQLReportFrom 
 from GrimoireSQL import GetSQLReportWhere, ExecuteQuery, BuildQuery
-from GrimoireUtils import GetPercentageDiff, GetDates, completePeriodIds
+from GrimoireUtils import GetPercentageDiff, GetDates, completePeriodIds, createJSON, read_options, getPeriod
 from data_source import DataSource
+import logging
 
 
 class SCM(DataSource):
+
+    bots = []
 
     @staticmethod
     def get_db_name():
@@ -51,6 +54,51 @@ class SCM(DataSource):
     def get_agg_data (period, startdate, enddate, i_db, type_analysis):
         return GetSCMStaticData (period, startdate, enddate, i_db, type_analysis)
 
+    @staticmethod
+    def get_filter_items(filter_, startdate, enddate, identities_db, bots):
+        items = None
+        filter_name = filter_.get_name()
+
+        if (filter_name == "repository"):
+            items  = repos_name(startdate, enddate)
+        elif (filter_name == "company"):
+            items  = companies_name_wo_affs(bots, startdate, enddate)
+        elif (filter_name == "country"):
+            items = scm_countries_names (identities_db, startdate, enddate)
+        elif (filter_name == "domain"):
+            items = scm_domains_names (identities_db, startdate, enddate)
+        else:
+            logging.error(filter_name + " not supported")
+        return items
+
+    @staticmethod
+    def create_filter_report(filter_, startdate, enddate, identities_db, bots):
+        opts = read_options()
+        period = getPeriod(opts.granularity)
+
+        items = SCM.get_filter_items(filter_, startdate, enddate, identities_db, bots)
+        items = items['name']
+
+        filter_name = filter_.get_name()
+        filter_name_short = filter_.get_name_short()
+        if (filter_name == "repositories"): filter_name = "repos"
+
+        if not isinstance(items, (list)):
+            items = [items]
+
+        createJSON(items, opts.destdir+"/scm-"+filter_name+".json")
+
+        for item in items :
+            item_name = "'"+ item+ "'"
+            logging.info (item_name)
+            type_analysis = [filter_.get_name(), item_name]
+
+            evol_data = SCM.get_evolutionary_data (period, startdate, enddate, identities_db, type_analysis)
+            evol_data = completePeriodIds(evol_data)
+            createJSON(evol_data, opts.destdir+"/"+item+"-scm-"+filter_name_short+"-evolutionary.json")
+
+            agg = SCM.get_agg_data (period, startdate, enddate, identities_db, type_analysis)
+            createJSON(agg, opts.destdir+"/"+item+"-scm-"+filter_name_short+"-static.json")
 
 ##########
 # Meta-functions to automatically call metrics functions and merge them

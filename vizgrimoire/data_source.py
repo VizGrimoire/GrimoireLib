@@ -45,3 +45,10 @@ class DataSource(object):
     def get_agg_data (period, startdate, enddate, i_db, type_analysis):
         raise NotImplementedError
 
+    @staticmethod
+    def create_filter_report(period, startdate, enddate, identities_db, filter_):
+        raise NotImplementedError
+
+    @staticmethod
+    def get_filter_items(period, startdate, enddate, identities_db, filter_):
+        raise NotImplementedError
