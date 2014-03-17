@@ -207,6 +207,16 @@ def execute_mediawiki_script(env):
     os.system(cmd)
     print("MediaWiki analysis finished")
 
+def execute_downloads_script(env):
+    # Execute downloads analysis
+    if not 'db_downloads' in env:
+        print("downloads analysis disabled")
+        return
+    print("Starting Downloads analysis")
+    cmd = get_analysis_cmd(env, "download-analysis.py", env["db_downloads"])
+    os.system(cmd)
+    print("Downloads analysis finished")
+
 tasks_section = {
     'scm':execute_scm_script,
     'people':execute_people_script,
@@ -215,9 +225,10 @@ tasks_section = {
     'mls':execute_mls_script,
     'scr':execute_scr_script,
     'mediawiki':execute_mediawiki_script,
+    'downloads':execute_downloads_script,
     'irc': execute_irc_script,
 }
-tasks_order = ['scm','people','its','mls','scr','mediawiki','irc']
+tasks_order = ['scm','people','its','mls','scr','mediawiki','downloads,''irc']
 #tasks_order = ['scm','people','its','mls','scr','mediawiki','irc','people_experimental']
 
 
