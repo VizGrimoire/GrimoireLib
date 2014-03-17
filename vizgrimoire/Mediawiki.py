@@ -27,8 +27,21 @@
 from GrimoireSQL import GetSQLGlobal, GetSQLPeriod, GetSQLReportFrom 
 from GrimoireSQL import GetSQLReportWhere, ExecuteQuery, BuildQuery
 from GrimoireUtils import GetPercentageDiff, GetDates, completePeriodIds
-import GrimoireUtils
 
+from data_source import DataSource
+
+class Mediawiki(DataSource):
+
+    @staticmethod
+    def get_db_name():
+        return "db_mediawiki"
+
+    @staticmethod
+    def get_name(): return "Mediawiki"
+
+    @staticmethod
+    def get_evolutionary_data (period, startdate, enddate, i_db, type_analysis):
+        GetEvolDataMediaWiki (period, startdate, enddate, i_db, type_analysis)
 
 # SQL Metaqueries
 
