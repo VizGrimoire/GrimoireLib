@@ -209,6 +209,15 @@ class SCMQuery (Query):
 
         return self.join(Actions)
 
+    def filter_branches (self, branches):
+        """Filter variables for a set of branches
+
+        For considering only those commits that happened in a branch.
+        """
+
+        query = self.join(Actions,Branches).filter(Branches.name.in_(branches))
+        return query
+
     def filter_period(self, start = None, end = None, date = "commit"):
         """Filter variable for a period
 
@@ -337,9 +346,10 @@ if __name__ == "__main__":
         .select_listpersons("authors") \
         .filter_period(start=datetime(2013,12,1),
                        end=datetime(2014,2,1))
-    print res
     for row in res.limit(10).all():
         print row.id, row.name
+    res = res.filter_branches(("master",))
+    print res.all()
     # List of branches
     res = session.query().select_listbranches()
     print res.all()
