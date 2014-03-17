@@ -28,10 +28,9 @@
 
 import re
 
-from GrimoireSQL import GetSQLGlobal, GetSQLPeriod, GetSQLReportFrom
-from GrimoireSQL import GetSQLReportWhere, ExecuteQuery, BuildQuery
+from GrimoireSQL import GetSQLGlobal, GetSQLPeriod
+from GrimoireSQL import ExecuteQuery, BuildQuery
 from GrimoireUtils import GetPercentageDiff, GetDates, completePeriodIds
-import GrimoireUtils
 
 ##############
 # Specific FROM and WHERE clauses per type of report
@@ -126,7 +125,6 @@ def GetMLSSQLReportFrom (identities_db, type_analysis):
     if (len(type_analysis) != 2): return From
 
     analysis = type_analysis[0]
-    value = type_analysis[1]
 
     if analysis == 'repository': From = GetMLSSQLRepositoriesFrom()
     elif analysis == 'company': From = GetMLSSQLCompaniesFrom(identities_db)
@@ -176,6 +174,7 @@ def reposField () :
 def GetMLSFiltersResponse () :
     filters = GetMLSFiltersOwnUniqueIdsMLS()
     filters_response = filters + " AND m.is_response_of IS NOT NULL"
+    return filters_response
 
 ##########
 # Meta functions that aggregate all evolutionary or static data in one call
@@ -546,12 +545,12 @@ def reposNames  (rfield, startdate, enddate) :
         names = mailing_lists
     return (names)
 
-def countriesNames  (identities_db, startdate, enddate, filter=[]) :
+def countriesNames  (identities_db, startdate, enddate, filter_=[]) :
     countries_limit = 30
 
     filter_countries = ""
-    for country in filter:
-        filter_countries += " c.name<>'"+aff+"' AND "
+    for country in filter_:
+        filter_countries += " c.name<>'"+country+"' AND "
 
     q = "SELECT c.name as name, COUNT(m.message_ID) as sent "+\
             "FROM "+ GetTablesCountries(identities_db)+ " "+\
@@ -566,11 +565,11 @@ def countriesNames  (identities_db, startdate, enddate, filter=[]) :
     return(data['name'])
 
 
-def companiesNames  (i_db, startdate, enddate, filter=[]) :
+def companiesNames  (i_db, startdate, enddate, filter_=[]) :
     companies_limit = 30
     filter_companies = ""
 
-    for company in filter:
+    for company in filter_:
         filter_companies += " c.name<>'"+company+"' AND "
 
     q = "SELECT c.name as name, COUNT(DISTINCT(m.message_ID)) as sent "+\
@@ -587,11 +586,11 @@ def companiesNames  (i_db, startdate, enddate, filter=[]) :
     return (data['name'])
 
 
-def domainsNames  (i_db, startdate, enddate, filter=[]) :
+def domainsNames  (i_db, startdate, enddate, filter_=[]) :
     domains_limit = 30
     filter_domains = ""
 
-    for domain in filter:
+    for domain in filter_:
         filter_domains += " d.name<>'"+ domain + "' AND "
 
     q = "SELECT d.name as name, COUNT(DISTINCT(m.message_ID)) as sent "+\
@@ -663,10 +662,12 @@ def GetFiltersDomains () :
 def GetFiltersInit () :
     filters = GetFiltersOwnUniqueIdsMLS()
     filters_init = filters + " AND m.is_response_of IS NULL"
+    return filters_init
 
 def GetFiltersResponse () :
     filters = GetFiltersOwnUniqueIdsMLS()
     filters_response = filters + " AND m.is_response_of IS NOT NULL"
+    return filters_response
 
 def GetListPeopleMLS (startdate, enddate) :
     fields = "DISTINCT(pup.upeople_id) as id, count(m.message_ID) total"
@@ -714,11 +715,11 @@ def GetStaticPeopleMLS (developer_id, startdate, enddate) :
 #########################
 
 
-def top_senders (days, startdate, enddate, identities_db, filter, limit) :
+def top_senders (days, startdate, enddate, identities_db, filter_, limit) :
 
     affiliations = ""
-    if (not filter): filter = []
-    for aff in filter:
+    if (not filter_): filter_ = []
+    for aff in filter_:
         affiliations = affiliations+ " c.name<>'"+ aff +"' and "
 
     date_limit = ""
