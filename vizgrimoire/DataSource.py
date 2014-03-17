@@ -24,16 +24,16 @@
 ## Authors:
 ##   Alvaro del Castillo <acs@bitergia.com>
 
-import abc
 
 class DataSource(object):
-    __metaclass__ = abc.ABCMeta
+    #__metaclass__ = abc.ABCMeta
 
-    @abc.abstractmethod
-    def getName(): pass
+    @staticmethod
+    def get_name():
+        raise NotImplementedError
 
-    @abc.abstractmethod
-    def GetEvolutionaryData (period, startdate, enddate, i_db, type_analysis):
-        pass
+    @staticmethod
+    def get_evolutionary_data (period, startdate, enddate, i_db, type_analysis):
+        raise NotImplementedError
 
 

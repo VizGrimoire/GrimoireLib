@@ -229,8 +229,8 @@ def microStudies(enddate, destdir):
     vizr.ReportDemographicsBirthSCM(enddate, destdir)
 
 def testClass(period, startdate, enddate, identities_db, destdir, granularity, conf):
-    scm = SCM.SCM()
-    data = scm.GetEvolutionaryData(period, startdate, enddate, identities_db, None)
+    from SCM import SCM
+    data = SCM.get_evolutionary_data(period, startdate, enddate, identities_db, None)
     print(data)
 
 if __name__ == '__main__':

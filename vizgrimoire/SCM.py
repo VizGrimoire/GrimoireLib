@@ -36,11 +36,11 @@ from DataSource import DataSource
 class SCM(DataSource):
 
     @staticmethod
-    def getName():
+    def get_name():
         return "SCM"
 
     @staticmethod
-    def GetEvolutionaryData (period, startdate, enddate, i_db, type_analysis):
+    def get_evolutionary_data (period, startdate, enddate, i_db, type_analysis):
         # Meta function that includes basic evolutionary metrics from the source code
         # management system. Those are merged and returned.
 
