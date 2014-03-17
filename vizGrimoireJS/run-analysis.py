@@ -213,7 +213,7 @@ def execute_downloads_script(env):
         print("downloads analysis disabled")
         return
     print("Starting Downloads analysis")
-    cmd = get_analysis_cmd(env, "download-analysis.py", env["db_downloads"])
+    cmd = get_analysis_cmd(env, "downloads-analysis.py", env["db_downloads"])
     os.system(cmd)
     print("Downloads analysis finished")
 
