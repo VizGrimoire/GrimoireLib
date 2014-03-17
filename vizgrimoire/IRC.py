@@ -40,6 +40,11 @@ class IRC(DataSource):
     def get_evolutionary_data (period, startdate, enddate, i_db, type_analysis):
         return GetEvolDataIRC (period, startdate, enddate, i_db, type_analysis)
 
+    @staticmethod
+    def get_agg_data (period, startdate, enddate, i_db, type_analysis):
+        pass
+
+
 # SQL Metaqueries
 def GetIRCSQLRepositoriesFrom ():
     # tables necessary for repositories

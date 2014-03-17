@@ -25,11 +25,35 @@
 ##   Alvaro del Castillo <acs@bitergia.com>
 
 
+from GrimoireSQL import SetDBChannel
+from GrimoireUtils import read_options, read_main_conf
 import SCM, ITS, MLS, SCR, Mediawiki, IRC
 
 class Report(object):
 
     @staticmethod
+    def _get_config():
+        opts = read_options()
+
+        opts.config_file = "../../../conf/main.conf"
+        automator = read_main_conf(opts.config_file)
+
+        return automator
+
+    @staticmethod
+    def connect_ds(ds):
+        opts = read_options()
+        automator = Report._get_config()
+        db = automator['generic'][ds.get_db_name()]
+        SetDBChannel (database=db, user=opts.dbuser, password=opts.dbpassword)
+
+    @staticmethod
     def get_data_sources():
-        data_sources = [SCM.SCM, ITS.ITS, MLS.MLS, SCR.SCR, Mediawiki.Mediawiki, IRC.IRC]
+        automator = Report._get_config()
+        all_data_sources = [SCM.SCM, ITS.ITS, MLS.MLS, SCR.SCR, Mediawiki.Mediawiki, IRC.IRC]
+        data_sources= []
+
+        for ds in all_data_sources:
+            if not ds.get_db_name() in automator['generic']: continue
+            else: data_sources.append(ds)
         return data_sources

@@ -43,6 +43,11 @@ class Mediawiki(DataSource):
     def get_evolutionary_data (period, startdate, enddate, i_db, type_analysis):
         return GetEvolDataMediaWiki (period, startdate, enddate, i_db, type_analysis)
 
+    @staticmethod
+    def get_agg_data (period, startdate, enddate, i_db, type_analysis):
+        pass
+
+
 # SQL Metaqueries
 
 def GetTablesOwnUniqueIdsMediaWiki () :

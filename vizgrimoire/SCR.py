@@ -97,6 +97,11 @@ class SCR(DataSource):
             evol = dict(evol.items() + completePeriodIds(data).items())
         return evol
 
+    @staticmethod
+    def get_agg_data (period, startdate, enddate, i_db, type_analysis):
+        pass
+
+
 ##########
 # Specific FROM and WHERE clauses per type of report
 ##########

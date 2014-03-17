@@ -36,9 +36,7 @@ def get_evol_report(startdate, enddate, identities_db, bots, type_analysis):
     all_ds = {}
 
     for ds in Report.get_data_sources():
-        if not ds.get_db_name() in automator['generic']: continue
-        db = automator['generic'][ds.get_db_name()]
-        GrimoireSQL.SetDBChannel (database=db, user=opts.dbuser, password=opts.dbpassword)
+        Report.connect_ds(ds)
         all_ds[ds.get_name()] = ds.get_evolutionary_data (period, startdate, enddate, identities_db, type_analysis)
     return all_ds
 
@@ -46,9 +44,7 @@ def get_agg_report(startdate, enddate, identities_db, bots, type_analysis):
     all_ds = {}
 
     for ds in Report.get_data_sources():
-        if not ds.get_db_name() in automator['generic']: continue
-        db = automator['generic'][ds.get_db_name()]
-        GrimoireSQL.SetDBChannel (database=db, user=opts.dbuser, password=opts.dbpassword)
+        Report.connect_ds(ds)
         all_ds[ds.get_name()] = ds.get_agg_data (period, startdate, enddate, identities_db, type_analysis)
     return all_ds
 
@@ -70,6 +66,6 @@ if __name__ == '__main__':
     opts.config_file = "../../../conf/main.conf"
     automator = read_main_conf(opts.config_file)
     print(get_evol_report(startdate, enddate, opts.identities_db, [], []))
-    # print(get_agg_report(startdate, enddate, opts.identities_db, [], []))
+    print(get_agg_report(startdate, enddate, opts.identities_db, [], []))
 
     logging.info("Report data source analysis OK")

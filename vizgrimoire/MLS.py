@@ -48,6 +48,11 @@ class MLS(DataSource):
         rfield = "mailing_list_url"
         return EvolMLSInfo (period, startdate, enddate, i_db, rfield, type_analysis)
 
+    @staticmethod
+    def get_agg_data (period, startdate, enddate, i_db, type_analysis):
+        pass
+
+
 ##############
 # Specific FROM and WHERE clauses per type of report
 ##############

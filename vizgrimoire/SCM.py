@@ -45,25 +45,11 @@ class SCM(DataSource):
 
     @staticmethod
     def get_evolutionary_data (period, startdate, enddate, i_db, type_analysis):
-        # Meta function that includes basic evolutionary metrics from the source code
-        # management system. Those are merged and returned.
+        return GetSCMEvolutionaryData (period, startdate, enddate, i_db, type_analysis)
 
-        # 1- Retrieving information
-        commits = completePeriodIds(EvolCommits(period, startdate, enddate, i_db, type_analysis))
-        authors = completePeriodIds(EvolAuthors(period, startdate, enddate, i_db, type_analysis))
-        committers = completePeriodIds(EvolCommitters(period, startdate, enddate, i_db, type_analysis))
-        files = completePeriodIds(EvolFiles(period, startdate, enddate, i_db, type_analysis))
-        lines = completePeriodIds(EvolLines(period, startdate, enddate, i_db, type_analysis))
-        branches = completePeriodIds(EvolBranches(period, startdate, enddate, i_db, type_analysis))
-        repositories = completePeriodIds(EvolRepositories(period, startdate, enddate, i_db, type_analysis))
-
-        # 2- Merging information
-        evol = dict(commits.items() + repositories.items() + committers.items())
-        evol = dict(evol.items() + authors.items() + files.items())
-        evol = dict(evol.items() + lines.items() + branches.items())
-
-        return (evol)
-
+    @staticmethod
+    def get_agg_data (period, startdate, enddate, i_db, type_analysis):
+        return GetSCMStaticData (period, startdate, enddate, i_db, type_analysis)
 
 
 ##########

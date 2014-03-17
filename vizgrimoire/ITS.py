@@ -54,6 +54,11 @@ class ITS(DataSource):
         backend = Backend(its_backend)
         return EvolITSInfo (period, startdate, enddate, i_db, type_analysis,  backend.closed_condition)
 
+    @staticmethod
+    def get_agg_data (period, startdate, enddate, i_db, type_analysis):
+        pass
+
+
 ##############
 # Specific FROM and WHERE clauses per type of report
 ##############
