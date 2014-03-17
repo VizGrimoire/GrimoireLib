@@ -27,15 +27,11 @@
 ##   Daniel Izquierdo <dizquierdo@bitergia.com>
 ##   Alvaro del Castillo San Felix <acs@bitergia.com>
 
-import time
 from numpy import median, average
 
-
-
-from GrimoireSQL import GetSQLGlobal, GetSQLPeriod, GetSQLReportFrom
-from GrimoireSQL import GetSQLReportWhere, ExecuteQuery, BuildQuery
+from GrimoireSQL import GetSQLGlobal, GetSQLPeriod
+from GrimoireSQL import ExecuteQuery
 from GrimoireUtils import GetPercentageDiff, GetDates, completePeriodIds, checkListArray, removeDecimals
-import GrimoireUtils
 
 
 ##########
@@ -97,7 +93,6 @@ def GetSQLReportFromSCR (identities_db, type_analysis):
     if (len(type_analysis) != 2): return From
 
     analysis = type_analysis[0]
-    value = type_analysis[1]
 
     if (analysis):
         if analysis == 'repository': From = GetSQLRepositoriesFromSCR()
@@ -189,18 +184,18 @@ def GetCountriesSCRName  (startdate, enddate, identities_db, limit = 0):
 #########
 
 # REVIEWS
-def GetReviews (period, startdate, enddate, type, type_analysis, evolutionary, identities_db):
+def GetReviews (period, startdate, enddate, type_, type_analysis, evolutionary, identities_db):
 
     #Building the query
-    fields = " count(distinct(i.issue)) as " + type
+    fields = " count(distinct(i.issue)) as " + type_
     tables = "issues i" + GetSQLReportFromSCR(identities_db, type_analysis)
-    if type == "submitted": filters = ""
-    elif type == "opened": filters = " (i.status = 'NEW' or i.status = 'WORKINPROGRESS') "
-    elif type == "new": filters = " i.status = 'NEW' "
-    elif type == "inprogress": filters = " i.status = 'WORKINGPROGRESS' "
-    elif type == "closed": filters = " (i.status = 'MERGED' or i.status = 'ABANDONED') "
-    elif type == "merged": filters = " i.status = 'MERGED' "
-    elif type == "abandoned": filters = " i.status = 'ABANDONED' "
+    if type_ == "submitted": filters = ""
+    elif type_ == "opened": filters = " (i.status = 'NEW' or i.status = 'WORKINPROGRESS') "
+    elif type_ == "new": filters = " i.status = 'NEW' "
+    elif type_ == "inprogress": filters = " i.status = 'WORKINGPROGRESS' "
+    elif type_ == "closed": filters = " (i.status = 'MERGED' or i.status = 'ABANDONED') "
+    elif type_ == "merged": filters = " i.status = 'MERGED' "
+    elif type_ == "abandoned": filters = " i.status = 'ABANDONED' "
     filters = filters + GetSQLReportWhereSCR(type_analysis)
 
     #Adding dates filters (and evolutionary or static analysis)
@@ -214,11 +209,11 @@ def GetReviews (period, startdate, enddate, type, type_analysis, evolutionary, i
 
 
 # Reviews status using changes table
-def GetReviewsChanges(period, startdate, enddate, type, type_analysis, evolutionary, identities_db):
-    fields = "count(issue_id) as "+ type+ "_changes"
+def GetReviewsChanges(period, startdate, enddate, type_, type_analysis, evolutionary, identities_db):
+    fields = "count(issue_id) as "+ type_+ "_changes"
     tables = "changes c, issues i"
     tables = tables + GetSQLReportFromSCR(identities_db, type_analysis)
-    filters = "c.issue_id = i.id AND new_value='"+type+"'"
+    filters = "c.issue_id = i.id AND new_value='"+type_+"'"
     filters = filters + GetSQLReportWhereSCR(type_analysis)
 
     #Adding dates filters (and evolutionary or static analysis)
@@ -368,19 +363,19 @@ def StaticReviewsPendingChanges(period, startdate, enddate, type_analysis = [], 
 
 
 #WORK ON PATCHES: ANY REVIEW MAY HAVE MORE THAN ONE PATCH
-def GetEvaluations (period, startdate, enddate, type, type_analysis, evolutionary):
+def GetEvaluations (period, startdate, enddate, type_, type_analysis, evolutionary):
     # verified - VRIF
     # approved - APRV
     # code review - CRVW
     # submitted - SUBM
 
     #Building the query
-    fields = " count(distinct(c.id)) as " + type
+    fields = " count(distinct(c.id)) as " + type_
     tables = " changes c, issues i " + GetSQLReportFromSCR(None, type_analysis)
-    if type == "verified": filters =  " (c.field = 'VRIF' OR c.field = 'Verified') "
-    elif type == "approved": filters =  " c.field = 'APRV'  "
-    elif type == "codereview": filters =  "   (c.field = 'CRVW' OR c.field = 'Code-Review') "
-    elif type == "sent": filters =  " c.field = 'SUBM'  "
+    if type_ == "verified": filters =  " (c.field = 'VRIF' OR c.field = 'Verified') "
+    elif type_ == "approved": filters =  " c.field = 'APRV'  "
+    elif type_ == "codereview": filters =  "   (c.field = 'CRVW' OR c.field = 'Code-Review') "
+    elif type_ == "sent": filters =  " c.field = 'SUBM'  "
     filters = filters + " and i.id = c.issue_id "
     filters = filters + GetSQLReportWhereSCR(type_analysis)
 
@@ -429,32 +424,32 @@ def StaticPatchesSent (period, startdate, enddate, type_analysis = []):
 
 #PATCHES WAITING FOR REVIEW FROM REVIEWER
 def GetWaiting4Reviewer (period, startdate, enddate, identities_db, type_analysis, evolutionary):
-     fields = " count(distinct(c.id)) as WaitingForReviewer "
-     tables = " changes c, "+\
-              "  issues i, "+\
-              "        (select c.issue_id as issue_id, "+\
-              "                c.old_value as old_value, "+\
-              "                max(c.id) as id "+\
-              "         from changes c, "+\
-              "              issues i "+\
-              "         where c.issue_id = i.id and "+\
-              "               i.status='NEW' "+\
-              "         group by c.issue_id, c.old_value) t1 "
-     tables = tables + GetSQLReportFromSCR(identities_db, type_analysis)
-     filters =  " i.id = c.issue_id  "+\
-                "  and t1.id = c.id "+\
-                "  and (c.field='CRVW' or c.field='Code-Review' or c.field='Verified' or c.field='VRIF') "+\
-                "  and (c.new_value=1 or c.new_value=2) "
-     filters = filters + GetSQLReportWhereSCR(type_analysis)
-
-     if (evolutionary):
-         q = GetSQLPeriod(period, " c.changed_on", fields, tables, filters,
-                           startdate, enddate)
-     else:
-         q = GetSQLGlobal(" c.changed_on ", fields, tables, filters,
-                           startdate, enddate)
-
-     return(ExecuteQuery(q))
+    fields = " count(distinct(c.id)) as WaitingForReviewer "
+    tables = " changes c, "+\
+             "  issues i, "+\
+             "        (select c.issue_id as issue_id, "+\
+             "                c.old_value as old_value, "+\
+             "                max(c.id) as id "+\
+             "         from changes c, "+\
+             "              issues i "+\
+             "         where c.issue_id = i.id and "+\
+             "               i.status='NEW' "+\
+             "         group by c.issue_id, c.old_value) t1 "
+    tables = tables + GetSQLReportFromSCR(identities_db, type_analysis)
+    filters =  " i.id = c.issue_id  "+\
+               "  and t1.id = c.id "+\
+               "  and (c.field='CRVW' or c.field='Code-Review' or c.field='Verified' or c.field='VRIF') "+\
+               "  and (c.new_value=1 or c.new_value=2) "
+    filters = filters + GetSQLReportWhereSCR(type_analysis)
+    
+    if (evolutionary):
+        q = GetSQLPeriod(period, " c.changed_on", fields, tables, filters,
+                          startdate, enddate)
+    else:
+        q = GetSQLGlobal(" c.changed_on ", fields, tables, filters,
+                          startdate, enddate)
+    
+    return(ExecuteQuery(q))
 
 
 def EvolWaiting4Reviewer (period, startdate, enddate, identities_db=None, type_analysis = []):
@@ -467,33 +462,31 @@ def StaticWaiting4Reviewer (period, startdate, enddate, identities_db=None, type
 
 def GetWaiting4Submitter (period, startdate, enddate, identities_db, type_analysis, evolutionary):
 
-     fields = "count(distinct(c.id)) as WaitingForSubmitter "
-     tables = "  changes c, "+\
-              "   issues i, "+\
-              "        (select c.issue_id as issue_id, "+\
-              "                c.old_value as old_value, "+\
-              "                max(c.id) as id "+\
-              "         from changes c, "+\
-              "              issues i "+\
-              "         where c.issue_id = i.id and "+\
-              "               i.status='NEW' "+\
-              "         group by c.issue_id, c.old_value) t1 "
-     tables = tables + GetSQLReportFromSCR(identities_db, type_analysis)
-     filters = " i.id = c.issue_id "+\
-               "  and t1.id = c.id "+\
-	           "  and (c.field='CRVW' or c.field='Code-Review' or c.field='Verified' or c.field='VRIF') "+\
-               "  and (c.new_value=-1 or c.new_value=-2) "
-     filters = filters + GetSQLReportWhereSCR(type_analysis)
+    fields = "count(distinct(c.id)) as WaitingForSubmitter "
+    tables = "  changes c, "+\
+             "   issues i, "+\
+             "        (select c.issue_id as issue_id, "+\
+             "                c.old_value as old_value, "+\
+             "                max(c.id) as id "+\
+             "         from changes c, "+\
+             "              issues i "+\
+             "         where c.issue_id = i.id and "+\
+             "               i.status='NEW' "+\
+             "         group by c.issue_id, c.old_value) t1 "
+    tables = tables + GetSQLReportFromSCR(identities_db, type_analysis)
+    filters = " i.id = c.issue_id "+\
+              "  and t1.id = c.id "+\
+              "  and (c.field='CRVW' or c.field='Code-Review' or c.field='Verified' or c.field='VRIF') "+\
+              "  and (c.new_value=-1 or c.new_value=-2) "
+    filters = filters + GetSQLReportWhereSCR(type_analysis)
 
-     if (evolutionary):
-         q = GetSQLPeriod(period, " c.changed_on", fields, tables, filters,
-                           startdate, enddate)
-     else:
-         q = GetSQLGlobal(" c.changed_on ", fields, tables, filters,
-                           startdate, enddate)
-
-
-     return(ExecuteQuery(q))
+    if (evolutionary):
+        q = GetSQLPeriod(period, " c.changed_on", fields, tables, filters,
+                          startdate, enddate)
+    else:
+        q = GetSQLGlobal(" c.changed_on ", fields, tables, filters,
+                          startdate, enddate)
+    return(ExecuteQuery(q))
 
 
 def EvolWaiting4Submitter (period, startdate, enddate, identities_db=None, type_analysis = []):
@@ -530,26 +523,27 @@ def StaticReviewers  (period, startdate, enddate, identities_db = None, type_ana
     return (GetReviewers(period, startdate, enddate, identities_db, type_analysis, False))
 
 
-def GetLongestReviews  (startdate, enddate, type_analysis = []):
+# Nobody is using it yet
+def GetLongestReviews  (startdate, enddate, identities_db, type_analysis = []):
 
-    q = "select i.issue as review, "+\
-        "         t1.old_value as patch, "+\
-        "         timestampdiff (HOUR, t1.min_time, t1.max_time) as timeOpened "+\
-        "  from ( "+\
-        "        select c.issue_id as issue_id, "+\
-        "               c.old_value as old_value, "+\
-        "               min(c.changed_on) as min_time, "+\
-        "               max(c.changed_on) as max_time "+\
-        "        from changes c, "+\
-        "             issues i "+\
-        "        where c.issue_id = i.id and "+\
-        "              i.status='NEW' "+\
-        "        group by c.issue_id, "+\
-        "                 c.old_value) t1, "+\
-        "       issues i "+\
-        "  where t1.issue_id = i.id "+\
-        "  order by timeOpened desc "+\
-        "  limit 20"
+#    q = "select i.issue as review, "+\
+#        "         t1.old_value as patch, "+\
+#        "         timestampdiff (HOUR, t1.min_time, t1.max_time) as timeOpened "+\
+#        "  from ( "+\
+#        "        select c.issue_id as issue_id, "+\
+#        "               c.old_value as old_value, "+\
+#        "               min(c.changed_on) as min_time, "+\
+#        "               max(c.changed_on) as max_time "+\
+#        "        from changes c, "+\
+#        "             issues i "+\
+#        "        where c.issue_id = i.id and "+\
+#        "              i.status='NEW' "+\
+#        "        group by c.issue_id, "+\
+#        "                 c.old_value) t1, "+\
+#        "       issues i "+\
+#        "  where t1.issue_id = i.id "+\
+#        "  order by timeOpened desc "+\
+#        "  limit 20"
     fields = " i.issue as review, " + \
              " t1.old_value as patch, " + \
             " timestampdiff (HOUR, t1.min_time, t1.max_time) as timeOpened, "
@@ -778,9 +772,9 @@ def EvolTimeToReviewSCR (period, startdate, enddate, identities_db = None, type_
     review_list_len = len(review_list['changed_on'])
     if len(review_list['changed_on']) == 0: return metrics_list
     start = review_list['changed_on'][0]
-    end = review_list['changed_on'][review_list_len-1]
     start_month = start.year*12 + start.month
-    end_month = end.year*12 + end.month
+    # end = review_list['changed_on'][review_list_len-1]
+    # end_month = end.year*12 + end.month
     month = start_month
 
     metrics_data = []
