@@ -50,8 +50,8 @@ class MLS(DataSource):
 
     @staticmethod
     def get_agg_data (period, startdate, enddate, i_db, type_analysis):
-        pass
-
+        rfield = "mailing_list_url"
+        return StaticMLSInfo (period, startdate, enddate, i_db, rfield, type_analysis)
 
 ##############
 # Specific FROM and WHERE clauses per type of report

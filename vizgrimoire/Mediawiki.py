@@ -45,8 +45,7 @@ class Mediawiki(DataSource):
 
     @staticmethod
     def get_agg_data (period, startdate, enddate, i_db, type_analysis):
-        pass
-
+        return GetStaticDataMediaWiki (period, startdate, enddate, i_db, type_analysis)
 
 # SQL Metaqueries
 

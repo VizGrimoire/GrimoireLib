@@ -42,7 +42,7 @@ class IRC(DataSource):
 
     @staticmethod
     def get_agg_data (period, startdate, enddate, i_db, type_analysis):
-        pass
+        return GetStaticDataIRC (period, startdate, enddate, i_db, type_analysis)
 
 
 # SQL Metaqueries
@@ -122,7 +122,6 @@ def GetIRCSQLReportFrom (identities_db, type_analysis):
     if (len(type_analysis) != 2): return From
 
     analysis = type_analysis[0]
-    value = type_analysis[1]
 
     if analysis == 'repository': From = GetIRCSQLRepositoriesFrom()
     elif analysis == 'company': From = GetIRCSQLCompaniesFrom(identities_db)

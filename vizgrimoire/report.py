@@ -32,7 +32,7 @@ import SCM, ITS, MLS, SCR, Mediawiki, IRC
 class Report(object):
 
     @staticmethod
-    def _get_config():
+    def get_config():
         opts = read_options()
 
         opts.config_file = "../../../conf/main.conf"
@@ -43,13 +43,13 @@ class Report(object):
     @staticmethod
     def connect_ds(ds):
         opts = read_options()
-        automator = Report._get_config()
+        automator = Report.get_config()
         db = automator['generic'][ds.get_db_name()]
         SetDBChannel (database=db, user=opts.dbuser, password=opts.dbpassword)
 
     @staticmethod
     def get_data_sources():
-        automator = Report._get_config()
+        automator = Report.get_config()
         all_data_sources = [SCM.SCM, ITS.ITS, MLS.MLS, SCR.SCR, Mediawiki.Mediawiki, IRC.IRC]
         data_sources= []
 

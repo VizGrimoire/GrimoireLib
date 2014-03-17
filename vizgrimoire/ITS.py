@@ -34,6 +34,7 @@ from GrimoireSQL import ExecuteQuery, BuildQuery
 from GrimoireUtils import GetPercentageDiff, GetDates, completePeriodIds, read_options, read_main_conf
 
 from data_source import DataSource
+import report
 
 class ITS(DataSource):
 
@@ -45,18 +46,19 @@ class ITS(DataSource):
     def get_name(): return "ITS"
 
     @staticmethod
-    def get_evolutionary_data (period, startdate, enddate, i_db, type_analysis):
-        opts = read_options()
-        # TODO: DRY
-        opts.config_file = "../../../conf/main.conf"
-        automator = read_main_conf(opts.config_file)
+    def _get_closed_condition():
+        automator = report.Report.get_config()
         its_backend = automator['generic']['bicho_backend']
         backend = Backend(its_backend)
-        return EvolITSInfo (period, startdate, enddate, i_db, type_analysis,  backend.closed_condition)
+        return backend.closed_condition
+
+    @staticmethod
+    def get_evolutionary_data (period, startdate, enddate, i_db, type_analysis):
+        return EvolITSInfo (period, startdate, enddate, i_db, type_analysis, ITS._get_closed_condition())
 
     @staticmethod
     def get_agg_data (period, startdate, enddate, i_db, type_analysis):
-        pass
+        return AggITSInfo (period, startdate, enddate, i_db, type_analysis, ITS._get_closed_condition())
 
 
 ##############

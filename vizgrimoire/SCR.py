@@ -17,11 +17,9 @@
 ## This file is a part of the vizGrimoire R package
 ##  (an R library for the MetricsGrimoire and vizGrimoire systems)
 ##
-## SCR.R
 ##
 ## Queries for source code review data analysis
 ##
-## "*Changes" functions use changes table for more precisse results
 ##
 ## Authors:
 ##   Daniel Izquierdo <dizquierdo@bitergia.com>
@@ -99,8 +97,52 @@ class SCR(DataSource):
 
     @staticmethod
     def get_agg_data (period, startdate, enddate, i_db, type_analysis):
-        pass
+        agg = StaticReviewsSubmitted(period, startdate, enddate)
+        data = StaticReviewsOpened(period, startdate, enddate)
+        agg = dict(agg.items() + data.items())
+        data = StaticReviewsNew(period, startdate, enddate)
+        agg = dict(agg.items() + data.items())
+        data = StaticReviewsInProgress(period, startdate, enddate)
+        agg = dict(agg.items() + data.items())
+        data = StaticReviewsClosed(period, startdate, enddate)
+        agg = dict(agg.items() + data.items())
+        data = StaticReviewsMerged(period, startdate, enddate)
+        agg = dict(agg.items() + data.items())
+        data = StaticReviewsAbandoned(period, startdate, enddate)
+        agg = dict(agg.items() + data.items())
+        data = StaticReviewsPending(period, startdate, enddate)
+        agg = dict(agg.items() + data.items())
+        data = StaticPatchesVerified(period, startdate, enddate)
+        agg = dict(agg.items() + data.items())
+        data = StaticPatchesApproved(period, startdate, enddate)
+        agg = dict(agg.items() + data.items())
+        data = StaticPatchesCodeReview(period, startdate, enddate)
+        agg = dict(agg.items() + data.items())
+        data = StaticPatchesSent(period, startdate, enddate)
+        agg = dict(agg.items() + data.items())
+        data = StaticWaiting4Reviewer(period, startdate, enddate)
+        agg = dict(agg.items() + data.items())
+        data = StaticWaiting4Submitter(period, startdate, enddate)
+        agg = dict(agg.items() + data.items())
+        #Reviewers info
+        data = StaticReviewers(period, startdate, enddate)
+        agg = dict(agg.items() + data.items())
+        # Time to Review info
+        data = StaticTimeToReviewSCR(startdate, enddate)
+        data['review_time_days_avg'] = float(data['review_time_days_avg'])
+        data['review_time_days_median'] = float(data['review_time_days_median'])
+        agg = dict(agg.items() + data.items())
 
+        # Tendencies
+        for i in [7,30,365]:
+            period_data = GetSCRDiffSubmittedDays(period, enddate, i, i_db)
+            agg = dict(agg.items() + period_data.items())
+            period_data = GetSCRDiffMergedDays(period, enddate, i, i_db)
+            agg = dict(agg.items() + period_data.items())
+            period_data = GetSCRDiffPendingDays(period, enddate, i, i_db)
+            agg = dict(agg.items() + period_data.items())
+            period_data = GetSCRDiffAbandonedDays(period, enddate, i, i_db)
+            agg = dict(agg.items() + period_data.items())
 
 ##########
 # Specific FROM and WHERE clauses per type of report
