@@ -25,7 +25,17 @@
 from GrimoireSQL import GetSQLGlobal, GetSQLPeriod, GetSQLReportFrom
 from GrimoireSQL import GetSQLReportWhere, ExecuteQuery, BuildQuery
 from GrimoireUtils import GetPercentageDiff, GetDates
-import GrimoireUtils
+import DataSource
+
+class IRC(DataSource):
+
+    @staticmethod
+    def get_name():
+        return "IRC"
+
+    @staticmethod
+    def get_evolutionary_data (period, startdate, enddate, i_db, type_analysis):
+        GetEvolDataIRC (period, startdate, enddate, i_db, type_analysis)
 
 # SQL Metaqueries
 def GetIRCSQLRepositoriesFrom ():
@@ -62,13 +72,12 @@ def GetIRCSQLCountriesFrom (i_db):
            i_db+".upeople_countries upc")
 
 
-def GetIRCSQLCcountriesWhere (name):
+def GetIRCSQLCountriesWhere (name):
     # filters necessary to countries analysis
     return(" i.nick = pup.people_id and "+\
            "pup.upeople_id = upc.upeople_id and "+\
            "upc.country_id = c.id and "+\
            "c.name = "+name)
-
 
 def GetIRCSQLDomainsFrom (i_db):
     # tables necessary to domains analysis
@@ -76,9 +85,7 @@ def GetIRCSQLDomainsFrom (i_db):
            i_db+".domains d, "+\
            i_db+".upeople_domains upd")
 
-
-
-def GetIRCSQLDomainsWhere ():
+def GetIRCSQLDomainsWhere (name):
     # filters necessary to domains analysis
     return(" i.nick = pup.people_id and "+\
            "pup.upeople_id = upd.upeople_id and "+\
