@@ -228,7 +228,7 @@ tasks_section = {
     'downloads':execute_downloads_script,
     'irc': execute_irc_script,
 }
-tasks_order = ['scm','people','its','mls','scr','mediawiki','downloads,''irc']
+tasks_order = ['scm','people','its','mls','scr','mediawiki','downloads','irc']
 #tasks_order = ['scm','people','its','mls','scr','mediawiki','irc','people_experimental']
 
 
