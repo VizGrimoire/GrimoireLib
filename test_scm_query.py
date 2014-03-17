@@ -24,6 +24,7 @@
 
 from scm_query import buildSession, SCMLog
 from datetime import datetime
+from timeseries import TimeSeries
 import unittest
 
 database = 'mysql://jgb:XXX@localhost/vizgrimoire_cvsanaly'
@@ -46,7 +47,7 @@ class TestSCMQuery (unittest.TestCase):
 
         self.database = database
         self.session = buildSession(database=self.database, echo=False)
-        self.start = datetime(2014,1,1)
+        self.start = datetime(2013,11,13)
         self.end = datetime(2014,2,1)
 
     def _test_select_nscmlog (self, variables, results):
@@ -106,11 +107,11 @@ class TestSCMQuery (unittest.TestCase):
         """Test select_ncsmlog"""
 
         self._test_select_nscmlog_period (["commits",],
-                                          [[(310L,)], [(288,)], [(310,)]])
+                                          [[(730,)], [(666,)], [(728,)]])
         self._test_select_nscmlog_period (["authors",],
-                                          [[(8L,)], [(7,)], [(8,)]])
+                                          [[(9,)], [(9,)], [(9,)]])
         self._test_select_nscmlog_period (["committers",],
-                                          [[(8L,)], [(7,)], [(8,)]])
+                                          [[(9,)], [(9,)], [(9,)]])
 
     def _test_select_listpersons (self, kind, uid, correct):
         """Test select_listpersons, for a specific kind of persons
@@ -188,12 +189,22 @@ class TestSCMQuery (unittest.TestCase):
         """Test select_nbranches"""
 
         correct = [[(17L,)],
-                   [(2L,)]]
+                   [(5L,)],
+                   TimeSeries ("months",
+                               start=datetime(2013,11,13),
+                               end=datetime(2014,01,01),
+                               data=[(datetime(2013,11,13), (3L,)),
+                                     (datetime(2013,12,13), (2L,)),
+                                     (datetime(2014,01,13), (2L,))]
+                               )]
         res = self.session.query().select_nbranches()
         self.assertEqual (res.all(), correct[0])
         res = res.join(SCMLog) \
             .filter_period(start=self.start, end=self.end)
         self.assertEqual (res.all(), correct[1])
+        res = res.group_by_period().timeseries()
+        print res
+        self.assertEqual (res, correct[2])
 
     def test_select_listbranches (self):
         """Test select_listbranches"""
@@ -206,7 +217,8 @@ class TestSCMQuery (unittest.TestCase):
              (12L, 'minJSONfiles'), (13L, 'restapi'),
              (14L, 'unique-ids'), (15L, 'newperiodR'),
              (16L, 'newperiod'), (17L, 'gerrit')],
-            [(1L, 'master'), (13L, 'restapi')]
+            [(1L, 'master'), (8L, 'redhat'), (9L, 'mediawiki'),
+             (12L, 'minJSONfiles'), (13L, 'restapi')]
             ]
         res = self.session.query().select_listbranches()
         self.assertEqual (res.all(), correct[0])

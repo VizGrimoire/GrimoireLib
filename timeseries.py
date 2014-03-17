@@ -125,7 +125,14 @@ class TimeSeries:
         return dumps(data, sort_keys=sort_keys,
                      indent=indent, separators=separators,
                      default=json_serial, encoding=encoding)
-    
+
+    def __eq__(self, other):
+        return (isinstance(other, self.__class__)
+            and self.__dict__ == other.__dict__)
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
     def __repr__ (self):
 
         repr = "TimeSeries object (%s) " % (self.period)
