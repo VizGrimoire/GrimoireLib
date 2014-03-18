@@ -94,7 +94,7 @@ def get_vars():
     v.update(options['r'])
     # Fixed locations
     v['r_libs'] = '../../r-lib'
-    v['python_libs'] = '../vizgrimoire'
+    v['python_libs'] = '../vizgrimoire:../vizgrimoire/analysis'
     v['json_dir'] = '../../../json'
 
     # if end_date is not present or is empty we set up today's date
