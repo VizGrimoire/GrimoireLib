@@ -103,6 +103,7 @@ class IRC(DataSource):
             agg = GetRepoStaticSentSendersIRC(item, startdate, enddate)
             createJSON(agg, opts.destdir+"/"+item+"-irc-"+filter_name_short+"-static.json")
 
+
 # SQL Metaqueries
 def GetIRCSQLRepositoriesFrom ():
     # tables necessary for repositories

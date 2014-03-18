@@ -64,14 +64,6 @@ def create_reports(startdate, enddate, identities_db, bots):
             logging.info("-> " + filter_.get_name())
             ds.create_filter_report(filter_, startdate, enddate, identities_db, bots)
 
-def create_top_reports(startdate, enddate, identities_db, bots):
-    for ds in Report.get_data_sources():
-        Report.connect_ds(ds)
-        logging.info("Creating TOP reports for " + ds.get_name())
-        for filter_ in Report.get_filters():
-            logging.info("-> " + filter_.get_name())
-            ds.create_filter_top_report(filter_, startdate, enddate, identities_db, bots)
-
 if __name__ == '__main__':
 
     Report.init()
@@ -87,10 +79,10 @@ if __name__ == '__main__':
 
     opts.config_file = "../../../conf/main.conf"
     automator = read_main_conf(opts.config_file)
-    evol = get_evol_report(startdate, enddate, opts.identities_db, [], [])
-    agg = get_agg_report(startdate, enddate, opts.identities_db, [], [])
-    top = get_top_report(startdate, enddate, opts.identities_db, [])
-    print(top)
-    # create_reports(startdate, enddate, opts.identities_db, [])
+#    evol = get_evol_report(startdate, enddate, opts.identities_db, [], [])
+#    agg = get_agg_report(startdate, enddate, opts.identities_db, [], [])
+#    top = get_top_report(startdate, enddate, opts.identities_db, [])
+#
+    create_reports(startdate, enddate, opts.identities_db, [])
 
     logging.info("Report data source analysis OK")

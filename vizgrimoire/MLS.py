@@ -98,7 +98,7 @@ class MLS(DataSource):
 
         filter_name = filter_.get_name()
         filter_name_short = filter_.get_name_short()
-        if (filter_name == "repositories"): filter_name = "repos"
+        if (filter_name == "repository"): filter_name = "repos"
 
         if not isinstance(items, (list)):
             items = [items]
@@ -119,6 +119,14 @@ class MLS(DataSource):
 
             agg = MLS.get_agg_data (period, startdate, enddate, identities_db, type_analysis)
             createJSON(agg, opts.destdir+"/"+item_file+"-mls-"+filter_name_short+"-static.json")
+
+            if (filter_name == "company"):
+                top_senders = companyTopSenders (item, identities_db, startdate, enddate, opts.npeople)
+                createJSON(top_senders, opts.destdir+"/"+item+"-mls-"+filter_name_short+"-top-senders.json")
+
+        if (filter_name == "company"):
+            sent = GetSentSummaryCompanies(period, startdate, enddate, opts.identities_db, 10)
+            createJSON (sent, opts.destdir+"/mls-sent-companies-summary.json")
 
 ##############
 # Specific FROM and WHERE clauses per type of report

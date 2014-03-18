@@ -108,6 +108,7 @@ class ITS(DataSource):
     def create_filter_report(filter_, startdate, enddate, identities_db, bots):
         opts = read_options()
         period = getPeriod(opts.granularity)
+        closed_condition =  ITS._get_closed_condition()
 
         items = ITS.get_filter_items(filter_, startdate, enddate, identities_db, bots)
         if (items == None): return
@@ -134,6 +135,18 @@ class ITS(DataSource):
 
             agg = ITS.get_agg_data (period, startdate, enddate, identities_db, type_analysis)
             createJSON(agg, opts.destdir+"/"+item_file+"-its-"+filter_name_short+"-static.json")
+
+            if (filter_name == "company"):
+                top = GetCompanyTopClosers(item_name, startdate, enddate, identities_db, bots, closed_condition, opts.npeople)
+                createJSON(top, opts.destdir+"/"+item+"-its-"+filter_name_short+"-top-closers.json")
+
+            if (filter_name == "domain"):
+                top = GetDomainTopClosers(item_name, startdate, enddate, identities_db, bots, closed_condition, opts.npeople)
+                createJSON(top, opts.destdir+"/"+item+"-its-"+filter_name_short+"-top-closers.json")
+
+        if (filter_name == "company"):
+            closed = GetClosedSummaryCompanies(period, startdate, enddate, identities_db, closed_condition, 10)
+            createJSON (closed, opts.destdir+"/its-closed-companies-summary.json")
 
 ##############
 # Specific FROM and WHERE clauses per type of report

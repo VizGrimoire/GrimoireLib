@@ -92,7 +92,7 @@ class SCM(DataSource):
 
         filter_name = filter_.get_name()
         filter_name_short = filter_.get_name_short()
-        if (filter_name == "repositories"): filter_name = "repos"
+        if (filter_name == "repository"): filter_name = "repos"
 
         if not isinstance(items, (list)):
             items = [items]
@@ -109,6 +109,18 @@ class SCM(DataSource):
 
             agg = SCM.get_agg_data (period, startdate, enddate, identities_db, type_analysis)
             createJSON(agg, opts.destdir+"/"+item+"-scm-"+filter_name_short+"-static.json")
+
+            if (filter_name == "company"):
+                top_authors = company_top_authors(item_name, startdate, enddate, opts.npeople)
+                createJSON(top_authors, opts.destdir+"/"+item+"-scm-"+filter_name_short+"-top-authors.json")
+
+                for i in [2006,2009,2012]:
+                    data = company_top_authors_year(item_name, i, opts.npeople)
+                    createJSON(data, opts.destdir+"/"+item+"-scm-top-authors_"+str(i)+".json")
+
+        if (filter_name == "company"):
+                commits =  GetCommitsSummaryCompanies(period, startdate, enddate, opts.identities_db, 10)
+                createJSON (commits, opts.destdir+"/scm-companies-commits-summary.json")
 
 ##########
 # Meta-functions to automatically call metrics functions and merge them

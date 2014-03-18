@@ -42,7 +42,7 @@ class SCR(DataSource):
         return "db_gerrit"
 
     @staticmethod
-    def get_name(): return "Mediawiki"
+    def get_name(): return "SCR"
 
     @staticmethod
     def get_evolutionary_data (period, startdate, enddate, i_db, type_analysis):
@@ -260,6 +260,7 @@ class SCR(DataSource):
             createJSON(agg, opts.destdir + "/"+item_file + "-scr-"+filter_name_short+"-static.json")
 
         createJSON(items_list, opts.destdir+"/scr-"+filter_name+".json")
+
 
 ##########
 # Specific FROM and WHERE clauses per type of report
