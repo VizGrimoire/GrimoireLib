@@ -39,7 +39,7 @@ class Email(object):
                
     def _buildEmail(self):
         query = """
-                select m.message_ID, 
+                select distinct m.message_ID, 
                        m.subject, 
                        m.message_body,
                        m.first_date,
@@ -51,6 +51,7 @@ class Email(object):
                      %s.upeople u
                 where m.message_ID = '%s' and
                       m.message_ID = mp.message_id and
+                      mp.type_of_recipient = 'From' and
                       mp.email_address = pup.people_id and
                       pup.upeople_id = u.id 
                 """  % (self.i_db, self.message_id)

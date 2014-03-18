@@ -214,7 +214,6 @@ def getLongestThreads(startdate, enddate, identities_db):
     main_topics = Threads(startdate, enddate, identities_db)
 
     longest_threads = main_topics.topLongestThread(10)
-    print "Top longest threads: "
     l_threads = {}
     l_threads['message_id'] = []
     l_threads['length'] = []
@@ -226,7 +225,7 @@ def getLongestThreads(startdate, enddate, identities_db):
         l_threads['message_id'].append(email.message_id)
         l_threads['length'].append(main_topics.lenThread(email.message_id))
         l_threads['subject'].append(email.subject)
-        l_threads['date'].append(str(email.date))
+        l_threads['date'].append(email.date.strftime("%Y-%m-%d"))
         l_threads['initiator_name'].append(email.initiator_name)
         l_threads['initiator_id'].append(email.initiator_id)
 
@@ -247,8 +246,10 @@ def topData(period, startdate, enddate, identities_db, destdir, bots, npeople):
 
     top_senders_data['threads.'] = getLongestThreads(startdate, enddate, identities_db)
     startdate = datetime.date.today() - datetime.timedelta(days=365)
+    startdate =  "'" + str(startdate) + "'"
     top_senders_data['threads.last year'] = getLongestThreads(startdate, enddate, identities_db)
     startdate = datetime.date.today() - datetime.timedelta(days=30)
+    startdate =  "'" + str(startdate) + "'"
     top_senders_data['threads.last month'] = getLongestThreads(startdate, enddate, identities_db)
 
     createJSON (top_senders_data, destdir+"/mls-top.json")
