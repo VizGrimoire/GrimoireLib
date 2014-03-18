@@ -145,7 +145,7 @@ class MLS(DataSource):
             elif (filter_name == "domain"):
                 top_senders = domainTopSenders(item, identities_db, startdate, enddate, opts.npeople)
                 createJSON(top_senders, opts.destdir+"/"+item_file+"-mls-"+filter_name_short+"-top-senders.json")
-            elif (filter_name == "repos"):
+            elif (filter_name == "repository"):
                 rfield = MLS.get_repo_field()
                 top_senders = repoTopSenders (item, identities_db, startdate, enddate, rfield, opts.npeople)
                 createJSON(top_senders, opts.destdir+ "/"+item_file+"-mls-rep-top-senders.json")
