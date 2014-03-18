@@ -27,17 +27,21 @@ import GrimoireSQL
 from GrimoireSQL import ExecuteQuery
 
 class Email(object):
-    # This class contains the main attributes of an email
+    """This class contains the main attributes of an email
+    """
 
     def __init__(self, message_id, i_db):
         self.message_id = message_id
         self.i_db = i_db # Identities database
-        self.subject = None
-        self.body = None
-        self.date = None
-        self._buildEmail()
+        self.subject = None # Email subject
+        self.body = None # Email body
+        self.date = None # Email sending date
+        self._buildEmail() # Constructor
                
     def _buildEmail(self):
+        # This method retrieves items of information of a given
+        # email, specified by its email id.
+
         query = """
                 select distinct m.message_ID, 
                        m.subject, 
@@ -65,14 +69,15 @@ class Email(object):
 
 
 class Threads(object):
-    # This class contains the analysis of the mailing list from the point
-    # of view of threads. The main topics are those with the longest,
-    # the most crowded or the thread with the most verbose emails.
+    """This class contains the analysis of the mailing list from the point
+       of view of threads. The main topics are those with the longest,
+       the most crowded or the thread with the most verbose emails.
+    """
 
     def __init__ (self, initdate, enddate, i_db):
         self.initdate = initdate # initial date of analysis
         self.enddate = enddate  # final date of analysis
-        self.i_db = i_db
+        self.i_db = i_db # identities database
         self.list_message_id = [] # list of messages id
         self.list_is_response_of = [] #list of 'father' messages
         self.threads = {} # General structure, keys = root message_id,
@@ -84,6 +89,8 @@ class Threads(object):
         self._init_threads()    
 
     def _build_threads (self, message_id):
+        # Constructor of threads.
+
         sons = []
         messages = []
         if message_id not in self.list_is_response_of:
@@ -130,7 +137,6 @@ class Threads(object):
                 messages[message_id] = self._build_threads(message_id)
                 # Adding the root message to the list in first place
                 messages[message_id].insert(0, message_id)
-
 
         self.threads = messages
 
