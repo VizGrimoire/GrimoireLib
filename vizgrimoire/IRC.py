@@ -43,17 +43,30 @@ class IRC(DataSource):
         return completePeriodIds(GetEvolDataIRC (period, startdate, enddate, identities_db, type_analysis))
 
     @staticmethod
-    def create_evolutionary_report (period, startdate, enddate, i_db, type_analysis):
+    def create_evolutionary_report (period, startdate, enddate, identities_db, type_analysis = None):
         opts = read_options()
-        data =  IRC.get_evolutionary_data (period, startdate, enddate, i_db, type_analysis)
+        data =  IRC.get_evolutionary_data (period, startdate, enddate, identities_db, type_analysis)
         createJSON (data, opts.destdir+"/irc-evolutionary.json")
 
     @staticmethod
-    def get_agg_data (period, startdate, enddate, i_db, type_analysis):
-        return GetStaticDataIRC (period, startdate, enddate, i_db, type_analysis)
+    def get_agg_data (period, startdate, enddate, identities_db, type_analysis):
+        agg_data = {}
+
+        if (type_analysis is None):
+            # Tendencies
+            for i in [7,30,365]:
+                period_data = GetIRCDiffSentDays(period, enddate, i)
+                agg_data = dict(agg_data.items() + period_data.items())
+                period_data = GetIRCDiffSendersDays(period, enddate, identities_db, i)
+                agg_data = dict(agg_data.items() + period_data.items())
+
+        static_data = GetStaticDataIRC(period, startdate, enddate, identities_db, type_analysis)
+        agg_data = dict(agg_data.items() + static_data.items())
+
+        return agg_data
 
     @staticmethod
-    def create_agg_report (period, startdate, enddate, i_db, type_analysis):
+    def create_agg_report (period, startdate, enddate, i_db, type_analysis = None):
         opts = read_options()
         data = IRC.get_agg_data (period, startdate, enddate, i_db, type_analysis)
         createJSON (data, opts.destdir+"/irc-static.json")

@@ -46,19 +46,19 @@ class DataSource(object):
         raise NotImplementedError
 
     @staticmethod
-    def get_evolutionary_data (period, startdate, enddate, identities_db, type_analysis):
+    def get_evolutionary_data (period, startdate, enddate, identities_db, type_analysis = None):
         raise NotImplementedError
 
     @staticmethod
-    def create_evolutionary_report (period, startdate, enddate, identities_db, type_analysis):
+    def create_evolutionary_report (period, startdate, enddate, identities_db, type_analysis = None):
         raise NotImplementedError
 
     @staticmethod
-    def get_agg_data (period, startdate, enddate, identities_db, type_analysis):
+    def get_agg_data (period, startdate, enddate, identities_db, type_analysis = None):
         raise NotImplementedError
 
     @staticmethod
-    def create_agg_report (period, startdate, enddate, identities_db, type_analysis):
+    def create_agg_report (period, startdate, enddate, identities_db, type_analysis = None):
         raise NotImplementedError
 
     @staticmethod

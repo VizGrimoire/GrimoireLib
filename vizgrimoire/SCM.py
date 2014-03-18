@@ -45,21 +45,68 @@ class SCM(DataSource):
         return "SCM"
 
     @staticmethod
-    def get_evolutionary_data (period, startdate, enddate, i_db, type_analysis):
-        return completePeriodIds(GetSCMEvolutionaryData (period, startdate, enddate, i_db, type_analysis))
+    def get_evolutionary_data (period, startdate, enddate, identities_db, type_analysis):
+
+        data = GetSCMEvolutionaryData(period, startdate, enddate, identities_db, type_analysis)
+        evol_data = completePeriodIds(data)
+
+        if (type_analysis is None):
+            data = EvolCompanies(period, startdate, enddate)
+            evol_data = dict(evol_data.items() + completePeriodIds(data).items())
+            data = EvolCountries(period, startdate, enddate)
+            evol_data = dict(evol_data.items() + completePeriodIds(data).items())
+            data = EvolDomains(period, startdate, enddate)
+            evol_data = dict(evol_data.items() + completePeriodIds(data).items())
+
+        return evol_data
 
     @staticmethod
-    def create_evolutionary_report (period, startdate, enddate, i_db, type_analysis):
+    def create_evolutionary_report (period, startdate, enddate, i_db, type_analysis = None):
         opts = read_options()
         data =  SCM.get_evolutionary_data (period, startdate, enddate, i_db, type_analysis)
         createJSON (data, opts.destdir+"/scm-evolutionary.json")
 
     @staticmethod
-    def get_agg_data (period, startdate, enddate, i_db, type_analysis):
-        return GetSCMStaticData (period, startdate, enddate, i_db, type_analysis)
+    def get_agg_data (period, startdate, enddate, identities_db, type_analysis):
+        data = GetSCMStaticData(period, startdate, enddate, identities_db, type_analysis)
+        agg = data
+
+        if (type_analysis is None):
+            static_url = StaticURL()
+            agg = dict(agg.items() + static_url.items())
+
+            data = evol_info_data_companies (startdate, enddate)
+            agg = dict(agg.items() + data.items())
+
+            data = evol_info_data_countries (startdate, enddate)
+            agg = dict(agg.items() + data.items())
+
+            data = evol_info_data_domains (startdate, enddate)
+            agg = dict(agg.items() + data.items())
+
+            data = GetCodeCommunityStructure(period, startdate, enddate, identities_db)
+            agg = dict(agg.items() + data.items())
+
+            # Tendencies    
+            for i in [7,30,365]:
+                data = GetDiffCommitsDays(period, enddate, identities_db, i)
+                agg = dict(agg.items() + data.items())
+                data = GetDiffAuthorsDays(period, enddate, identities_db, i)
+                agg = dict(agg.items() + data.items())
+                data = GetDiffFilesDays(period, enddate, identities_db, i)
+                agg = dict(agg.items() + data.items())
+                data = GetDiffLinesDays(period, enddate, identities_db, i)
+                agg = dict(agg.items() + data.items())
+
+            # Last Activity: to be removed
+            for i in [7,14,30,60,90,180,365,730]:
+                data = last_activity(i)
+                agg = dict(agg.items() + data.items())
+
+        return agg
 
     @staticmethod
-    def create_agg_report (period, startdate, enddate, i_db, type_analysis):
+    def create_agg_report (period, startdate, enddate, i_db, type_analysis = None):
         opts = read_options()
         data = SCM.get_agg_data (period, startdate, enddate, i_db, type_analysis)
         createJSON (data, opts.destdir+"/scm-static.json")

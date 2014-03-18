@@ -46,17 +46,30 @@ class Mediawiki(DataSource):
         return GetEvolDataMediaWiki (period, startdate, enddate, i_db, type_analysis)
 
     @staticmethod
-    def create_evolutionary_report (period, startdate, enddate, i_db, type_analysis):
+    def create_evolutionary_report (period, startdate, enddate, i_db, type_analysis = None):
         opts = read_options()
         data =  Mediawiki.get_evolutionary_data (period, startdate, enddate, i_db, type_analysis)
         createJSON (data, opts.destdir+"/mediawiki-evolutionary.json")
 
     @staticmethod
-    def get_agg_data (period, startdate, enddate, i_db, type_analysis):
-        return GetStaticDataMediaWiki (period, startdate, enddate, i_db, type_analysis)
+    def get_agg_data (period, startdate, enddate, identities_db, type_analysis):
+        # Tendencies
+        agg = {}
+
+        if (type_analysis is None):
+            for i in [7,30,365]:
+                data = GetMediaWikiDiffReviewsDays(period, enddate, identities_db, i)
+                agg = dict(agg.items() + data.items())
+                data = GetMediaWikiDiffAuthorsDays(period, enddate, identities_db, i)
+                agg = dict(agg.items() + data.items())
+
+        data = GetStaticDataMediaWiki(period, startdate, enddate, identities_db, type_analysis)
+        agg = dict(agg.items() + data.items())
+
+        return agg
 
     @staticmethod
-    def create_agg_report (period, startdate, enddate, i_db, type_analysis):
+    def create_agg_report (period, startdate, enddate, i_db, type_analysis = None):
         opts = read_options()
         data = Mediawiki.get_agg_data (period, startdate, enddate, i_db, type_analysis)
         createJSON (data, opts.destdir+"/mediawiki-static.json")

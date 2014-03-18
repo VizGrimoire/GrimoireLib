@@ -48,23 +48,62 @@ class MLS(DataSource):
     def get_name(): return "MLS"
 
     @staticmethod
-    def get_evolutionary_data (period, startdate, enddate, i_db, type_analysis):
+    def get_evolutionary_data (period, startdate, enddate, identities_db, type_analysis):
         rfield = MLS.get_repo_field()
-        return completePeriodIds(EvolMLSInfo (period, startdate, enddate, i_db, rfield, type_analysis))
+        evol = {}
+
+        data = EvolMLSInfo(period, startdate, enddate, identities_db, rfield, type_analysis)
+        evol = dict(evol.items() + completePeriodIds(data).items())
+
+        if (type_analysis is None):
+            data  = EvolMLSCompanies(period, startdate, enddate, identities_db)
+            evol = dict(evol.items() + completePeriodIds(data).items())
+
+            data = EvolMLSCountries(period, startdate, enddate, identities_db)
+            evol = dict(evol.items() + completePeriodIds(data).items())
+
+            data = EvolMLSDomains(period, startdate, enddate, identities_db)
+            evol = dict(evol.items() + completePeriodIds(data).items())
+
+        return evol
 
     @staticmethod
-    def create_evolutionary_report (period, startdate, enddate, i_db, type_analysis):
+    def create_evolutionary_report (period, startdate, enddate, i_db, type_analysis = None):
         opts = read_options()
         data =  MLS.get_evolutionary_data (period, startdate, enddate, i_db, type_analysis)
         createJSON (data, opts.destdir+"/mls-evolutionary.json")
 
     @staticmethod
-    def get_agg_data (period, startdate, enddate, i_db, type_analysis):
+    def get_agg_data (period, startdate, enddate, identities_db, type_analysis):
         rfield = MLS.get_repo_field()
-        return StaticMLSInfo (period, startdate, enddate, i_db, rfield, type_analysis)
+        agg = StaticMLSInfo(period, startdate, enddate, identities_db, rfield, type_analysis)
+
+        if (type_analysis is None):
+            data = AggMLSCompanies(period, startdate, enddate, identities_db)
+            agg = dict(agg.items() + data.items())
+
+            data = AggMLSCountries(period, startdate, enddate, identities_db)
+            agg = dict(agg.items() + data.items())
+
+            data = AggMLSDomains(period, startdate, enddate, identities_db)
+            agg = dict(agg.items() + data.items())
+
+            # Tendencies
+            for i in [7,30,365]:
+                period_data = GetDiffSentDays(period, enddate, i)
+                agg = dict(agg.items() + period_data.items())
+                period_data = GetDiffSendersDays(period, enddate, i)
+                agg = dict(agg.items() + period_data.items())
+
+            # Last Activity: to be removed
+            for i in [7,14,30,60,90,180,365,730]:
+                period_activity = lastActivity(i)
+                agg = dict(agg.items() + period_activity.items())
+
+        return agg
 
     @staticmethod
-    def create_agg_report (period, startdate, enddate, i_db, type_analysis):
+    def create_agg_report (period, startdate, enddate, i_db, type_analysis = None):
         opts = read_options()
         data = MLS.get_agg_data (period, startdate, enddate, i_db, type_analysis)
         createJSON (data, opts.destdir+"/mls-static.json")
@@ -280,7 +319,7 @@ def GetMLSSQLReportFrom (identities_db, type_analysis):
 
     From = ""
 
-    if (len(type_analysis) != 2): return From
+    if (type_analysis is None or len(type_analysis) != 2): return From
 
     analysis = type_analysis[0]
 
@@ -300,7 +339,7 @@ def GetMLSSQLReportWhere (type_analysis):
 
     where = ""
 
-    if (len(type_analysis) != 2): return where
+    if (type_analysis is None or len(type_analysis) != 2): return where
 
     analysis = type_analysis[0]
     value = type_analysis[1]

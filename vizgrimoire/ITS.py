@@ -47,28 +47,115 @@ class ITS(DataSource):
     def get_name(): return "ITS"
 
     @staticmethod
-    def _get_closed_condition():
+    def _get_backend():
         automator = report.Report.get_config()
         its_backend = automator['generic']['bicho_backend']
         backend = Backend(its_backend)
-        return backend.closed_condition
+        return backend
 
     @staticmethod
-    def get_evolutionary_data (period, startdate, enddate, i_db, type_analysis):
-        return completePeriodIds(EvolITSInfo (period, startdate, enddate, i_db, type_analysis, ITS._get_closed_condition()))
+    def _get_closed_condition():
+        return ITS._get_backend().closed_condition
 
     @staticmethod
-    def create_evolutionary_report (period, startdate, enddate, i_db, type_analysis):
+    def get_tickets_states(period, startdate, enddate, identities_db, backend):
+
+        from rpy2.robjects.packages import importr
+        from GrimoireUtils import dataFrame2Dict
+
+        vizr = importr("vizgrimoire")
+
+        evol = {}
+        return evol
+
+        for status in backend.statuses:
+            logging.info ("Working with ticket status: " + status)
+            #Evolution of the backlog
+            tickets_status = vizr.GetEvolBacklogTickets(period, startdate, enddate, status, backend.name_log_table)
+            tickets_status = dataFrame2Dict(tickets_status)
+            tickets_status = completePeriodIds(tickets_status)
+            # rename key
+            tickets_status[status] = tickets_status.pop("pending_tickets")
+            #Issues per status
+            current_status = vizr.GetCurrentStatus(period, startdate, enddate, identities_db, status)
+            current_status = completePeriodIds(dataFrame2Dict(current_status))
+            #Merging data
+            evol = dict(evol.items() + current_status.items() + tickets_status.items())
+        return evol
+
+    @staticmethod
+    def get_evolutionary_data (period, startdate, enddate, identities_db, type_analysis):
+        closed_condition = ITS._get_closed_condition()
+
+        data = EvolITSInfo(period, startdate, enddate, identities_db, type_analysis, closed_condition)
+        evol = completePeriodIds(data)
+
+        if (type_analysis is None):
+            data = EvolIssuesCompanies(period, startdate, enddate, identities_db)
+            evol = dict(evol.items() + completePeriodIds(data).items())
+
+            data = EvolIssuesCountries(period, startdate, enddate, identities_db)
+            evol = dict(evol.items() + completePeriodIds(data).items())
+
+            data = EvolIssuesRepositories(period, startdate, enddate, identities_db)
+            evol = dict(evol.items() + completePeriodIds(data).items())
+
+            data = EvolIssuesDomains(period, startdate, enddate, identities_db)
+            evol = dict(evol.items() + completePeriodIds(data).items())
+
+            data = ITS.get_tickets_states(period, startdate, enddate, identities_db, ITS._get_backend())
+            evol = dict(evol.items() + data.items())
+
+        return evol
+
+    @staticmethod
+    def create_evolutionary_report (period, startdate, enddate, i_db, type_analysis = None):
         opts = read_options()
         data =  ITS.get_evolutionary_data (period, startdate, enddate, i_db, type_analysis)
         createJSON (data, opts.destdir+"/its-evolutionary.json")
 
     @staticmethod
     def get_agg_data (period, startdate, enddate, identities_db, type_analysis):
-        return AggITSInfo (period, startdate, enddate, identities_db, type_analysis, ITS._get_closed_condition())
+        closed_condition = ITS._get_closed_condition()
+
+        data = AggITSInfo(period, startdate, enddate, identities_db, type_analysis, closed_condition)
+        agg = data
+
+        if (type_analysis is None):
+            data = AggAllParticipants(startdate, enddate)
+            agg = dict(agg.items() +  data.items())
+            data = TrackerURL()
+            agg = dict(agg.items() +  data.items())
+
+            data = AggIssuesCompanies(period, startdate, enddate, identities_db)
+            agg = dict(agg.items() + data.items())
+
+            data = AggIssuesCountries(period, startdate, enddate, identities_db)
+            agg = dict(agg.items() + data.items())
+
+            data = AggIssuesDomains(period, startdate, enddate, identities_db)
+            agg = dict(agg.items() + data.items())
+
+            # Tendencies    
+            for i in [7,30,365]:
+                period_data = GetDiffClosedDays(period, identities_db, enddate, i, [], closed_condition)
+                agg = dict(agg.items() + period_data.items())
+                period_data = GetDiffOpenedDays(period, identities_db, enddate, i, [])
+                agg = dict(agg.items() + period_data.items())
+                period_data = GetDiffClosersDays(period, identities_db, enddate, i, [], closed_condition)
+                agg = dict(agg.items() + period_data.items())
+                period_data = GetDiffChangersDays(period, identities_db, enddate, i, [])
+                agg = dict(agg.items() + period_data.items())
+
+            # Last Activity: to be removed
+            for i in [7,14,30,60,90,180,365,730]:
+                period_activity = GetLastActivityITS(i, closed_condition)
+                agg = dict(agg.items() + period_activity.items())
+
+        return agg
 
     @staticmethod
-    def create_agg_report (period, startdate, enddate, i_db, type_analysis):
+    def create_agg_report (period, startdate, enddate, i_db, type_analysis = None):
         opts = read_options()
         data = ITS.get_agg_data (period, startdate, enddate, i_db, type_analysis)
         createJSON (data, opts.destdir+"/its-static.json")

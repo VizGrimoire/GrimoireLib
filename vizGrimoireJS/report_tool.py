@@ -27,31 +27,31 @@ import logging
 from GrimoireUtils import read_options, getPeriod, read_main_conf
 from report import Report
 
-def get_evol_report(startdate, enddate, identities_db, bots, type_analysis):
+def get_evol_report(startdate, enddate, identities_db, bots):
     all_ds = {}
 
     for ds in Report.get_data_sources():
         Report.connect_ds(ds)
-        all_ds[ds.get_name()] = ds.get_evolutionary_data (period, startdate, enddate, identities_db, type_analysis)
+        all_ds[ds.get_name()] = ds.get_evolutionary_data (period, startdate, enddate, identities_db)
     return all_ds
 
-def create_evol_report(startdate, enddate, identities_db, bots, type_analysis):
+def create_evol_report(startdate, enddate, identities_db, bots):
     for ds in Report.get_data_sources():
         Report.connect_ds(ds)
-        ds.create_evolutionary_report (period, startdate, enddate, identities_db, type_analysis)
+        ds.create_evolutionary_report (period, startdate, enddate, identities_db)
 
-def get_agg_report(startdate, enddate, identities_db, bots, type_analysis):
+def get_agg_report(startdate, enddate, identities_db, bots):
     all_ds = {}
 
     for ds in Report.get_data_sources():
         Report.connect_ds(ds)
-        all_ds[ds.get_name()] = ds.get_agg_data (period, startdate, enddate, identities_db, type_analysis)
+        all_ds[ds.get_name()] = ds.get_agg_data (period, startdate, enddate, identities_db)
     return all_ds
 
-def create_agg_report(startdate, enddate, identities_db, bots, type_analysis):
+def create_agg_report(startdate, enddate, identities_db, bots):
     for ds in Report.get_data_sources():
         Report.connect_ds(ds)
-        ds.create_agg_report (period, startdate, enddate, identities_db, type_analysis)
+        ds.create_agg_report (period, startdate, enddate, identities_db)
 
 def get_top_report(startdate, enddate, identities_db, bots):
     all_ds_top = {}
@@ -109,12 +109,15 @@ if __name__ == '__main__':
 
     opts.config_file = "../../../conf/main.conf"
     automator = read_main_conf(opts.config_file)
-    evol = create_evol_report(startdate, enddate, opts.identities_db, [], [])
-    agg = create_agg_report(startdate, enddate, opts.identities_db, [], [])
-    top = create_top_report(startdate, enddate, opts.identities_db, [])
 
-    create_reports_filters(startdate, enddate, opts.identities_db, [])
-    create_report_people(startdate, enddate, opts.identities_db, [])
+    bots = []
+
+    evol = create_evol_report(startdate, enddate, opts.identities_db, bots)
+    agg = create_agg_report(startdate, enddate, opts.identities_db, bots)
+    top = create_top_report(startdate, enddate, opts.identities_db, bots)
+
+    create_reports_filters(startdate, enddate, opts.identities_db, bots)
+    create_report_people(startdate, enddate, opts.identities_db, bots)
     create_reports_r(opts.enddate)
 
     logging.info("Report data source analysis OK")

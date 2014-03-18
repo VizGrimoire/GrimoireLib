@@ -263,6 +263,6 @@ if __name__ == '__main__':
     top = topData(period, startdate, enddate, opts.identities_db, opts.destdir, bots, opts.npeople)
     if ('people' in reports):
         peopleData (period, startdate, enddate, opts.identities_db, opts.destdir, top)
-    microStudies(vizr, opts.enddate, opts.destdir)
+    microStudies(opts.enddate, opts.destdir)
 
     logging.info("SCM data source analysis OK")

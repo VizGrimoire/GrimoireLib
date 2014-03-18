@@ -97,7 +97,7 @@ class SCR(DataSource):
         return evol
 
     @staticmethod
-    def create_evolutionary_report (period, startdate, enddate, i_db, type_analysis):
+    def create_evolutionary_report (period, startdate, enddate, i_db, type_analysis = None):
         opts = read_options()
         data =  SCR.get_evolutionary_data (period, startdate, enddate, i_db, type_analysis)
         createJSON (data, opts.destdir+"/scr-evolutionary.json")
@@ -140,21 +140,23 @@ class SCR(DataSource):
         data['review_time_days_median'] = float(data['review_time_days_median'])
         agg = dict(agg.items() + data.items())
 
-        # Tendencies
-        for i in [7,30,365]:
-            period_data = GetSCRDiffSubmittedDays(period, enddate, i, i_db)
-            agg = dict(agg.items() + period_data.items())
-            period_data = GetSCRDiffMergedDays(period, enddate, i, i_db)
-            agg = dict(agg.items() + period_data.items())
-            period_data = GetSCRDiffPendingDays(period, enddate, i, i_db)
-            agg = dict(agg.items() + period_data.items())
-            period_data = GetSCRDiffAbandonedDays(period, enddate, i, i_db)
-            agg = dict(agg.items() + period_data.items())
+        if (type_analysis is None):
+
+            # Tendencies
+            for i in [7,30,365]:
+                period_data = GetSCRDiffSubmittedDays(period, enddate, i, i_db)
+                agg = dict(agg.items() + period_data.items())
+                period_data = GetSCRDiffMergedDays(period, enddate, i, i_db)
+                agg = dict(agg.items() + period_data.items())
+                period_data = GetSCRDiffPendingDays(period, enddate, i, i_db)
+                agg = dict(agg.items() + period_data.items())
+                period_data = GetSCRDiffAbandonedDays(period, enddate, i, i_db)
+                agg = dict(agg.items() + period_data.items())
 
         return agg
 
     @staticmethod
-    def create_agg_report (period, startdate, enddate, i_db, type_analysis):
+    def create_agg_report (period, startdate, enddate, i_db, type_analysis = None):
         opts = read_options()
         data = SCR.get_agg_data (period, startdate, enddate, i_db, type_analysis)
         createJSON (data, opts.destdir+"/scr-static.json")
