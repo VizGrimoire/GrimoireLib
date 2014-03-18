@@ -25,30 +25,16 @@
 ##   Alvaro del Castillo <acs@bitergia.com>
 
 
-class DataSource(object):
-    #__metaclass__ = abc.ABCMeta
+class Filter(object):
+    name = None
+    name_short = None
 
-    @staticmethod
-    def get_name():
-        raise NotImplementedError
+    def __init__(self, name, name_short):
+        self.name = name
+        self.name_short = name_short 
 
-    # Automatoc config name for the data source database
-    @staticmethod
-    def get_db_name(self):
-        raise NotImplementedError
+    def get_name(self):
+        return self.name
 
-    @staticmethod
-    def get_evolutionary_data (period, startdate, enddate, i_db, type_analysis):
-        raise NotImplementedError
-
-    @staticmethod
-    def get_agg_data (period, startdate, enddate, i_db, type_analysis):
-        raise NotImplementedError
-
-    @staticmethod
-    def create_filter_report(_filter, startdate, enddate, identities_db, filter_, bots):
-        raise NotImplementedError
-
-    @staticmethod
-    def get_filter_items(period, startdate, enddate, identities_db, filter_):
-        raise NotImplementedError
+    def get_name_short(self):
+        return self.name_short

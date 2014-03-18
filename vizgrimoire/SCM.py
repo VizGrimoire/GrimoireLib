@@ -48,7 +48,7 @@ class SCM(DataSource):
 
     @staticmethod
     def get_evolutionary_data (period, startdate, enddate, i_db, type_analysis):
-        return GetSCMEvolutionaryData (period, startdate, enddate, i_db, type_analysis)
+        return completePeriodIds(GetSCMEvolutionaryData (period, startdate, enddate, i_db, type_analysis))
 
     @staticmethod
     def get_agg_data (period, startdate, enddate, i_db, type_analysis):
@@ -77,6 +77,7 @@ class SCM(DataSource):
         period = getPeriod(opts.granularity)
 
         items = SCM.get_filter_items(filter_, startdate, enddate, identities_db, bots)
+        if (items == None): return
         items = items['name']
 
         filter_name = filter_.get_name()
@@ -94,7 +95,6 @@ class SCM(DataSource):
             type_analysis = [filter_.get_name(), item_name]
 
             evol_data = SCM.get_evolutionary_data (period, startdate, enddate, identities_db, type_analysis)
-            evol_data = completePeriodIds(evol_data)
             createJSON(evol_data, opts.destdir+"/"+item+"-scm-"+filter_name_short+"-evolutionary.json")
 
             agg = SCM.get_agg_data (period, startdate, enddate, identities_db, type_analysis)

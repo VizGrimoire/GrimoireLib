@@ -26,15 +26,19 @@
 #       evolution and agg values of countries and companies
 #############
 
-import re
+import logging, re
 
 from GrimoireSQL import GetSQLGlobal, GetSQLPeriod
 from GrimoireSQL import ExecuteQuery, BuildQuery
-from GrimoireUtils import GetPercentageDiff, GetDates, completePeriodIds
+from GrimoireUtils import GetPercentageDiff, GetDates, completePeriodIds, read_options, getPeriod, createJSON
 
 from data_source import DataSource
 
 class MLS(DataSource):
+
+    @staticmethod
+    def get_repo_field():
+        return "mailing_list_url"
 
     @staticmethod
     def get_db_name():
@@ -45,17 +49,63 @@ class MLS(DataSource):
 
     @staticmethod
     def get_evolutionary_data (period, startdate, enddate, i_db, type_analysis):
-        rfield = "mailing_list_url"
-        return EvolMLSInfo (period, startdate, enddate, i_db, rfield, type_analysis)
+        rfield = MLS.get_repo_field()
+        return completePeriodIds(EvolMLSInfo (period, startdate, enddate, i_db, rfield, type_analysis))
 
     @staticmethod
     def get_agg_data (period, startdate, enddate, i_db, type_analysis):
-        rfield = "mailing_list_url"
+        rfield = MLS.get_repo_field()
         return StaticMLSInfo (period, startdate, enddate, i_db, rfield, type_analysis)
 
     @staticmethod
-    def create_filter_report(period, startdate, enddate, identities_db, filter_):
-        pass
+    def get_filter_items(filter_, startdate, enddate, identities_db, bots):
+        rfield = MLS.get_repo_field()
+        items = None
+        filter_name = filter_.get_name()
+
+        if (filter_name == "repository"):
+            items  = reposNames(rfield, startdate, enddate)  
+        elif (filter_name == "company"):
+            items  = companiesNames(identities_db, startdate, enddate)
+        elif (filter_name == "country"):
+            items = countriesNames(identities_db, startdate, enddate)
+        elif (filter_name == "domain"):
+            items = domainsNames(identities_db, startdate, enddate)
+        else:
+            logging.error(filter_name + " not supported")
+        return items
+
+    @staticmethod
+    def create_filter_report(filter_, startdate, enddate, identities_db, bots):
+        opts = read_options()
+        period = getPeriod(opts.granularity)
+
+        items = MLS.get_filter_items(filter_, startdate, enddate, identities_db, bots)
+        if (items == None): return
+
+        filter_name = filter_.get_name()
+        filter_name_short = filter_.get_name_short()
+        if (filter_name == "repositories"): filter_name = "repos"
+
+        if not isinstance(items, (list)):
+            items = [items]
+
+        items_files = [item.replace('/', '_').replace("<","__").replace(">","___")
+            for item in items]
+
+        createJSON(items_files, opts.destdir+"/mls-"+filter_name+".json")
+
+        for item in items :
+            item_name = "'"+ item+ "'"
+            item_file = item.replace("/","_").replace("<","__").replace(">","___")
+            logging.info (item_name)
+            type_analysis = [filter_.get_name(), item_name]
+
+            evol_data = MLS.get_evolutionary_data (period, startdate, enddate, identities_db, type_analysis)
+            createJSON(evol_data, opts.destdir+"/"+item_file+"-mls-"+filter_name_short+"-evolutionary.json")
+
+            agg = MLS.get_agg_data (period, startdate, enddate, identities_db, type_analysis)
+            createJSON(agg, opts.destdir+"/"+item_file+"-mls-"+filter_name_short+"-static.json")
 
 ##############
 # Specific FROM and WHERE clauses per type of report
@@ -560,7 +610,7 @@ def reposNames  (rfield, startdate, enddate) :
                "GROUP BY ml.mailing_list_url ORDER by total desc"
         mailing_lists = ExecuteQuery(q)
         mailing_lists_files = ExecuteQuery(q)
-        names = mailing_lists_files
+        names = mailing_lists_files[rfield]
     else:
         # TODO: not ordered yet by total messages
         q = "SELECT DISTINCT(mailing_list) FROM messages m "+\

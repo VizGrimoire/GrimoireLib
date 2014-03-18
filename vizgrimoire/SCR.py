@@ -25,11 +25,13 @@
 ##   Daniel Izquierdo <dizquierdo@bitergia.com>
 ##   Alvaro del Castillo San Felix <acs@bitergia.com>
 
+import logging
 from numpy import median, average
 
 from GrimoireSQL import GetSQLGlobal, GetSQLPeriod
 from GrimoireSQL import ExecuteQuery
 from GrimoireUtils import GetPercentageDiff, GetDates, completePeriodIds, checkListArray, removeDecimals, read_options
+from GrimoireUtils import getPeriod, createJSON, checkFloatArray
 
 from data_source import DataSource
 
@@ -44,7 +46,6 @@ class SCR(DataSource):
 
     @staticmethod
     def get_evolutionary_data (period, startdate, enddate, i_db, type_analysis):
-        conf = read_options()
         evol = {}
         data = EvolReviewsSubmitted(period, startdate, enddate)
         evol = dict(evol.items() + completePeriodIds(data).items())
@@ -66,12 +67,12 @@ class SCR(DataSource):
         evol = dict(evol.items() + completePeriodIds(data).items())
         data = EvolReviewsAbandonedChanges(period, startdate, enddate)
         evol = dict(evol.items() + completePeriodIds(data).items())
-        data = EvolReviewsPending(period, startdate, enddate, conf, [])
+        data = EvolReviewsPending(period, startdate, enddate, [])
         evol = dict(evol.items() + completePeriodIds(data).items())
         #Patches info
         data = EvolPatchesVerified(period, startdate, enddate)
         evol = dict(evol.items() + completePeriodIds(data).items())
-        # data = SCR.EvolPatchesApproved(period, startdate, enddate)
+        # data = EvolPatchesApproved(period, startdate, enddate)
         # evol = dict(evol.items() + completePeriodIds(data).items())
         data = EvolPatchesCodeReview(period, startdate, enddate)
         evol = dict(evol.items() + completePeriodIds(data).items())
@@ -145,9 +146,92 @@ class SCR(DataSource):
             agg = dict(agg.items() + period_data.items())
 
     @staticmethod
-    def create_filter_report(period, startdate, enddate, identities_db, filter_):
-        pass
+    def get_filter_items(filter_, startdate, enddate, identities_db, bots):
+        items = None
+        filter_name = filter_.get_name()
 
+        if (filter_name == "repository"):
+            items  = GetReposSCRName(startdate, enddate)
+        elif (filter_name == "company"):
+            items  = GetCompaniesSCRName(startdate, enddate, identities_db)
+        elif (filter_name == "country"):
+            items = GetCountriesSCRName(startdate, enddate, identities_db)
+        elif (filter_name == "domain"):
+            logging.error(filter_name + " not supported")
+        else:
+            logging.error(filter_name + " not supported")
+        return items
+
+    @staticmethod
+    def create_filter_report(filter_, startdate, enddate, identities_db, bots):
+        opts = read_options()
+        period = getPeriod(opts.granularity)
+
+        items = SCR.get_filter_items(filter_, startdate, enddate, identities_db, bots)
+        if (items == None): return
+        items = items['name']
+
+
+        filter_name = filter_.get_name()
+        filter_name_short = filter_.get_name_short()
+        if (filter_name == "repositories"): filter_name = "repos"
+
+        if not isinstance(items, (list)):
+            items = [items]
+
+        # For repos aggregated data. Include metrics to sort in javascript.
+        if (filter_name == "repositories"):
+            items_list = {"name":[],"review_time_days_median":[],"submitted":[]}
+        else:
+            items_list = items
+
+        for item in items :
+            item_file = item.replace("/","_")
+
+            logging.info (item)
+            type_analysis = [filter_.get_name(), item]
+
+            evol = {}
+            data = EvolReviewsSubmitted(period, startdate, enddate, type_analysis, identities_db)
+            evol = dict(evol.items() + completePeriodIds(data).items())
+            data = EvolReviewsMerged(period, startdate, enddate, type_analysis, identities_db)
+            evol = dict(evol.items() + completePeriodIds(data).items())
+            data = EvolReviewsAbandoned(period, startdate, enddate, type_analysis, identities_db)
+            evol = dict(evol.items() + completePeriodIds(data).items())
+            data = EvolReviewsPending(period, startdate, enddate, type_analysis, identities_db)
+            evol = dict(evol.items() + completePeriodIds(data).items())
+            if (period == "month"):
+                data = EvolTimeToReviewSCR(period, startdate, enddate, identities_db, type_analysis)
+                data['review_time_days_avg'] = checkFloatArray(data['review_time_days_avg'])
+                data['review_time_days_median'] = checkFloatArray(data['review_time_days_median'])
+                evol = dict(evol.items() + completePeriodIds(data).items())
+            createJSON(evol, opts.destdir+"/"+item_file+"-scr-"+filter_name_short+"-evolutionary.json")
+
+            # Static
+            agg = {}
+            data = StaticReviewsSubmitted(period, startdate, enddate, type_analysis, identities_db)
+            if (filter_name == "repositories"):
+                items_list["submitted"].append(data["submitted"])
+            agg = dict(agg.items() + data.items())
+            data = StaticReviewsMerged(period, startdate, enddate, type_analysis, identities_db)
+            agg = dict(agg.items() + data.items())
+            data = StaticReviewsAbandoned(period, startdate, enddate, type_analysis, identities_db)
+            agg = dict(agg.items() + data.items())
+            data = StaticReviewsPending(period, startdate, enddate, type_analysis, identities_db)
+            agg = dict(agg.items() + data.items())
+            data = StaticTimeToReviewSCR(startdate, enddate, identities_db, type_analysis, identities_db)
+            val = data['review_time_days_avg']
+            if (not val or val == 0): data['review_time_days_avg'] = 0
+            else: data['review_time_days_avg'] = float(val)
+            val = data['review_time_days_median']
+            if (not val or val == 0): data['review_time_days_median'] = 0
+            else: data['review_time_days_median'] = float(val)
+            agg = dict(agg.items() + data.items())
+            if (filter_name == "repositories"):
+                items_list["review_time_days_median"].append(data['review_time_days_median'])
+            createJSON(agg, opts.destdir + "/"+item_file + "-scr-"+filter_name_short+"-static.json")
+
+        createJSON(items_list, opts.destdir+"/scr-"+filter_name+".json")
 
 ##########
 # Specific FROM and WHERE clauses per type of report
@@ -383,7 +467,7 @@ def EvolReviewsAbandonedChanges(period, startdate, enddate, type_analysis = [], 
     return (GetReviewsChanges(period, startdate, enddate, "abandoned", type_analysis, True, identities_db))
 
 
-def EvolReviewsPending(period, startdate, enddate, config, type_analysis = [], identities_db=None):
+def EvolReviewsPending(period, startdate, enddate, type_analysis = [], identities_db=None):
     data = EvolReviewsSubmitted(period, startdate, enddate, type_analysis, identities_db)
     data = completePeriodIds(data)
     data1 = EvolReviewsMerged(period, startdate, enddate, type_analysis, identities_db)
@@ -401,7 +485,7 @@ def EvolReviewsPending(period, startdate, enddate, config, type_analysis = [], i
     return pending
 
 # PENDING = SUBMITTED - MERGED - ABANDONED
-def EvolReviewsPendingChanges(period, startdate, enddate, config, type_analysis = [], identities_db=None):
+def EvolReviewsPendingChanges(period, startdate, enddate, type_analysis = [], identities_db=None):
     data = EvolReviewsSubmitted(period, startdate, enddate, type_analysis, identities_db)
     data = completePeriodIds(data)
     data1 = EvolReviewsMergedChanges(period, startdate, enddate, type_analysis, identities_db)

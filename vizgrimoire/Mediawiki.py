@@ -24,9 +24,11 @@
 ## Authors:
 ##   Alvaro del Castillo <acs@bitergia.com>
 
+import logging
+
 from GrimoireSQL import GetSQLGlobal, GetSQLPeriod, GetSQLReportFrom 
 from GrimoireSQL import GetSQLReportWhere, ExecuteQuery, BuildQuery
-from GrimoireUtils import GetPercentageDiff, GetDates, completePeriodIds
+from GrimoireUtils import GetPercentageDiff, GetDates, completePeriodIds, read_options, getPeriod
 
 from data_source import DataSource
 
@@ -48,9 +50,20 @@ class Mediawiki(DataSource):
         return GetStaticDataMediaWiki (period, startdate, enddate, i_db, type_analysis)
 
     @staticmethod
-    def create_filter_report(period, startdate, enddate, identities_db, filter_):
-        pass
+    def get_filter_items(filter_, startdate, enddate, identities_db, bots):
+        items = None
+        filter_name = filter_.get_name()
 
+        logging.error(filter_name + " not supported")
+        return items
+
+    @staticmethod
+    def create_filter_report(filter_, startdate, enddate, identities_db, bots):
+        # opts = read_options()
+        # period = getPeriod(opts.granularity)
+
+        items = Mediawiki.get_filter_items(filter_, startdate, enddate, identities_db, bots)
+        if (items == None): return
 
 # SQL Metaqueries
 

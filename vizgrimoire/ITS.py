@@ -27,11 +27,12 @@
 ##   Alvaro del Castillo <acs@bitergia.com>
 ##   Luis Canas-Diaz <lcanas@bitergia.com>
 
-import re
+import logging, re
 
 from GrimoireSQL import GetSQLGlobal, GetSQLPeriod
 from GrimoireSQL import ExecuteQuery, BuildQuery
-from GrimoireUtils import GetPercentageDiff, GetDates, completePeriodIds, read_options, read_main_conf
+from GrimoireUtils import GetPercentageDiff, GetDates, completePeriodIds, read_options, getPeriod
+from GrimoireUtils import createJSON
 
 from data_source import DataSource
 import report
@@ -54,15 +55,59 @@ class ITS(DataSource):
 
     @staticmethod
     def get_evolutionary_data (period, startdate, enddate, i_db, type_analysis):
-        return EvolITSInfo (period, startdate, enddate, i_db, type_analysis, ITS._get_closed_condition())
+        return completePeriodIds(EvolITSInfo (period, startdate, enddate, i_db, type_analysis, ITS._get_closed_condition()))
 
     @staticmethod
     def get_agg_data (period, startdate, enddate, i_db, type_analysis):
         return AggITSInfo (period, startdate, enddate, i_db, type_analysis, ITS._get_closed_condition())
 
     @staticmethod
-    def create_filter_report(period, startdate, enddate, identities_db, filter_):
-        pass
+    def get_filter_items(filter_, startdate, enddate, identities_db, bots):
+        items = None
+        filter_name = filter_.get_name()
+
+        if (filter_name == "repository"):
+            items  = GetReposNameITS(startdate, enddate)
+        elif (filter_name == "company"):
+            items  = GetCompaniesNameITS(startdate, enddate, identities_db, ITS._get_closed_condition(), bots)
+        elif (filter_name == "country"):
+            items = GetCountriesNamesITS(startdate, enddate, identities_db, ITS._get_closed_condition())
+        elif (filter_name == "domain"):
+            items = GetDomainsNameITS(startdate, enddate, identities_db, ITS._get_closed_condition(), bots)
+        else:
+            logging.error(filter_name + " not supported")
+        return items
+
+    @staticmethod
+    def create_filter_report(filter_, startdate, enddate, identities_db, bots):
+        opts = read_options()
+        period = getPeriod(opts.granularity)
+
+        items = ITS.get_filter_items(filter_, startdate, enddate, identities_db, bots)
+        if (items == None): return
+        items = items['name']
+
+        filter_name = filter_.get_name()
+        filter_name_short = filter_.get_name_short()
+        if (filter_name == "repositories"): filter_name = "repos"
+
+        if not isinstance(items, (list)):
+            items = [items]
+
+        createJSON(items, opts.destdir+"/its-"+filter_name+".json")
+
+        for item in items :
+            item_name = "'"+ item+ "'"
+            logging.info (item_name)
+            item_file = item_name.replace("/","_")
+            type_analysis = [filter_.get_name(), item_name]
+
+            evol_data = ITS.get_evolutionary_data (period, startdate, enddate, identities_db, type_analysis)
+            evol_data = completePeriodIds(evol_data)
+            createJSON(evol_data, opts.destdir+"/"+item_file+"-its-"+filter_name_short+"-evolutionary.json")
+
+            agg = ITS.get_agg_data (period, startdate, enddate, identities_db, type_analysis)
+            createJSON(agg, opts.destdir+"/"+item_file+"-its-"+filter_name_short+"-static.json")
 
 ##############
 # Specific FROM and WHERE clauses per type of report

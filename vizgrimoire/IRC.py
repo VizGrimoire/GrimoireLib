@@ -22,9 +22,11 @@
 #     Alvaro del Castillo <acs@bitergia.com>
 #     Daniel Izquierdo <dizquierdo@bitergia.com>
 
+import logging
+
 from GrimoireSQL import GetSQLGlobal, GetSQLPeriod, GetSQLReportFrom
 from GrimoireSQL import GetSQLReportWhere, ExecuteQuery, BuildQuery
-from GrimoireUtils import GetPercentageDiff, GetDates
+from GrimoireUtils import GetPercentageDiff, GetDates, read_options, getPeriod, createJSON, completePeriodIds
 from data_source import DataSource
 
 class IRC(DataSource):
@@ -38,15 +40,51 @@ class IRC(DataSource):
 
     @staticmethod
     def get_evolutionary_data (period, startdate, enddate, i_db, type_analysis):
-        return GetEvolDataIRC (period, startdate, enddate, i_db, type_analysis)
+        return completePeriodIds(GetEvolDataIRC (period, startdate, enddate, i_db, type_analysis))
 
     @staticmethod
     def get_agg_data (period, startdate, enddate, i_db, type_analysis):
         return GetStaticDataIRC (period, startdate, enddate, i_db, type_analysis)
 
     @staticmethod
-    def create_filter_report(period, startdate, enddate, identities_db, filter_):
-        pass
+    def get_filter_items(filter_, startdate, enddate, identities_db, bots):
+        items = None
+        filter_name = filter_.get_name()
+
+        if (filter_name == "repository"):
+            items = GetReposNameIRC()
+        else:
+            logging.error("IRC " + filter_name + " filter not supported")
+        return items
+
+
+    @staticmethod
+    def create_filter_report(filter_, startdate, enddate, identities_db, bots):
+        opts = read_options()
+        period = getPeriod(opts.granularity)
+
+        items = IRC.get_filter_items(filter_, startdate, enddate, identities_db, bots)
+        if (items == None): return
+
+        filter_name = filter_.get_name()
+        filter_name_short = filter_.get_name_short()
+        if (filter_name == "repositories"): filter_name = "repos"
+
+        if not isinstance(items, (list)):
+            items = [items]
+
+        createJSON(items, opts.destdir+"/irc-"+filter_name+".json")
+
+        for item in items :
+            # item_name = "'"+ item+ "'"
+            logging.info (item)
+            # type_analysis = [filter_.get_name(), item_name]
+
+            evol_data = GetRepoEvolSentSendersIRC(item, period, startdate, enddate)
+            createJSON(completePeriodIds(evol_data), opts.destdir+"/"+item+"-irc-"+filter_name_short+"-evolutionary.json")
+
+            agg = GetRepoStaticSentSendersIRC(item, startdate, enddate)
+            createJSON(agg, opts.destdir+"/"+item+"-irc-"+filter_name_short+"-static.json")
 
 # SQL Metaqueries
 def GetIRCSQLRepositoriesFrom ():

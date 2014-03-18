@@ -25,7 +25,7 @@
 import logging
 import sys
 
-import GrimoireSQL
+
 from GrimoireUtils import createJSON
 from GrimoireUtils import read_options, getPeriod, read_main_conf
 from report import Report
