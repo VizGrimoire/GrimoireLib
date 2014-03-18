@@ -34,6 +34,9 @@
 import logging
 from rpy2.robjects.packages import importr
 import sys
+import datetime
+
+from threads import Threads
 
 isoweek = importr("ISOweek")
 vizr = importr("vizgrimoire")
@@ -201,11 +204,52 @@ def domainsData(period, startdate, enddate, identities_db, destdir, npeople):
         data = MLS.StaticMLSInfo(period, startdate, enddate, identities_db, rfield, type_analysis)
         createJSON(data, destdir+"/"+domain+"-mls-dom-static.json")
 
+
+def getLongestThreads(startdate, enddate, identities_db):
+    # This function builds a coherent data structure according
+    # to other simila structures. The Class Threads only returns
+    # the head of the threads (the first message) and the message_id
+    # of each of its children.
+
+    main_topics = Threads(startdate, enddate, identities_db)
+
+    longest_threads = main_topics.topLongestThread(10)
+    print "Top longest threads: "
+    l_threads = {}
+    l_threads['message_id'] = []
+    l_threads['length'] = []
+    l_threads['subject'] = []
+    l_threads['date'] = []
+    l_threads['initiator_name'] = []
+    l_threads['initiator_id'] = []
+    for email in longest_threads:
+        l_threads['message_id'].append(email.message_id)
+        l_threads['length'].append(main_topics.lenThread(email.message_id))
+        l_threads['subject'].append(email.subject)
+        l_threads['date'].append(str(email.date))
+        l_threads['initiator_name'].append(email.initiator_name)
+        l_threads['initiator_id'].append(email.initiator_id)
+
+    return l_threads
+
+
+
 def topData(period, startdate, enddate, identities_db, destdir, bots, npeople):
+    # List of top information of interest for the project.
+    # So far providing information about top people sending messages
+    # and longest threads for three periods: the whole history, last year and
+    # last month.
+
     top_senders_data = {}
     top_senders_data['senders.']=MLS.top_senders(0, startdate, enddate,identities_db,bots, npeople)
     top_senders_data['senders.last year']=MLS.top_senders(365, startdate, enddate,identities_db, bots, npeople)
     top_senders_data['senders.last month']=MLS.top_senders(31, startdate, enddate,identities_db,bots, npeople)
+
+    top_senders_data['threads.'] = getLongestThreads(startdate, enddate, identities_db)
+    startdate = datetime.date.today() - datetime.timedelta(days=365)
+    top_senders_data['threads.last year'] = getLongestThreads(startdate, enddate, identities_db)
+    startdate = datetime.date.today() - datetime.timedelta(days=30)
+    top_senders_data['threads.last month'] = getLongestThreads(startdate, enddate, identities_db)
 
     createJSON (top_senders_data, destdir+"/mls-top.json")
 

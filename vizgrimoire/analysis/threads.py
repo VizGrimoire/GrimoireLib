@@ -112,7 +112,7 @@ class Threads(object):
         query = """
                 select message_ID, is_response_of 
                 from messages 
-                where first_date > '%s' and first_date <= '%s'
+                where first_date > %s and first_date <= %s
                 """ % (self.initdate, self.enddate)
         list_messages = ExecuteQuery(query)
         self.list_message_id = list_messages["message_ID"]
