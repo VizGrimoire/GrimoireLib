@@ -58,8 +58,20 @@ class ITS(DataSource):
         return completePeriodIds(EvolITSInfo (period, startdate, enddate, i_db, type_analysis, ITS._get_closed_condition()))
 
     @staticmethod
+    def create_evolutionary_report (period, startdate, enddate, i_db, type_analysis):
+        opts = read_options()
+        data =  ITS.get_evolutionary_data (period, startdate, enddate, i_db, type_analysis)
+        createJSON (data, opts.destdir+"/its-evolutionary.json")
+
+    @staticmethod
     def get_agg_data (period, startdate, enddate, identities_db, type_analysis):
         return AggITSInfo (period, startdate, enddate, identities_db, type_analysis, ITS._get_closed_condition())
+
+    @staticmethod
+    def create_agg_report (period, startdate, enddate, i_db, type_analysis):
+        opts = read_options()
+        data = ITS.get_agg_data (period, startdate, enddate, i_db, type_analysis)
+        createJSON (data, opts.destdir+"/its-static.json")
 
     @staticmethod
     def get_top_data (period, startdate, enddate, identities_db, npeople):
@@ -118,17 +130,16 @@ class ITS(DataSource):
 
         filter_name = filter_.get_name()
         filter_name_short = filter_.get_name_short()
-        if (filter_name == "repositories"): filter_name = "repos"
 
         if not isinstance(items, (list)):
             items = [items]
 
-        createJSON(items, opts.destdir+"/its-"+filter_name+".json")
+        createJSON(items, opts.destdir+"/its-"+filter_.get_name_plural()+".json")
 
         for item in items :
             item_name = "'"+ item+ "'"
             logging.info (item_name)
-            item_file = item_name.replace("/","_")
+            item_file = item.replace("/","_")
             type_analysis = [filter_.get_name(), item_name]
 
             evol_data = ITS.get_evolutionary_data (period, startdate, enddate, identities_db, type_analysis)

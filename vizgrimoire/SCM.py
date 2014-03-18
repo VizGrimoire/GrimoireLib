@@ -49,8 +49,20 @@ class SCM(DataSource):
         return completePeriodIds(GetSCMEvolutionaryData (period, startdate, enddate, i_db, type_analysis))
 
     @staticmethod
+    def create_evolutionary_report (period, startdate, enddate, i_db, type_analysis):
+        opts = read_options()
+        data =  SCM.get_evolutionary_data (period, startdate, enddate, i_db, type_analysis)
+        createJSON (data, opts.destdir+"/scm-evolutionary.json")
+
+    @staticmethod
     def get_agg_data (period, startdate, enddate, i_db, type_analysis):
         return GetSCMStaticData (period, startdate, enddate, i_db, type_analysis)
+
+    @staticmethod
+    def create_agg_report (period, startdate, enddate, i_db, type_analysis):
+        opts = read_options()
+        data = SCM.get_agg_data (period, startdate, enddate, i_db, type_analysis)
+        createJSON (data, opts.destdir+"/scm-static.json")
 
     @staticmethod
     def get_top_data (period, startdate, enddate, i_db, npeople):
@@ -95,12 +107,11 @@ class SCM(DataSource):
 
         filter_name = filter_.get_name()
         filter_name_short = filter_.get_name_short()
-        if (filter_name == "repository"): filter_name = "repos"
 
         if not isinstance(items, (list)):
             items = [items]
 
-        createJSON(items, opts.destdir+"/scm-"+filter_name+".json")
+        createJSON(items, opts.destdir+"/scm-"+filter_.get_name_plural()+".json")
 
         for item in items :
             item_name = "'"+ item+ "'"

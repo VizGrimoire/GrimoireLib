@@ -53,9 +53,21 @@ class MLS(DataSource):
         return completePeriodIds(EvolMLSInfo (period, startdate, enddate, i_db, rfield, type_analysis))
 
     @staticmethod
+    def create_evolutionary_report (period, startdate, enddate, i_db, type_analysis):
+        opts = read_options()
+        data =  MLS.get_evolutionary_data (period, startdate, enddate, i_db, type_analysis)
+        createJSON (data, opts.destdir+"/mls-evolutionary.json")
+
+    @staticmethod
     def get_agg_data (period, startdate, enddate, i_db, type_analysis):
         rfield = MLS.get_repo_field()
         return StaticMLSInfo (period, startdate, enddate, i_db, rfield, type_analysis)
+
+    @staticmethod
+    def create_agg_report (period, startdate, enddate, i_db, type_analysis):
+        opts = read_options()
+        data = MLS.get_agg_data (period, startdate, enddate, i_db, type_analysis)
+        createJSON (data, opts.destdir+"/mls-static.json")
 
     @staticmethod
     def get_top_data (period, startdate, enddate, identities_db, npeople):
@@ -103,7 +115,6 @@ class MLS(DataSource):
 
         filter_name = filter_.get_name()
         filter_name_short = filter_.get_name_short()
-        if (filter_name == "repository"): filter_name = "repos"
 
         if not isinstance(items, (list)):
             items = [items]
@@ -111,7 +122,7 @@ class MLS(DataSource):
         items_files = [item.replace('/', '_').replace("<","__").replace(">","___")
             for item in items]
 
-        createJSON(items_files, opts.destdir+"/mls-"+filter_name+".json")
+        createJSON(items_files, opts.destdir+"/mls-"+filter_.get_name_plural()+".json")
 
         for item in items :
             item_name = "'"+ item+ "'"
@@ -127,7 +138,18 @@ class MLS(DataSource):
 
             if (filter_name == "company"):
                 top_senders = companyTopSenders (item, identities_db, startdate, enddate, opts.npeople)
-                createJSON(top_senders, opts.destdir+"/"+item+"-mls-"+filter_name_short+"-top-senders.json")
+                createJSON(top_senders, opts.destdir+"/"+item_file+"-mls-"+filter_name_short+"-top-senders.json")
+            elif (filter_name == "country"):
+                top_senders = countryTopSenders (item, identities_db, startdate, enddate, opts.npeople)
+                createJSON(top_senders, opts.destdir+"/"+item_file+"-mls-"+filter_name_short+"-top-senders.json")
+            elif (filter_name == "domain"):
+                top_senders = domainTopSenders(item, identities_db, startdate, enddate, opts.npeople)
+                createJSON(top_senders, opts.destdir+"/"+item_file+"-mls-"+filter_name_short+"-top-senders.json")
+            elif (filter_name == "repos"):
+                rfield = MLS.get_repo_field()
+                top_senders = repoTopSenders (item, identities_db, startdate, enddate, rfield, opts.npeople)
+                createJSON(top_senders, opts.destdir+ "/"+item_file+"-mls-rep-top-senders.json")
+
 
         if (filter_name == "company"):
             sent = GetSentSummaryCompanies(period, startdate, enddate, opts.identities_db, 10)

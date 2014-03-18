@@ -97,6 +97,12 @@ class SCR(DataSource):
         return evol
 
     @staticmethod
+    def create_evolutionary_report (period, startdate, enddate, i_db, type_analysis):
+        opts = read_options()
+        data =  SCR.get_evolutionary_data (period, startdate, enddate, i_db, type_analysis)
+        createJSON (data, opts.destdir+"/scr-evolutionary.json")
+
+    @staticmethod
     def get_agg_data (period, startdate, enddate, i_db, type_analysis):
         agg = StaticReviewsSubmitted(period, startdate, enddate)
         data = StaticReviewsOpened(period, startdate, enddate)
@@ -144,6 +150,12 @@ class SCR(DataSource):
             agg = dict(agg.items() + period_data.items())
             period_data = GetSCRDiffAbandonedDays(period, enddate, i, i_db)
             agg = dict(agg.items() + period_data.items())
+
+    @staticmethod
+    def create_agg_report (period, startdate, enddate, i_db, type_analysis):
+        opts = read_options()
+        data = SCR.get_agg_data (period, startdate, enddate, i_db, type_analysis)
+        createJSON (data, opts.destdir+"/scr-static.json")
 
     @staticmethod
     def get_top_data (period, startdate, enddate, identities_db, npeople):
@@ -206,7 +218,6 @@ class SCR(DataSource):
 
         filter_name = filter_.get_name()
         filter_name_short = filter_.get_name_short()
-        if (filter_name == "repositories"): filter_name = "repos"
 
         if not isinstance(items, (list)):
             items = [items]
@@ -263,7 +274,7 @@ class SCR(DataSource):
                 items_list["review_time_days_median"].append(data['review_time_days_median'])
             createJSON(agg, opts.destdir + "/"+item_file + "-scr-"+filter_name_short+"-static.json")
 
-        createJSON(items_list, opts.destdir+"/scr-"+filter_name+".json")
+        createJSON(items_list, opts.destdir+"/scr-"+filter_.get_name_plural()+".json")
 
 
     # Unify top format

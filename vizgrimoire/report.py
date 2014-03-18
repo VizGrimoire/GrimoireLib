@@ -43,9 +43,9 @@ class Report(object):
     @staticmethod
     def _init_filters():
         # people report is a bit different. Not included
-        filters_ = [["repository","rep"],["company","com"],["country","cou"],["domain","dom"]]
+        filters_ = [["repository","rep","repos"],["company","com","companies"],["country","cou","countries"],["domain","dom","domains"]]
         for filter_ in filters_:
-            Report._filters.append(Filter(filter_[0],filter_[1]))
+            Report._filters.append(Filter(filter_[0],filter_[1],filter_[2]))
 
     @staticmethod
     def _init_data_sources():

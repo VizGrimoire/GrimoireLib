@@ -239,6 +239,7 @@ def microStudies(destdir):
 
 def ticketsStates(period, startdate, enddate, identities_db, backend):
     evol = {}
+    return evol
     for status in backend.statuses:
         print ("Working with ticket status: " + status)
         #Evolution of the backlog

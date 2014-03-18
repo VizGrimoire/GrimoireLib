@@ -43,8 +43,20 @@ class IRC(DataSource):
         return completePeriodIds(GetEvolDataIRC (period, startdate, enddate, identities_db, type_analysis))
 
     @staticmethod
+    def create_evolutionary_report (period, startdate, enddate, i_db, type_analysis):
+        opts = read_options()
+        data =  IRC.get_evolutionary_data (period, startdate, enddate, i_db, type_analysis)
+        createJSON (data, opts.destdir+"/irc-evolutionary.json")
+
+    @staticmethod
     def get_agg_data (period, startdate, enddate, i_db, type_analysis):
         return GetStaticDataIRC (period, startdate, enddate, i_db, type_analysis)
+
+    @staticmethod
+    def create_agg_report (period, startdate, enddate, i_db, type_analysis):
+        opts = read_options()
+        data = IRC.get_agg_data (period, startdate, enddate, i_db, type_analysis)
+        createJSON (data, opts.destdir+"/irc-static.json")
 
     @staticmethod
     def get_top_data (period, startdate, enddate, identities_db, npeople):
@@ -89,12 +101,11 @@ class IRC(DataSource):
 
         filter_name = filter_.get_name()
         filter_name_short = filter_.get_name_short()
-        if (filter_name == "repositories"): filter_name = "repos"
 
         if not isinstance(items, (list)):
             items = [items]
 
-        createJSON(items, opts.destdir+"/irc-"+filter_name+".json")
+        createJSON(items, opts.destdir+"/irc-"+filter_.get_name_plural()+".json")
 
         for item in items :
             # item_name = "'"+ item+ "'"
