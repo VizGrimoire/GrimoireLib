@@ -228,11 +228,6 @@ def microStudies(vizr, enddate, destdir):
     vizr.ReportDemographicsAgingSCM(enddate, destdir)
     vizr.ReportDemographicsBirthSCM(enddate, destdir)
 
-def testClass(period, startdate, enddate, identities_db, destdir, granularity, conf):
-    from SCM import SCM
-    data = SCM.get_evolutionary_data(period, startdate, enddate, identities_db, None)
-    print(data)
-
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO,format='%(asctime)s %(message)s')
     logging.info("Starting SCM data source analysis")
@@ -251,10 +246,6 @@ if __name__ == '__main__':
     vizr.SetDBChannel (database=opts.dbname, user=opts.dbuser, password=opts.dbpassword)
     GrimoireSQL.SetDBChannel (database=opts.dbname, user=opts.dbuser, password=opts.dbpassword)
 
-    # Testing conversion to class
-    testClass (period, startdate, enddate, opts.identities_db, opts.destdir, opts.granularity, opts)
-    sys.exit()
-
     aggData(period, startdate, enddate, opts.identities_db, opts.destdir)
     tsData (period, startdate, enddate, opts.identities_db, opts.destdir, opts.granularity, opts)
 
@@ -272,6 +263,6 @@ if __name__ == '__main__':
     top = topData(period, startdate, enddate, opts.identities_db, opts.destdir, bots, opts.npeople)
     if ('people' in reports):
         peopleData (period, startdate, enddate, opts.identities_db, opts.destdir, top)
-    microStudies(opts.enddate, opts.destdir)
+    microStudies(vizr, opts.enddate, opts.destdir)
 
     logging.info("SCM data source analysis OK")
