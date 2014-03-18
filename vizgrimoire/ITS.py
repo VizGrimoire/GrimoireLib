@@ -58,8 +58,34 @@ class ITS(DataSource):
         return completePeriodIds(EvolITSInfo (period, startdate, enddate, i_db, type_analysis, ITS._get_closed_condition()))
 
     @staticmethod
-    def get_agg_data (period, startdate, enddate, i_db, type_analysis):
-        return AggITSInfo (period, startdate, enddate, i_db, type_analysis, ITS._get_closed_condition())
+    def get_agg_data (period, startdate, enddate, identities_db, type_analysis):
+        return AggITSInfo (period, startdate, enddate, identities_db, type_analysis, ITS._get_closed_condition())
+
+    @staticmethod
+    def get_top_data (period, startdate, enddate, identities_db, npeople):
+        bots = ITS.get_bots()
+        closed_condition =  ITS._get_closed_condition()
+        opts = read_options()
+
+
+        # Top closers
+        top_closers_data = {}
+        # top_closers_data['closers.']=dataFrame2Dict(vizr.GetTopClosers(0, startdate, enddate,identities_db, bots, closed_condition))
+        top_closers_data['closers.']=GetTopClosers(0, startdate, enddate,identities_db, bots, closed_condition, npeople)
+        top_closers_data['closers.last year']=GetTopClosers(365, startdate, enddate,identities_db, bots, closed_condition, npeople)
+        top_closers_data['closers.last month']=GetTopClosers(31, startdate, enddate,identities_db, bots, closed_condition, npeople)
+
+        # Top openers
+        top_openers_data = {}
+        top_openers_data['openers.']=GetTopOpeners(0, startdate, enddate,identities_db, bots, closed_condition, npeople)
+        top_openers_data['openers.last year']=GetTopOpeners(365, startdate, enddate,identities_db, bots, closed_condition, npeople)
+        top_openers_data['openers.last month']=GetTopOpeners(31, startdate, enddate,identities_db, bots, closed_condition, npeople)
+
+
+        all_top = dict(top_closers_data.items() + top_openers_data.items())
+        createJSON (all_top, opts.destdir+"/its-top.json")
+
+        return all_top
 
     @staticmethod
     def get_filter_items(filter_, startdate, enddate, identities_db, bots):

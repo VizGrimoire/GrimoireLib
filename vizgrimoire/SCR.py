@@ -146,6 +146,34 @@ class SCR(DataSource):
             agg = dict(agg.items() + period_data.items())
 
     @staticmethod
+    def get_top_data (period, startdate, enddate, identities_db, npeople):
+        bots = SCR.get_bots()
+        opts = read_options()
+
+        top_reviewers = {}
+        top_reviewers['reviewers'] = GetTopReviewersSCR(0, startdate, enddate, identities_db, bots, npeople)
+        top_reviewers['reviewers.last year']= GetTopReviewersSCR(365, startdate, enddate, identities_db, bots, npeople)
+        top_reviewers['reviewers.last month']= GetTopReviewersSCR(31, startdate, enddate, identities_db, bots, npeople)
+
+        # Top openers
+        top_openers = {}
+        top_openers['openers.']=GetTopOpenersSCR(0, startdate, enddate,identities_db, bots, npeople)
+        top_openers['openers.last year']=GetTopOpenersSCR(365, startdate, enddate,identities_db, bots, npeople)
+        top_openers['openers.last_month']=GetTopOpenersSCR(31, startdate, enddate,identities_db, bots, npeople)
+
+        # Top mergers
+        top_mergers = {}
+        top_mergers['mergers.last year']=GetTopMergersSCR(365, startdate, enddate,identities_db, bots, npeople)
+        top_mergers['mergers.']=GetTopMergersSCR(0, startdate, enddate,identities_db, bots, npeople)
+        top_mergers['mergers.last_month']=GetTopMergersSCR(31, startdate, enddate,identities_db, bots, npeople)
+
+        # The order of the list item change so we can not check it
+        top_all = dict(top_reviewers.items() +  top_openers.items() + top_mergers.items())
+        createJSON (top_all, opts.destdir+"/scr-top.json")
+
+        return (top_all)
+
+    @staticmethod
     def get_filter_items(filter_, startdate, enddate, identities_db, bots):
         items = None
         filter_name = filter_.get_name()

@@ -39,12 +39,29 @@ class IRC(DataSource):
     def get_name(): return "IRC"
 
     @staticmethod
-    def get_evolutionary_data (period, startdate, enddate, i_db, type_analysis):
-        return completePeriodIds(GetEvolDataIRC (period, startdate, enddate, i_db, type_analysis))
+    def get_evolutionary_data (period, startdate, enddate, identities_db, type_analysis):
+        return completePeriodIds(GetEvolDataIRC (period, startdate, enddate, identities_db, type_analysis))
 
     @staticmethod
     def get_agg_data (period, startdate, enddate, i_db, type_analysis):
         return GetStaticDataIRC (period, startdate, enddate, i_db, type_analysis)
+
+    @staticmethod
+    def get_top_data (period, startdate, enddate, identities_db, npeople):
+        bots = IRC.get_bots()
+        opts = read_options()
+
+        top_senders = {}
+        top_senders['senders.'] = \
+            GetTopSendersIRC(0, startdate, enddate, identities_db, bots, npeople)
+        top_senders['senders.last year'] = \
+            GetTopSendersIRC(365, startdate, enddate, identities_db, bots, npeople)
+        top_senders['senders.last month'] = \
+            GetTopSendersIRC(31, startdate, enddate, identities_db, bots, npeople)
+        top_file = opts.destdir+"/irc-top.json"
+        createJSON (top_senders, top_file)
+
+        return(top_senders)
 
     @staticmethod
     def get_filter_items(filter_, startdate, enddate, identities_db, bots):

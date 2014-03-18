@@ -36,8 +36,6 @@ import logging
 
 class SCM(DataSource):
 
-    bots = []
-
     @staticmethod
     def get_db_name():
         return "db_cvsanaly"
@@ -53,6 +51,18 @@ class SCM(DataSource):
     @staticmethod
     def get_agg_data (period, startdate, enddate, i_db, type_analysis):
         return GetSCMStaticData (period, startdate, enddate, i_db, type_analysis)
+
+    @staticmethod
+    def get_top_data (period, startdate, enddate, i_db, npeople):
+        opts = read_options()
+        top_authors_data =  {}
+        top_authors_data['authors.'] = top_people(0, startdate, enddate, "author" , "" , npeople)
+        top_authors_data['authors.last month']= top_people(31, startdate, enddate, "author", "", npeople)
+        top_authors_data['authors.last year']= top_people(365, startdate, enddate, "author", "", npeople)
+
+        createJSON (top_authors_data, opts.destdir+"/scm-top.json")
+
+        return top_authors_data
 
     @staticmethod
     def get_filter_items(filter_, startdate, enddate, identities_db, bots):

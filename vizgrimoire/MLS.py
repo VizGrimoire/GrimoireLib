@@ -58,6 +58,19 @@ class MLS(DataSource):
         return StaticMLSInfo (period, startdate, enddate, i_db, rfield, type_analysis)
 
     @staticmethod
+    def get_top_data (period, startdate, enddate, identities_db, npeople):
+        bots = MLS.get_bots()
+        opts = read_options()
+
+        top_senders_data = {}
+        top_senders_data['senders.']=top_senders(0, startdate, enddate,identities_db,bots, npeople)
+        top_senders_data['senders.last year']=top_senders(365, startdate, enddate,identities_db, bots, npeople)
+        top_senders_data['senders.last month']=top_senders(31, startdate, enddate,identities_db,bots, npeople)
+        createJSON (top_senders_data, opts.destdir+"/mls-top.json")
+
+        return top_senders_data
+
+    @staticmethod
     def get_filter_items(filter_, startdate, enddate, identities_db, bots):
         rfield = MLS.get_repo_field()
         items = None

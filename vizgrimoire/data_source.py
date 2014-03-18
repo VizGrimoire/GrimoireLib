@@ -26,7 +26,15 @@
 
 
 class DataSource(object):
-    #__metaclass__ = abc.ABCMeta
+    _bots = []
+
+    @staticmethod
+    def get_bots():
+        return DataSource._bots
+
+    @staticmethod
+    def set_bots(ds_bots):
+        DataSource._bots = ds_bots
 
     @staticmethod
     def get_name():
@@ -38,11 +46,15 @@ class DataSource(object):
         raise NotImplementedError
 
     @staticmethod
-    def get_evolutionary_data (period, startdate, enddate, i_db, type_analysis):
+    def get_evolutionary_data (period, startdate, enddate, identities_db, type_analysis):
         raise NotImplementedError
 
     @staticmethod
-    def get_agg_data (period, startdate, enddate, i_db, type_analysis):
+    def get_agg_data (period, startdate, enddate, identities_db, type_analysis):
+        raise NotImplementedError
+
+    @staticmethod
+    def get_top_data (period, startdate, enddate, identities_db, npeople):
         raise NotImplementedError
 
     @staticmethod

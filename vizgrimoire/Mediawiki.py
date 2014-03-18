@@ -28,7 +28,7 @@ import logging
 
 from GrimoireSQL import GetSQLGlobal, GetSQLPeriod, GetSQLReportFrom 
 from GrimoireSQL import GetSQLReportWhere, ExecuteQuery, BuildQuery
-from GrimoireUtils import GetPercentageDiff, GetDates, completePeriodIds, read_options, getPeriod
+from GrimoireUtils import GetPercentageDiff, GetDates, completePeriodIds, read_options, createJSON
 
 from data_source import DataSource
 
@@ -48,6 +48,20 @@ class Mediawiki(DataSource):
     @staticmethod
     def get_agg_data (period, startdate, enddate, i_db, type_analysis):
         return GetStaticDataMediaWiki (period, startdate, enddate, i_db, type_analysis)
+
+    @staticmethod
+    def get_top_data (period, startdate, enddate, identities_db, npeople):
+        bots = Mediawiki.get_bots()
+        opts = read_options()
+
+        top_authors = {}
+        top_authors['authors.'] = GetTopAuthorsMediaWiki(0, startdate, enddate, identities_db, bots, npeople)
+        top_authors['authors.last year']= GetTopAuthorsMediaWiki(365, startdate, enddate, identities_db, bots, npeople)
+        top_authors['authors.last month']= GetTopAuthorsMediaWiki(31, startdate, enddate, identities_db, bots, npeople)
+        createJSON (top_authors, opts.destdir+"/mediawiki-top.json")
+
+        return(top_authors)
+
 
     @staticmethod
     def get_filter_items(filter_, startdate, enddate, identities_db, bots):

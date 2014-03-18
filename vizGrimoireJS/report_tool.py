@@ -46,6 +46,16 @@ def get_agg_report(startdate, enddate, identities_db, bots, type_analysis):
         all_ds[ds.get_name()] = ds.get_agg_data (period, startdate, enddate, identities_db, type_analysis)
     return all_ds
 
+def get_top_report(startdate, enddate, identities_db, bots):
+    all_ds_top = {}
+
+    for ds in Report.get_data_sources():
+        Report.connect_ds(ds)
+        top = ds.get_top_data (period, startdate, enddate, identities_db, opts.npeople)
+        all_ds_top[ds.get_name()] = top 
+    return all_ds_top
+
+
 def create_reports(startdate, enddate, identities_db, bots):
     for ds in Report.get_data_sources():
         Report.connect_ds(ds)
@@ -53,6 +63,14 @@ def create_reports(startdate, enddate, identities_db, bots):
         for filter_ in Report.get_filters():
             logging.info("-> " + filter_.get_name())
             ds.create_filter_report(filter_, startdate, enddate, identities_db, bots)
+
+def create_top_reports(startdate, enddate, identities_db, bots):
+    for ds in Report.get_data_sources():
+        Report.connect_ds(ds)
+        logging.info("Creating TOP reports for " + ds.get_name())
+        for filter_ in Report.get_filters():
+            logging.info("-> " + filter_.get_name())
+            ds.create_filter_top_report(filter_, startdate, enddate, identities_db, bots)
 
 if __name__ == '__main__':
 
@@ -71,6 +89,8 @@ if __name__ == '__main__':
     automator = read_main_conf(opts.config_file)
     evol = get_evol_report(startdate, enddate, opts.identities_db, [], [])
     agg = get_agg_report(startdate, enddate, opts.identities_db, [], [])
-    create_reports(startdate, enddate, opts.identities_db, [])
+    top = get_top_report(startdate, enddate, opts.identities_db, [])
+    print(top)
+    # create_reports(startdate, enddate, opts.identities_db, [])
 
     logging.info("Report data source analysis OK")
