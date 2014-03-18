@@ -151,6 +151,8 @@ class SCR(DataSource):
             period_data = GetSCRDiffAbandonedDays(period, enddate, i, i_db)
             agg = dict(agg.items() + period_data.items())
 
+        return agg
+
     @staticmethod
     def create_agg_report (period, startdate, enddate, i_db, type_analysis):
         opts = read_options()
@@ -223,13 +225,15 @@ class SCR(DataSource):
             items = [items]
 
         # For repos aggregated data. Include metrics to sort in javascript.
-        if (filter_name == "repositories"):
+        if (filter_name == "repository"):
             items_list = {"name":[],"review_time_days_median":[],"submitted":[]}
         else:
             items_list = items
 
         for item in items :
             item_file = item.replace("/","_")
+            if (filter_name == "repository"):
+                items_list["name"].append(item_file)
 
             logging.info (item)
             type_analysis = [filter_.get_name(), item]
@@ -253,7 +257,7 @@ class SCR(DataSource):
             # Static
             agg = {}
             data = StaticReviewsSubmitted(period, startdate, enddate, type_analysis, identities_db)
-            if (filter_name == "repositories"):
+            if (filter_name == "repository"):
                 items_list["submitted"].append(data["submitted"])
             agg = dict(agg.items() + data.items())
             data = StaticReviewsMerged(period, startdate, enddate, type_analysis, identities_db)
@@ -270,7 +274,7 @@ class SCR(DataSource):
             if (not val or val == 0): data['review_time_days_median'] = 0
             else: data['review_time_days_median'] = float(val)
             agg = dict(agg.items() + data.items())
-            if (filter_name == "repositories"):
+            if (filter_name == "repository"):
                 items_list["review_time_days_median"].append(data['review_time_days_median'])
             createJSON(agg, opts.destdir + "/"+item_file + "-scr-"+filter_name_short+"-static.json")
 
