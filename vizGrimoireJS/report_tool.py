@@ -56,13 +56,19 @@ def get_top_report(startdate, enddate, identities_db, bots):
     return all_ds_top
 
 
-def create_reports(startdate, enddate, identities_db, bots):
+def create_reports_filters(startdate, enddate, identities_db, bots):
     for ds in Report.get_data_sources():
         Report.connect_ds(ds)
-        logging.info("Creating reports for " + ds.get_name())
+        logging.info("Creating filter reports for " + ds.get_name())
         for filter_ in Report.get_filters():
             logging.info("-> " + filter_.get_name())
             ds.create_filter_report(filter_, startdate, enddate, identities_db, bots)
+
+def create_report_people(startdate, enddate, identities_db, bots):
+    for ds in Report.get_data_sources():
+        Report.connect_ds(ds)
+        logging.info("Creating people for " + ds.get_name())
+        ds.create_people_report(period, startdate, enddate, identities_db)
 
 if __name__ == '__main__':
 
@@ -83,6 +89,7 @@ if __name__ == '__main__':
 #    agg = get_agg_report(startdate, enddate, opts.identities_db, [], [])
 #    top = get_top_report(startdate, enddate, opts.identities_db, [])
 #
-    create_reports(startdate, enddate, opts.identities_db, [])
+#    create_reports_filters(startdate, enddate, opts.identities_db, [])
+    create_report_people(startdate, enddate, opts.identities_db, [])
 
     logging.info("Report data source analysis OK")

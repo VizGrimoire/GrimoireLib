@@ -52,16 +52,20 @@ class Mediawiki(DataSource):
     @staticmethod
     def get_top_data (period, startdate, enddate, identities_db, npeople):
         bots = Mediawiki.get_bots()
-        opts = read_options()
 
         top_authors = {}
         top_authors['authors.'] = GetTopAuthorsMediaWiki(0, startdate, enddate, identities_db, bots, npeople)
         top_authors['authors.last year']= GetTopAuthorsMediaWiki(365, startdate, enddate, identities_db, bots, npeople)
         top_authors['authors.last month']= GetTopAuthorsMediaWiki(31, startdate, enddate, identities_db, bots, npeople)
-        createJSON (top_authors, opts.destdir+"/mediawiki-top.json")
 
         return(top_authors)
 
+    @staticmethod
+    def create_top_report (period, startdate, enddate, i_db):
+        opts = read_options()
+        data = Mediawiki.get_top_data (period, startdate, enddate, i_db, opts.npeople)
+        top_file = opts.destdir+"/mediawiki-top.json"
+        createJSON (data, top_file)
 
     @staticmethod
     def get_filter_items(filter_, startdate, enddate, identities_db, bots):
@@ -78,6 +82,26 @@ class Mediawiki(DataSource):
 
         items = Mediawiki.get_filter_items(filter_, startdate, enddate, identities_db, bots)
         if (items == None): return
+
+    @staticmethod
+    def create_people_report(period, startdate, enddate, identities_db):
+        opts = read_options()
+        top_data = Mediawiki.get_top_data (period, startdate, enddate, identities_db, opts.npeople)
+
+        top = top_data['authors.']["id"]
+        top += top_data['authors.last year']["id"]
+        top += top_data['authors.last month']["id"]
+        # remove duplicates
+        people = list(set(top))
+        createJSON(people, opts.destdir+"/mediawiki-people.json")
+
+        for upeople_id in people:
+            evol = GetEvolPeopleMediaWiki(upeople_id, period, startdate, enddate)
+            evol = completePeriodIds(evol)
+            createJSON(evol, opts.destdir+"/people-"+str(upeople_id)+"-mediawiki-evolutionary.json")
+
+            static = GetStaticPeopleMediaWiki(upeople_id, startdate, enddate)
+            createJSON(static, opts.destdir+"/people-"+str(upeople_id)+"-mediawiki-static.json")
 
 # SQL Metaqueries
 

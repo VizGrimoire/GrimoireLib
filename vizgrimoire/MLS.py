@@ -60,15 +60,20 @@ class MLS(DataSource):
     @staticmethod
     def get_top_data (period, startdate, enddate, identities_db, npeople):
         bots = MLS.get_bots()
-        opts = read_options()
 
         top_senders_data = {}
         top_senders_data['senders.']=top_senders(0, startdate, enddate,identities_db,bots, npeople)
         top_senders_data['senders.last year']=top_senders(365, startdate, enddate,identities_db, bots, npeople)
         top_senders_data['senders.last month']=top_senders(31, startdate, enddate,identities_db,bots, npeople)
-        createJSON (top_senders_data, opts.destdir+"/mls-top.json")
 
         return top_senders_data
+
+    @staticmethod
+    def create_top_report (period, startdate, enddate, i_db):
+        opts = read_options()
+        data = MLS.get_top_data (period, startdate, enddate, i_db, opts.npeople)
+        top_file = opts.destdir+"/mls-top.json"
+        createJSON (data, top_file)
 
     @staticmethod
     def get_filter_items(filter_, startdate, enddate, identities_db, bots):
@@ -127,6 +132,26 @@ class MLS(DataSource):
         if (filter_name == "company"):
             sent = GetSentSummaryCompanies(period, startdate, enddate, opts.identities_db, 10)
             createJSON (sent, opts.destdir+"/mls-sent-companies-summary.json")
+
+    @staticmethod
+    def create_people_report(period, startdate, enddate, identities_db):
+        opts = read_options()
+        top_data = MLS.get_top_data (period, startdate, enddate, identities_db, opts.npeople)
+
+        top = top_data['senders.']["id"]
+        top += top_data['senders.last year']["id"]
+        top += top_data['senders.last month']["id"]
+        # remove duplicates
+        people = list(set(top))
+        createJSON(people, opts.destdir+"/mls-people.json")
+
+        for upeople_id in people:
+            evol = GetEvolPeopleMLS(upeople_id, period, startdate, enddate)
+            evol = completePeriodIds(evol)
+            createJSON(evol, opts.destdir+"/people-"+str(upeople_id)+"-mls-evolutionary.json")
+
+            static = GetStaticPeopleMLS(upeople_id, startdate, enddate)
+            createJSON(static, opts.destdir+"/people-"+str(upeople_id)+"-mls-static.json")
 
 ##############
 # Specific FROM and WHERE clauses per type of report

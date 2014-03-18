@@ -49,7 +49,6 @@ class IRC(DataSource):
     @staticmethod
     def get_top_data (period, startdate, enddate, identities_db, npeople):
         bots = IRC.get_bots()
-        opts = read_options()
 
         top_senders = {}
         top_senders['senders.'] = \
@@ -58,10 +57,15 @@ class IRC(DataSource):
             GetTopSendersIRC(365, startdate, enddate, identities_db, bots, npeople)
         top_senders['senders.last month'] = \
             GetTopSendersIRC(31, startdate, enddate, identities_db, bots, npeople)
-        top_file = opts.destdir+"/irc-top.json"
-        createJSON (top_senders, top_file)
 
         return(top_senders)
+
+    @staticmethod
+    def create_top_report (period, startdate, enddate, i_db):
+        opts = read_options()
+        data = IRC.get_top_data (period, startdate, enddate, i_db, opts.npeople)
+        top_file = opts.destdir+"/irc-top.json"
+        createJSON (data, top_file)
 
     @staticmethod
     def get_filter_items(filter_, startdate, enddate, identities_db, bots):
@@ -103,6 +107,30 @@ class IRC(DataSource):
             agg = GetRepoStaticSentSendersIRC(item, startdate, enddate)
             createJSON(agg, opts.destdir+"/"+item+"-irc-"+filter_name_short+"-static.json")
 
+    @staticmethod
+    def create_people_report(period, startdate, enddate, identities_db):
+        opts = read_options()
+
+        top_data = IRC.get_top_data (period, startdate, enddate, identities_db, opts.npeople)
+
+        top = top_data['senders.']["id"]
+        top += top_data['senders.last year']["id"]
+        top += top_data['senders.last month']["id"]
+        # remove duplicates
+        people = list(set(top)) 
+        createJSON(people, opts.destdir+"/irc-people.json")
+
+        for upeople_id in people:
+            # evol = dataFrame2Dict(vizr.GetEvolPeopleIRC(upeople_id, period, startdate, enddate))
+            evol = GetEvolPeopleIRC(upeople_id, period, startdate, enddate)
+            evol = completePeriodIds(evol)
+            person_file = opts.destdir+"/people-"+str(upeople_id)+"-irc-evolutionary.json"
+            createJSON(evol, person_file)
+
+            person_file = opts.destdir+"/people-"+str(upeople_id)+"-irc-static.json"
+            # aggdata = dataFrame2Dict(vizr.GetStaticPeopleIRC(upeople_id, startdate, enddate))
+            aggdata = GetStaticPeopleIRC(upeople_id, startdate, enddate)
+            createJSON(aggdata, person_file)
 
 # SQL Metaqueries
 def GetIRCSQLRepositoriesFrom ():

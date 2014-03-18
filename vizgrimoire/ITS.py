@@ -65,8 +65,6 @@ class ITS(DataSource):
     def get_top_data (period, startdate, enddate, identities_db, npeople):
         bots = ITS.get_bots()
         closed_condition =  ITS._get_closed_condition()
-        opts = read_options()
-
 
         # Top closers
         top_closers_data = {}
@@ -81,11 +79,15 @@ class ITS(DataSource):
         top_openers_data['openers.last year']=GetTopOpeners(365, startdate, enddate,identities_db, bots, closed_condition, npeople)
         top_openers_data['openers.last month']=GetTopOpeners(31, startdate, enddate,identities_db, bots, closed_condition, npeople)
 
-
         all_top = dict(top_closers_data.items() + top_openers_data.items())
-        createJSON (all_top, opts.destdir+"/its-top.json")
 
         return all_top
+
+    @staticmethod
+    def create_top_report (period, startdate, enddate, i_db):
+        opts = read_options()
+        data = ITS.get_top_data (period, startdate, enddate, i_db, opts.npeople)
+        createJSON (data, opts.destdir+"/its-top.json")
 
     @staticmethod
     def get_filter_items(filter_, startdate, enddate, identities_db, bots):
@@ -147,6 +149,31 @@ class ITS(DataSource):
         if (filter_name == "company"):
             closed = GetClosedSummaryCompanies(period, startdate, enddate, identities_db, closed_condition, 10)
             createJSON (closed, opts.destdir+"/its-closed-companies-summary.json")
+
+    @staticmethod
+    def create_people_report(period, startdate, enddate, identities_db):
+        opts = read_options()
+        closed_condition =  ITS._get_closed_condition()
+
+        top_data = ITS.get_top_data (period, startdate, enddate, identities_db, opts.npeople)
+
+        top = top_data['closers.']["id"]
+        top += top_data['closers.last year']["id"]
+        top += top_data['closers.last month']["id"]
+        top += top_data['openers.']["id"]
+        top += top_data['openers.last year']["id"]
+        top += top_data['openers.last month']["id"]
+        # remove duplicates
+        people = list(set(top))
+        createJSON(people, opts.destdir+"/its-people.json")
+
+        for upeople_id in people :
+            evol = GetPeopleEvolITS(upeople_id, period, startdate, enddate, closed_condition)
+            evol = completePeriodIds(evol)
+            createJSON (evol, opts.destdir+"/people-"+str(upeople_id)+"-its-evolutionary.json")
+
+            data = GetPeopleStaticITS(upeople_id, startdate, enddate, closed_condition)
+            createJSON (data, opts.destdir+"/people-"+str(upeople_id)+"-its-static.json")
 
 ##############
 # Specific FROM and WHERE clauses per type of report

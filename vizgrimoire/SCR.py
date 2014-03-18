@@ -148,7 +148,6 @@ class SCR(DataSource):
     @staticmethod
     def get_top_data (period, startdate, enddate, identities_db, npeople):
         bots = SCR.get_bots()
-        opts = read_options()
 
         top_reviewers = {}
         top_reviewers['reviewers'] = GetTopReviewersSCR(0, startdate, enddate, identities_db, bots, npeople)
@@ -169,9 +168,14 @@ class SCR(DataSource):
 
         # The order of the list item change so we can not check it
         top_all = dict(top_reviewers.items() +  top_openers.items() + top_mergers.items())
-        createJSON (top_all, opts.destdir+"/scr-top.json")
 
         return (top_all)
+
+    @staticmethod
+    def create_top_report (period, startdate, enddate, i_db):
+        opts = read_options()
+        data = SCR.get_top_data (period, startdate, enddate, i_db, opts.npeople)
+        createJSON (data, opts.destdir+"/scr-top.json")
 
     @staticmethod
     def get_filter_items(filter_, startdate, enddate, identities_db, bots):
@@ -261,6 +265,41 @@ class SCR(DataSource):
 
         createJSON(items_list, opts.destdir+"/scr-"+filter_name+".json")
 
+
+    # Unify top format
+    @staticmethod
+    def _safeTopIds(top_data_period):
+        if not isinstance(top_data_period['id'], (list)):
+            for name in top_data_period:
+                top_data_period[name] = [top_data_period[name]]
+        return top_data_period['id']
+
+    @staticmethod
+    def create_people_report(period, startdate, enddate, identities_db):
+        opts = read_options()
+
+        top_data = SCR.get_top_data (period, startdate, enddate, identities_db, opts.npeople)
+
+        top  = SCR._safeTopIds(top_data['reviewers'])
+        top += SCR._safeTopIds(top_data['reviewers.last year'])
+        top += SCR._safeTopIds(top_data['reviewers.last month'])
+        top += SCR._safeTopIds(top_data['openers.'])
+        top += SCR._safeTopIds(top_data['openers.last year'])
+        top += SCR._safeTopIds(top_data['openers.last_month'])
+        top += SCR._safeTopIds(top_data['mergers.'])
+        top += SCR._safeTopIds(top_data['mergers.last year'])
+        top += SCR._safeTopIds(top_data['mergers.last_month'])
+        # remove duplicates
+        people = list(set(top)) 
+        createJSON(people, opts.destdir+"/scr-people.json")
+
+        for upeople_id in people:
+            evol = GetPeopleEvolSCR(upeople_id, period, startdate, enddate)
+            evol = completePeriodIds(evol)
+            createJSON(evol, opts.destdir+"/people-"+str(upeople_id)+"-scr-evolutionary.json")
+
+            agg = GetPeopleStaticSCR(upeople_id, startdate, enddate)
+            createJSON(agg, opts.destdir+"/people-"+str(upeople_id)+"-scr-static.json")
 
 ##########
 # Specific FROM and WHERE clauses per type of report

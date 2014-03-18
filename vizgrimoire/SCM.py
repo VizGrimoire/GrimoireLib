@@ -54,15 +54,18 @@ class SCM(DataSource):
 
     @staticmethod
     def get_top_data (period, startdate, enddate, i_db, npeople):
-        opts = read_options()
         top_authors_data =  {}
         top_authors_data['authors.'] = top_people(0, startdate, enddate, "author" , "" , npeople)
         top_authors_data['authors.last month']= top_people(31, startdate, enddate, "author", "", npeople)
         top_authors_data['authors.last year']= top_people(365, startdate, enddate, "author", "", npeople)
 
-        createJSON (top_authors_data, opts.destdir+"/scm-top.json")
-
         return top_authors_data
+
+    @staticmethod
+    def create_top_report (period, startdate, enddate, i_db):
+        opts = read_options()
+        data = SCM.get_top_data (period, startdate, enddate, i_db, opts.npeople)
+        createJSON (data, opts.destdir+"/scm-top.json")
 
     @staticmethod
     def get_filter_items(filter_, startdate, enddate, identities_db, bots):
@@ -121,6 +124,25 @@ class SCM(DataSource):
         if (filter_name == "company"):
                 commits =  GetCommitsSummaryCompanies(period, startdate, enddate, opts.identities_db, 10)
                 createJSON (commits, opts.destdir+"/scm-companies-commits-summary.json")
+
+    @staticmethod
+    def create_people_report(period, startdate, enddate, identities_db):
+        opts = read_options()
+        top_authors_data = SCM.get_top_data (period, startdate, enddate, identities_db, opts.npeople)
+        top = top_authors_data['authors.']["id"]
+        top += top_authors_data['authors.last year']["id"]
+        top += top_authors_data['authors.last month']["id"]
+        # remove duplicates
+        people = list(set(top))
+        createJSON(people, opts.destdir+"/scm-people.json")
+
+        for upeople_id in people :
+            evol_data = GetEvolPeopleSCM(upeople_id, period, startdate, enddate)
+            evol_data = completePeriodIds(evol_data)
+            createJSON (evol_data, opts.destdir+"/people-"+str(upeople_id)+"-scm-evolutionary.json")
+
+            agg = GetStaticPeopleSCM(upeople_id,  startdate, enddate)
+            createJSON (agg, opts.destdir+"/people-"+str(upeople_id)+"-scm-static.json")
 
 ##########
 # Meta-functions to automatically call metrics functions and merge them
