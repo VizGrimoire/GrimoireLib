@@ -175,6 +175,20 @@ class ITS(DataSource):
             data = GetPeopleStaticITS(upeople_id, startdate, enddate, closed_condition)
             createJSON (data, opts.destdir+"/people-"+str(upeople_id)+"-its-static.json")
 
+    @staticmethod
+    def create_r_reports(vizr, enddate):
+        opts = read_options()
+
+        # Time to Close: Other backends not yet supported
+        vizr.ReportTimeToCloseITS(opts.backend, opts.destdir)
+
+        # Demographics
+        vizr.ReportDemographicsAgingITS(opts.enddate, opts.destdir)
+        vizr.ReportDemographicsBirthITS(opts.enddate, opts.destdir)
+
+        # Markov
+        vizr.ReportMarkovChain(opts.destdir)
+
 ##############
 # Specific FROM and WHERE clauses per type of report
 ##############

@@ -68,3 +68,7 @@ class DataSource(object):
     @staticmethod
     def create_people_report(period, startdate, enddate, identities_db):
         raise NotImplementedError
+
+    @staticmethod
+    def create_r_reports(vizr, enddate):
+        raise NotImplementedError

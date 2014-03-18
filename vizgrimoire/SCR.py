@@ -301,6 +301,10 @@ class SCR(DataSource):
             agg = GetPeopleStaticSCR(upeople_id, startdate, enddate)
             createJSON(agg, opts.destdir+"/people-"+str(upeople_id)+"-scr-static.json")
 
+    @staticmethod
+    def create_r_reports(vizr, enddate):
+        pass
+
 ##########
 # Specific FROM and WHERE clauses per type of report
 ##########

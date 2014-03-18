@@ -221,7 +221,7 @@ def topData(period, startdate, enddate, identities_db, destdir, bots, npeople):
 
     return top_authors_data
 
-def microStudies(enddate, destdir):
+def microStudies(vizr, enddate, destdir):
     # Studies implemented in R
 
     # Demographics

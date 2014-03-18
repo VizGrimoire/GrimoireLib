@@ -132,6 +132,10 @@ class IRC(DataSource):
             aggdata = GetStaticPeopleIRC(upeople_id, startdate, enddate)
             createJSON(aggdata, person_file)
 
+    @staticmethod
+    def create_r_reports(vizr, enddate):
+        pass
+
 # SQL Metaqueries
 def GetIRCSQLRepositoriesFrom ():
     # tables necessary for repositories

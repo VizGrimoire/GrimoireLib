@@ -103,6 +103,10 @@ class Mediawiki(DataSource):
             static = GetStaticPeopleMediaWiki(upeople_id, startdate, enddate)
             createJSON(static, opts.destdir+"/people-"+str(upeople_id)+"-mediawiki-static.json")
 
+    @staticmethod
+    def create_r_reports(vizr, enddate):
+        pass
+
 # SQL Metaqueries
 
 def GetTablesOwnUniqueIdsMediaWiki () :

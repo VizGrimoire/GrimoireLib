@@ -144,6 +144,16 @@ class SCM(DataSource):
             agg = GetStaticPeopleSCM(upeople_id,  startdate, enddate)
             createJSON (agg, opts.destdir+"/people-"+str(upeople_id)+"-scm-static.json")
 
+    # Studies implemented in R
+    @staticmethod
+    def create_r_reports(vizr, enddate):
+        opts = read_options()
+
+        # Demographics
+        vizr.ReportDemographicsAgingSCM(enddate, opts.destdir)
+        vizr.ReportDemographicsBirthSCM(enddate, opts.destdir)
+
+
 ##########
 # Meta-functions to automatically call metrics functions and merge them
 ##########

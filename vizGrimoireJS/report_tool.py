@@ -23,10 +23,7 @@
 #
 
 import logging
-import sys
 
-
-from GrimoireUtils import createJSON
 from GrimoireUtils import read_options, getPeriod, read_main_conf
 from report import Report
 
@@ -70,6 +67,19 @@ def create_report_people(startdate, enddate, identities_db, bots):
         logging.info("Creating people for " + ds.get_name())
         ds.create_people_report(period, startdate, enddate, identities_db)
 
+def create_reports_r(enddate):
+    from rpy2.robjects.packages import importr
+    opts = read_options()
+
+    vizr = importr("vizgrimoire")
+
+    for ds in Report.get_data_sources():
+        automator = Report.get_config()
+        db = automator['generic'][ds.get_db_name()]
+        vizr.SetDBChannel (database=db, user=opts.dbuser, password=opts.dbpassword)
+        logging.info("Creating R reports for " + ds.get_name())
+        ds.create_r_reports(vizr, enddate)
+
 if __name__ == '__main__':
 
     Report.init()
@@ -90,6 +100,7 @@ if __name__ == '__main__':
 #    top = get_top_report(startdate, enddate, opts.identities_db, [])
 #
 #    create_reports_filters(startdate, enddate, opts.identities_db, [])
-    create_report_people(startdate, enddate, opts.identities_db, [])
+#    create_report_people(startdate, enddate, opts.identities_db, [])
+    create_reports_r(opts.enddate)
 
     logging.info("Report data source analysis OK")

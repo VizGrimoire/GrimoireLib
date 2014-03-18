@@ -153,6 +153,21 @@ class MLS(DataSource):
             static = GetStaticPeopleMLS(upeople_id, startdate, enddate)
             createJSON(static, opts.destdir+"/people-"+str(upeople_id)+"-mls-static.json")
 
+    @staticmethod
+    def create_r_reports(vizr, enddate):
+        opts = read_options()
+
+        vizr.ReportDemographicsAgingMLS(enddate, opts.destdir)
+        vizr.ReportDemographicsBirthMLS(enddate, opts.destdir)
+
+        ## Which quantiles we're interested in
+        # quantiles_spec = [0.99,0.95,0.5,0.25]
+
+        ## Yearly quantiles of time to attention (minutes)
+        ## Monthly quantiles of time to attention (hours)
+        ## JSON files generated from VizR
+        vizr.ReportTimeToAttendMLS(opts.destdir)
+
 ##############
 # Specific FROM and WHERE clauses per type of report
 ##############
