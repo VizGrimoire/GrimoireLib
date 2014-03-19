@@ -26,12 +26,208 @@
 #       evolution and agg values of countries and companies
 #############
 
-import re
+import logging, re
 
-from GrimoireSQL import GetSQLGlobal, GetSQLPeriod, GetSQLReportFrom
-from GrimoireSQL import GetSQLReportWhere, ExecuteQuery, BuildQuery
-from GrimoireUtils import GetPercentageDiff, GetDates, completePeriodIds
-import GrimoireUtils
+from GrimoireSQL import GetSQLGlobal, GetSQLPeriod
+from GrimoireSQL import ExecuteQuery, BuildQuery
+from GrimoireUtils import GetPercentageDiff, GetDates, completePeriodIds, read_options, getPeriod, createJSON
+
+from data_source import DataSource
+
+class MLS(DataSource):
+
+    @staticmethod
+    def get_repo_field():
+        return "mailing_list_url"
+
+    @staticmethod
+    def get_db_name():
+        return "db_mlstats"
+
+    @staticmethod
+    def get_name(): return "MLS"
+
+    @staticmethod
+    def get_evolutionary_data (period, startdate, enddate, identities_db, type_analysis):
+        rfield = MLS.get_repo_field()
+        evol = {}
+
+        data = EvolMLSInfo(period, startdate, enddate, identities_db, rfield, type_analysis)
+        evol = dict(evol.items() + completePeriodIds(data).items())
+
+        if (type_analysis is None):
+            data  = EvolMLSCompanies(period, startdate, enddate, identities_db)
+            evol = dict(evol.items() + completePeriodIds(data).items())
+
+            data = EvolMLSCountries(period, startdate, enddate, identities_db)
+            evol = dict(evol.items() + completePeriodIds(data).items())
+
+            data = EvolMLSDomains(period, startdate, enddate, identities_db)
+            evol = dict(evol.items() + completePeriodIds(data).items())
+
+        return evol
+
+    @staticmethod
+    def create_evolutionary_report (period, startdate, enddate, i_db, type_analysis = None):
+        opts = read_options()
+        data =  MLS.get_evolutionary_data (period, startdate, enddate, i_db, type_analysis)
+        createJSON (data, opts.destdir+"/mls-evolutionary.json")
+
+    @staticmethod
+    def get_agg_data (period, startdate, enddate, identities_db, type_analysis):
+        rfield = MLS.get_repo_field()
+        agg = StaticMLSInfo(period, startdate, enddate, identities_db, rfield, type_analysis)
+
+        if (type_analysis is None):
+            data = AggMLSCompanies(period, startdate, enddate, identities_db)
+            agg = dict(agg.items() + data.items())
+
+            data = AggMLSCountries(period, startdate, enddate, identities_db)
+            agg = dict(agg.items() + data.items())
+
+            data = AggMLSDomains(period, startdate, enddate, identities_db)
+            agg = dict(agg.items() + data.items())
+
+            # Tendencies
+            for i in [7,30,365]:
+                period_data = GetDiffSentDays(period, enddate, i)
+                agg = dict(agg.items() + period_data.items())
+                period_data = GetDiffSendersDays(period, enddate, i)
+                agg = dict(agg.items() + period_data.items())
+
+            # Last Activity: to be removed
+            for i in [7,14,30,60,90,180,365,730]:
+                period_activity = lastActivity(i)
+                agg = dict(agg.items() + period_activity.items())
+
+        return agg
+
+    @staticmethod
+    def create_agg_report (period, startdate, enddate, i_db, type_analysis = None):
+        opts = read_options()
+        data = MLS.get_agg_data (period, startdate, enddate, i_db, type_analysis)
+        createJSON (data, opts.destdir+"/mls-static.json")
+
+    @staticmethod
+    def get_top_data (period, startdate, enddate, identities_db, npeople):
+        bots = MLS.get_bots()
+
+        top_senders_data = {}
+        top_senders_data['senders.']=top_senders(0, startdate, enddate,identities_db,bots, npeople)
+        top_senders_data['senders.last year']=top_senders(365, startdate, enddate,identities_db, bots, npeople)
+        top_senders_data['senders.last month']=top_senders(31, startdate, enddate,identities_db,bots, npeople)
+
+        return top_senders_data
+
+    @staticmethod
+    def create_top_report (period, startdate, enddate, i_db):
+        opts = read_options()
+        data = MLS.get_top_data (period, startdate, enddate, i_db, opts.npeople)
+        top_file = opts.destdir+"/mls-top.json"
+        createJSON (data, top_file)
+
+    @staticmethod
+    def get_filter_items(filter_, startdate, enddate, identities_db, bots):
+        rfield = MLS.get_repo_field()
+        items = None
+        filter_name = filter_.get_name()
+
+        if (filter_name == "repository"):
+            items  = reposNames(rfield, startdate, enddate)  
+        elif (filter_name == "company"):
+            items  = companiesNames(identities_db, startdate, enddate)
+        elif (filter_name == "country"):
+            items = countriesNames(identities_db, startdate, enddate)
+        elif (filter_name == "domain"):
+            items = domainsNames(identities_db, startdate, enddate)
+        else:
+            logging.error(filter_name + " not supported")
+        return items
+
+    @staticmethod
+    def create_filter_report(filter_, startdate, enddate, identities_db, bots):
+        opts = read_options()
+        period = getPeriod(opts.granularity)
+
+        items = MLS.get_filter_items(filter_, startdate, enddate, identities_db, bots)
+        if (items == None): return
+
+        filter_name = filter_.get_name()
+        filter_name_short = filter_.get_name_short()
+
+        if not isinstance(items, (list)):
+            items = [items]
+
+        items_files = [item.replace('/', '_').replace("<","__").replace(">","___")
+            for item in items]
+
+        createJSON(items_files, opts.destdir+"/mls-"+filter_.get_name_plural()+".json")
+
+        for item in items :
+            item_name = "'"+ item+ "'"
+            item_file = item.replace("/","_").replace("<","__").replace(">","___")
+            logging.info (item_name)
+            type_analysis = [filter_.get_name(), item_name]
+
+            evol_data = MLS.get_evolutionary_data (period, startdate, enddate, identities_db, type_analysis)
+            createJSON(evol_data, opts.destdir+"/"+item_file+"-mls-"+filter_name_short+"-evolutionary.json")
+
+            agg = MLS.get_agg_data (period, startdate, enddate, identities_db, type_analysis)
+            createJSON(agg, opts.destdir+"/"+item_file+"-mls-"+filter_name_short+"-static.json")
+
+            if (filter_name == "company"):
+                top_senders = companyTopSenders (item, identities_db, startdate, enddate, opts.npeople)
+                createJSON(top_senders, opts.destdir+"/"+item_file+"-mls-"+filter_name_short+"-top-senders.json")
+            elif (filter_name == "country"):
+                top_senders = countryTopSenders (item, identities_db, startdate, enddate, opts.npeople)
+                createJSON(top_senders, opts.destdir+"/"+item_file+"-mls-"+filter_name_short+"-top-senders.json")
+            elif (filter_name == "domain"):
+                top_senders = domainTopSenders(item, identities_db, startdate, enddate, opts.npeople)
+                createJSON(top_senders, opts.destdir+"/"+item_file+"-mls-"+filter_name_short+"-top-senders.json")
+            elif (filter_name == "repository"):
+                rfield = MLS.get_repo_field()
+                top_senders = repoTopSenders (item, identities_db, startdate, enddate, rfield, opts.npeople)
+                createJSON(top_senders, opts.destdir+ "/"+item_file+"-mls-rep-top-senders.json")
+
+
+        if (filter_name == "company"):
+            sent = GetSentSummaryCompanies(period, startdate, enddate, opts.identities_db, 10)
+            createJSON (sent, opts.destdir+"/mls-sent-companies-summary.json")
+
+    @staticmethod
+    def create_people_report(period, startdate, enddate, identities_db):
+        opts = read_options()
+        top_data = MLS.get_top_data (period, startdate, enddate, identities_db, opts.npeople)
+
+        top = top_data['senders.']["id"]
+        top += top_data['senders.last year']["id"]
+        top += top_data['senders.last month']["id"]
+        # remove duplicates
+        people = list(set(top))
+        createJSON(people, opts.destdir+"/mls-people.json")
+
+        for upeople_id in people:
+            evol = GetEvolPeopleMLS(upeople_id, period, startdate, enddate)
+            evol = completePeriodIds(evol)
+            createJSON(evol, opts.destdir+"/people-"+str(upeople_id)+"-mls-evolutionary.json")
+
+            static = GetStaticPeopleMLS(upeople_id, startdate, enddate)
+            createJSON(static, opts.destdir+"/people-"+str(upeople_id)+"-mls-static.json")
+
+    @staticmethod
+    def create_r_reports(vizr, enddate):
+        opts = read_options()
+
+        vizr.ReportDemographicsAgingMLS(enddate, opts.destdir)
+        vizr.ReportDemographicsBirthMLS(enddate, opts.destdir)
+
+        ## Which quantiles we're interested in
+        # quantiles_spec = [0.99,0.95,0.5,0.25]
+
+        ## Yearly quantiles of time to attention (minutes)
+        ## Monthly quantiles of time to attention (hours)
+        ## JSON files generated from VizR
+        vizr.ReportTimeToAttendMLS(opts.destdir)
 
 ##############
 # Specific FROM and WHERE clauses per type of report
@@ -123,10 +319,9 @@ def GetMLSSQLReportFrom (identities_db, type_analysis):
 
     From = ""
 
-    if (len(type_analysis) != 2): return From
+    if (type_analysis is None or len(type_analysis) != 2): return From
 
     analysis = type_analysis[0]
-    value = type_analysis[1]
 
     if analysis == 'repository': From = GetMLSSQLRepositoriesFrom()
     elif analysis == 'company': From = GetMLSSQLCompaniesFrom(identities_db)
@@ -144,7 +339,7 @@ def GetMLSSQLReportWhere (type_analysis):
 
     where = ""
 
-    if (len(type_analysis) != 2): return where
+    if (type_analysis is None or len(type_analysis) != 2): return where
 
     analysis = type_analysis[0]
     value = type_analysis[1]
@@ -176,6 +371,7 @@ def reposField () :
 def GetMLSFiltersResponse () :
     filters = GetMLSFiltersOwnUniqueIdsMLS()
     filters_response = filters + " AND m.is_response_of IS NOT NULL"
+    return filters_response
 
 ##########
 # Meta functions that aggregate all evolutionary or static data in one call
@@ -536,7 +732,7 @@ def reposNames  (rfield, startdate, enddate) :
                "GROUP BY ml.mailing_list_url ORDER by total desc"
         mailing_lists = ExecuteQuery(q)
         mailing_lists_files = ExecuteQuery(q)
-        names = mailing_lists_files
+        names = mailing_lists_files[rfield]
     else:
         # TODO: not ordered yet by total messages
         q = "SELECT DISTINCT(mailing_list) FROM messages m "+\
@@ -546,12 +742,12 @@ def reposNames  (rfield, startdate, enddate) :
         names = mailing_lists
     return (names)
 
-def countriesNames  (identities_db, startdate, enddate, filter=[]) :
+def countriesNames  (identities_db, startdate, enddate, filter_=[]) :
     countries_limit = 30
 
     filter_countries = ""
-    for country in filter:
-        filter_countries += " c.name<>'"+aff+"' AND "
+    for country in filter_:
+        filter_countries += " c.name<>'"+country+"' AND "
 
     q = "SELECT c.name as name, COUNT(m.message_ID) as sent "+\
             "FROM "+ GetTablesCountries(identities_db)+ " "+\
@@ -566,11 +762,11 @@ def countriesNames  (identities_db, startdate, enddate, filter=[]) :
     return(data['name'])
 
 
-def companiesNames  (i_db, startdate, enddate, filter=[]) :
+def companiesNames  (i_db, startdate, enddate, filter_=[]) :
     companies_limit = 30
     filter_companies = ""
 
-    for company in filter:
+    for company in filter_:
         filter_companies += " c.name<>'"+company+"' AND "
 
     q = "SELECT c.name as name, COUNT(DISTINCT(m.message_ID)) as sent "+\
@@ -587,11 +783,11 @@ def companiesNames  (i_db, startdate, enddate, filter=[]) :
     return (data['name'])
 
 
-def domainsNames  (i_db, startdate, enddate, filter=[]) :
+def domainsNames  (i_db, startdate, enddate, filter_=[]) :
     domains_limit = 30
     filter_domains = ""
 
-    for domain in filter:
+    for domain in filter_:
         filter_domains += " d.name<>'"+ domain + "' AND "
 
     q = "SELECT d.name as name, COUNT(DISTINCT(m.message_ID)) as sent "+\
@@ -663,10 +859,12 @@ def GetFiltersDomains () :
 def GetFiltersInit () :
     filters = GetFiltersOwnUniqueIdsMLS()
     filters_init = filters + " AND m.is_response_of IS NULL"
+    return filters_init
 
 def GetFiltersResponse () :
     filters = GetFiltersOwnUniqueIdsMLS()
     filters_response = filters + " AND m.is_response_of IS NOT NULL"
+    return filters_response
 
 def GetListPeopleMLS (startdate, enddate) :
     fields = "DISTINCT(pup.upeople_id) as id, count(m.message_ID) total"
@@ -714,11 +912,11 @@ def GetStaticPeopleMLS (developer_id, startdate, enddate) :
 #########################
 
 
-def top_senders (days, startdate, enddate, identities_db, filter, limit) :
+def top_senders (days, startdate, enddate, identities_db, filter_, limit) :
 
     affiliations = ""
-    if (not filter): filter = []
-    for aff in filter:
+    if (not filter_): filter_ = []
+    for aff in filter_:
         affiliations = affiliations+ " c.name<>'"+ aff +"' and "
 
     date_limit = ""

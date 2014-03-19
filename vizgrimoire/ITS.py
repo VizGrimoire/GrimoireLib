@@ -27,12 +27,265 @@
 ##   Alvaro del Castillo <acs@bitergia.com>
 ##   Luis Canas-Diaz <lcanas@bitergia.com>
 
-import re, sys
+import logging, re
 
-from GrimoireSQL import GetSQLGlobal, GetSQLPeriod, GetSQLReportFrom
-from GrimoireSQL import GetSQLReportWhere, ExecuteQuery, BuildQuery
-from GrimoireUtils import GetPercentageDiff, GetDates, completePeriodIds
-import GrimoireUtils
+from GrimoireSQL import GetSQLGlobal, GetSQLPeriod
+from GrimoireSQL import ExecuteQuery, BuildQuery
+from GrimoireUtils import GetPercentageDiff, GetDates, completePeriodIds, read_options, getPeriod
+from GrimoireUtils import createJSON
+
+from data_source import DataSource
+import report
+
+class ITS(DataSource):
+
+    @staticmethod
+    def get_db_name():
+        return "db_bicho"
+
+    @staticmethod
+    def get_name(): return "ITS"
+
+    @staticmethod
+    def _get_backend():
+        automator = report.Report.get_config()
+        its_backend = automator['generic']['bicho_backend']
+        backend = Backend(its_backend)
+        return backend
+
+    @staticmethod
+    def _get_closed_condition():
+        return ITS._get_backend().closed_condition
+
+    @staticmethod
+    def get_tickets_states(period, startdate, enddate, identities_db, backend):
+
+        from rpy2.robjects.packages import importr
+        from GrimoireUtils import dataFrame2Dict
+
+        vizr = importr("vizgrimoire")
+
+        evol = {}
+        return evol
+
+        for status in backend.statuses:
+            logging.info ("Working with ticket status: " + status)
+            #Evolution of the backlog
+            tickets_status = vizr.GetEvolBacklogTickets(period, startdate, enddate, status, backend.name_log_table)
+            tickets_status = dataFrame2Dict(tickets_status)
+            tickets_status = completePeriodIds(tickets_status)
+            # rename key
+            tickets_status[status] = tickets_status.pop("pending_tickets")
+            #Issues per status
+            current_status = vizr.GetCurrentStatus(period, startdate, enddate, identities_db, status)
+            current_status = completePeriodIds(dataFrame2Dict(current_status))
+            #Merging data
+            evol = dict(evol.items() + current_status.items() + tickets_status.items())
+        return evol
+
+    @staticmethod
+    def get_evolutionary_data (period, startdate, enddate, identities_db, type_analysis):
+        closed_condition = ITS._get_closed_condition()
+
+        data = EvolITSInfo(period, startdate, enddate, identities_db, type_analysis, closed_condition)
+        evol = completePeriodIds(data)
+
+        if (type_analysis is None):
+            data = EvolIssuesCompanies(period, startdate, enddate, identities_db)
+            evol = dict(evol.items() + completePeriodIds(data).items())
+
+            data = EvolIssuesCountries(period, startdate, enddate, identities_db)
+            evol = dict(evol.items() + completePeriodIds(data).items())
+
+            data = EvolIssuesRepositories(period, startdate, enddate, identities_db)
+            evol = dict(evol.items() + completePeriodIds(data).items())
+
+            data = EvolIssuesDomains(period, startdate, enddate, identities_db)
+            evol = dict(evol.items() + completePeriodIds(data).items())
+
+            data = ITS.get_tickets_states(period, startdate, enddate, identities_db, ITS._get_backend())
+            evol = dict(evol.items() + data.items())
+
+        return evol
+
+    @staticmethod
+    def create_evolutionary_report (period, startdate, enddate, i_db, type_analysis = None):
+        opts = read_options()
+        data =  ITS.get_evolutionary_data (period, startdate, enddate, i_db, type_analysis)
+        createJSON (data, opts.destdir+"/its-evolutionary.json")
+
+    @staticmethod
+    def get_agg_data (period, startdate, enddate, identities_db, type_analysis):
+        closed_condition = ITS._get_closed_condition()
+
+        data = AggITSInfo(period, startdate, enddate, identities_db, type_analysis, closed_condition)
+        agg = data
+
+        if (type_analysis is None):
+            data = AggAllParticipants(startdate, enddate)
+            agg = dict(agg.items() +  data.items())
+            data = TrackerURL()
+            agg = dict(agg.items() +  data.items())
+
+            data = AggIssuesCompanies(period, startdate, enddate, identities_db)
+            agg = dict(agg.items() + data.items())
+
+            data = AggIssuesCountries(period, startdate, enddate, identities_db)
+            agg = dict(agg.items() + data.items())
+
+            data = AggIssuesDomains(period, startdate, enddate, identities_db)
+            agg = dict(agg.items() + data.items())
+
+            # Tendencies    
+            for i in [7,30,365]:
+                period_data = GetDiffClosedDays(period, identities_db, enddate, i, [], closed_condition)
+                agg = dict(agg.items() + period_data.items())
+                period_data = GetDiffOpenedDays(period, identities_db, enddate, i, [])
+                agg = dict(agg.items() + period_data.items())
+                period_data = GetDiffClosersDays(period, identities_db, enddate, i, [], closed_condition)
+                agg = dict(agg.items() + period_data.items())
+                period_data = GetDiffChangersDays(period, identities_db, enddate, i, [])
+                agg = dict(agg.items() + period_data.items())
+
+            # Last Activity: to be removed
+            for i in [7,14,30,60,90,180,365,730]:
+                period_activity = GetLastActivityITS(i, closed_condition)
+                agg = dict(agg.items() + period_activity.items())
+
+        return agg
+
+    @staticmethod
+    def create_agg_report (period, startdate, enddate, i_db, type_analysis = None):
+        opts = read_options()
+        data = ITS.get_agg_data (period, startdate, enddate, i_db, type_analysis)
+        createJSON (data, opts.destdir+"/its-static.json")
+
+    @staticmethod
+    def get_top_data (period, startdate, enddate, identities_db, npeople):
+        bots = ITS.get_bots()
+        closed_condition =  ITS._get_closed_condition()
+
+        # Top closers
+        top_closers_data = {}
+        # top_closers_data['closers.']=dataFrame2Dict(vizr.GetTopClosers(0, startdate, enddate,identities_db, bots, closed_condition))
+        top_closers_data['closers.']=GetTopClosers(0, startdate, enddate,identities_db, bots, closed_condition, npeople)
+        top_closers_data['closers.last year']=GetTopClosers(365, startdate, enddate,identities_db, bots, closed_condition, npeople)
+        top_closers_data['closers.last month']=GetTopClosers(31, startdate, enddate,identities_db, bots, closed_condition, npeople)
+
+        # Top openers
+        top_openers_data = {}
+        top_openers_data['openers.']=GetTopOpeners(0, startdate, enddate,identities_db, bots, closed_condition, npeople)
+        top_openers_data['openers.last year']=GetTopOpeners(365, startdate, enddate,identities_db, bots, closed_condition, npeople)
+        top_openers_data['openers.last month']=GetTopOpeners(31, startdate, enddate,identities_db, bots, closed_condition, npeople)
+
+        all_top = dict(top_closers_data.items() + top_openers_data.items())
+
+        return all_top
+
+    @staticmethod
+    def create_top_report (period, startdate, enddate, i_db):
+        opts = read_options()
+        data = ITS.get_top_data (period, startdate, enddate, i_db, opts.npeople)
+        createJSON (data, opts.destdir+"/its-top.json")
+
+    @staticmethod
+    def get_filter_items(filter_, startdate, enddate, identities_db, bots):
+        items = None
+        filter_name = filter_.get_name()
+
+        if (filter_name == "repository"):
+            items  = GetReposNameITS(startdate, enddate)
+        elif (filter_name == "company"):
+            items  = GetCompaniesNameITS(startdate, enddate, identities_db, ITS._get_closed_condition(), bots)
+        elif (filter_name == "country"):
+            items = GetCountriesNamesITS(startdate, enddate, identities_db, ITS._get_closed_condition())
+        elif (filter_name == "domain"):
+            items = GetDomainsNameITS(startdate, enddate, identities_db, ITS._get_closed_condition(), bots)
+        else:
+            logging.error(filter_name + " not supported")
+        return items
+
+    @staticmethod
+    def create_filter_report(filter_, startdate, enddate, identities_db, bots):
+        opts = read_options()
+        period = getPeriod(opts.granularity)
+        closed_condition =  ITS._get_closed_condition()
+
+        items = ITS.get_filter_items(filter_, startdate, enddate, identities_db, bots)
+        if (items == None): return
+        items = items['name']
+
+        filter_name = filter_.get_name()
+        filter_name_short = filter_.get_name_short()
+
+        if not isinstance(items, (list)):
+            items = [items]
+
+        createJSON(items, opts.destdir+"/its-"+filter_.get_name_plural()+".json")
+
+        for item in items :
+            item_name = "'"+ item+ "'"
+            logging.info (item_name)
+            item_file = item.replace("/","_")
+            type_analysis = [filter_.get_name(), item_name]
+
+            evol_data = ITS.get_evolutionary_data (period, startdate, enddate, identities_db, type_analysis)
+            evol_data = completePeriodIds(evol_data)
+            createJSON(evol_data, opts.destdir+"/"+item_file+"-its-"+filter_name_short+"-evolutionary.json")
+
+            agg = ITS.get_agg_data (period, startdate, enddate, identities_db, type_analysis)
+            createJSON(agg, opts.destdir+"/"+item_file+"-its-"+filter_name_short+"-static.json")
+
+            if (filter_name == "company"):
+                top = GetCompanyTopClosers(item_name, startdate, enddate, identities_db, bots, closed_condition, opts.npeople)
+                createJSON(top, opts.destdir+"/"+item+"-its-"+filter_name_short+"-top-closers.json")
+
+            if (filter_name == "domain"):
+                top = GetDomainTopClosers(item_name, startdate, enddate, identities_db, bots, closed_condition, opts.npeople)
+                createJSON(top, opts.destdir+"/"+item+"-its-"+filter_name_short+"-top-closers.json")
+
+        if (filter_name == "company"):
+            closed = GetClosedSummaryCompanies(period, startdate, enddate, identities_db, closed_condition, 10)
+            createJSON (closed, opts.destdir+"/its-closed-companies-summary.json")
+
+    @staticmethod
+    def create_people_report(period, startdate, enddate, identities_db):
+        opts = read_options()
+        closed_condition =  ITS._get_closed_condition()
+
+        top_data = ITS.get_top_data (period, startdate, enddate, identities_db, opts.npeople)
+
+        top = top_data['closers.']["id"]
+        top += top_data['closers.last year']["id"]
+        top += top_data['closers.last month']["id"]
+        top += top_data['openers.']["id"]
+        top += top_data['openers.last year']["id"]
+        top += top_data['openers.last month']["id"]
+        # remove duplicates
+        people = list(set(top))
+        createJSON(people, opts.destdir+"/its-people.json")
+
+        for upeople_id in people :
+            evol = GetPeopleEvolITS(upeople_id, period, startdate, enddate, closed_condition)
+            evol = completePeriodIds(evol)
+            createJSON (evol, opts.destdir+"/people-"+str(upeople_id)+"-its-evolutionary.json")
+
+            data = GetPeopleStaticITS(upeople_id, startdate, enddate, closed_condition)
+            createJSON (data, opts.destdir+"/people-"+str(upeople_id)+"-its-static.json")
+
+    @staticmethod
+    def create_r_reports(vizr, enddate):
+        opts = read_options()
+
+        # Time to Close: Other backends not yet supported
+        vizr.ReportTimeToCloseITS(opts.backend, opts.destdir)
+
+        # Demographics
+        vizr.ReportDemographicsAgingITS(opts.enddate, opts.destdir)
+        vizr.ReportDemographicsBirthITS(opts.enddate, opts.destdir)
+
+        # Markov
+        vizr.ReportMarkovChain(opts.destdir)
 
 ##############
 # Specific FROM and WHERE clauses per type of report
@@ -1018,3 +1271,54 @@ def GetClosedSummaryCompanies (period, startdate, enddate, identities_db, closed
     first_companies = completePeriodIds(first_companies)
 
     return(first_companies)
+
+
+class Backend(object):
+
+    closed_condition = ""
+    reopened_condition = ""
+    name_log_table = ""
+    statuses = ""
+    open_status = ""
+    reopened_status = ""
+    name_log_table = ""
+
+    def __init__(self, its_type):
+        if (its_type == 'allura'):
+            Backend.closed_condition = "new_value='CLOSED'"
+        if (its_type == 'bugzilla'):
+            Backend.closed_condition = "(new_value='RESOLVED' OR new_value='CLOSED')"
+            Backend.reopened_condition = "new_value='NEW'"
+            Backend.name_log_table = 'issues_log_bugzilla'
+            Backend.statuses = ["NEW", "ASSIGNED"]
+            #Pretty specific states in Red Hat's Bugzilla
+            Backend.statuses = ["ASSIGNED", "CLOSED", "MODIFIED", "NEW", "ON_DEV", \
+                    "ON_QA", "POST", "RELEASE_PENDING", "VERIFIED"]
+
+        if (its_type == 'github'):
+            Backend.closed_condition = "field='closed'"
+
+        if (its_type == 'jira'):
+            Backend.closed_condition = "new_value='CLOSED'"
+            Backend.reopened_condition = "new_value='Reopened'"
+            #Backend.new_condition = "status='Open'"
+            #Backend.reopened_condition = "status='Reopened'"
+            Backend.open_status = 'Open'
+            Backend.reopened_status = 'Reopened'
+            Backend.name_log_table = 'issues_log_jira'
+
+        if (its_type == 'launchpad'):
+            #Backend.closed_condition = "(new_value='Fix Released' or new_value='Invalid' or new_value='Expired' or new_value='Won''t Fix')"
+            Backend.closed_condition = "(new_value='Fix Committed')"
+            Backend.statuses = ["Confirmed", "Fix Committed", "New", "In Progress", "Triaged", "Incomplete", "Invalid", "Won\\'t Fix", "Fix Released", "Opinion", "Unknown", "Expired"]
+            Backend.name_log_table = 'issues_log_launchpad'
+
+        if (its_type == 'redmine'):
+            Backend.statuses = ["New", "Verified", "Need More Info", "In Progress", "Feedback",
+                         "Need Review", "Testing", "Pending Backport", "Pending Upstream",
+                         "Resolved", "Closed", "Rejected", "Won\\'t Fix", "Can\\'t reproduce",
+                         "Duplicate"]
+            Backend.closed_condition = "(new_value='Resolved' OR new_value='Closed' OR new_value='Rejected'" +\
+                                  " OR new_value='Won\\'t Fix' OR new_value='Can\\'t reproduce' OR new_value='Duplicate')"
+            Backend.reopened_condition = "new_value='Reopened'" # FIXME: fake condition
+            Backend.name_log_table = 'issues_log_redmine'

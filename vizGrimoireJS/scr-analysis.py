@@ -111,7 +111,7 @@ def tsData(period, startdate, enddate, idb, destdir, granularity, conf):
     evol = dict(evol.items() + completePeriodIds(data).items())
     data = SCR.EvolReviewsAbandonedChanges(period, startdate, enddate)
     evol = dict(evol.items() + completePeriodIds(data).items())
-    data = SCR.EvolReviewsPending(period, startdate, enddate, conf, [])
+    data = SCR.EvolReviewsPending(period, startdate, enddate, [])
     evol = dict(evol.items() + completePeriodIds(data).items())
     #Patches info
     data = SCR.EvolPatchesVerified(period, startdate, enddate)
@@ -192,7 +192,7 @@ def reposData(period, startdate, enddate, idb, destdir, conf):
         evol = dict(evol.items() + completePeriodIds(data).items())
         data = SCR.EvolReviewsAbandoned(period, startdate, enddate, type_analysis)
         evol = dict(evol.items() + completePeriodIds(data).items())
-        data = SCR.EvolReviewsPending(period, startdate, enddate, conf, type_analysis, idb)
+        data = SCR.EvolReviewsPending(period, startdate, enddate, type_analysis, idb)
         evol = dict(evol.items() + completePeriodIds(data).items())
         if (period == "month"):
             data = SCR.EvolTimeToReviewSCR(period, startdate, enddate, idb, type_analysis)

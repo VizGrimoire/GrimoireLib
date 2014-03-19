@@ -24,11 +24,113 @@
 ## Authors:
 ##   Alvaro del Castillo <acs@bitergia.com>
 
+import logging
+
 from GrimoireSQL import GetSQLGlobal, GetSQLPeriod, GetSQLReportFrom 
 from GrimoireSQL import GetSQLReportWhere, ExecuteQuery, BuildQuery
-from GrimoireUtils import GetPercentageDiff, GetDates, completePeriodIds
-import GrimoireUtils
+from GrimoireUtils import GetPercentageDiff, GetDates, completePeriodIds, read_options, createJSON
 
+from data_source import DataSource
+
+class Mediawiki(DataSource):
+
+    @staticmethod
+    def get_db_name():
+        return "db_mediawiki"
+
+    @staticmethod
+    def get_name(): return "Mediawiki"
+
+    @staticmethod
+    def get_evolutionary_data (period, startdate, enddate, i_db, type_analysis):
+        return GetEvolDataMediaWiki (period, startdate, enddate, i_db, type_analysis)
+
+    @staticmethod
+    def create_evolutionary_report (period, startdate, enddate, i_db, type_analysis = None):
+        opts = read_options()
+        data =  Mediawiki.get_evolutionary_data (period, startdate, enddate, i_db, type_analysis)
+        createJSON (data, opts.destdir+"/mediawiki-evolutionary.json")
+
+    @staticmethod
+    def get_agg_data (period, startdate, enddate, identities_db, type_analysis):
+        # Tendencies
+        agg = {}
+
+        if (type_analysis is None):
+            for i in [7,30,365]:
+                data = GetMediaWikiDiffReviewsDays(period, enddate, identities_db, i)
+                agg = dict(agg.items() + data.items())
+                data = GetMediaWikiDiffAuthorsDays(period, enddate, identities_db, i)
+                agg = dict(agg.items() + data.items())
+
+        data = GetStaticDataMediaWiki(period, startdate, enddate, identities_db, type_analysis)
+        agg = dict(agg.items() + data.items())
+
+        return agg
+
+    @staticmethod
+    def create_agg_report (period, startdate, enddate, i_db, type_analysis = None):
+        opts = read_options()
+        data = Mediawiki.get_agg_data (period, startdate, enddate, i_db, type_analysis)
+        createJSON (data, opts.destdir+"/mediawiki-static.json")
+
+    @staticmethod
+    def get_top_data (period, startdate, enddate, identities_db, npeople):
+        bots = Mediawiki.get_bots()
+
+        top_authors = {}
+        top_authors['authors.'] = GetTopAuthorsMediaWiki(0, startdate, enddate, identities_db, bots, npeople)
+        top_authors['authors.last year']= GetTopAuthorsMediaWiki(365, startdate, enddate, identities_db, bots, npeople)
+        top_authors['authors.last month']= GetTopAuthorsMediaWiki(31, startdate, enddate, identities_db, bots, npeople)
+
+        return(top_authors)
+
+    @staticmethod
+    def create_top_report (period, startdate, enddate, i_db):
+        opts = read_options()
+        data = Mediawiki.get_top_data (period, startdate, enddate, i_db, opts.npeople)
+        top_file = opts.destdir+"/mediawiki-top.json"
+        createJSON (data, top_file)
+
+    @staticmethod
+    def get_filter_items(filter_, startdate, enddate, identities_db, bots):
+        items = None
+        filter_name = filter_.get_name()
+
+        logging.error(filter_name + " not supported")
+        return items
+
+    @staticmethod
+    def create_filter_report(filter_, startdate, enddate, identities_db, bots):
+        # opts = read_options()
+        # period = getPeriod(opts.granularity)
+
+        items = Mediawiki.get_filter_items(filter_, startdate, enddate, identities_db, bots)
+        if (items == None): return
+
+    @staticmethod
+    def create_people_report(period, startdate, enddate, identities_db):
+        opts = read_options()
+        top_data = Mediawiki.get_top_data (period, startdate, enddate, identities_db, opts.npeople)
+
+        top = top_data['authors.']["id"]
+        top += top_data['authors.last year']["id"]
+        top += top_data['authors.last month']["id"]
+        # remove duplicates
+        people = list(set(top))
+        createJSON(people, opts.destdir+"/mediawiki-people.json")
+
+        for upeople_id in people:
+            evol = GetEvolPeopleMediaWiki(upeople_id, period, startdate, enddate)
+            evol = completePeriodIds(evol)
+            createJSON(evol, opts.destdir+"/people-"+str(upeople_id)+"-mediawiki-evolutionary.json")
+
+            static = GetStaticPeopleMediaWiki(upeople_id, startdate, enddate)
+            createJSON(static, opts.destdir+"/people-"+str(upeople_id)+"-mediawiki-static.json")
+
+    @staticmethod
+    def create_r_reports(vizr, enddate):
+        pass
 
 # SQL Metaqueries
 

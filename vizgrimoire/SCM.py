@@ -26,17 +26,196 @@
 ##   Daniel Izquierdo <dizquierdo@bitergia.com>
 ##   Alvaro del Castillo <acs@bitergia.com>
 
-import re, sys
-
 from GrimoireSQL import GetSQLGlobal, GetSQLPeriod
 # TODO integrate: from GrimoireSQL import  GetSQLReportFrom 
 from GrimoireSQL import GetSQLReportWhere, ExecuteQuery, BuildQuery
-from GrimoireUtils import GetPercentageDiff, GetDates, completePeriodIds
-import GrimoireUtils
+from GrimoireUtils import GetPercentageDiff, GetDates, completePeriodIds, createJSON, read_options, getPeriod
+from data_source import DataSource
+import logging
+
+
+class SCM(DataSource):
+
+    @staticmethod
+    def get_db_name():
+        return "db_cvsanaly"
+
+    @staticmethod
+    def get_name():
+        return "SCM"
+
+    @staticmethod
+    def get_evolutionary_data (period, startdate, enddate, identities_db, type_analysis):
+
+        data = GetSCMEvolutionaryData(period, startdate, enddate, identities_db, type_analysis)
+        evol_data = completePeriodIds(data)
+
+        if (type_analysis is None):
+            data = EvolCompanies(period, startdate, enddate)
+            evol_data = dict(evol_data.items() + completePeriodIds(data).items())
+            data = EvolCountries(period, startdate, enddate)
+            evol_data = dict(evol_data.items() + completePeriodIds(data).items())
+            data = EvolDomains(period, startdate, enddate)
+            evol_data = dict(evol_data.items() + completePeriodIds(data).items())
+
+        return evol_data
+
+    @staticmethod
+    def create_evolutionary_report (period, startdate, enddate, i_db, type_analysis = None):
+        opts = read_options()
+        data =  SCM.get_evolutionary_data (period, startdate, enddate, i_db, type_analysis)
+        createJSON (data, opts.destdir+"/scm-evolutionary.json")
+
+    @staticmethod
+    def get_agg_data (period, startdate, enddate, identities_db, type_analysis):
+        data = GetSCMStaticData(period, startdate, enddate, identities_db, type_analysis)
+        agg = data
+
+        if (type_analysis is None):
+            static_url = StaticURL()
+            agg = dict(agg.items() + static_url.items())
+
+            data = evol_info_data_companies (startdate, enddate)
+            agg = dict(agg.items() + data.items())
+
+            data = evol_info_data_countries (startdate, enddate)
+            agg = dict(agg.items() + data.items())
+
+            data = evol_info_data_domains (startdate, enddate)
+            agg = dict(agg.items() + data.items())
+
+            data = GetCodeCommunityStructure(period, startdate, enddate, identities_db)
+            agg = dict(agg.items() + data.items())
+
+            # Tendencies    
+            for i in [7,30,365]:
+                data = GetDiffCommitsDays(period, enddate, identities_db, i)
+                agg = dict(agg.items() + data.items())
+                data = GetDiffAuthorsDays(period, enddate, identities_db, i)
+                agg = dict(agg.items() + data.items())
+                data = GetDiffFilesDays(period, enddate, identities_db, i)
+                agg = dict(agg.items() + data.items())
+                data = GetDiffLinesDays(period, enddate, identities_db, i)
+                agg = dict(agg.items() + data.items())
+
+            # Last Activity: to be removed
+            for i in [7,14,30,60,90,180,365,730]:
+                data = last_activity(i)
+                agg = dict(agg.items() + data.items())
+
+        return agg
+
+    @staticmethod
+    def create_agg_report (period, startdate, enddate, i_db, type_analysis = None):
+        opts = read_options()
+        data = SCM.get_agg_data (period, startdate, enddate, i_db, type_analysis)
+        createJSON (data, opts.destdir+"/scm-static.json")
+
+    @staticmethod
+    def get_top_data (period, startdate, enddate, i_db, npeople):
+        top_authors_data =  {}
+        top_authors_data['authors.'] = top_people(0, startdate, enddate, "author" , "" , npeople)
+        top_authors_data['authors.last month']= top_people(31, startdate, enddate, "author", "", npeople)
+        top_authors_data['authors.last year']= top_people(365, startdate, enddate, "author", "", npeople)
+
+        return top_authors_data
+
+    @staticmethod
+    def create_top_report (period, startdate, enddate, i_db):
+        opts = read_options()
+        data = SCM.get_top_data (period, startdate, enddate, i_db, opts.npeople)
+        createJSON (data, opts.destdir+"/scm-top.json")
+
+    @staticmethod
+    def get_filter_items(filter_, startdate, enddate, identities_db, bots):
+        items = None
+        filter_name = filter_.get_name()
+
+        if (filter_name == "repository"):
+            items  = repos_name(startdate, enddate)
+        elif (filter_name == "company"):
+            items  = companies_name_wo_affs(bots, startdate, enddate)
+        elif (filter_name == "country"):
+            items = scm_countries_names (identities_db, startdate, enddate)
+        elif (filter_name == "domain"):
+            items = scm_domains_names (identities_db, startdate, enddate)
+        else:
+            logging.error(filter_name + " not supported")
+        return items
+
+    @staticmethod
+    def create_filter_report(filter_, startdate, enddate, identities_db, bots):
+        opts = read_options()
+        period = getPeriod(opts.granularity)
+
+        items = SCM.get_filter_items(filter_, startdate, enddate, identities_db, bots)
+        if (items == None): return
+        items = items['name']
+
+        filter_name = filter_.get_name()
+        filter_name_short = filter_.get_name_short()
+
+        if not isinstance(items, (list)):
+            items = [items]
+
+        createJSON(items, opts.destdir+"/scm-"+filter_.get_name_plural()+".json")
+
+        for item in items :
+            item_name = "'"+ item+ "'"
+            logging.info (item_name)
+            type_analysis = [filter_.get_name(), item_name]
+
+            evol_data = SCM.get_evolutionary_data (period, startdate, enddate, identities_db, type_analysis)
+            createJSON(evol_data, opts.destdir+"/"+item+"-scm-"+filter_name_short+"-evolutionary.json")
+
+            agg = SCM.get_agg_data (period, startdate, enddate, identities_db, type_analysis)
+            createJSON(agg, opts.destdir+"/"+item+"-scm-"+filter_name_short+"-static.json")
+
+            if (filter_name == "company"):
+                top_authors = company_top_authors(item_name, startdate, enddate, opts.npeople)
+                createJSON(top_authors, opts.destdir+"/"+item+"-scm-"+filter_name_short+"-top-authors.json")
+
+                for i in [2006,2009,2012]:
+                    data = company_top_authors_year(item_name, i, opts.npeople)
+                    createJSON(data, opts.destdir+"/"+item+"-scm-top-authors_"+str(i)+".json")
+
+        if (filter_name == "company"):
+                commits =  GetCommitsSummaryCompanies(period, startdate, enddate, opts.identities_db, 10)
+                createJSON (commits, opts.destdir+"/scm-companies-commits-summary.json")
+
+    @staticmethod
+    def create_people_report(period, startdate, enddate, identities_db):
+        opts = read_options()
+        top_authors_data = SCM.get_top_data (period, startdate, enddate, identities_db, opts.npeople)
+        top = top_authors_data['authors.']["id"]
+        top += top_authors_data['authors.last year']["id"]
+        top += top_authors_data['authors.last month']["id"]
+        # remove duplicates
+        people = list(set(top))
+        createJSON(people, opts.destdir+"/scm-people.json")
+
+        for upeople_id in people :
+            evol_data = GetEvolPeopleSCM(upeople_id, period, startdate, enddate)
+            evol_data = completePeriodIds(evol_data)
+            createJSON (evol_data, opts.destdir+"/people-"+str(upeople_id)+"-scm-evolutionary.json")
+
+            agg = GetStaticPeopleSCM(upeople_id,  startdate, enddate)
+            createJSON (agg, opts.destdir+"/people-"+str(upeople_id)+"-scm-static.json")
+
+    # Studies implemented in R
+    @staticmethod
+    def create_r_reports(vizr, enddate):
+        opts = read_options()
+
+        # Demographics
+        vizr.ReportDemographicsAgingSCM(enddate, opts.destdir)
+        vizr.ReportDemographicsBirthSCM(enddate, opts.destdir)
+
 
 ##########
 # Meta-functions to automatically call metrics functions and merge them
 ##########
+
 
 def GetSCMEvolutionaryData (period, startdate, enddate, i_db, type_analysis):
     # Meta function that includes basic evolutionary metrics from the source code
@@ -75,8 +254,8 @@ def GetSCMStaticData (period, startdate, enddate, i_db, type_analysis):
     avg_commits_period = StaticAvgCommitsPeriod(period, startdate, enddate, i_db, type_analysis)
     avg_files_period = StaticAvgFilesPeriod(period, startdate, enddate, i_db, type_analysis)
     avg_commits_author = StaticAvgCommitsAuthor(period, startdate, enddate, i_db, type_analysis)
-    avg_authors_period = StaticAvgAuthorPeriod(period, startdate, enddate, i_db, type_analysis)
-    avg_committer_period = StaticAvgCommitterPeriod(period, startdate, enddate, i_db, type_analysis)
+    # avg_authors_period = StaticAvgAuthorPeriod(period, startdate, enddate, i_db, type_analysis)
+    # avg_committer_period = StaticAvgCommitterPeriod(period, startdate, enddate, i_db, type_analysis)
     avg_files_author = StaticAvgFilesAuthor(period, startdate, enddate, i_db, type_analysis)
 
     # 2- Merging information
@@ -163,7 +342,7 @@ def GetSQLReportFrom (identities_db, type_analysis):
     if (type_analysis is None or len(type_analysis) != 2): return From
 
     analysis = type_analysis[0]
-    value = type_analysis[1]
+    # value = type_analysis[1]
 
     if analysis == 'repository': From = GetSQLRepositoriesFrom()
     elif analysis == 'company': From = GetSQLCompaniesFrom(identities_db)
@@ -399,7 +578,8 @@ def EvolLines (period, startdate, enddate, identities_db, type_analysis) :
     return (GetLines(period, startdate, enddate, identities_db, type_analysis, True))
 
 
-def StaticNumLines (period, startdate, enddate, identities_db, type_analysis):
+# TODO: two version of this funcion. Unify.
+def StaticNumLines2 (period, startdate, enddate, identities_db, type_analysis):
     # returns the aggregate number of lines in the specified timeperiod (enddate - startdate)
     return (GetLines(period, startdate, enddate, identities_db, type_analysis, False))
 
@@ -671,7 +851,7 @@ def GetAvgAuthorPeriod (period, startdate, enddate, identities_db, type_analysis
 
     fields = " count(distinct(pup.upeople_id))/timestampdiff("+period+",min(s.date),max(s.date)) as avg_authors_"+period 
     tables = " scmlog s "
-    filters = ""
+    # filters = ""
 
     filters = GetSQLReportWhere(type_analysis, "author")
 
@@ -712,7 +892,7 @@ def GetAvgCommitterPeriod (period, startdate, enddate, identities_db, type_analy
 
     fields = " count(distinct(pup.upeople_id))/timestampdiff("+period+",min(s.date),max(s.date)) as avg_authors_"+period
     tables = " scmlog s "
-    filters = ""
+    # filters = ""
 
     filters = GetSQLReportWhere(type_analysis, "committer")
 
@@ -1016,16 +1196,16 @@ def top_people (days, startdate, enddate, role, filters, limit) :
 
 
 def top_files_modified () :
-      # Top 10 modified files
+    # Top 10 modified files
 
-      #FIXME: to be updated to use stardate and enddate values
-      q = "select file_name, count(commit_id) as modifications "+\
-          "from action_files a join files f on a.file_id = f.id  "+\
-          "where action_type='M'  "+\
-          "group by f.id  "+\
-          "order by modifications desc limit 10; "	
-      data = ExecuteQuery(q)
-      return (data)	
+    #FIXME: to be updated to use stardate and enddate values
+    q = "select file_name, count(commit_id) as modifications "+\
+        "from action_files a join files f on a.file_id = f.id  "+\
+        "where action_type='M'  "+\
+        "group by f.id  "+\
+        "order by modifications desc limit 10; "	
+    data = ExecuteQuery(q)
+    return (data)	
 
 
 ## TODO: Follow top_committers implementation
@@ -1087,8 +1267,8 @@ def top_authors_wo_affiliations (list_affs, startdate, enddate, limit) :
 
 
 def top_authors_year (year, limit) :
-   # Given a year, this functions provides the top 10 authors 
-   # of such year
+    # Given a year, this functions provides the top 10 authors 
+    # of such year
     q = "SELECT u.id as id, u.identifier as authors, "+\
         "       count(distinct(s.id)) as commits "+\
         "FROM scmlog s, "+\
@@ -1117,7 +1297,7 @@ def companies_name_wo_affs (affs_list, startdate, enddate) :
     #List of companies without certain affiliations
     affiliations = ""
     for aff in affs_list:
-       affiliations += " c.name<>'"+aff+"' and "
+        affiliations += " c.name<>'"+aff+"' and "
 
     q = "select c.name "+\
                "  from companies c, "+\
@@ -1158,7 +1338,7 @@ def companies_name (startdate, enddate) :
          "      s.date < "+ enddate+ " "+\
          "group by c.name "+\
          "order by count(distinct(s.id)) desc"
-         # order by count(distinct(s.id)) desc LIMIT ", companies_limit
+        # order by count(distinct(s.id)) desc LIMIT ", companies_limit
 
     data = ExecuteQuery(q)	
     return (data)
@@ -1168,7 +1348,7 @@ def companies_name (startdate, enddate) :
 def evol_info_data_companies (startdate, enddate) :
     # DEPRECATED FUNCTION; TO BE REMOVED	
 
-	q = "select count(distinct(c.id)) as companies "+\
+    q = "select count(distinct(c.id)) as companies "+\
          "from companies c, "+\
          "     upeople_companies upc, "+\
          "     people_upeople pup, "+\
@@ -1178,10 +1358,10 @@ def evol_info_data_companies (startdate, enddate) :
          "      pup.people_id = s.author_id and "+\
          "      s.date >="+ startdate+ " and "+\
          "      s.date < "+ enddate
-	
-	data13 = ExecuteQuery(q)
-	
-	q = "select count(distinct(c.id)) as companies_2006 "+\
+
+    data13 = ExecuteQuery(q)
+
+    q = "select count(distinct(c.id)) as companies_2006 "+\
         "from scmlog s, "+\
         "  people_upeople pup, "+\
         "  upeople_companies upc, "+\
@@ -1192,10 +1372,10 @@ def evol_info_data_companies (startdate, enddate) :
         "  s.date < upc.end and "+\
         "  upc.company_id = c.id and "+\
         "  year(s.date) = 2006"
-	
-	data14 = ExecuteQuery(q)
-	
-	q = "select count(distinct(c.id)) as companies_2009 "+\
+
+    data14 = ExecuteQuery(q)
+
+    q = "select count(distinct(c.id)) as companies_2009 "+\
         "from scmlog s, "+\
         "  people_upeople pup, "+\
         "  upeople_companies upc, "+\
@@ -1206,10 +1386,10 @@ def evol_info_data_companies (startdate, enddate) :
         "  s.date < upc.end and "+\
         "  upc.company_id = c.id and "+\
         "  year(s.date) = 2009"
-	
-	data15 = ExecuteQuery(q)
-	
-	q = "select count(distinct(c.id)) as companies_2012 "+\
+
+    data15 = ExecuteQuery(q)
+
+    q = "select count(distinct(c.id)) as companies_2012 "+\
         "from scmlog s, "+\
         "  people_upeople pup, "+\
         "  upeople_companies upc, "+\
@@ -1220,16 +1400,16 @@ def evol_info_data_companies (startdate, enddate) :
         "  s.date < upc.end and "+\
         "  upc.company_id = c.id and "+\
         "  year(s.date) = 2012"
-	
-	data16 = ExecuteQuery(q)
-	
-	
-	agg_data = dict(data13.items() + data14.items() + data15.items() + data16.items())
-	return (agg_data)
+
+    data16 = ExecuteQuery(q)
+
+
+    agg_data = dict(data13.items() + data14.items() + data15.items() + data16.items())
+    return (agg_data)
 
 
 def evol_info_data_countries (startdate, enddate) :
-	
+
     q = "select count(distinct(upc.country_id)) as countries "+\
          "from upeople_countries upc, "+\
          "     people_upeople pup, "+\
@@ -1274,7 +1454,7 @@ def company_top_authors (company_name, startdate, enddate, limit) :
 
 def company_top_authors_year (company_name, year, limit):
     # Top 10 authors per company and in a given year
-	
+
     q = "select u.id as id, u.identifier as authors, "+\
         "        count(distinct(s.id)) as commits "+\
         " from people p, "+\
@@ -1302,7 +1482,7 @@ def company_top_authors_year (company_name, year, limit):
 
 def evol_companies (period, startdate, enddate):	
     # Evolution of companies, also deprecated function
-	
+
     q = "select ((to_days(s.date) - to_days("+startdate+")) div "+period+") as id, "+\
         "       count(distinct(upc.company_id)) as companies "+\
         "from   scmlog s, "+\
@@ -1434,83 +1614,83 @@ def scm_domains_names (identities_db, startdate, enddate) :
 ##############
 
 def GetCodeCommunityStructure (period, startdate, enddate, identities_db):
-  # This function provides information about the general structure of the community.
-  # This is divided into core, regular and ocassional authors
-  # Core developers are defined as those doing up to a 80% of the total commits
-  # Regular developers are defind as those doing from the 80% to a 99% of the total commits
-  # Occasional developers are defined as those doing from the 99% to the 100% of the commits
+    # This function provides information about the general structure of the community.
+    # This is divided into core, regular and ocassional authors
+    # Core developers are defined as those doing up to a 80% of the total commits
+    # Regular developers are defind as those doing from the 80% to a 99% of the total commits
+    # Occasional developers are defined as those doing from the 99% to the 100% of the commits
 
-  # Init of structure to be returned
-  community = {}
-  community['core'] = None
-  community['regular'] = None
-  community['occasional'] = None
+    # Init of structure to be returned
+    community = {}
+    community['core'] = None
+    community['regular'] = None
+    community['occasional'] = None
 
-  q = "select count(distinct(s.id)) as total "+\
-       "from scmlog s, people p, actions a "+\
-       "where s.author_id = p.id and "+\
-       "      p.email <> '%gerrit@%' and "+\
-       "      p.email <> '%jenkins@%' and "+\
-       "      s.id = a.commit_id and "+\
-       "      s.date>="+startdate+" and "+\
-       "      s.date<="+enddate+";"
+    q = "select count(distinct(s.id)) as total "+\
+         "from scmlog s, people p, actions a "+\
+         "where s.author_id = p.id and "+\
+         "      p.email <> '%gerrit@%' and "+\
+         "      p.email <> '%jenkins@%' and "+\
+         "      s.id = a.commit_id and "+\
+         "      s.date>="+startdate+" and "+\
+         "      s.date<="+enddate+";"
 
-  total = ExecuteQuery(q)
-  total_commits = float(total['total'])
+    total = ExecuteQuery(q)
+    total_commits = float(total['total'])
 
-  # Database access: developer, %commits
-  q = " select pup.upeople_id, "+\
-      "        (count(distinct(s.id))) as commits "+\
-      " from scmlog s, "+\
-      "      actions a, "+\
-      "      people_upeople pup, "+\
-      "      people p "+\
-      " where s.id = a.commit_id and "+\
-      "       s.date>="+startdate+" and "+\
-      "       s.date<="+enddate+" and "+\
-      "       s.author_id = pup.people_id and "+\
-      "       s.author_id = p.id and "+\
-      "       p.email <> '%gerrit@%' and "+\
-      "       p.email <> '%jenkins@%' "+\
-      " group by pup.upeople_id "+\
-      " order by commits desc; "
+    # Database access: developer, %commits
+    q = " select pup.upeople_id, "+\
+        "        (count(distinct(s.id))) as commits "+\
+        " from scmlog s, "+\
+        "      actions a, "+\
+        "      people_upeople pup, "+\
+        "      people p "+\
+        " where s.id = a.commit_id and "+\
+        "       s.date>="+startdate+" and "+\
+        "       s.date<="+enddate+" and "+\
+        "       s.author_id = pup.people_id and "+\
+        "       s.author_id = p.id and "+\
+        "       p.email <> '%gerrit@%' and "+\
+        "       p.email <> '%jenkins@%' "+\
+        " group by pup.upeople_id "+\
+        " order by commits desc; "
 
-  people = ExecuteQuery(q)
-  # this is a list. Operate over the list
-  people['commits'] = [((commits / total_commits) * 100) for commits in people['commits']]
-  # people['commits'] = (people['commits'] / total_commits) * 100
+    people = ExecuteQuery(q)
+    # this is a list. Operate over the list
+    people['commits'] = [((commits / total_commits) * 100) for commits in people['commits']]
+    # people['commits'] = (people['commits'] / total_commits) * 100
 
-  # Calculating number of core, regular and occasional developers
-  cont = 0
-  core = 0
-  core_f = True # flag
-  regular = 0
-  regular_f = True  # flag
-  occasional = 0
-  devs = 0
+    # Calculating number of core, regular and occasional developers
+    cont = 0
+    core = 0
+    core_f = True # flag
+    regular = 0
+    regular_f = True  # flag
+    occasional = 0
+    devs = 0
 
-  for value in people['commits']:
-    cont = cont + value
-    devs = devs + 1
+    for value in people['commits']:
+        cont = cont + value
+        devs = devs + 1
 
-    if (core_f and cont >= 80):
-      #core developers number reached
-      core = devs
-      core_f = False
+        if (core_f and cont >= 80):
+            #core developers number reached
+            core = devs
+            core_f = False
 
-    if (regular_f and cont >= 95):
-      regular = devs
-      regular_f = False
+        if (regular_f and cont >= 95):
+            regular = devs
+            regular_f = False
 
-  occasional = devs - regular
-  regular = regular - core
+    occasional = devs - regular
+    regular = regular - core
 
-  # inserting values in variable
-  community['core'] = core
-  community['regular'] = regular
-  community['occasional'] = occasional
+    # inserting values in variable
+    community['core'] = core
+    community['regular'] = regular
+    community['occasional'] = occasional
 
-  return(community)
+    return(community)
 
 
 def GetCommitsSummaryCompanies (period, startdate, enddate, identities_db, num_companies):

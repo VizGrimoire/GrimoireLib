@@ -119,7 +119,7 @@ def peopleData(period, startdate, enddate, identities_db, destdir, top_data):
 def reposData(period, startdate, enddate, identities_db, destdir, conf, repofield, npeople):
     repos = MLS.reposNames(rfield, startdate, enddate)
     createJSON (repos, destdir+"/mls-lists.json")
-    repos = repos['mailing_list_url']
+    # repos = repos['mailing_list_url']
     check = True
     if not isinstance(repos, (list)):
         repos = [repos]
