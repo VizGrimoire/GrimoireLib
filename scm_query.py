@@ -24,7 +24,7 @@
 ##   Jesus M. Gonzalez-Barahona <jgb@bitergia.com>
 ##
 
-from sqlalchemy import create_engine, func, Column, Integer, ForeignKey
+from sqlalchemy import create_engine, func, Column, Integer, ForeignKey, or_
 from sqlalchemy.ext.declarative import declarative_base, DeferredReflection
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm.query import Query
@@ -129,7 +129,14 @@ class SCMQuery (Query):
                           label("date", SCMLog.date))
 
     def select_listpersons_uid(self, kind = "all"):
-        """Select a list of persons (authors, committers), using uids"""
+        """Select a list of persons (authors, committers), using uids
+
+        - kind: kind of person to select
+           authors: authors of commits
+           committers: committers of commits
+           all: authors and committers
+        Returns a SCMQuery object, with (id, name, email) selected.
+        """
         
         query = self.add_columns (label("id", func.distinct(UPeople.id)),
                                   label("name", UPeople.identifier)) \
@@ -155,6 +162,8 @@ class SCMQuery (Query):
            authors: authors of commits
            committers: committers of commits
            all: authors and committers
+
+        Returns a SCMQuery object, with (id, name, email) selected.
         """
 
         query = self.add_columns (label("id", func.distinct(People.id)),
@@ -218,6 +227,7 @@ class SCMQuery (Query):
         query = self.join(Actions,Branches).filter(Branches.name.in_(branches))
         return query
 
+
     def filter_period(self, start = None, end = None, date = "commit"):
         """Filter variable for a period
 
@@ -242,6 +252,28 @@ class SCMQuery (Query):
             self.end = end
             query = query.filter(scmlog_date < end.isoformat())
         return query
+
+
+    def filter_persons (self, list, kind = "all"):
+        """Fiter for a certain list of persons (committers, authors)
+
+        - list: list of People.id
+        - kind: kind of person to select
+           authors: authors of commits
+           committers: committers of commits
+           all: authors and committers
+        Returns a SCMQuery object.
+        """
+
+        query = self
+        if kind == "authors":
+            return query.filter (SCMLog.author_id.in_(list))    
+        elif kind == "committers":
+            return query.filter (SCMLog.committer_id.in_(list))    
+        elif kind == "all":
+            return query.filter (or_(SCMLog.author_id.in_(list),
+                                     SCMLog.committer_id.in_(list)))
+
 
     def group_by_period (self):
         """Group by time period (per month)"""

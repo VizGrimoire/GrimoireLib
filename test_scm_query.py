@@ -203,7 +203,6 @@ class TestSCMQuery (unittest.TestCase):
             .filter_period(start=self.start, end=self.end)
         self.assertEqual (res.all(), correct[1])
         res = res.group_by_period().timeseries()
-        print res
         self.assertEqual (res, correct[2])
 
     def test_select_listbranches (self):
@@ -225,6 +224,19 @@ class TestSCMQuery (unittest.TestCase):
         res = res.join(SCMLog) \
             .filter_period(start=self.start, end=self.end)
         self.assertEqual (res.all(), correct[1])
+
+
+    def test_filter_persons (self):
+        """Test filter_persons"""
+        
+        res = self.session.query().select_nscmlog(["commits"]) \
+            .filter_persons ([2,3]) \
+            .all()
+        self.assertEqual (res, [(1898L,)])
+        res = self.session.query().select_nscmlog(["commits"]) \
+            .filter_persons ([1,2], "committers") \
+            .all()
+        self.assertEqual (res, [(3307L,)])
 
 if __name__ == "__main__":
     unittest.main()
