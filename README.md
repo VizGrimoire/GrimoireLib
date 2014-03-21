@@ -3,17 +3,17 @@ grimoire-api
 
 Proof of concept of the Grimoire API, using SQLAlchemy. Currently only a part of the support for SCM (CVSAnalY databases) is provided.
 
-== scm_query.py
+## scm_query.py
 
 Low level interface. Provides three main elements:
 
-Classes for each of the tables in CVSAnalY databases: SCMLog, People, Actions, PeopleUPeople, UPeople, Actions.
+* Classes for each of the tables in CVSAnalY databases: SCMLog, People, Actions, PeopleUPeople, UPeople, Actions.
 
-SCMQuery class, which provides a interface to work with SCM tables. It inherites from Query, which means that can be used as SQLAlchemy Query is used, but providing some specialized methods as well.
+* SCMQuery class, which provides a interface to work with SCM tables. It inherites from Query, which means that can be used as SQLAlchemy Query is used, but providing some specialized methods as well.
 
-buildSession function, to create a SQL session that works with the SCMQuery class instead of the standard Query class.
+* buildSession function, to create a SQL session that works with the SCMQuery class instead of the standard Query class.
 
-=== SCMQuery class
+### SCMQuery class
 
 Provides an enriched interface to deal with SCM queries, maintaining the interface of the base Query class. This interface includes four kinds of functions:
 
@@ -27,9 +27,9 @@ Provides an enriched interface to deal with SCM queries, maintaining the interfa
 
 In addition, __repr__ and __str__ are specialized, to facilitate debugging.
 
-Examples of use:
+### Examples of use:
 
-```
+```python
 session = buildSession(
     database='mysql://jgb:XXX@localhost/vizgrimoire_cvsanaly',
     echo=False)
@@ -47,13 +47,13 @@ print (ts)
 ```
 
 
-== timeseries.py
+## timeseries.py
 
 Provides the TimeSeries class, for dealing with time series. This is one of the abstract data types that this module provides. Time series maintained by it keep track of empty periods, and zero them conveniently. Methods for conversion to JSON, for representation, etc. are provided.
 
 Example of use:
 
-```
+```python
 data = [(datetime(2011,12,1), (1, 2, 3)),
             (datetime(2012,1,1), (4, 5, 6)),
             (datetime(2012,2,1), (7, 8, 9))]
@@ -61,7 +61,7 @@ ts = TimeSeries ("months", start=None, end=datetime(2014,8,1),
                  data=data, zerovalue=0)
 ```
 
-== scm.py
+## scm.py
 
 High level interface to SCM (CVSAnalY) databases. Its main component is the SCM class, which models a SCM variable. The variable in particular that an SCM object represents is defined when instantiating the class (ncommits, nauthors, listcommits, listauthors).
 
@@ -76,7 +76,7 @@ Provided methods (return the defined variable in different formats):
 
 Examples of use:
 
-```
+```python
 data = SCM (database = 'mysql://jgb:XXX@localhost/vizgrimoire_cvsanaly',
             var = "ncommits", dates = (None, None))
 print data.timeseries()
@@ -86,7 +86,7 @@ data = SCM (database = 'mysql://jgb:XXX@localhost/vizgrimoire_cvsanaly',
 print data.timeseries()
 ```
 
-== Tests
+## Tests
 
 There are some tests available:
 
