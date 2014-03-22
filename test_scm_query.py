@@ -238,5 +238,31 @@ class TestSCMQuery (unittest.TestCase):
             .all()
         self.assertEqual (res, [(3307L,)])
 
+    def test_group_by_repo (self):
+        """Test group_by_repo"""
+
+        correct = [
+            [(11L, 1L), (1375L, 2L), (1615L, 3L), (1428L, 4L), (36L, 5L)],
+            [(11L, 1L), (1343L, 2L), (1570L, 3L), (1109L, 4L), (13L, 5L)],
+            [(11L, 1L, 'vizgrimoire.github.com.git'),
+             (1375L, 2L, 'VizGrimoireJS.git'),
+             (1615L, 3L, 'VizGrimoireJS-lib.git'),
+             (1428L, 4L, 'VizGrimoireR.git'),
+             (36L, 5L, 'VizGrimoireUtils.git')]]
+
+        # Number of commits for each repo
+        res = self.session.query().select_nscmlog(["commits",]) \
+            .group_by_repo().all()
+        self.assertEqual (res, correct[0])
+        # Number of commits for each repo until some date
+        res = self.session.query().select_nscmlog(["commits",]) \
+            .group_by_repo() \
+            .filter_period(end=datetime(2014,1,1)).all()
+        self.assertEqual (res, correct[1])
+        # Number of commits for each repo, including repo name
+        res = self.session.query().select_nscmlog(["commits",]) \
+            .group_by_repo(names=True).all()
+        self.assertEqual (res, correct[2])
+
 if __name__ == "__main__":
     unittest.main()

@@ -52,19 +52,6 @@ def buildSession(database, echo):
     session = Session()
     return (session)
 
-class SCMLog(Base):
-    """scmlog table"""
-    __tablename__ = 'scmlog'
-    author_id = Column(Integer, ForeignKey('people_upeople.people_id'))
-    author_id = Column(Integer, ForeignKey('people.id'))
-    committer_id = Column(Integer, ForeignKey('people_upeople.people_id'))
-    committer_id = Column(Integer, ForeignKey('people.id'))
-
-class People(Base):
-    """upeople"""
-
-    __tablename__ = 'people'
-
 class Actions(Base):
     """actions table"""
 
@@ -72,21 +59,40 @@ class Actions(Base):
     commit_id = Column(Integer, ForeignKey('scmlog.id'))
     branch_id = Column(Integer, ForeignKey('branches.id'))
 
+class Branches(Base):
+    """branches table"""
+
+    __tablename__ = 'branches'
+
+class People(Base):
+    """upeople table"""
+
+    __tablename__ = 'people'
+
 class PeopleUPeople(Base):
-    """people_upeople"""
+    """people_upeople table"""
 
     __tablename__ = 'people_upeople'
     upeople_id = Column(Integer, ForeignKey('upeople.id'))
+
+class Repositories(Base):
+    """repositories table"""
+
+    __tablename__ = 'repositories'
+
+class SCMLog(Base):
+    """scmlog table"""
+    __tablename__ = 'scmlog'
+    author_id = Column(Integer, ForeignKey('people_upeople.people_id'))
+    author_id = Column(Integer, ForeignKey('people.id'))
+    committer_id = Column(Integer, ForeignKey('people_upeople.people_id'))
+    committer_id = Column(Integer, ForeignKey('people.id'))
+    repository_id = Column(Integer, ForeignKey('repositories.id'))
 
 class UPeople(Base):
     """upeople"""
 
     __tablename__ = 'upeople'
-
-class Branches(Base):
-    """branches"""
-
-    __tablename__ = 'branches'
 
 
 class SCMQuery (Query):
@@ -282,6 +288,25 @@ class SCMQuery (Query):
             .add_columns (label("month", func.month(SCMLog.date)),
                           label("year", func.year(SCMLog.date))) \
             .group_by("month", "year").order_by("year", "month")
+
+
+    def group_by_repo (self, names = False):
+        """Group by repository
+
+        - names: include names of repositories as a column
+
+        Returns a SCMQuery with new columns (repository id,
+        and repository name, if names is True), grouped by
+        repository id."""
+
+        query = self.add_columns (label("repo", SCMLog.repository_id))
+        if names:
+            query = query.add_columns (label("name", Repositories.name)) \
+                .join (Repositories,
+                       SCMLog.repository_id == Repositories.id)
+        query = query.group_by("repo").order_by("repo")
+        return query
+
 
     def timeseries (self):
         """Return a TimeSeries object.
