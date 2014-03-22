@@ -442,9 +442,9 @@ def read_main_conf(config_file):
     fd.close()
 
     sec = parser.sections()
-    # we'll read "generic" for db information and "r" for start_date
+    # we'll read "generic" for db information and "r" for start_date and "bicho" for backend
     for s in sec:
-        if not((s == "generic") or (s == "r")):
+        if not((s == "generic") or (s == "r") or (s == "bicho")):
             continue
         options[s] = {}
         opti = parser.options(s)

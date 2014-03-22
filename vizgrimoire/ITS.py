@@ -49,7 +49,7 @@ class ITS(DataSource):
     @staticmethod
     def _get_backend():
         automator = report.Report.get_config()
-        its_backend = automator['generic']['bicho_backend']
+        its_backend = automator['bicho']['backend']
         backend = Backend(its_backend)
         return backend
 
