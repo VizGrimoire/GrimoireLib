@@ -69,8 +69,9 @@ def read_main_conf(config_file):
 
     sec = parser.sections()
     # we'll read "generic" for db information and "r" for start_date
+    # and bicho for backend
     for s in sec:
-        if not((s == "generic") or (s == "r")):
+        if not((s == "generic") or (s == "r") or (s == "bicho")):
             continue
         options[s] = {}
         opti = parser.options(s)
@@ -81,10 +82,8 @@ def read_main_conf(config_file):
 
 def check_configuration():
     if 'db_bicho' in options['generic']:
-        try:
-            'bicho_backend' in options['generic'] == True
-        except:
-            print "Configuration error: Configuration section for [generic] with 'backend_bicho'\
+        if not 'backend' in options['generic']:
+            print "Configuration error: Configuration section for [generic] with 'backend'\
  variable expected"
             sys.exit(-1)
 
@@ -92,6 +91,8 @@ def get_vars():
     v = {}
     v = options['generic']
     v.update(options['r'])
+    # bicho backend
+    v.update(options['bicho'])
     # Fixed locations
     v['r_libs'] = '../../r-lib'
     v['python_libs'] = '../vizgrimoire:../vizgrimoire/analysis'
@@ -119,7 +120,7 @@ def get_analysis_cmd(v, script, db):
     cmd += "-i %s -s %s -e %s -o %s -g %s " % \
         (v['db_identities'], v['start_date'], v['end_date'], v['json_dir'], v['period'])
     if script == "its-analysis.R" or script == "its-analysis.py":
-        cmd += "-t %s " % (v['bicho_backend'])
+        cmd += "-t %s " % (v['backend'])
     if v.has_key('people_number'):
         cmd += "--npeople %s " %  (v['people_number'])
     else:
@@ -236,8 +237,8 @@ tasks_order = ['scm','people','its','mls','scr','mediawiki','downloads','irc']
 if __name__ == '__main__':
     opt = get_options()
     read_main_conf(opt.config_file)
-    check_configuration()
     env = get_vars()
+    check_configuration()
 
     if opt.section is not None:
         tasks_section[opt.section](env)

@@ -1286,7 +1286,7 @@ class Backend(object):
     def __init__(self, its_type):
         if (its_type == 'allura'):
             Backend.closed_condition = "new_value='CLOSED'"
-        if (its_type == 'bugzilla'):
+        if (its_type == 'bugzilla' or its_type == 'bg'):
             Backend.closed_condition = "(new_value='RESOLVED' OR new_value='CLOSED')"
             Backend.reopened_condition = "new_value='NEW'"
             Backend.name_log_table = 'issues_log_bugzilla'
