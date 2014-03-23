@@ -52,10 +52,23 @@ class DataSourceTest(unittest.TestCase):
             self.assertEqual(ds_bots[0], bots[0])
 
     def test_get_name(self):
-        # Run the same tests over all data sources
         for ds in Report.get_data_sources():
             ds_name = ds.get_name()
-            self.assertNotEqual(ds_name, "IRC")
+            self.assertNotEqual(ds_name, "")
+
+    def test_get_db_name(self):
+        for ds in Report.get_data_sources():
+            ds_db_name = ds.get_db_name()
+            self.assertNotEqual(ds_db_name, "")
+
+    def test_get_evolutionary_data(self):
+        # Test without filters
+        for ds in Report.get_data_sources():
+            pass
+        # Test for alll filters
+        for ds in Report.get_data_sources():
+            for filter_ in Report.get_filters():
+                pass
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO,format='%(asctime)s %(message)s')
