@@ -264,5 +264,28 @@ class TestSCMQuery (unittest.TestCase):
             .group_by_repo(names=True).all()
         self.assertEqual (res, correct[2])
 
+    def test_group_by (self):
+        """Test combinations of group_by_* functions"""
+
+        correct = [
+            [(29L, 2L, 'VizGrimoireJS.git', 11L, 2013L),
+             (79L, 2L, 'VizGrimoireJS.git', 12L, 2013L),
+             (31L, 2L, 'VizGrimoireJS.git', 1L, 2014L),
+             (8L, 3L, 'VizGrimoireJS-lib.git', 11L, 2013L),
+             (105L, 3L, 'VizGrimoireJS-lib.git', 12L, 2013L),
+             (39L, 3L, 'VizGrimoireJS-lib.git', 1L, 2014L),
+             (55L, 4L, 'VizGrimoireR.git', 11L, 2013L),
+             (131L, 4L, 'VizGrimoireR.git', 12L, 2013L),
+             (219L, 4L, 'VizGrimoireR.git', 1L, 2014L),
+             (8L, 5L, 'VizGrimoireUtils.git', 11L, 2013L),
+             (5L, 5L, 'VizGrimoireUtils.git', 12L, 2013L),
+             (21L, 5L, 'VizGrimoireUtils.git', 1L, 2014L)]
+            ]
+
+        res = self.session.query().select_nscmlog(["commits",]) \
+            .group_by_repo(names=True).group_by_period() \
+            .filter_period(start=self.start, end=self.end)
+        self.assertEqual (res.all(), correct[0])
+
 if __name__ == "__main__":
     unittest.main()
