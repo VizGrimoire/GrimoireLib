@@ -92,6 +92,10 @@ def read_options():
                       dest="npeople",
                       default="10",
                       help="Limit for people analysis")
+    parser.add_option("-c", "--config-file",
+                      action="store",
+                      dest="config_file",
+                      help="Automator config file")
 
 
     (opts, args) = parser.parse_args()
@@ -99,8 +103,9 @@ def read_options():
     if len(args) != 0:
         parser.error("Wrong number of arguments")
 
-    if not(opts.dbname and opts.dbuser and opts.identities_db):
-        parser.error("--database --db-user and --identities are needed")
+    if opts.config_file is None :
+        if not(opts.dbname and opts.dbuser and opts.identities_db):
+            parser.error("--database --db-user and --identities are needed")
     return opts
 
 def valRtoPython(val):
@@ -271,7 +276,7 @@ def completePeriodIds(ts_data):
 
 # Convert a R data frame to a python dictionary
 def dataFrame2Dict(data):
-    dict = {}
+    dict_ = {}
 
     # R start from 1 in data frames
     for i in range(1,len(data)+1):
@@ -279,14 +284,14 @@ def dataFrame2Dict(data):
         col = data.rx(i)
         colname = col.names[0]
         colvalues = col[0]
-        dict[colname] = [];
+        dict_[colname] = [];
 
         if (len(colvalues) == 1):
-            dict[colname] = valRtoPython(colvalues[0])
+            dict_[colname] = valRtoPython(colvalues[0])
         else:
             for j in colvalues: 
-                dict[colname].append(valRtoPython(j))
-    return dict
+                dict_[colname].append(valRtoPython(j))
+    return dict_
 
 def getPeriod(granularity, number = None):
     period = None
@@ -353,12 +358,22 @@ def createJSON(data, filepath, check=False, skip_fields = []):
         os.rename(filepath_py, filepath)
 
 def compareJSON(orig_file, new_file, skip_fields = []):
-    check = True
     f1 = open(orig_file)
     f2 = open(new_file)
     data1 = json.load(f1)
     data2 = json.load(f2)
+    f1.close()
+    f2.close()
 
+    return compare_json_data(data1, data2, orig_file, new_file, skip_fields)
+
+def compare_json_data(data1, data2, orig_file = "", new_file = "", skip_fields = []):
+    """ Compare two JS objects read from a JSON file or created from code """
+
+    if (orig_file == ""): orig_file = "orig data"
+    if (new_file == ""): orig_file = "new data"
+
+    check = True
     if len(data1) > len(data2):
         logging.warn("More data in orig file than in new: " + str(len(data1)) + " " + str(len (data2)))
         check = False
@@ -389,8 +404,6 @@ def compareJSON(orig_file, new_file, skip_fields = []):
             if data1.has_key(name) is False:
                 logging.warn (name + " does not exists in " + orig_file)
 
-    f1.close()
-    f2.close()
     return check
 
 def GetDates (last_date, days):

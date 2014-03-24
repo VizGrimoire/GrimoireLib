@@ -44,7 +44,7 @@ class ITS(DataSource):
         return "db_bicho"
 
     @staticmethod
-    def get_name(): return "ITS"
+    def get_name(): return "its"
 
     @staticmethod
     def _get_backend():
@@ -84,7 +84,7 @@ class ITS(DataSource):
         return evol
 
     @staticmethod
-    def get_evolutionary_data (period, startdate, enddate, identities_db, type_analysis):
+    def get_evolutionary_data (period, startdate, enddate, identities_db, type_analysis = None):
         closed_condition = ITS._get_closed_condition()
 
         data = EvolITSInfo(period, startdate, enddate, identities_db, type_analysis, closed_condition)
@@ -112,10 +112,10 @@ class ITS(DataSource):
     def create_evolutionary_report (period, startdate, enddate, i_db, type_analysis = None):
         opts = read_options()
         data =  ITS.get_evolutionary_data (period, startdate, enddate, i_db, type_analysis)
-        createJSON (data, opts.destdir+"/its-evolutionary.json")
+        createJSON (data, opts.destdir+ITS.get_evolutionary_filename(ITS.get_name()))
 
     @staticmethod
-    def get_agg_data (period, startdate, enddate, identities_db, type_analysis):
+    def get_agg_data (period, startdate, enddate, identities_db, type_analysis = None):
         closed_condition = ITS._get_closed_condition()
 
         data = AggITSInfo(period, startdate, enddate, identities_db, type_analysis, closed_condition)
@@ -158,7 +158,7 @@ class ITS(DataSource):
     def create_agg_report (period, startdate, enddate, i_db, type_analysis = None):
         opts = read_options()
         data = ITS.get_agg_data (period, startdate, enddate, i_db, type_analysis)
-        createJSON (data, opts.destdir+"/its-static.json")
+        createJSON (data, opts.destdir+ITS.get_agg_filename(ITS.get_name()))
 
     @staticmethod
     def get_top_data (period, startdate, enddate, identities_db, npeople):

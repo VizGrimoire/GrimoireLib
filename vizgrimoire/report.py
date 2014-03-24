@@ -55,7 +55,7 @@ class Report(object):
     def get_config():
         opts = read_options()
 
-        opts.config_file = "../../../conf/main.conf"
+        # opts.config_file = "../../../conf/main.conf"
         automator = read_main_conf(opts.config_file)
 
         return automator

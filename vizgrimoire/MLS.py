@@ -45,10 +45,10 @@ class MLS(DataSource):
         return "db_mlstats"
 
     @staticmethod
-    def get_name(): return "MLS"
+    def get_name(): return "mls"
 
     @staticmethod
-    def get_evolutionary_data (period, startdate, enddate, identities_db, type_analysis):
+    def get_evolutionary_data (period, startdate, enddate, identities_db, type_analysis = None):
         rfield = MLS.get_repo_field()
         evol = {}
 
@@ -71,10 +71,10 @@ class MLS(DataSource):
     def create_evolutionary_report (period, startdate, enddate, i_db, type_analysis = None):
         opts = read_options()
         data =  MLS.get_evolutionary_data (period, startdate, enddate, i_db, type_analysis)
-        createJSON (data, opts.destdir+"/mls-evolutionary.json")
+        createJSON (data, opts.destdir+MLS.get_evolutionary_filename(MLS.get_name()))
 
     @staticmethod
-    def get_agg_data (period, startdate, enddate, identities_db, type_analysis):
+    def get_agg_data (period, startdate, enddate, identities_db, type_analysis = None):
         rfield = MLS.get_repo_field()
         agg = StaticMLSInfo(period, startdate, enddate, identities_db, rfield, type_analysis)
 
@@ -106,7 +106,7 @@ class MLS(DataSource):
     def create_agg_report (period, startdate, enddate, i_db, type_analysis = None):
         opts = read_options()
         data = MLS.get_agg_data (period, startdate, enddate, i_db, type_analysis)
-        createJSON (data, opts.destdir+"/mls-static.json")
+        createJSON (data, opts.destdir+MLS.get_agg_filename(MLS.get_name()))
 
     @staticmethod
     def get_top_data (period, startdate, enddate, identities_db, npeople):
