@@ -46,12 +46,20 @@ class DataSource(object):
         raise NotImplementedError
 
     @staticmethod
+    def get_evolutionary_filename (ds_name):
+        return ds_name+"-evolutionary.json"
+
+    @staticmethod
     def get_evolutionary_data (period, startdate, enddate, identities_db, type_analysis = None):
         raise NotImplementedError
 
     @staticmethod
     def create_evolutionary_report (period, startdate, enddate, identities_db, type_analysis = None):
         raise NotImplementedError
+
+    @staticmethod
+    def get_agg_filename (ds_name):
+        return ds_name+"-static.json"
 
     @staticmethod
     def get_agg_data (period, startdate, enddate, identities_db, type_analysis = None):
