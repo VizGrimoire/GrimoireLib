@@ -105,11 +105,11 @@ def AggIPs(period, startdate, enddate):
 def TopIPs(startdate, enddate, numTop):
     # Top IPs downloading packages in a given period
     query = """
-            select ip, count(*) as downloads 
+            select ip as ips, count(*) as downloads 
             from downloads
             where date >= %s and
                   date < %s
-            group by ip
+            group by ips
             order by downloads desc
             limit %s
             """ % (startdate, enddate, str(numTop))
@@ -118,11 +118,11 @@ def TopIPs(startdate, enddate, numTop):
 def TopPackages(startdate, enddate, numTop):
     # Top Packages bein downloaded in a given period
     query = """
-            select package, count(*) as downloads
+            select packages, count(*) as downloads
             from downloads
             where date >= %s and
                   date < %s
-            group by package
+            group by packages
             order by downloads desc
             limit %s
             """ % (startdate, enddate, str(numTop))
