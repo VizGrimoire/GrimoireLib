@@ -166,11 +166,9 @@ class DataSourceTest(unittest.TestCase):
 
                     logging.info(ds.get_name() +","+ filter_name+","+ item+","+ "agg")
                     agg = ds.get_filter_item_agg(startdate, enddate, identities_db, type_analysis)
-                    fn = item_file+"-"+ds.get_name()+"-"+filter_name_short+"-evolutionary.json"
+                    fn = item_file+"-"+ds.get_name()+"-"+filter_name_short+"-static.json"
                     test_json = os.path.join("json",fn)
                     self.assertTrue(DataSourceTest._compare_data(agg, test_json))
-
-                    continue
 
                     logging.info(ds.get_name() +","+ filter_name+","+ item+","+ "evol")
                     evol = ds.get_filter_item_evol(startdate, enddate, identities_db, type_analysis)

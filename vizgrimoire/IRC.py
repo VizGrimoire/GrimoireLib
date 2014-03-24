@@ -116,7 +116,8 @@ class IRC(DataSource):
         period = getPeriod(opts.granularity)
 
         if (filter_ == "repository"):
-            evol = GetRepoEvolSentSendersIRC(item, period, startdate, enddate) 
+            evol = GetRepoEvolSentSendersIRC(item, period, startdate, enddate)
+            evol = completePeriodIds(evol)
 
         return evol 
 
