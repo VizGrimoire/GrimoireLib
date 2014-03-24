@@ -107,17 +107,17 @@ if __name__ == '__main__':
     startdate = "'"+opts.startdate+"'"
     enddate = "'"+opts.enddate+"'"
 
-    opts.config_file = "../../../conf/main.conf"
     automator = read_main_conf(opts.config_file)
+    identities_db = automator['generic']['db_identities']
 
     bots = []
 
-    evol = create_evol_report(startdate, enddate, opts.identities_db, bots)
-    agg = create_agg_report(startdate, enddate, opts.identities_db, bots)
-    top = create_top_report(startdate, enddate, opts.identities_db, bots)
+    evol = create_evol_report(startdate, enddate, identities_db, bots)
+    agg = create_agg_report(startdate, enddate, identities_db, bots)
+    top = create_top_report(startdate, enddate, identities_db, bots)
 
-    create_reports_filters(startdate, enddate, opts.identities_db, bots)
-    create_report_people(startdate, enddate, opts.identities_db, bots)
+    create_reports_filters(startdate, enddate, identities_db, bots)
+    create_report_people(startdate, enddate, identities_db, bots)
     create_reports_r(opts.enddate)
 
     logging.info("Report data source analysis OK")
