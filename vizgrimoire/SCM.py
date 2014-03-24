@@ -180,7 +180,7 @@ class SCM(DataSource):
                     createJSON(data, opts.destdir+"/"+item+"-scm-top-authors_"+str(i)+".json")
 
         if (filter_name == "company"):
-                commits =  GetCommitsSummaryCompanies(period, startdate, enddate, opts.identities_db, 10)
+                commits =  GetCommitsSummaryCompanies(period, startdate, enddate, identities_db, 10)
                 createJSON (commits, opts.destdir+"/scm-companies-commits-summary.json")
 
     @staticmethod

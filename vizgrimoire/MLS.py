@@ -191,7 +191,7 @@ class MLS(DataSource):
 
 
         if (filter_name == "company"):
-            sent = GetSentSummaryCompanies(period, startdate, enddate, opts.identities_db, 10)
+            sent = GetSentSummaryCompanies(period, startdate, enddate, identities_db, 10)
             createJSON (sent, opts.destdir+"/mls-sent-companies-summary.json")
 
     @staticmethod
