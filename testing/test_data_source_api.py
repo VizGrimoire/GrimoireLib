@@ -69,32 +69,28 @@ class DataSourceTest(unittest.TestCase):
     def compare_dicts (dict1, dict2):
         pass
 
-    def no_test_get_evolutionary_data(self):
+    def test_get_evolutionary_data(self):
         opts = read_options()
         period = getPeriod(opts.granularity)
         startdate = "'"+opts.startdate+"'"
         enddate = "'"+opts.enddate+"'"
 
-        opts.config_file = "../../../conf/main.conf"
+        # opts.config_file = "../../../conf/main.conf"
         automator = read_main_conf(opts.config_file)
         identities_db = automator['generic']['db_identities']
-
 
         # Test without filters
         for ds in Report.get_data_sources():
             # Create the evolutionary data from dbs and check with test JSON
-            print(ds)
+            logging.info(ds.get_name() + " test_get_evolutionary_data")
             Report.connect_ds(ds)
             ds_data = ds.get_evolutionary_data (period, startdate,
                                                 enddate, identities_db)
-            ds_data = completePeriodIds(ds_data)
+
             test_json = ds.get_evolutionary_filename(ds.get_name())
-            f_test_json = open(os.path.join("json",test_json))
-            ds_data_test = json.load(f_test_json)
+            f_test_json = os.path.join("json", test_json)
 
-            self.assertTrue(compare_json_data(ds_data, ds_data_test))
-
-            print(ds_data_test)
+            self.assertTrue(DataSourceTest._compare_data(ds_data, f_test_json))
 
         # Test for all filters
         for ds in Report.get_data_sources():
@@ -125,6 +121,7 @@ class DataSourceTest(unittest.TestCase):
 
         # Test without filters
         for ds in Report.get_data_sources():
+            logging.info(ds.get_name() + " test_get_agg_data")
             # Create the evolutionary data from dbs and check with test JSON
             Report.connect_ds(ds)
             ds_data = ds.get_agg_data (period, startdate,
