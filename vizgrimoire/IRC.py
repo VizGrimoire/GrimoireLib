@@ -105,16 +105,40 @@ class IRC(DataSource):
             logging.error("IRC " + filter_name + " filter not supported")
         return items
 
+    @staticmethod
+    def get_filter_item_evol(startdate, enddate, identities_db, type_analysis):
+        evol = {}
+
+        filter_ = type_analysis[0]
+        item = type_analysis[1]
+
+        opts = read_options()
+        period = getPeriod(opts.granularity)
+
+        if (filter_ == "repository"):
+            evol = GetRepoEvolSentSendersIRC(item, period, startdate, enddate) 
+
+        return evol 
+
+    @staticmethod
+    def get_filter_item_agg(startdate, enddate, identities_db, type_analysis):
+        agg = {}
+
+        filter_ = type_analysis[0]
+        item = type_analysis[1]
+
+        if (filter_ == "repository"):
+            agg = GetRepoStaticSentSendersIRC(item, startdate, enddate)
+
+        return agg
 
     @staticmethod
     def create_filter_report(filter_, startdate, enddate, identities_db, bots):
         opts = read_options()
-        period = getPeriod(opts.granularity)
 
         items = IRC.get_filter_items(filter_, startdate, enddate, identities_db, bots)
         if (items == None): return
 
-        filter_name = filter_.get_name()
         filter_name_short = filter_.get_name_short()
 
         if not isinstance(items, (list)):
@@ -123,15 +147,17 @@ class IRC(DataSource):
         createJSON(items, opts.destdir+"/irc-"+filter_.get_name_plural()+".json")
 
         for item in items :
-            # item_name = "'"+ item+ "'"
+            item_name = "'"+ item+ "'"
             logging.info (item)
-            # type_analysis = [filter_.get_name(), item_name]
+            type_analysis = [filter_.get_name(), item]
 
-            evol_data = GetRepoEvolSentSendersIRC(item, period, startdate, enddate)
-            createJSON(completePeriodIds(evol_data), opts.destdir+"/"+item+"-irc-"+filter_name_short+"-evolutionary.json")
+            evol_data = IRC.get_filter_item_evol(startdate, enddate, identities_db, type_analysis)
+            fn = item+"-"+IRC.get_name()+"-"+filter_name_short+"-evolutionary.json";
+            createJSON(completePeriodIds(evol_data), opts.destdir+"/"+fn)
 
-            agg = GetRepoStaticSentSendersIRC(item, startdate, enddate)
-            createJSON(agg, opts.destdir+"/"+item+"-irc-"+filter_name_short+"-static.json")
+            agg = IRC.get_filter_item_agg(startdate, enddate, identities_db, type_analysis)
+            fn = item+"-"+IRC.get_name()+"-"+filter_name_short+"-static.json"
+            createJSON(agg, opts.destdir+"/"+ fn)
 
     @staticmethod
     def create_people_report(period, startdate, enddate, identities_db):

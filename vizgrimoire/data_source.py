@@ -86,6 +86,14 @@ class DataSource(object):
         raise NotImplementedError
 
     @staticmethod
+    def get_filter_item_evol(startdate, enddate, identities_db, type_analysis):
+        raise NotImplementedError        
+
+    @staticmethod
+    def get_filter_item_agg(startdate, enddate, identities_db, type_analysis):
+        raise NotImplementedError        
+
+    @staticmethod
     def create_people_report(period, startdate, enddate, identities_db):
         raise NotImplementedError
 

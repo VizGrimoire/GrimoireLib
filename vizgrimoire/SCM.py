@@ -149,6 +149,20 @@ class SCM(DataSource):
         return items
 
     @staticmethod
+    def get_filter_item_evol(startdate, enddate, identities_db, type_analysis):
+        opts = read_options()
+        period = getPeriod(opts.granularity)
+
+        return SCM.get_evolutionary_data (period, startdate, enddate, identities_db, type_analysis)
+
+    @staticmethod
+    def get_filter_item_agg(startdate, enddate, identities_db, type_analysis):
+        opts = read_options()
+        period = getPeriod(opts.granularity)
+
+        return SCM.get_agg_data (period, startdate, enddate, identities_db, type_analysis)
+
+    @staticmethod
     def create_filter_report(filter_, startdate, enddate, identities_db, bots):
         opts = read_options()
         period = getPeriod(opts.granularity)
@@ -170,10 +184,10 @@ class SCM(DataSource):
             logging.info (item_name)
             type_analysis = [filter_.get_name(), item_name]
 
-            evol_data = SCM.get_evolutionary_data (period, startdate, enddate, identities_db, type_analysis)
+            evol_data = SCM.get_filter_item_evol(startdate, enddate, identities_db, type_analysis)
             createJSON(evol_data, opts.destdir+"/"+item+"-scm-"+filter_name_short+"-evolutionary.json")
 
-            agg = SCM.get_agg_data (period, startdate, enddate, identities_db, type_analysis)
+            agg = SCM.get_filter_item_agg(startdate, enddate, identities_db, type_analysis)
             createJSON(agg, opts.destdir+"/"+item+"-scm-"+filter_name_short+"-static.json")
 
             if (filter_name == "company"):
