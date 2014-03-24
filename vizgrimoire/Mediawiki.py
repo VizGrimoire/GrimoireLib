@@ -39,20 +39,20 @@ class Mediawiki(DataSource):
         return "db_mediawiki"
 
     @staticmethod
-    def get_name(): return "Mediawiki"
+    def get_name(): return "mediawiki"
 
     @staticmethod
-    def get_evolutionary_data (period, startdate, enddate, i_db, type_analysis):
+    def get_evolutionary_data (period, startdate, enddate, i_db, type_analysis = None):
         return GetEvolDataMediaWiki (period, startdate, enddate, i_db, type_analysis)
 
     @staticmethod
     def create_evolutionary_report (period, startdate, enddate, i_db, type_analysis = None):
         opts = read_options()
         data =  Mediawiki.get_evolutionary_data (period, startdate, enddate, i_db, type_analysis)
-        createJSON (data, opts.destdir+"/mediawiki-evolutionary.json")
+        createJSON (data, opts.destdir+Mediawiki.get_evolutionary_filename(Mediawiki.get_name()))
 
     @staticmethod
-    def get_agg_data (period, startdate, enddate, identities_db, type_analysis):
+    def get_agg_data (period, startdate, enddate, identities_db, type_analysis = None):
         # Tendencies
         agg = {}
 
@@ -72,7 +72,7 @@ class Mediawiki(DataSource):
     def create_agg_report (period, startdate, enddate, i_db, type_analysis = None):
         opts = read_options()
         data = Mediawiki.get_agg_data (period, startdate, enddate, i_db, type_analysis)
-        createJSON (data, opts.destdir+"/mediawiki-static.json")
+        createJSON (data, opts.destdir+Mediawiki.get_agg_filename(Mediawiki.get_name()))
 
     @staticmethod
     def get_top_data (period, startdate, enddate, identities_db, npeople):

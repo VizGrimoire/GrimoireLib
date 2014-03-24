@@ -42,10 +42,10 @@ class SCM(DataSource):
 
     @staticmethod
     def get_name():
-        return "SCM"
+        return "scm"
 
     @staticmethod
-    def get_evolutionary_data (period, startdate, enddate, identities_db, type_analysis):
+    def get_evolutionary_data (period, startdate, enddate, identities_db, type_analysis = None):
 
         data = GetSCMEvolutionaryData(period, startdate, enddate, identities_db, type_analysis)
         evol_data = completePeriodIds(data)
@@ -64,10 +64,10 @@ class SCM(DataSource):
     def create_evolutionary_report (period, startdate, enddate, i_db, type_analysis = None):
         opts = read_options()
         data =  SCM.get_evolutionary_data (period, startdate, enddate, i_db, type_analysis)
-        createJSON (data, opts.destdir+"/scm-evolutionary.json")
+        createJSON (data, opts.destdir+SCM.get_evolutionary_filename(SCM.get_name()))
 
     @staticmethod
-    def get_agg_data (period, startdate, enddate, identities_db, type_analysis):
+    def get_agg_data (period, startdate, enddate, identities_db, type_analysis = None):
         data = GetSCMStaticData(period, startdate, enddate, identities_db, type_analysis)
         agg = data
 
@@ -109,7 +109,7 @@ class SCM(DataSource):
     def create_agg_report (period, startdate, enddate, i_db, type_analysis = None):
         opts = read_options()
         data = SCM.get_agg_data (period, startdate, enddate, i_db, type_analysis)
-        createJSON (data, opts.destdir+"/scm-static.json")
+        createJSON (data, opts.destdir+SCM.get_agg_filename(SCM.get_name()))
 
     @staticmethod
     def get_top_data (period, startdate, enddate, i_db, npeople):

@@ -36,20 +36,20 @@ class IRC(DataSource):
         return "db_irc"
 
     @staticmethod
-    def get_name(): return "IRC"
+    def get_name(): return "irc"
 
     @staticmethod
-    def get_evolutionary_data (period, startdate, enddate, identities_db, type_analysis):
+    def get_evolutionary_data (period, startdate, enddate, identities_db, type_analysis = None):
         return completePeriodIds(GetEvolDataIRC (period, startdate, enddate, identities_db, type_analysis))
 
     @staticmethod
     def create_evolutionary_report (period, startdate, enddate, identities_db, type_analysis = None):
         opts = read_options()
         data =  IRC.get_evolutionary_data (period, startdate, enddate, identities_db, type_analysis)
-        createJSON (data, opts.destdir+"/irc-evolutionary.json")
+        createJSON (data, opts.destdir+IRC.get_evolutionary_filename(IRC.get_name()))
 
     @staticmethod
-    def get_agg_data (period, startdate, enddate, identities_db, type_analysis):
+    def get_agg_data (period, startdate, enddate, identities_db, type_analysis = None):
         agg_data = {}
 
         if (type_analysis is None):
@@ -69,7 +69,7 @@ class IRC(DataSource):
     def create_agg_report (period, startdate, enddate, i_db, type_analysis = None):
         opts = read_options()
         data = IRC.get_agg_data (period, startdate, enddate, i_db, type_analysis)
-        createJSON (data, opts.destdir+"/irc-static.json")
+        createJSON (data, opts.destdir+IRC.get_agg_filename(IRC.get_name()))
 
     @staticmethod
     def get_top_data (period, startdate, enddate, identities_db, npeople):

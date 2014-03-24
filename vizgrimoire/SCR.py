@@ -42,10 +42,10 @@ class SCR(DataSource):
         return "db_gerrit"
 
     @staticmethod
-    def get_name(): return "SCR"
+    def get_name(): return "scr"
 
     @staticmethod
-    def get_evolutionary_data (period, startdate, enddate, i_db, type_analysis):
+    def get_evolutionary_data (period, startdate, enddate, i_db, type_analysis = None):
         evol = {}
         data = EvolReviewsSubmitted(period, startdate, enddate)
         evol = dict(evol.items() + completePeriodIds(data).items())
@@ -100,10 +100,10 @@ class SCR(DataSource):
     def create_evolutionary_report (period, startdate, enddate, i_db, type_analysis = None):
         opts = read_options()
         data =  SCR.get_evolutionary_data (period, startdate, enddate, i_db, type_analysis)
-        createJSON (data, opts.destdir+"/scr-evolutionary.json")
+        createJSON (data, opts.destdir+SCR.get_evolutionary_filename(SCR.get_name()))
 
     @staticmethod
-    def get_agg_data (period, startdate, enddate, i_db, type_analysis):
+    def get_agg_data (period, startdate, enddate, i_db, type_analysis = None):
         agg = StaticReviewsSubmitted(period, startdate, enddate)
         data = StaticReviewsOpened(period, startdate, enddate)
         agg = dict(agg.items() + data.items())
@@ -159,7 +159,7 @@ class SCR(DataSource):
     def create_agg_report (period, startdate, enddate, i_db, type_analysis = None):
         opts = read_options()
         data = SCR.get_agg_data (period, startdate, enddate, i_db, type_analysis)
-        createJSON (data, opts.destdir+"/scr-static.json")
+        createJSON (data, opts.destdir+SCR.get_agg_filename(SCR.get_name()))
 
     @staticmethod
     def get_top_data (period, startdate, enddate, identities_db, npeople):
