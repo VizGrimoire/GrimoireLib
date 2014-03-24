@@ -271,7 +271,7 @@ def completePeriodIds(ts_data):
 
 # Convert a R data frame to a python dictionary
 def dataFrame2Dict(data):
-    dict = {}
+    dict_ = {}
 
     # R start from 1 in data frames
     for i in range(1,len(data)+1):
@@ -279,14 +279,14 @@ def dataFrame2Dict(data):
         col = data.rx(i)
         colname = col.names[0]
         colvalues = col[0]
-        dict[colname] = [];
+        dict_[colname] = [];
 
         if (len(colvalues) == 1):
-            dict[colname] = valRtoPython(colvalues[0])
+            dict_[colname] = valRtoPython(colvalues[0])
         else:
             for j in colvalues: 
-                dict[colname].append(valRtoPython(j))
-    return dict
+                dict_[colname].append(valRtoPython(j))
+    return dict_
 
 def getPeriod(granularity, number = None):
     period = None
