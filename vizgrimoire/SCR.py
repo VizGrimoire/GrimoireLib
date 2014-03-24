@@ -213,9 +213,54 @@ class SCR(DataSource):
         return items
 
     @staticmethod
-    def create_filter_report(filter_, startdate, enddate, identities_db, bots):
+    def get_filter_item_evol(startdate, enddate, identities_db, type_analysis):
         opts = read_options()
         period = getPeriod(opts.granularity)
+
+        evol = {}
+        data = EvolReviewsSubmitted(period, startdate, enddate, type_analysis, identities_db)
+        evol = dict(evol.items() + completePeriodIds(data).items())
+        data = EvolReviewsMerged(period, startdate, enddate, type_analysis, identities_db)
+        evol = dict(evol.items() + completePeriodIds(data).items())
+        data = EvolReviewsAbandoned(period, startdate, enddate, type_analysis, identities_db)
+        evol = dict(evol.items() + completePeriodIds(data).items())
+        data = EvolReviewsPending(period, startdate, enddate, type_analysis, identities_db)
+        evol = dict(evol.items() + completePeriodIds(data).items())
+        if (period == "month"):
+            data = EvolTimeToReviewSCR(period, startdate, enddate, identities_db, type_analysis)
+            data['review_time_days_avg'] = checkFloatArray(data['review_time_days_avg'])
+            data['review_time_days_median'] = checkFloatArray(data['review_time_days_median'])
+            evol = dict(evol.items() + completePeriodIds(data).items())
+        return evol
+
+    @staticmethod
+    def get_filter_item_agg(startdate, enddate, identities_db, type_analysis):
+        opts = read_options()
+        period = getPeriod(opts.granularity)
+
+        agg = {}
+        data = StaticReviewsSubmitted(period, startdate, enddate, type_analysis, identities_db)
+        agg = dict(agg.items() + data.items())
+        data = StaticReviewsMerged(period, startdate, enddate, type_analysis, identities_db)
+        agg = dict(agg.items() + data.items())
+        data = StaticReviewsAbandoned(period, startdate, enddate, type_analysis, identities_db)
+        agg = dict(agg.items() + data.items())
+        data = StaticReviewsPending(period, startdate, enddate, type_analysis, identities_db)
+        agg = dict(agg.items() + data.items())
+        data = StaticTimeToReviewSCR(startdate, enddate, identities_db, type_analysis, identities_db)
+        val = data['review_time_days_avg']
+        if (not val or val == 0): data['review_time_days_avg'] = 0
+        else: data['review_time_days_avg'] = float(val)
+        val = data['review_time_days_median']
+        if (not val or val == 0): data['review_time_days_median'] = 0
+        else: data['review_time_days_median'] = float(val)
+        agg = dict(agg.items() + data.items())
+
+        return agg
+
+    @staticmethod
+    def create_filter_report(filter_, startdate, enddate, identities_db, bots):
+        opts = read_options()
 
         items = SCR.get_filter_items(filter_, startdate, enddate, identities_db, bots)
         if (items == None): return
@@ -242,48 +287,17 @@ class SCR(DataSource):
             logging.info (item)
             type_analysis = [filter_.get_name(), item]
 
-            evol = {}
-            data = EvolReviewsSubmitted(period, startdate, enddate, type_analysis, identities_db)
-            evol = dict(evol.items() + completePeriodIds(data).items())
-            data = EvolReviewsMerged(period, startdate, enddate, type_analysis, identities_db)
-            evol = dict(evol.items() + completePeriodIds(data).items())
-            data = EvolReviewsAbandoned(period, startdate, enddate, type_analysis, identities_db)
-            evol = dict(evol.items() + completePeriodIds(data).items())
-            data = EvolReviewsPending(period, startdate, enddate, type_analysis, identities_db)
-            evol = dict(evol.items() + completePeriodIds(data).items())
-            if (period == "month"):
-                data = EvolTimeToReviewSCR(period, startdate, enddate, identities_db, type_analysis)
-                data['review_time_days_avg'] = checkFloatArray(data['review_time_days_avg'])
-                data['review_time_days_median'] = checkFloatArray(data['review_time_days_median'])
-                evol = dict(evol.items() + completePeriodIds(data).items())
-            createJSON(evol, opts.destdir+"/"+item_file+"-scr-"+filter_name_short+"-evolutionary.json")
+            evol = SCR.get_filter_item_evol(startdate, enddate, identities_db, type_analysis)
+            createJSON(evol, opts.destdir+"/"+item_file+"-"+SCR.get_name()+"-"+filter_name_short+"-evolutionary.json")
 
             # Static
-            agg = {}
-            data = StaticReviewsSubmitted(period, startdate, enddate, type_analysis, identities_db)
+            agg = SCR.get_filter_item_agg(startdate, enddate, identities_db, type_analysis)
+            createJSON(agg, opts.destdir + "/"+item_file + "-"+SCR.get_name()+"-"+filter_name_short+"-static.json")
             if (filter_name == "repository"):
-                items_list["submitted"].append(data["submitted"])
-            agg = dict(agg.items() + data.items())
-            data = StaticReviewsMerged(period, startdate, enddate, type_analysis, identities_db)
-            agg = dict(agg.items() + data.items())
-            data = StaticReviewsAbandoned(period, startdate, enddate, type_analysis, identities_db)
-            agg = dict(agg.items() + data.items())
-            data = StaticReviewsPending(period, startdate, enddate, type_analysis, identities_db)
-            agg = dict(agg.items() + data.items())
-            data = StaticTimeToReviewSCR(startdate, enddate, identities_db, type_analysis, identities_db)
-            val = data['review_time_days_avg']
-            if (not val or val == 0): data['review_time_days_avg'] = 0
-            else: data['review_time_days_avg'] = float(val)
-            val = data['review_time_days_median']
-            if (not val or val == 0): data['review_time_days_median'] = 0
-            else: data['review_time_days_median'] = float(val)
-            agg = dict(agg.items() + data.items())
-            if (filter_name == "repository"):
-                items_list["review_time_days_median"].append(data['review_time_days_median'])
-            createJSON(agg, opts.destdir + "/"+item_file + "-scr-"+filter_name_short+"-static.json")
+                items_list["submitted"].append(agg["submitted"])
+                items_list["review_time_days_median"].append(agg['review_time_days_median'])
 
-        createJSON(items_list, opts.destdir+"/scr-"+filter_.get_name_plural()+".json")
-
+        createJSON(items_list, opts.destdir+"/"+SCR.get_name()+"-"+filter_.get_name_plural()+".json")
 
     # Unify top format
     @staticmethod

@@ -177,7 +177,7 @@ class SCM(DataSource):
         if not isinstance(items, (list)):
             items = [items]
 
-        createJSON(items, opts.destdir+"/scm-"+filter_.get_name_plural()+".json")
+        createJSON(items, opts.destdir+"/"+SCM.get_name()+"-"+filter_.get_name_plural()+".json")
 
         for item in items :
             item_name = "'"+ item+ "'"
@@ -185,22 +185,22 @@ class SCM(DataSource):
             type_analysis = [filter_.get_name(), item_name]
 
             evol_data = SCM.get_filter_item_evol(startdate, enddate, identities_db, type_analysis)
-            createJSON(evol_data, opts.destdir+"/"+item+"-scm-"+filter_name_short+"-evolutionary.json")
+            createJSON(evol_data, opts.destdir+"/"+item+"-"+SCM.get_name()+"-"+filter_name_short+"-evolutionary.json")
 
             agg = SCM.get_filter_item_agg(startdate, enddate, identities_db, type_analysis)
-            createJSON(agg, opts.destdir+"/"+item+"-scm-"+filter_name_short+"-static.json")
+            createJSON(agg, opts.destdir+"/"+item+"-"+SCM.get_name()+"-"+filter_name_short+"-static.json")
 
             if (filter_name == "company"):
                 top_authors = company_top_authors(item_name, startdate, enddate, opts.npeople)
-                createJSON(top_authors, opts.destdir+"/"+item+"-scm-"+filter_name_short+"-top-authors.json")
+                createJSON(top_authors, opts.destdir+"/"+item+"-"+SCM.get_name()+"-"+filter_name_short+"-top-authors.json")
 
                 for i in [2006,2009,2012]:
                     data = company_top_authors_year(item_name, i, opts.npeople)
-                    createJSON(data, opts.destdir+"/"+item+"-scm-top-authors_"+str(i)+".json")
+                    createJSON(data, opts.destdir+"/"+item+"-"+SCM.get_name()+"-top-authors_"+str(i)+".json")
 
         if (filter_name == "company"):
                 commits =  GetCommitsSummaryCompanies(period, startdate, enddate, identities_db, 10)
-                createJSON (commits, opts.destdir+"/scm-companies-commits-summary.json")
+                createJSON (commits, opts.destdir+"/"+SCM.get_name()+"-companies-commits-summary.json")
 
     @staticmethod
     def create_people_report(period, startdate, enddate, identities_db):
@@ -211,15 +211,15 @@ class SCM(DataSource):
         top += top_authors_data['authors.last month']["id"]
         # remove duplicates
         people = list(set(top))
-        createJSON(people, opts.destdir+"/scm-people.json")
+        createJSON(people, opts.destdir+"/"+SCM.get_name()+"-people.json")
 
         for upeople_id in people :
             evol_data = GetEvolPeopleSCM(upeople_id, period, startdate, enddate)
             evol_data = completePeriodIds(evol_data)
-            createJSON (evol_data, opts.destdir+"/people-"+str(upeople_id)+"-scm-evolutionary.json")
+            createJSON (evol_data, opts.destdir+"/people-"+str(upeople_id)+"-"+SCM.get_name()+"-evolutionary.json")
 
             agg = GetStaticPeopleSCM(upeople_id,  startdate, enddate)
-            createJSON (agg, opts.destdir+"/people-"+str(upeople_id)+"-scm-static.json")
+            createJSON (agg, opts.destdir+"/people-"+str(upeople_id)+"-"+SCM.get_name()+"-static.json")
 
     # Studies implemented in R
     @staticmethod

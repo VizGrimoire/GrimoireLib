@@ -147,6 +147,22 @@ class MLS(DataSource):
         return items
 
     @staticmethod
+    def get_filter_item_evol(startdate, enddate, identities_db, type_analysis):
+        opts = read_options()
+        period = getPeriod(opts.granularity)
+
+        evol = MLS.get_evolutionary_data (period, startdate, enddate, identities_db, type_analysis)
+        return evol
+
+    @staticmethod
+    def get_filter_item_agg(startdate, enddate, identities_db, type_analysis):
+        opts = read_options()
+        period = getPeriod(opts.granularity)
+
+        agg = MLS.get_agg_data (period, startdate, enddate, identities_db, type_analysis)
+        return agg
+
+    @staticmethod
     def create_filter_report(filter_, startdate, enddate, identities_db, bots):
         opts = read_options()
         period = getPeriod(opts.granularity)
@@ -163,7 +179,7 @@ class MLS(DataSource):
         items_files = [item.replace('/', '_').replace("<","__").replace(">","___")
             for item in items]
 
-        createJSON(items_files, opts.destdir+"/mls-"+filter_.get_name_plural()+".json")
+        createJSON(items_files, opts.destdir+"/"+MLS.get_name()+"-"+filter_.get_name_plural()+".json")
 
         for item in items :
             item_name = "'"+ item+ "'"
@@ -171,30 +187,30 @@ class MLS(DataSource):
             logging.info (item_name)
             type_analysis = [filter_.get_name(), item_name]
 
-            evol_data = MLS.get_evolutionary_data (period, startdate, enddate, identities_db, type_analysis)
-            createJSON(evol_data, opts.destdir+"/"+item_file+"-mls-"+filter_name_short+"-evolutionary.json")
+            evol_data = MLS.get_filter_item_evol(startdate, enddate, identities_db, type_analysis)
+            createJSON(evol_data, opts.destdir+"/"+item_file+"-"+MLS.get_name()+"-"+filter_name_short+"-evolutionary.json")
 
-            agg = MLS.get_agg_data (period, startdate, enddate, identities_db, type_analysis)
-            createJSON(agg, opts.destdir+"/"+item_file+"-mls-"+filter_name_short+"-static.json")
+            agg = MLS.get_filter_item_agg(startdate, enddate, identities_db, type_analysis)
+            createJSON(agg, opts.destdir+"/"+item_file+"-"+MLS.get_name()+"-"+filter_name_short+"-static.json")
 
             if (filter_name == "company"):
                 top_senders = companyTopSenders (item, identities_db, startdate, enddate, opts.npeople)
-                createJSON(top_senders, opts.destdir+"/"+item_file+"-mls-"+filter_name_short+"-top-senders.json")
+                createJSON(top_senders, opts.destdir+"/"+item_file+"-"+MLS.get_name()+"-"+filter_name_short+"-top-senders.json")
             elif (filter_name == "country"):
                 top_senders = countryTopSenders (item, identities_db, startdate, enddate, opts.npeople)
-                createJSON(top_senders, opts.destdir+"/"+item_file+"-mls-"+filter_name_short+"-top-senders.json")
+                createJSON(top_senders, opts.destdir+"/"+item_file+"-"+MLS.get_name()+"-"+filter_name_short+"-top-senders.json")
             elif (filter_name == "domain"):
                 top_senders = domainTopSenders(item, identities_db, startdate, enddate, opts.npeople)
-                createJSON(top_senders, opts.destdir+"/"+item_file+"-mls-"+filter_name_short+"-top-senders.json")
+                createJSON(top_senders, opts.destdir+"/"+item_file+"-"+MLS.get_name()+"-"+filter_name_short+"-top-senders.json")
             elif (filter_name == "repository"):
                 rfield = MLS.get_repo_field()
                 top_senders = repoTopSenders (item, identities_db, startdate, enddate, rfield, opts.npeople)
-                createJSON(top_senders, opts.destdir+ "/"+item_file+"-mls-rep-top-senders.json")
+                createJSON(top_senders, opts.destdir+ "/"+item_file+"-"+MLS.get_name()+"-rep-top-senders.json")
 
 
         if (filter_name == "company"):
             sent = GetSentSummaryCompanies(period, startdate, enddate, identities_db, 10)
-            createJSON (sent, opts.destdir+"/mls-sent-companies-summary.json")
+            createJSON (sent, opts.destdir+"/"+MLS.get_name()+"-sent-companies-summary.json")
 
     @staticmethod
     def create_people_report(period, startdate, enddate, identities_db):
@@ -206,15 +222,15 @@ class MLS(DataSource):
         top += top_data['senders.last month']["id"]
         # remove duplicates
         people = list(set(top))
-        createJSON(people, opts.destdir+"/mls-people.json")
+        createJSON(people, opts.destdir+"/"+MLS.get_name()+"-people.json")
 
         for upeople_id in people:
             evol = GetEvolPeopleMLS(upeople_id, period, startdate, enddate)
             evol = completePeriodIds(evol)
-            createJSON(evol, opts.destdir+"/people-"+str(upeople_id)+"-mls-evolutionary.json")
+            createJSON(evol, opts.destdir+"/people-"+str(upeople_id)+"-"+MLS.get_name()+"-evolutionary.json")
 
             static = GetStaticPeopleMLS(upeople_id, startdate, enddate)
-            createJSON(static, opts.destdir+"/people-"+str(upeople_id)+"-mls-static.json")
+            createJSON(static, opts.destdir+"/people-"+str(upeople_id)+"-"+MLS.get_name()+"-static.json")
 
     @staticmethod
     def create_r_reports(vizr, enddate):

@@ -91,7 +91,7 @@ class Mediawiki(DataSource):
     def create_top_report (period, startdate, enddate, i_db):
         opts = read_options()
         data = Mediawiki.get_top_data (period, startdate, enddate, i_db, opts.npeople)
-        top_file = opts.destdir+"/mediawiki-top.json"
+        top_file = opts.destdir+"/"+Mediawiki.get_name()+"-top.json"
         createJSON (data, top_file)
 
     @staticmethod
@@ -101,6 +101,14 @@ class Mediawiki(DataSource):
 
         logging.error(filter_name + " not supported")
         return items
+
+    @staticmethod
+    def get_filter_item_evol(startdate, enddate, identities_db, type_analysis):
+        raise NotImplementedError
+
+    @staticmethod
+    def get_filter_item_agg(startdate, enddate, identities_db, type_analysis):
+        raise NotImplementedError
 
     @staticmethod
     def create_filter_report(filter_, startdate, enddate, identities_db, bots):
@@ -120,15 +128,15 @@ class Mediawiki(DataSource):
         top += top_data['authors.last month']["id"]
         # remove duplicates
         people = list(set(top))
-        createJSON(people, opts.destdir+"/mediawiki-people.json")
+        createJSON(people, opts.destdir+"/"+Mediawiki.get_name()+"-people.json")
 
         for upeople_id in people:
             evol = GetEvolPeopleMediaWiki(upeople_id, period, startdate, enddate)
             evol = completePeriodIds(evol)
-            createJSON(evol, opts.destdir+"/people-"+str(upeople_id)+"-mediawiki-evolutionary.json")
+            createJSON(evol, opts.destdir+"/people-"+str(upeople_id)+"-"+Mediawiki.get_name()+"-evolutionary.json")
 
             static = GetStaticPeopleMediaWiki(upeople_id, startdate, enddate)
-            createJSON(static, opts.destdir+"/people-"+str(upeople_id)+"-mediawiki-static.json")
+            createJSON(static, opts.destdir+"/people-"+str(upeople_id)+"-"+Mediawiki.get_name()+"-static.json")
 
     @staticmethod
     def create_r_reports(vizr, enddate):

@@ -131,7 +131,7 @@ class DataSourceTest(unittest.TestCase):
 
             self.assertTrue(DataSourceTest._compare_data(ds_data, test_json))
 
-    def notest_get_agg_filters_data(self):
+    def test_get_agg_filters_data(self):
         opts = read_options()
         startdate = "'"+opts.startdate+"'"
         enddate = "'"+opts.enddate+"'"
@@ -142,15 +142,18 @@ class DataSourceTest(unittest.TestCase):
 
         # Test for all filters
         for ds in Report.get_data_sources():
+            Report.connect_ds(ds)
             for filter_ in Report.get_filters():
                 filter_name = filter_.get_name()
                 # filter_name_short = filter_.get_name_short()
                 items = ds.get_filter_items(filter_, startdate, enddate, identities_db, bots)
+                if items is None: continue
+                if (isinstance(items, dict)): items = items['name']
 
                 if not isinstance(items, (list)): items = [items]
 
                 for item in items:
-                    logging.info(",".join([ds.get_name(), filter_name, item, "agg_data"]))
+                    logging.info(ds.get_name() +","+ filter_name+","+ item+","+ "agg_data")
 
 
 if __name__ == '__main__':

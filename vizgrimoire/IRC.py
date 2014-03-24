@@ -147,7 +147,7 @@ class IRC(DataSource):
         createJSON(items, opts.destdir+"/irc-"+filter_.get_name_plural()+".json")
 
         for item in items :
-            item_name = "'"+ item+ "'"
+            # item_name = "'"+ item+ "'"
             logging.info (item)
             type_analysis = [filter_.get_name(), item]
 

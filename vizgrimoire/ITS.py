@@ -208,6 +208,22 @@ class ITS(DataSource):
         return items
 
     @staticmethod
+    def get_filter_item_evol(startdate, enddate, identities_db, type_analysis):
+        opts = read_options()
+        period = getPeriod(opts.granularity)
+
+        evol = ITS.get_evolutionary_data (period, startdate, enddate, identities_db, type_analysis)
+        return evol
+
+    @staticmethod
+    def get_filter_item_agg(startdate, enddate, identities_db, type_analysis):
+        opts = read_options()
+        period = getPeriod(opts.granularity)
+
+        agg = ITS.get_agg_data (period, startdate, enddate, identities_db, type_analysis)
+        return agg
+
+    @staticmethod
     def create_filter_report(filter_, startdate, enddate, identities_db, bots):
         opts = read_options()
         period = getPeriod(opts.granularity)
@@ -223,7 +239,7 @@ class ITS(DataSource):
         if not isinstance(items, (list)):
             items = [items]
 
-        createJSON(items, opts.destdir+"/its-"+filter_.get_name_plural()+".json")
+        createJSON(items, opts.destdir+"/"+ITS.get_name()+"-"+filter_.get_name_plural()+".json")
 
         for item in items :
             item_name = "'"+ item+ "'"
@@ -231,24 +247,24 @@ class ITS(DataSource):
             item_file = item.replace("/","_")
             type_analysis = [filter_.get_name(), item_name]
 
-            evol_data = ITS.get_evolutionary_data (period, startdate, enddate, identities_db, type_analysis)
+            evol_data = ITS.get_filter_item_evol(startdate, enddate, identities_db, type_analysis)
             evol_data = completePeriodIds(evol_data)
-            createJSON(evol_data, opts.destdir+"/"+item_file+"-its-"+filter_name_short+"-evolutionary.json")
+            createJSON(evol_data, opts.destdir+"/"+item_file+"-"+ITS.get_name()+"-"+filter_name_short+"-evolutionary.json")
 
-            agg = ITS.get_agg_data (period, startdate, enddate, identities_db, type_analysis)
-            createJSON(agg, opts.destdir+"/"+item_file+"-its-"+filter_name_short+"-static.json")
+            agg = ITS.get_filter_item_agg(startdate, enddate, identities_db, type_analysis)
+            createJSON(agg, opts.destdir+"/"+item_file+"-"+ITS.get_name()+"-"+filter_name_short+"-static.json")
 
             if (filter_name == "company"):
                 top = GetCompanyTopClosers(item_name, startdate, enddate, identities_db, bots, closed_condition, opts.npeople)
-                createJSON(top, opts.destdir+"/"+item+"-its-"+filter_name_short+"-top-closers.json")
+                createJSON(top, opts.destdir+"/"+item+"-"+ITS.get_name()+"-"+filter_name_short+"-top-closers.json")
 
             if (filter_name == "domain"):
                 top = GetDomainTopClosers(item_name, startdate, enddate, identities_db, bots, closed_condition, opts.npeople)
-                createJSON(top, opts.destdir+"/"+item+"-its-"+filter_name_short+"-top-closers.json")
+                createJSON(top, opts.destdir+"/"+item+"-"+ITS.get_name()+"-"+filter_name_short+"-top-closers.json")
 
         if (filter_name == "company"):
             closed = GetClosedSummaryCompanies(period, startdate, enddate, identities_db, closed_condition, 10)
-            createJSON (closed, opts.destdir+"/its-closed-companies-summary.json")
+            createJSON (closed, opts.destdir+"/"+ITS.get_name()+"-closed-companies-summary.json")
 
     @staticmethod
     def create_people_report(period, startdate, enddate, identities_db):
@@ -265,15 +281,15 @@ class ITS(DataSource):
         top += top_data['openers.last month']["id"]
         # remove duplicates
         people = list(set(top))
-        createJSON(people, opts.destdir+"/its-people.json")
+        createJSON(people, opts.destdir+"/"+ITS.get_name()+"-people.json")
 
         for upeople_id in people :
             evol = GetPeopleEvolITS(upeople_id, period, startdate, enddate, closed_condition)
             evol = completePeriodIds(evol)
-            createJSON (evol, opts.destdir+"/people-"+str(upeople_id)+"-its-evolutionary.json")
+            createJSON (evol, opts.destdir+"/people-"+str(upeople_id)+"-"+ITS.get_name()+"-evolutionary.json")
 
             data = GetPeopleStaticITS(upeople_id, startdate, enddate, closed_condition)
-            createJSON (data, opts.destdir+"/people-"+str(upeople_id)+"-its-static.json")
+            createJSON (data, opts.destdir+"/people-"+str(upeople_id)+"-"+ITS.get_name()+"-static.json")
 
     @staticmethod
     def create_r_reports(vizr, enddate):
