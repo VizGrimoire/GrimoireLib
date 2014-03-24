@@ -25,9 +25,13 @@
 # import MySQLdb, os, random, string, sys
 # import data_source
 
-import unittest
+import json, os, unittest
 from report import Report
 import logging
+
+from GrimoireUtils import read_options, getPeriod, read_main_conf
+from GrimoireUtils import compare_json_data, completePeriodIds
+from GrimoireUtils import createJSON, compareJSON
 
 class DataSourceTest(unittest.TestCase):
     @staticmethod
@@ -61,14 +65,81 @@ class DataSourceTest(unittest.TestCase):
             ds_db_name = ds.get_db_name()
             self.assertNotEqual(ds_db_name, "")
 
-    def test_get_evolutionary_data(self):
+    @staticmethod
+    def compare_dicts (dict1, dict2):
+        pass
+
+    def no_test_get_evolutionary_data(self):
+        opts = read_options()
+        period = getPeriod(opts.granularity)
+        startdate = "'"+opts.startdate+"'"
+        enddate = "'"+opts.enddate+"'"
+
+        opts.config_file = "../../../conf/main.conf"
+        automator = read_main_conf(opts.config_file)
+        identities_db = automator['generic']['db_identities']
+
+
         # Test without filters
         for ds in Report.get_data_sources():
-            pass
-        # Test for alll filters
+            # Create the evolutionary data from dbs and check with test JSON
+            print(ds)
+            Report.connect_ds(ds)
+            ds_data = ds.get_evolutionary_data (period, startdate,
+                                                enddate, identities_db)
+            ds_data = completePeriodIds(ds_data)
+            test_json = ds.get_evolutionary_filename(ds.get_name())
+            f_test_json = open(os.path.join("json",test_json))
+            ds_data_test = json.load(f_test_json)
+
+            self.assertTrue(compare_json_data(ds_data, ds_data_test))
+
+            print(ds_data_test)
+
+        # Test for all filters
         for ds in Report.get_data_sources():
             for filter_ in Report.get_filters():
                 pass
+
+    @staticmethod
+    def _compare_data(data, json_file):
+        # Create a temporary JSON file with data
+        from tempfile import NamedTemporaryFile
+        data_file = NamedTemporaryFile()
+        data_file_name = data_file.name
+        data_file.close()
+        createJSON(data, data_file_name, check=False, skip_fields = [])
+
+        return compareJSON(data_file_name, json_file)
+
+
+
+    def test_get_agg_data(self):
+        opts = read_options()
+        period = getPeriod(opts.granularity)
+        startdate = "'"+opts.startdate+"'"
+        enddate = "'"+opts.enddate+"'"
+
+        automator = read_main_conf(opts.config_file)
+        identities_db = automator['generic']['db_identities']
+
+        # Test without filters
+        for ds in Report.get_data_sources():
+            # Create the evolutionary data from dbs and check with test JSON
+            Report.connect_ds(ds)
+            ds_data = ds.get_agg_data (period, startdate,
+                                                enddate, identities_db)
+
+            test_json = os.path.join("json",ds.get_agg_filename(ds.get_name()))
+
+            self.assertTrue(DataSourceTest._compare_data(ds_data, test_json))
+
+        # Test for all filters
+        for ds in Report.get_data_sources():
+            for filter_ in Report.get_filters():
+                pass
+
+
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO,format='%(asctime)s %(message)s')
