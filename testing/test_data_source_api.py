@@ -131,7 +131,7 @@ class DataSourceTest(unittest.TestCase):
 
             self.assertTrue(DataSourceTest._compare_data(ds_data, test_json))
 
-    def test_get_agg_filters_data(self):
+    def test_get_agg_evol_filters_data(self):
         opts = read_options()
         startdate = "'"+opts.startdate+"'"
         enddate = "'"+opts.enddate+"'"
@@ -145,7 +145,7 @@ class DataSourceTest(unittest.TestCase):
             Report.connect_ds(ds)
             for filter_ in Report.get_filters():
                 filter_name = filter_.get_name()
-                # filter_name_short = filter_.get_name_short()
+                filter_name_short = filter_.get_name_short()
                 items = ds.get_filter_items(filter_, startdate, enddate, identities_db, bots)
                 if items is None: continue
                 if (isinstance(items, dict)): items = items['name']
@@ -153,8 +153,30 @@ class DataSourceTest(unittest.TestCase):
                 if not isinstance(items, (list)): items = [items]
 
                 for item in items:
-                    logging.info(ds.get_name() +","+ filter_name+","+ item+","+ "agg_data")
+                    item_name = item
+                    if ds.get_name() not in ["irc","scr"]:
+                        item_name = "'"+item+"'"
+                    type_analysis = [filter_name, item_name]
+                    item_file = item
+                    if ds.get_name() in ["its","scr"] :
+                        item_file = item.replace("/","_")
 
+                    elif ds.get_name() == "mls":
+                        item_file = item.replace("/","_").replace("<","__").replace(">","___")
+
+                    logging.info(ds.get_name() +","+ filter_name+","+ item+","+ "agg")
+                    agg = ds.get_filter_item_agg(startdate, enddate, identities_db, type_analysis)
+                    fn = item_file+"-"+ds.get_name()+"-"+filter_name_short+"-evolutionary.json"
+                    test_json = os.path.join("json",fn)
+                    self.assertTrue(DataSourceTest._compare_data(agg, test_json))
+
+                    continue
+
+                    logging.info(ds.get_name() +","+ filter_name+","+ item+","+ "evol")
+                    evol = ds.get_filter_item_evol(startdate, enddate, identities_db, type_analysis)
+                    fn = item_file+"-"+ds.get_name()+"-"+filter_name_short+"-evolutionary.json"
+                    test_json = os.path.join("json",fn)
+                    self.assertTrue(DataSourceTest._compare_data(evol, test_json))
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO,format='%(asctime)s %(message)s')
