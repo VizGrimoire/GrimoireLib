@@ -26,12 +26,15 @@
 ##   Daniel Izquierdo <dizquierdo@bitergia.com>
 ##   Alvaro del Castillo <acs@bitergia.com>
 
+
+import os, logging
+
 from GrimoireSQL import GetSQLGlobal, GetSQLPeriod
 # TODO integrate: from GrimoireSQL import  GetSQLReportFrom 
 from GrimoireSQL import GetSQLReportWhere, ExecuteQuery, BuildQuery
 from GrimoireUtils import GetPercentageDiff, GetDates, completePeriodIds, createJSON, read_options, getPeriod
 from data_source import DataSource
-import logging
+
 
 
 class SCM(DataSource):
@@ -64,7 +67,8 @@ class SCM(DataSource):
     def create_evolutionary_report (period, startdate, enddate, i_db, type_analysis = None):
         opts = read_options()
         data =  SCM.get_evolutionary_data (period, startdate, enddate, i_db, type_analysis)
-        createJSON (data, opts.destdir+SCM.get_evolutionary_filename(SCM.get_name()))
+        filename = SCM.get_evolutionary_filename(SCM.get_name())
+        createJSON (data, os.path.join(opts.destdir, filename))
 
     @staticmethod
     def get_agg_data (period, startdate, enddate, identities_db, type_analysis = None):
@@ -109,7 +113,8 @@ class SCM(DataSource):
     def create_agg_report (period, startdate, enddate, i_db, type_analysis = None):
         opts = read_options()
         data = SCM.get_agg_data (period, startdate, enddate, i_db, type_analysis)
-        createJSON (data, opts.destdir+SCM.get_agg_filename(SCM.get_name()))
+        filename = SCM.get_agg_filename(SCM.get_name())
+        createJSON (data, os.path.join(opts.destdir, filename))
 
     @staticmethod
     def get_top_data (period, startdate, enddate, i_db, npeople):

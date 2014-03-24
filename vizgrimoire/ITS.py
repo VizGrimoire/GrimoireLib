@@ -27,7 +27,7 @@
 ##   Alvaro del Castillo <acs@bitergia.com>
 ##   Luis Canas-Diaz <lcanas@bitergia.com>
 
-import logging, re
+import logging, os, re
 
 from GrimoireSQL import GetSQLGlobal, GetSQLPeriod
 from GrimoireSQL import ExecuteQuery, BuildQuery
@@ -112,7 +112,8 @@ class ITS(DataSource):
     def create_evolutionary_report (period, startdate, enddate, i_db, type_analysis = None):
         opts = read_options()
         data =  ITS.get_evolutionary_data (period, startdate, enddate, i_db, type_analysis)
-        createJSON (data, opts.destdir+ITS.get_evolutionary_filename(ITS.get_name()))
+        filename = ITS.get_evolutionary_filename(ITS.get_name())
+        createJSON (data, os.path.join(opts.destdir, filename))
 
     @staticmethod
     def get_agg_data (period, startdate, enddate, identities_db, type_analysis = None):
@@ -158,7 +159,8 @@ class ITS(DataSource):
     def create_agg_report (period, startdate, enddate, i_db, type_analysis = None):
         opts = read_options()
         data = ITS.get_agg_data (period, startdate, enddate, i_db, type_analysis)
-        createJSON (data, opts.destdir+ITS.get_agg_filename(ITS.get_name()))
+        filename = ITS.get_agg_filename(ITS.get_name())
+        createJSON (data, os.path.join(opts.destdir, filename))
 
     @staticmethod
     def get_top_data (period, startdate, enddate, identities_db, npeople):

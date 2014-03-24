@@ -25,7 +25,7 @@
 ##   Daniel Izquierdo <dizquierdo@bitergia.com>
 ##   Alvaro del Castillo San Felix <acs@bitergia.com>
 
-import logging
+import logging, os
 from numpy import median, average
 
 from GrimoireSQL import GetSQLGlobal, GetSQLPeriod
@@ -100,7 +100,8 @@ class SCR(DataSource):
     def create_evolutionary_report (period, startdate, enddate, i_db, type_analysis = None):
         opts = read_options()
         data =  SCR.get_evolutionary_data (period, startdate, enddate, i_db, type_analysis)
-        createJSON (data, opts.destdir+SCR.get_evolutionary_filename(SCR.get_name()))
+        filename = SCR.get_evolutionary_filename(SCR.get_name())
+        createJSON (data, os.path.join(opts.destdir, filename))
 
     @staticmethod
     def get_agg_data (period, startdate, enddate, i_db, type_analysis = None):
@@ -159,7 +160,8 @@ class SCR(DataSource):
     def create_agg_report (period, startdate, enddate, i_db, type_analysis = None):
         opts = read_options()
         data = SCR.get_agg_data (period, startdate, enddate, i_db, type_analysis)
-        createJSON (data, opts.destdir+SCR.get_agg_filename(SCR.get_name()))
+        filename = SCR.get_agg_filename(SCR.get_name())
+        createJSON (data, os.path.join(opts.destdir, filename))
 
     @staticmethod
     def get_top_data (period, startdate, enddate, identities_db, npeople):

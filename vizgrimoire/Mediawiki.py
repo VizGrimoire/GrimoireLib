@@ -24,7 +24,7 @@
 ## Authors:
 ##   Alvaro del Castillo <acs@bitergia.com>
 
-import logging
+import logging, os
 
 from GrimoireSQL import GetSQLGlobal, GetSQLPeriod, GetSQLReportFrom 
 from GrimoireSQL import GetSQLReportWhere, ExecuteQuery, BuildQuery
@@ -49,7 +49,8 @@ class Mediawiki(DataSource):
     def create_evolutionary_report (period, startdate, enddate, i_db, type_analysis = None):
         opts = read_options()
         data =  Mediawiki.get_evolutionary_data (period, startdate, enddate, i_db, type_analysis)
-        createJSON (data, opts.destdir+Mediawiki.get_evolutionary_filename(Mediawiki.get_name()))
+        filename = Mediawiki.get_evolutionary_filename(Mediawiki.get_name())
+        createJSON (data, os.path.join(opts.destdir, filename))
 
     @staticmethod
     def get_agg_data (period, startdate, enddate, identities_db, type_analysis = None):
@@ -72,7 +73,8 @@ class Mediawiki(DataSource):
     def create_agg_report (period, startdate, enddate, i_db, type_analysis = None):
         opts = read_options()
         data = Mediawiki.get_agg_data (period, startdate, enddate, i_db, type_analysis)
-        createJSON (data, opts.destdir+Mediawiki.get_agg_filename(Mediawiki.get_name()))
+        filename = Mediawiki.get_agg_filename(Mediawiki.get_name())
+        createJSON (data, os.path.join(opts.destdir, filename))
 
     @staticmethod
     def get_top_data (period, startdate, enddate, identities_db, npeople):
