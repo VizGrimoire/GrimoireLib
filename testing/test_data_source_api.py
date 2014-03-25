@@ -92,11 +92,6 @@ class DataSourceTest(unittest.TestCase):
 
             self.assertTrue(DataSourceTest._compare_data(ds_data, f_test_json))
 
-        # Test for all filters
-        for ds in Report.get_data_sources():
-            for filter_ in Report.get_filters():
-                pass
-
     @staticmethod
     def _compare_data(data, json_file):
         # Create a temporary JSON file with data
