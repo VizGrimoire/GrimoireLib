@@ -91,3 +91,5 @@ print data.timeseries()
 There are some tests available:
 
 * test_scm_query.py
+
+For testing, the vizgrimoire_cvsanaly MySQL database is used. A dump of the exact version used for that purpose is available in the file vizgrimoire_cvsanaly.mysql.gz. Before running the tests, create that database, load the dump, and change the database url in the test file to the one you are using.
