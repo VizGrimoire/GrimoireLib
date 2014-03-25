@@ -52,7 +52,7 @@ def read_main_conf(config_file):
             options[s][o] = parser.get(s, o)
     return options
 
-def topPeople(startdate, enddate, idb, bots):
+def get_top_people(startdate, enddate, idb, bots):
     """Top people for all data sources. Wikimedia specific"""
     npeople = "10000" # max limit, all people included
     min_data_sources = 4 # min data sources to be in the list
@@ -95,18 +95,36 @@ def topPeople(startdate, enddate, idb, bots):
     for id in all_top:
         if len(all_top[id])>=min_data_sources: all_top_min_ds[id] = all_top[id]
 
+    return all_top_min_ds
+
+def create_top_people_report(startdate, enddate, idb, bots):
+    all_top_min_ds = get_top_people(startdate, enddate, idb, bots)
+
     createJSON(all_top_min_ds, opts.destdir+"/all_top.json")
 
-def createPeopleIdentifiers(startdate, enddate):
+def create_people_identifiers(startdate, enddate, idb, bots):
+
+    db = automator['generic']['db_cvsanaly']
+    GrimoireSQL.SetDBChannel (database=db, user=opts.dbuser, password=opts.dbpassword)
+
     people_data = {}
     people = GetPeopleListSCM(startdate, enddate)
     people = people['pid']
-    limit = 550
+    limit = 100
     if (len(people)<limit): limit = len(people);
     people = people[0:limit]
 
     for upeople_id in people:
         people_data[upeople_id] = People.GetPersonIdentifiers(upeople_id)
+
+    all_top_min_ds = get_top_people(startdate, enddate, idb, bots)
+
+    db = automator['generic']['db_cvsanaly']
+    GrimoireSQL.SetDBChannel (database=db, user=opts.dbuser, password=opts.dbpassword)
+
+    for upeople_id in people:
+        people_data[upeople_id] = People.GetPersonIdentifiers(upeople_id)
+
     createJSON(people_data, opts.destdir+"/people.json")
 
 
@@ -123,14 +141,12 @@ if __name__ == '__main__':
 
     bots = ['wikibugs','gerrit-wm','wikibugs_','wm-bot','','Translation updater bot','jenkins-bot','L10n-bot']
 
-    # Working at the same time with VizR and VizPy yet
-    # vizr.SetDBChannel (database=opts.dbname, user=opts.dbuser, password=opts.dbpassword)
-    GrimoireSQL.SetDBChannel (database=opts.dbname, user=opts.dbuser, password=opts.dbpassword)
+    if not opts.config_file:
+        logging.error("config_file param need")
 
-    createPeopleIdentifiers(startdate, enddate)
+    automator = read_main_conf(opts.config_file)
 
-    if opts.config_file:
-        automator = read_main_conf(opts.config_file)
-        topPeople(startdate, enddate, opts.identities_db, bots)
+    create_top_people_report(startdate, enddate, opts.identities_db, bots)
+    create_people_identifiers(startdate, enddate, opts.identities_db, bots)
 
     logging.info("People data source analysis OK")
