@@ -52,10 +52,10 @@ def read_main_conf(config_file):
             options[s][o] = parser.get(s, o)
     return options
 
-
-# Top people for all data sources. Wikimedia specific
 def topPeople(startdate, enddate, idb, bots):
+    """Top people for all data sources. Wikimedia specific"""
     npeople = "10000" # max limit, all people included
+    min_data_sources = 4 # min data sources to be in the list
     tops = {}
     all_top = {}
     all_top_all_ds = {}
@@ -93,7 +93,7 @@ def topPeople(startdate, enddate, idb, bots):
             pos += 1
 
     for id in all_top:
-        if len(all_top[id])>5: all_top_all_ds[id] = all_top[id]
+        if len(all_top[id])>min_data_sources: all_top_all_ds[id] = all_top[id]
 
     createJSON(all_top_all_ds, opts.destdir+"/all_top.json")
 
