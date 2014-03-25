@@ -118,11 +118,12 @@ def create_people_identifiers(startdate, enddate, idb, bots):
         people_data[upeople_id] = People.GetPersonIdentifiers(upeople_id)
 
     all_top_min_ds = get_top_people(startdate, enddate, idb, bots)
+    print(all_top_min_ds)
 
     db = automator['generic']['db_cvsanaly']
     GrimoireSQL.SetDBChannel (database=db, user=opts.dbuser, password=opts.dbpassword)
 
-    for upeople_id in people:
+    for upeople_id in all_top_min_ds:
         people_data[upeople_id] = People.GetPersonIdentifiers(upeople_id)
 
     createJSON(people_data, opts.destdir+"/people.json")
