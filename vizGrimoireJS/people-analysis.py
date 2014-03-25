@@ -58,7 +58,7 @@ def topPeople(startdate, enddate, idb, bots):
     min_data_sources = 4 # min data sources to be in the list
     tops = {}
     all_top = {}
-    all_top_all_ds = {}
+    all_top_min_ds = {}
     db = automator['generic']['db_gerrit']
     GrimoireSQL.SetDBChannel (database=db, user=opts.dbuser, password=opts.dbpassword)
     tops["scr"] = SCR.GetTopOpenersSCR(0, startdate, enddate, idb, bots, npeople)
@@ -93,9 +93,9 @@ def topPeople(startdate, enddate, idb, bots):
             pos += 1
 
     for id in all_top:
-        if len(all_top[id])>min_data_sources: all_top_all_ds[id] = all_top[id]
+        if len(all_top[id])>=min_data_sources: all_top_min_ds[id] = all_top[id]
 
-    createJSON(all_top_all_ds, opts.destdir+"/all_top.json")
+    createJSON(all_top_min_ds, opts.destdir+"/all_top.json")
 
 def createPeopleIdentifiers(startdate, enddate):
     people_data = {}
