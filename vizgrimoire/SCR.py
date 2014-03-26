@@ -533,7 +533,7 @@ def StaticReviewers  (period, startdate, enddate, identities_db = None, type_ana
     return (GetReviewers(period, startdate, enddate, identities_db, type_analysis, False))
 
 
-def GetLongestReviews  (startdate, enddate, type_analysis = []):
+def GetLongestReviews  (startdate, enddate, identities_db, type_analysis = []):
 
     q = "select i.issue as review, "+\
         "         t1.old_value as patch, "+\
