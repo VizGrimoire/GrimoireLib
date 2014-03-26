@@ -224,7 +224,7 @@ def topData(period, startdate, enddate, identities_db, destdir, bots, closed_con
 
     return all_top
 
-def microStudies(destdir):
+def microStudies(vizr, destdir):
     # Studies implemented in R
 
     # Time to Close: Other backends not yet supported
@@ -282,7 +282,7 @@ if __name__ == '__main__':
 
     top = topData(period, startdate, enddate, opts.identities_db, opts.destdir, bots, backend.closed_condition, opts.npeople)
 
-    microStudies(opts.destdir)
+    microStudies(vizr, opts.destdir)
 
     if ('people' in reports):
         peopleData (period, startdate, enddate, opts.identities_db, opts.destdir, backend.closed_condition, top)

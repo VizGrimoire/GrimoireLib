@@ -256,7 +256,7 @@ def topData(period, startdate, enddate, identities_db, destdir, bots, npeople):
 
     return top_senders_data
 
-def microstudies(enddate, destdir):
+def microstudies(vizr, enddate, destdir):
 
     vizr.ReportDemographicsAgingMLS(enddate, destdir)
     vizr.ReportDemographicsBirthMLS(enddate, destdir)
@@ -308,6 +308,6 @@ if __name__ == '__main__':
 
 
     # R specific reports
-    microstudies(opts.enddate, opts.destdir)
+    microstudies(vizr, opts.enddate, opts.destdir)
 
     logging.info("MLS data source analysis OK")
