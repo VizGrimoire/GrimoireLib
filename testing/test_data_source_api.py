@@ -65,9 +65,10 @@ class DataSourceTest(unittest.TestCase):
             ds_db_name = ds.get_db_name()
             self.assertNotEqual(ds_db_name, "")
 
-    @staticmethod
-    def compare_dicts (dict1, dict2):
-        pass
+    def test_get_evolutionary_filename(self):
+        for ds in Report.get_data_sources():
+            f_evol = ds.get_evolutionary_filename(ds.get_name())
+            self.assertNotEqual(f_evol, "")
 
     def test_get_evolutionary_data(self):
         opts = read_options()
@@ -75,7 +76,6 @@ class DataSourceTest(unittest.TestCase):
         startdate = "'"+opts.startdate+"'"
         enddate = "'"+opts.enddate+"'"
 
-        # opts.config_file = "../../../conf/main.conf"
         automator = read_main_conf(opts.config_file)
         identities_db = automator['generic']['db_identities']
 
@@ -92,6 +92,29 @@ class DataSourceTest(unittest.TestCase):
 
             self.assertTrue(DataSourceTest._compare_data(ds_data, f_test_json))
 
+    def test_create_evolutionary_report(self):
+        opts = read_options()
+        period = getPeriod(opts.granularity)
+        startdate = "'"+opts.startdate+"'"
+        enddate = "'"+opts.enddate+"'"
+
+        automator = read_main_conf(opts.config_file)
+        identities_db = automator['generic']['db_identities']
+
+        # Test without filters
+        for ds in Report.get_data_sources():
+            # Create the evolutionary data from dbs and check with test JSON
+            logging.info(ds.get_name() + " create_evolutionary_report")
+            Report.connect_ds(ds)
+            ds.create_evolutionary_report (period, startdate,
+                                           enddate, identities_db)
+
+            ds_json = ds.get_evolutionary_filename(ds.get_name())
+            f_test_json = os.path.join("json", ds_json)
+            f_report_json = os.path.join(opts.destdir, ds_json)
+
+            self.assertTrue(compareJSON(f_test_json, f_report_json))
+
     @staticmethod
     def _compare_data(data, json_file):
         # Create a temporary JSON file with data
@@ -103,7 +126,10 @@ class DataSourceTest(unittest.TestCase):
 
         return compareJSON(data_file_name, json_file)
 
-
+    def test_get_agg_filename(self):
+        for ds in Report.get_data_sources():
+            f_agg = ds.get_agg_filename(ds.get_name())
+            self.assertNotEqual(f_agg, "")
 
     def test_get_agg_data(self):
         opts = read_options()
@@ -125,6 +151,30 @@ class DataSourceTest(unittest.TestCase):
             test_json = os.path.join("json",ds.get_agg_filename(ds.get_name()))
 
             self.assertTrue(DataSourceTest._compare_data(ds_data, test_json))
+
+    def test_create_agg_report(self):
+        opts = read_options()
+        period = getPeriod(opts.granularity)
+        startdate = "'"+opts.startdate+"'"
+        enddate = "'"+opts.enddate+"'"
+
+        automator = read_main_conf(opts.config_file)
+        identities_db = automator['generic']['db_identities']
+
+        # Test without filters
+        for ds in Report.get_data_sources():
+            logging.info(ds.get_name() + " create_agg_report")
+            # Create the evolutionary data from dbs and check with test JSON
+            Report.connect_ds(ds)
+            ds.create_agg_report (period, startdate,
+                                  enddate, identities_db)
+
+            ds_json = ds.get_agg_filename(ds.get_name())
+            f_test_json = os.path.join("json", ds_json)
+            f_report_json = os.path.join(opts.destdir, ds_json)
+
+            self.assertTrue(compareJSON(f_test_json, f_report_json))
+
 
     def test_get_agg_evol_filters_data(self):
         opts = read_options()
@@ -172,7 +222,7 @@ class DataSourceTest(unittest.TestCase):
                     self.assertTrue(DataSourceTest._compare_data(evol, test_json))
 
 if __name__ == '__main__':
-    logging.basicConfig(level=logging.INFO,format='%(asctime)s %(message)s')
+    logging.basicConfig(level=logging.WARN,format='%(asctime)s %(message)s')
 
     DataSourceTest.init()
     suite = unittest.TestLoader().loadTestsFromTestCase(DataSourceTest)
