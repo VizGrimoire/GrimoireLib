@@ -105,6 +105,8 @@ def peopleData(period, startdate, enddate, identities_db, destdir, top_authors_d
     top += top_authors_data['authors.last year']["id"]
     top += top_authors_data['authors.last month']["id"]
     # remove duplicates
+    if not isinstance(top, list):
+        top = [top]
     people = list(set(top))
     # the order is not the same than in R json
     createJSON(people, destdir+"/scm-people.json")
@@ -120,11 +122,11 @@ def peopleData(period, startdate, enddate, identities_db, destdir, top_authors_d
 def reposData(period, startdate, enddate, identities_db, destdir, conf):
     repos  = SCM.repos_name(startdate, enddate)
     repos = repos['name']
+
     if not isinstance(repos, (list)): 
         repos = [repos]
-        createJSON(repos, destdir+"/scm-repos.json")
-    else:
-        createJSON(repos, destdir+"/scm-repos.json")
+
+    createJSON(repos, destdir+"/scm-repos.json")
 
     for repo in repos :
         repo_name = "'"+ repo+ "'"
@@ -140,6 +142,10 @@ def reposData(period, startdate, enddate, identities_db, destdir, conf):
 def companiesData(period, startdate, enddate, identities_db, destdir, bots, npeople):
     companies  = SCM.companies_name_wo_affs(bots, startdate, enddate)
     companies = companies['name']
+
+    if not isinstance(companies, list):
+        companies = [companies]
+
     createJSON(companies, destdir+"/scm-companies.json")
 
     for company in companies:
@@ -166,6 +172,10 @@ def companiesData(period, startdate, enddate, identities_db, destdir, bots, npeo
 def countriesData(period, startdate, enddate, identities_db, destdir):
     countries  = SCM.scm_countries_names(identities_db,startdate, enddate)
     countries = countries['name']
+
+    if not isinstance(countries, list):
+        countries = [countries]
+
     createJSON(countries, destdir+"/scm-countries.json")
 
     for country in countries:
@@ -182,6 +192,8 @@ def countriesData(period, startdate, enddate, identities_db, destdir):
 def domainsData(period, startdate, enddate, identities_db, destdir):
     domains = SCM.scm_domains_names(identities_db,startdate, enddate)
     domains = domains['name']
+    if not isinstance(domains, list):
+        domains = [domains]
     createJSON(domains, destdir+"/scm-domains.json")
 
     for domain in domains :
@@ -263,6 +275,6 @@ if __name__ == '__main__':
     top = topData(period, startdate, enddate, opts.identities_db, opts.destdir, bots, opts.npeople)
     if ('people' in reports):
         peopleData (period, startdate, enddate, opts.identities_db, opts.destdir, top)
-    microStudies(opts.enddate, opts.destdir)
+    microStudies(vizr, opts.enddate, opts.destdir)
 
     logging.info("SCM data source analysis OK")
