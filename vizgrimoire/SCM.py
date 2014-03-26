@@ -1686,6 +1686,8 @@ def GetCodeCommunityStructure (period, startdate, enddate, identities_db):
         " order by commits desc; "
 
     people = ExecuteQuery(q)
+    if not isinstance(people['commits'], list):
+        people['commits'] = [people['commits']]
     # this is a list. Operate over the list
     people['commits'] = [((commits / total_commits) * 100) for commits in people['commits']]
     # people['commits'] = (people['commits'] / total_commits) * 100
