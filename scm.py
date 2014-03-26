@@ -48,11 +48,11 @@ class SCM:
 
         return self.query.limit(limit).all()
 
-    def __init__ (self, database, var, period = None, echo = False):
+    def __init__ (self, database, var, conditions = (), echo = False):
         """Instantiation of the object.
 
         - var (string): variable ("commits", "listcommits")
-        - period (PeriodCondition): period condition
+        - conditions (list of Condition hierarchy): conditions
         - echo: write SQL queries to output stream
         """
 
@@ -67,8 +67,8 @@ class SCM:
             self.query = self.session.query().select_nscmlog(["authors",])
         elif var == "listauthors":
             self.query = self.session.query().select_listauthors()
-        if period is not None:
-            self.query = period.filter(self.query)
+        for condition in conditions:
+            self.query = condition.filter(self.query)
 
 
 class Condition ():
@@ -114,6 +114,29 @@ class PeriodCondition (Condition):
         self.end = end
         self.date = date
 
+
+class BranchesCondition (Condition):
+    """Branches Condition for qualifying a variable
+
+    Specifies the branches to be considered"""
+
+    def filter (self, query):
+        """Filter to apply for this condition
+
+        - query: query to which the filter will be applied
+        """
+
+        return query.filter_branches(branches = self.branches)
+
+    def __init__ (self, branches):
+        """Instatiation of the object.
+
+        - branches (list of string): list of branches to consider
+        """
+
+        self.branches = branches
+
+
 if __name__ == "__main__":
 
     from datetime import datetime
@@ -126,7 +149,7 @@ if __name__ == "__main__":
     period = PeriodCondition (start = datetime(2013,1,1), end = None)
 
     data = SCM (database = 'mysql://jgb:XXX@localhost/vizgrimoire_cvsanaly',
-                var = "ncommits", period = period)
+                var = "ncommits", conditions = (period,))
     print data.timeseries()
     print data.total()
 
@@ -135,6 +158,12 @@ if __name__ == "__main__":
     print data.list()
 
     data = SCM (database = 'mysql://jgb:XXX@localhost/vizgrimoire_cvsanaly',
-                var = "nauthors", period = period)
+                var = "nauthors", conditions = (period,))
+    print data.timeseries()
+    print data.total()
+
+    branches = BranchesCondition (branches = ("master",))
+    data = SCM (database = 'mysql://jgb:XXX@localhost/vizgrimoire_cvsanaly',
+                var = "nauthors", conditions = (period, branches))
     print data.timeseries()
     print data.total()

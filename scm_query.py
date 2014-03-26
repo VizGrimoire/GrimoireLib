@@ -240,7 +240,9 @@ class SCMQuery (Query):
     def filter_branches (self, branches):
         """Filter variables for a set of branches
 
-        For considering only those commits that happened in a branch.
+        - branches (list of string): list of branches to consider
+
+        Returns the object query, extended with the filter for branches.
         """
 
         query = self.join(Actions,Branches).filter(Branches.name.in_(branches))

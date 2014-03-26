@@ -61,18 +61,18 @@ class TestSCM (unittest.TestCase):
         # Only start for period
         period = PeriodCondition (start = self.start, end = None)
         data = SCM (database = database, var = "ncommits",
-                    period = period)
+                    conditions = (period,))
         self.assertEqual (data.total(), 839)
         # Start and end
         period = PeriodCondition (start = self.start, end = self.end)
         data = SCM (database = database, var = "ncommits",
-                    period = period)
+                    conditions = (period,))
         self.assertEqual (data.total(), 730)
         # Start and end, authoring date
         period = PeriodCondition (start = self.start, end = self.end,
                                   date = "author")
         data = SCM (database = database, var = "ncommits",
-                    period = period)
+                    conditions = (period,))
         self.assertEqual (data.total(), 728)
 
 
