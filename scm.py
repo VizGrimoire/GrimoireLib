@@ -98,18 +98,21 @@ class PeriodCondition (Condition):
         """
 
         return query.filter_period(start = self.start,
-                                   end = self.end)
+                                   end = self.end,
+                                   date = self.date)
 
-    def __init__ (self, start = None, end = None):
+    def __init__ (self, start = None, end = None, date = "commit"):
         """Instatiation of the object.
 
         - start (datetime): start of the period
         - end (datetime): end of the period
+        - date: "commit" or "author"
+            Git maintains "commit" and "author" date
         """
 
         self.start = start
         self.end = end
-        
+        self.date = date
 
 if __name__ == "__main__":
 
