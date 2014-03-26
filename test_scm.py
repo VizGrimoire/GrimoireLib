@@ -23,7 +23,7 @@
 ##
 
 from datetime import datetime
-from scm import SCM, PeriodCondition
+from scm import SCM, PeriodCondition, BranchesCondition
 import unittest
 
 database = 'mysql://jgb:XXX@localhost/vizgrimoire_cvsanaly'
@@ -75,6 +75,28 @@ class TestSCM (unittest.TestCase):
                     conditions = (period,))
         self.assertEqual (data.total(), 728)
 
+    def test_branches_condition (self):
+        """Test SCM object with a branches condition"""
+
+        # Master branch
+        branches = BranchesCondition (branches = ("master",))
+        data = SCM (database = database, var = "ncommits",
+                    conditions = (branches,))
+        self.assertEqual (data.total(), 3685)
+
+    def test_combined_conditions (self):
+        """Test SCM object with a combination of conditions"""
+
+        # Branches and period, and the other way around
+        branches = BranchesCondition (branches = ("master",))
+        period = PeriodCondition (start = self.start, end = self.end,
+                                  date = "author")
+        data = SCM (database = database, var = "ncommits",
+                    conditions = (branches,period))
+        self.assertEqual (data.total(), 647)
+        data = SCM (database = database, var = "ncommits",
+                    conditions = (period, branches))
+        self.assertEqual (data.total(), 647)
 
 if __name__ == "__main__":
     unittest.main()
