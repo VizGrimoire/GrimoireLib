@@ -48,11 +48,11 @@ class SCM:
 
         return self.query.limit(limit).all()
 
-    def __init__ (self, database, var, dates = (None, None), echo = False):
+    def __init__ (self, database, var, period = None, echo = False):
         """Instantiation of the object.
 
         - var (string): variable ("commits", "listcommits")
-        - dates (tuple of datetime): (begin, end)
+        - period (PeriodCondition): period condition
         - echo: write SQL queries to output stream
         """
 
@@ -67,28 +67,71 @@ class SCM:
             self.query = self.session.query().select_nscmlog(["authors",])
         elif var == "listauthors":
             self.query = self.session.query().select_listauthors()
-        self.query = self.query.filter_period(start = dates[0],
-                                              end = dates[1])
+        if period is not None:
+            self.query = period.filter(self.query)
+
+
+class Condition ():
+    """Root of all conditions
+
+    Provides a filter method which will be called when applying the condition.
+    """
+
+    def filter (query):
+        """Filter to apply for this condition
+
+        - query: query to which the filter will be applied
+        """
+
+        return query
+
+
+class PeriodCondition (Condition):
+    """Period Condition for qualifying a variable
+
+    Specifies the period when the variable has to be considered"""
+
+    def filter (self, query):
+        """Filter to apply for this condition
+
+        - query: query to which the filter will be applied
+        """
+
+        return query.filter_period(start = self.start,
+                                   end = self.end)
+
+    def __init__ (self, start = None, end = None):
+        """Instatiation of the object.
+
+        - start (datetime): start of the period
+        - end (datetime): end of the period
+        """
+
+        self.start = start
+        self.end = end
+        
 
 if __name__ == "__main__":
 
     from datetime import datetime
 
     data = SCM (database = 'mysql://jgb:XXX@localhost/vizgrimoire_cvsanaly',
-                var = "ncommits", dates = (None, None))
+                var = "ncommits")
+    print data.timeseries()
+    print data.total()
+
+    period = PeriodCondition (start = datetime(2013,1,1), end = None)
+
+    data = SCM (database = 'mysql://jgb:XXX@localhost/vizgrimoire_cvsanaly',
+                var = "ncommits", period = period)
     print data.timeseries()
     print data.total()
 
     data = SCM (database = 'mysql://jgb:XXX@localhost/vizgrimoire_cvsanaly',
-                var = "ncommits", dates = (datetime(2013,1,1), None))
-    print data.timeseries()
-    print data.total()
-
-    data = SCM (database = 'mysql://jgb:XXX@localhost/vizgrimoire_cvsanaly',
-                var = "listcommits", dates = (None, None))
+                var = "listcommits")
     print data.list()
 
     data = SCM (database = 'mysql://jgb:XXX@localhost/vizgrimoire_cvsanaly',
-                var = "nauthors", dates = (datetime(2013,1,1), None))
+                var = "nauthors", period = period)
     print data.timeseries()
     print data.total()

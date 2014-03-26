@@ -238,6 +238,19 @@ class TestSCMQuery (unittest.TestCase):
             .all()
         self.assertEqual (res, [(3307L,)])
 
+    def test_filter_paths (self):
+        """Test filter_paths"""
+        
+        res = self.session.query().select_nscmlog(["commits"]) \
+            .filter_paths (("examples",)) \
+            .all()
+        self.assertEqual (res, [(996L,)])
+        res = self.session.query().select_nscmlog(["commits"]) \
+            .filter_paths (("src", "examples",)) \
+            .all()
+        self.assertEqual (res, [(2411L,)])
+
+
     def test_group_by_repo (self):
         """Test group_by_repo"""
 

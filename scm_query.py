@@ -58,11 +58,24 @@ class Actions(Base):
     __tablename__ = 'actions'
     commit_id = Column(Integer, ForeignKey('scmlog.id'))
     branch_id = Column(Integer, ForeignKey('branches.id'))
+    file_id =  Column(Integer, ForeignKey('files.id'))
 
 class Branches(Base):
     """branches table"""
 
     __tablename__ = 'branches'
+
+class Files(Base):
+    """files table"""
+
+    __tablename__ = 'files'
+    repository_id =  Column(Integer, ForeignKey('repositories.id'))
+
+class FileLinks(Base):
+    """file_links table"""
+
+    __tablename__ = 'file_links'
+    file_id =  Column(Integer, ForeignKey('files.id'))
 
 class People(Base):
     """upeople table"""
@@ -281,6 +294,22 @@ class SCMQuery (Query):
                                      SCMLog.committer_id.in_(list)))
 
 
+    def filter_paths (self, list):
+        """Fiter for a certain list of paths
+
+        - list: list of strings (start of paths to filter)
+        Returns a SCMQuery object.
+        """
+
+        conditions = []
+        for path in list:
+            condition = FileLinks.file_path.like(path + '%')
+            conditions.append(condition)
+        query = self.join(Actions) \
+            .join(FileLinks, Actions.file_id == FileLinks.file_id) \
+            .filter(or_(*conditions))
+        return query
+
     def group_by_period (self):
         """Group by time period (per month)"""
 
@@ -399,12 +428,13 @@ if __name__ == "__main__":
                        end=datetime(2014,1,1))
     print res.scalar()
     # List of authors
-    res = session.query() \
+    resAuth = session.query() \
         .select_listpersons("authors") \
         .filter_period(start=datetime(2013,12,1),
                        end=datetime(2014,2,1))
-    for row in res.limit(10).all():
+    for row in resAuth.limit(10).all():
         print row.id, row.name
+    # Filter master branch
     res = res.filter_branches(("master",))
     print res.all()
     # List of branches
@@ -414,4 +444,7 @@ if __name__ == "__main__":
         .join(SCMLog) \
         .filter_period(start=datetime(2013,12,1),
                        end=datetime(2014,2,1))
+    print res.all()
+    # Filter some paths
+    res = resAuth.filter_paths(("examples",))
     print res.all()
