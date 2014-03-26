@@ -99,7 +99,7 @@ class Mediawiki(DataSource):
         items = None
         filter_name = filter_.get_name()
 
-        logging.error(filter_name + " not supported")
+        logging.error("Mediawiki " + filter_name + " not supported")
         return items
 
     @staticmethod

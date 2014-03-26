@@ -207,9 +207,9 @@ class SCR(DataSource):
         elif (filter_name == "country"):
             items = GetCountriesSCRName(startdate, enddate, identities_db)
         elif (filter_name == "domain"):
-            logging.error(filter_name + " not supported")
+            logging.error("SCR " + filter_name + " not supported")
         else:
-            logging.error(filter_name + " not supported")
+            logging.error("SCR " + filter_name + " not supported")
         return items
 
     @staticmethod

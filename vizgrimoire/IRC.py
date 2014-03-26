@@ -102,7 +102,7 @@ class IRC(DataSource):
         if (filter_name == "repository"):
             items = GetReposNameIRC()
         else:
-            logging.error("IRC " + filter_name + " filter not supported")
+            logging.error("IRC " + filter_name + " not supported")
         return items
 
     @staticmethod
