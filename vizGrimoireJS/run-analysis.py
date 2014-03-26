@@ -92,7 +92,8 @@ def get_vars():
     v = options['generic']
     v.update(options['r'])
     # bicho backend
-    v.update(options['bicho'])
+    if 'bicho' in options:
+        v.update(options['bicho'])
     # Fixed locations
     v['r_libs'] = '../../r-lib'
     v['python_libs'] = '../vizgrimoire:../vizgrimoire/analysis'
