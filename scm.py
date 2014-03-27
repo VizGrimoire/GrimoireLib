@@ -25,6 +25,7 @@
 
 from scm_query import buildSession, SCMQuery
 
+
 class SCM:
     """High level interface to variables from the SCM (CVSAnalY database).
 
