@@ -221,6 +221,40 @@ class DataSourceTest(unittest.TestCase):
                     test_json = os.path.join("json",fn)
                     self.assertTrue(DataSourceTest._compare_data(evol, test_json))
 
+    def test_get_filter_items(self):
+        opts = read_options()
+        startdate = "'"+opts.startdate+"'"
+        enddate = "'"+opts.enddate+"'"
+
+        automator = read_main_conf(opts.config_file)
+        identities_db = automator['generic']['db_identities']
+        bots = []
+
+        for ds in Report.get_data_sources():
+            Report.connect_ds(ds)
+            for filter_ in Report.get_filters():
+                items = ds.get_filter_items(filter_, startdate, enddate, identities_db, bots)
+                if items is None: continue
+                if (isinstance(items, dict)): items = items['name']
+                if not isinstance(items, (list)): items = [items]
+
+                if ds.get_name() in ["scr"] :
+                    items = [item.replace("/","_") for item in items]
+
+                elif ds.get_name() == "mls":
+                    items = [item.replace("/","_").replace("<","__").replace(">","___") 
+                             for item in items] 
+
+                fn = ds.get_name()+"-"+filter_.get_name_plural()+".json"
+                createJSON(items, opts.destdir+"/"+ fn)
+                test_json = os.path.join("json",fn)
+
+                if ds.get_name() not in ["scr"] :
+                    # scr repos format is more complex and 
+                    # is checked already in test_get_agg_evol_filters_data 
+                    self.assertTrue(compareJSON(test_json, opts.destdir+"/"+ fn))
+
+
 if __name__ == '__main__':
     logging.basicConfig(level=logging.WARN,format='%(asctime)s %(message)s')
 
