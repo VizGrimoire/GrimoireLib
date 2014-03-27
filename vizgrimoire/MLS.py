@@ -182,6 +182,7 @@ class MLS(DataSource):
     @staticmethod
     def get_filter_item_top_file(item, filter_):
         filter_name_short = filter_.get_name_short()
+        item = item.replace("/","_").replace("<","__").replace(">","___")
         fname = item+"-"+MLS.get_name()+"-"+filter_name_short+"-top-senders.json"
         return fname
 
@@ -233,7 +234,7 @@ class MLS(DataSource):
             createJSON(agg, opts.destdir+"/"+item_file+"-"+MLS.get_name()+"-"+filter_name_short+"-static.json")
 
             top_senders = MLS.get_filter_item_top(item, filter_, startdate, enddate, identities_db, opts.npeople)
-            createJSON(top_senders, opts.destdir+"/"+MLS.get_filter_item_top_file(item_file, filter_))
+            createJSON(top_senders, opts.destdir+"/"+MLS.get_filter_item_top_file(item, filter_))
 
         if (filter_name == "company"):
             sent = MLS.get_filter_summary(filter_, period, startdate, enddate, identities_db, 10)

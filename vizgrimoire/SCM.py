@@ -191,7 +191,7 @@ class SCM(DataSource):
         filter_name = filter_.get_name()
 
         if (filter_name == "company"):
-            top = company_top_authors(item, startdate, enddate, npeople)
+            top = company_top_authors("'"+item+"'", startdate, enddate, npeople)
         return top
 
     @staticmethod
@@ -223,7 +223,7 @@ class SCM(DataSource):
             createJSON(agg, opts.destdir+"/"+item+"-"+SCM.get_name()+"-"+filter_name_short+"-static.json")
 
             if (filter_name == "company"):
-                top_authors = SCM.get_filter_item_top(item_name, filter_, startdate, enddate, identities_db, opts.npeople)
+                top_authors = SCM.get_filter_item_top(item, filter_, startdate, enddate, identities_db, opts.npeople)
                 createJSON(top_authors, opts.destdir+"/"+SCM.get_filter_item_top_file(item, filter_))
 
                 for i in [2006,2009,2012]:

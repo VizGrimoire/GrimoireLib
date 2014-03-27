@@ -244,7 +244,8 @@ class ITS(DataSource):
     @staticmethod
     def get_filter_item_top_file(item, filter_):
         filter_name_short = filter_.get_name_short()
-        fname = item+"-"+ITS.get_name()+"-"+filter_name_short+"top-closers.json"
+        item = item.replace("/","_")
+        fname = item+"-"+ITS.get_name()+"-"+filter_name_short+"-top-closers.json"
         return fname
 
     @staticmethod
@@ -253,6 +254,7 @@ class ITS(DataSource):
         filter_name = filter_.get_name()
         closed_condition =  ITS._get_closed_condition()
         bots = ITS.get_bots()
+        item = "'"+item+"'"
 
 
         if (filter_name == "company"):
@@ -293,7 +295,7 @@ class ITS(DataSource):
             createJSON(agg, opts.destdir+"/"+item_file+"-"+ITS.get_name()+"-"+filter_name_short+"-static.json")
 
             if (filter_name in ["company","domain"]):
-                top = ITS.get_filter_item_top(item_name, filter_, startdate, enddate, identities_db, opts.npeople)
+                top = ITS.get_filter_item_top(item, filter_, startdate, enddate, identities_db, opts.npeople)
                 createJSON(top, opts.destdir+"/"+ITS.get_filter_item_top_file(item, filter_))
 
         if (filter_name == "company"):
