@@ -108,6 +108,14 @@ class TestSCM (unittest.TestCase):
         data = SCM (database = database, var = "ncommits",
                     conditions = (period, branches))
         self.assertEqual (data.total(), 647)
+        # Branches, period and merges (in several orders)
+        nomerges = NomergesCondition ()
+        data = SCM (database = database, var = "ncommits",
+                    conditions = (nomerges, period, branches))
+        self.assertEqual (data.total(), 647)
+        data = SCM (database = database, var = "ncommits",
+                    conditions = (branches, nomerges, period))
+        self.assertEqual (data.total(), 647)
 
 if __name__ == "__main__":
     unittest.main()

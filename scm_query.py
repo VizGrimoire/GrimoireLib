@@ -235,7 +235,11 @@ class SCMQuery (Query):
         where merge commits are not represented.
         """
 
-        return self.join(Actions)
+        if Actions not in self.joined:
+            self.joined.append (Actions)
+            return self.join(Actions)
+        else:
+            return self
 
     def filter_branches (self, branches):
         """Filter variables for a set of branches
@@ -245,7 +249,14 @@ class SCMQuery (Query):
         Returns the object query, extended with the filter for branches.
         """
 
-        query = self.join(Actions,Branches).filter(Branches.name.in_(branches))
+        query = self
+        if Actions not in self.joined:
+            self.joined.append (Actions)
+            query = query.join(Actions)
+        if Branches not in self.joined:
+            self.joined.append (Branches)
+            query = query.join(Branches)
+        query = query.filter(Branches.name.in_(branches))
         return query
 
 
@@ -307,9 +318,16 @@ class SCMQuery (Query):
         for path in list:
             condition = FileLinks.file_path.like(path + '%')
             conditions.append(condition)
-        query = self.join(Actions) \
-            .join(FileLinks, Actions.file_id == FileLinks.file_id) \
-            .filter(or_(*conditions))
+        query = self
+        if Actions not in self.joined:
+            self.joined.append (Actions)
+            query = query.join(Actions)
+        if FileLinks not in self.joined:
+            self.joined.append (FileLinks)
+            query = query.join(FileLinks, Actions.file_id == FileLinks.file_id)
+        else:
+            query = query.filter(Actions.file_id == FileLinks.file_id)
+        query = query.filter(or_(*conditions))
         return query
 
     def group_by_period (self):
@@ -385,6 +403,9 @@ class SCMQuery (Query):
 
         self.start = None
         self.end = None
+        # Keep an accounting of which tables have been joined, to avoid
+        # undesired repeated joins
+        self.joined = []
         Query.__init__(self, entities, session)
 
 
