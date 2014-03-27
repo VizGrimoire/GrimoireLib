@@ -256,10 +256,12 @@ def topData(period, startdate, enddate, identities_db, destdir, bots, npeople):
 
     return top_senders_data
 
+
 def microstudies(vizr, enddate, destdir):
 
-    vizr.ReportDemographicsAgingMLS(enddate, destdir)
-    vizr.ReportDemographicsBirthMLS(enddate, destdir)
+    unique_ids = True
+    vizr.ReportDemographicsAgingMLS(enddate, destdir, unique_ids)
+    vizr.ReportDemographicsBirthMLS(enddate, destdir, unique_ids)
 
     ## Which quantiles we're interested in
     quantiles_spec = [0.99,0.95,0.5,0.25]

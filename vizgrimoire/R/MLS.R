@@ -22,8 +22,8 @@
 ##   Alvaro del Castillo <acs@bitergia.com>
 
 
-ReportDemographicsAgingMLS <- function (enddate, destdir) {
-    d <- new ("Demographics","mls",6)
+ReportDemographicsAgingMLS <- function (enddate, destdir, unique = FALSE) {
+    d <- new ("Demographics","mls",6, unique)
     people <- Aging(d)
     people$age <- as.Date(enddate) - as.Date(people$firstdate)
     people$age[people$age < 0 ] <- 0
@@ -34,8 +34,8 @@ ReportDemographicsAgingMLS <- function (enddate, destdir) {
     createJSON (new, paste(c(destdir, "/mls-demographics-aging.json"), collapse=''))
 }
 
-ReportDemographicsBirthMLS <- function (enddate, destdir) {
-    d <- new ("Demographics","mls",6)
+ReportDemographicsBirthMLS <- function (enddate, destdir, unique = FALSE) {
+    d <- new ("Demographics","mls",6, unique)
     newcomers <- Birth(d)
     newcomers$age <- as.Date(enddate) - as.Date(newcomers$firstdate)
     newcomers$age[newcomers$age < 0 ] <- 0

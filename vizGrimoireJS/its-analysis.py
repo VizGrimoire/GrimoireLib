@@ -230,9 +230,10 @@ def microStudies(vizr, destdir):
     # Time to Close: Other backends not yet supported
     vizr.ReportTimeToCloseITS(opts.backend, opts.destdir)
 
+    unique_ids = True
     # Demographics
-    vizr.ReportDemographicsAgingITS(opts.enddate, opts.destdir)
-    vizr.ReportDemographicsBirthITS(opts.enddate, opts.destdir)
+    vizr.ReportDemographicsAgingITS(opts.enddate, opts.destdir, unique_ids)
+    vizr.ReportDemographicsBirthITS(opts.enddate, opts.destdir, unique_ids)
 
     # Markov
     vizr.ReportMarkovChain(opts.destdir)

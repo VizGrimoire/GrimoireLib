@@ -26,7 +26,7 @@
 ##   Alvaro del Castillo <acs@bitergia.com>
 
 # Demographics
-ReportDemographicsAgingSCM <- function (enddate, destdir) {
+ReportDemographicsAgingSCM <- function (enddate, destdir, unique = FALSE) {
     d <- new ("Demographics","scm",6)
     people <- Aging(d)
     people$age <- as.Date(enddate) - as.Date(people$firstdate)
@@ -38,7 +38,7 @@ ReportDemographicsAgingSCM <- function (enddate, destdir) {
     createJSON (new, paste(c(destdir, "/scm-demographics-aging.json"), collapse=''))
 }
 
-ReportDemographicsBirthSCM <- function (enddate, destdir) {
+ReportDemographicsBirthSCM <- function (enddate, destdir, unique = FALSE) {
     d <- new ("Demographics","scm",6)
     newcomers <- Birth(d)
     newcomers$age <- as.Date(enddate) - as.Date(newcomers$firstdate)

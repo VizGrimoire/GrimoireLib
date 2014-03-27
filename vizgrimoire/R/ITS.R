@@ -167,8 +167,8 @@ GetCurrentStatus <- function(period, startdate, enddate, identities_db, status){
 }
 
 # Demographics
-ReportDemographicsAgingITS <- function (enddate, destdir) {
-    d <- new ("Demographics","its",6)
+ReportDemographicsAgingITS <- function (enddate, destdir, unique = FALSE) {
+    d <- new ("Demographics","its",6, unique)
     people <- Aging(d)
     people$age <- as.Date(enddate) - as.Date(people$firstdate)
     people$age[people$age < 0 ] <- 0
@@ -179,8 +179,8 @@ ReportDemographicsAgingITS <- function (enddate, destdir) {
     createJSON (new, paste(c(destdir, "/its-demographics-aging.json"), collapse=''))
 }
 
-ReportDemographicsBirthITS <- function (enddate, destdir) {
-    d <- new ("Demographics","its",6)
+ReportDemographicsBirthITS <- function (enddate, destdir, unique = FALSE) {
+    d <- new ("Demographics","its",6, unique)
     newcomers <- Birth(d)
     newcomers$age <- as.Date(enddate) - as.Date(newcomers$firstdate)
     newcomers$age[newcomers$age < 0 ] <- 0

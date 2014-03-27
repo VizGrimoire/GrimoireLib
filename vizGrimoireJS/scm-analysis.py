@@ -235,10 +235,10 @@ def topData(period, startdate, enddate, identities_db, destdir, bots, npeople):
 
 def microStudies(vizr, enddate, destdir):
     # Studies implemented in R
-
+    unique_ids = True
     # Demographics
-    vizr.ReportDemographicsAgingSCM(enddate, destdir)
-    vizr.ReportDemographicsBirthSCM(enddate, destdir)
+    vizr.ReportDemographicsAgingSCM(enddate, destdir, unique_ids)
+    vizr.ReportDemographicsBirthSCM(enddate, destdir, unique_ids)
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO,format='%(asctime)s %(message)s')
