@@ -23,7 +23,8 @@
 ##   Jesus M. Gonzalez-Barahona <jgb@bitergia.com>
 ##
 
-from scm import SCM
+from scm import SCM, PeriodCondition
+from dateutil.parser import parse
 from json import dumps
 
 
@@ -55,6 +56,20 @@ class VariableFactory:
 class Variable:
     """Class for producing data for variables"""
 
+    def __init__ (self, variable, database, conditions = {}):
+        """Initialize object
+
+        - variable (string): name of the variable
+        """        
+
+        self.database = database
+        if variable in Variable.vars:
+            self.variable = variable
+            self.param = self.vars[self.variable]
+        else:
+            assert False, "Unknown variable id: %s." % variable
+        self.set_conditions (conditions)
+
     vars = {"scm/ncommits":
                 {"type": "total",
                  "family": "scm",
@@ -63,12 +78,36 @@ class Variable:
                  }
             }
 
+    def set_conditions (self, conditions):
+        """Set conditions for this variable.
 
+        - conditions (dictionary): conditions to apply
+            Format: {"cond_name": params,
+                     ...}
+            "cond_name" is the name of each condition
+               (eg. "period", "branches")
+            params is the parameters for that condition,
+            in the format relevant for it.
+        """
+
+        print conditions
+        self.conditions = []
+        for cond, params in conditions.iteritems():
+            if cond == "period":
+                start = parse (params[0])
+                end = parse (params[1])
+                condition = PeriodCondition (start = start, end = end)
+                self.conditions.append (condition)
+            else:
+                assert False, "Unknown condition: %s." % cond
+
+        
     def value (self):
         """Obtain the value for a variable"""
 
         if self.param["family"] == "scm":
-            data = SCM (database = self.database, var = self.param["id"])
+            data = SCM (database = self.database, var = self.param["id"],
+                        conditions = self.conditions)
             if self.param["type"] == "total":
                 return data.total()
             elif self.param["type"] == "timeseries":
@@ -96,24 +135,14 @@ class Variable:
                      encoding=encoding)
 
 
-    def __init__ (self, variable, database):
-        """Initialize object
-
-        - variable (string): name of the variable
-        """        
-
-        self.database = database
-        if variable in Variable.vars:
-            self.variable = variable
-            self.param = self.vars[self.variable]
-        else:
-            assert False, "Unknown variable id: %s." % variable
-
     
 if __name__ == "__main__":
 
     var_factory = VariableFactory (
         database = 'mysql://jgb:XXX@localhost/vizgrimoire_cvsanaly')
     ncommits = var_factory.make("scm/ncommits")
+    print ncommits.value ()
+    print ncommits.json(pretty=True)
+    ncommits.set_conditions ({"period": ("2013-09-01", "2014-02-01")})
     print ncommits.value ()
     print ncommits.json(pretty=True)
