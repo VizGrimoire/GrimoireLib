@@ -27,7 +27,30 @@ from scm import SCM
 from json import dumps
 
 
-database = 'mysql://jgb:XXX@localhost/vizgrimoire_cvsanaly'
+class VariableFactory:
+    """Factory of Variable objects
+
+    This factory helps to avoid repeating some patameters in all
+    instantiations of variables, such as the database name"""
+
+    def make (self, variable):
+        """Create a variable.
+
+        - variable (string): name of the variable
+        """
+
+        return Variable (variable = variable, database = self.database)
+
+
+    def __init__(self, database):
+        """Initialization
+
+        - database (string): database url (SQLAlchemy conventions)
+           example: 'mysql://jgb:XXX@localhost/vizgrimoire_cvsanaly'
+        """
+
+        self.database = database
+
 
 class Variable:
     """Class for producing data for variables"""
@@ -45,7 +68,7 @@ class Variable:
         """Obtain the value for a variable"""
 
         if self.param["family"] == "scm":
-            data = SCM (database = database, var = self.param["id"])
+            data = SCM (database = self.database, var = self.param["id"])
             if self.param["type"] == "total":
                 return data.total()
             elif self.param["type"] == "timeseries":
@@ -73,21 +96,24 @@ class Variable:
                      encoding=encoding)
 
 
-    def __init__ (self, variable):
+    def __init__ (self, variable, database):
         """Initialize object
 
         - variable (string): name of the variable
         """        
 
+        self.database = database
         if variable in Variable.vars:
             self.variable = variable
             self.param = self.vars[self.variable]
         else:
-            raise Exception ("Unknown variable: " + variable)
+            assert False, "Unknown variable id: %s." % variable
 
     
 if __name__ == "__main__":
 
-    ncommits = Variable("scm/ncommits")
+    var_factory = VariableFactory (
+        database = 'mysql://jgb:XXX@localhost/vizgrimoire_cvsanaly')
+    ncommits = var_factory.make("scm/ncommits")
     print ncommits.value ()
     print ncommits.json(pretty=True)
