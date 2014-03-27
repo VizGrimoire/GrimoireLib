@@ -163,6 +163,14 @@ class SCM(DataSource):
         return SCM.get_agg_data (period, startdate, enddate, identities_db, type_analysis)
 
     @staticmethod
+    def get_filter_summary_file(filter_):
+        name = None
+        filter_name = filter_.get_name()
+        if (filter_name == "company"):
+            name = SCM.get_name()+"-companies-commits-summary.json"
+        return name
+
+    @staticmethod
     def get_filter_summary(filter_, period, startdate, enddate, identities_db, limit):
         summary = None
         filter_name = filter_.get_name()
@@ -214,7 +222,7 @@ class SCM(DataSource):
 
         if (filter_name == "company"):
             summary =  SCM.get_filter_summary(filter_, period, startdate, enddate, identities_db, 10)
-            createJSON (summary, opts.destdir+"/"+SCM.get_name()+"-companies-commits-summary.json")
+            createJSON (summary, opts.destdir+"/"+ SCM.get_filter_summary_file(filter_))
 
     @staticmethod
     def create_people_report(period, startdate, enddate, identities_db):

@@ -224,6 +224,14 @@ class ITS(DataSource):
         return agg
 
     @staticmethod
+    def get_filter_summary_file(filter_):
+        name = None
+        filter_name = filter_.get_name()
+        if (filter_name == "company"):
+            name = ITS.get_name()+"-closed-companies-summary.json"
+        return name
+
+    @staticmethod
     def get_filter_summary(filter_, period, startdate, enddate, identities_db, limit):
         summary = None
         filter_name = filter_.get_name()
@@ -274,7 +282,7 @@ class ITS(DataSource):
 
         if (filter_name == "company"):
             closed = ITS.get_filter_summary(filter_, period, startdate, enddate, identities_db, 10)
-            createJSON (closed, opts.destdir+"/"+ITS.get_name()+"-closed-companies-summary.json")
+            createJSON (closed, opts.destdir+"/"+ ITS.get_filter_summary_file(filter_))
 
     @staticmethod
     def create_people_report(period, startdate, enddate, identities_db):
