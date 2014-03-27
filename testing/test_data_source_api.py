@@ -288,6 +288,55 @@ class DataSourceTest(unittest.TestCase):
 
             self.assertTrue(compareJSON(test_json, top_json))
 
+    def test_get_filter_summary (self):
+        opts = read_options()
+        startdate = "'"+opts.startdate+"'"
+        enddate = "'"+opts.enddate+"'"
+        period = getPeriod(opts.granularity)
+
+
+        automator = read_main_conf(opts.config_file)
+        identities_db = automator['generic']['db_identities']
+
+        for ds in Report.get_data_sources():
+            if ds.get_name() not in ['scm','its','mls']:
+                continue
+            Report.connect_ds(ds)
+            for filter_ in Report.get_filters():
+                if (filter_.get_name() == "company"):
+                    summary = ds.get_filter_summary(filter_, period, startdate,
+                                          enddate, identities_db, 10)
+                    test_json = os.path.join("json",ds.get_filter_summary_file(filter_))
+                    self.assertTrue(DataSourceTest._compare_data(summary, test_json))
+
+    def test_get_filter_item_top (self):
+        opts = read_options()
+        startdate = "'"+opts.startdate+"'"
+        enddate = "'"+opts.enddate+"'"
+        npeople = opts.npeople
+
+
+        automator = read_main_conf(opts.config_file)
+        identities_db = automator['generic']['db_identities']
+
+        for ds in Report.get_data_sources():
+            if ds.get_name() not in ['scm','its','mls']:
+                continue
+            Report.connect_ds(ds)
+            bots = ds.get_bots()
+            for filter_ in Report.get_filters():
+                items = ds.get_filter_items(filter_, startdate, enddate, identities_db, bots)
+                if items is None: continue
+                if (isinstance(items, dict)): items = items['name']
+                if not isinstance(items, (list)): items = [items]
+
+                for item in items:
+                    top = ds.get_filter_item_top(item, filter_, startdate,
+                                                 enddate, identities_db, npeople)
+                    if top is None: continue
+                    test_json = os.path.join("json",ds.get_filter_item_top_file(item, filter_))
+                    print(test_json)
+                    self.assertTrue(DataSourceTest._compare_data(top, test_json))
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.WARN,format='%(asctime)s %(message)s')
