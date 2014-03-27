@@ -248,11 +248,45 @@ class DataSourceTest(unittest.TestCase):
                 fn = ds.get_name()+"-"+filter_.get_name_plural()+".json"
                 createJSON(items, opts.destdir+"/"+ fn)
                 test_json = os.path.join("json",fn)
+                new_json = opts.destdir+"/"+ fn
 
                 if ds.get_name() not in ["scr"] :
                     # scr repos format is more complex and 
                     # is checked already in test_get_agg_evol_filters_data 
-                    self.assertTrue(compareJSON(test_json, opts.destdir+"/"+ fn))
+                    self.assertTrue(compareJSON(test_json, new_json))
+
+    def test_get_top_data (self):
+        opts = read_options()
+        startdate = "'"+opts.startdate+"'"
+        enddate = "'"+opts.enddate+"'"
+        npeople = opts.npeople
+
+        automator = read_main_conf(opts.config_file)
+        identities_db = automator['generic']['db_identities']
+
+        for ds in Report.get_data_sources():
+            Report.connect_ds(ds)
+            top = ds.get_top_data(startdate, enddate, identities_db, npeople)
+            test_json = os.path.join("json",ds.get_name()+"-top.json")
+            self.assertTrue(DataSourceTest._compare_data(top, test_json))
+
+    def test_create_top_report (self):
+        opts = read_options()
+        startdate = "'"+opts.startdate+"'"
+        enddate = "'"+opts.enddate+"'"
+
+        automator = read_main_conf(opts.config_file)
+        identities_db = automator['generic']['db_identities']
+
+        for ds in Report.get_data_sources():
+            Report.connect_ds(ds)
+            ds.create_top_report(startdate, enddate, identities_db)
+
+            fn = ds.get_name()+"-top.json"
+            test_json = os.path.join("json",fn)
+            top_json = os.path.join(opts.destdir,fn)
+
+            self.assertTrue(compareJSON(test_json, top_json))
 
 
 if __name__ == '__main__':
