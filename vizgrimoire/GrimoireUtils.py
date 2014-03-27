@@ -375,10 +375,11 @@ def compare_json_data(data1, data2, orig_file = "", new_file = "", skip_fields =
 
     check = True
     if len(data1) > len(data2):
-        logging.warn("More data in orig file than in new: " + str(len(data1)) + " " + str(len (data2)))
+        logging.warn("More data in " + orig_file + " than in "+
+                     new_file +": " + str(len(data1)) + " " + str(len (data2)))
         check = False
 
-    if isinstance(data1, list):
+    elif isinstance(data1, list):
         for i in range(0, len(data1)):
             if isinstance(data1[i], float): data1[i] = round(data1[i],6)
             if isinstance(data2[i], float): data2[i] = round(data2[i],6)
