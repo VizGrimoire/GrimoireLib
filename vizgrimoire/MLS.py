@@ -241,24 +241,43 @@ class MLS(DataSource):
             createJSON (sent, opts.destdir+"/"+MLS.get_filter_summary_file(filter_))
 
     @staticmethod
-    def create_people_report(period, startdate, enddate, identities_db):
-        opts = read_options()
-        top_data = MLS.get_top_data (startdate, enddate, identities_db, opts.npeople)
+    def get_top_people(startdate, enddate, identities_db, npeople):
+        top_data = MLS.get_top_data (startdate, enddate, identities_db, npeople)
 
         top = top_data['senders.']["id"]
         top += top_data['senders.last year']["id"]
         top += top_data['senders.last month']["id"]
         # remove duplicates
         people = list(set(top))
-        createJSON(people, opts.destdir+"/"+MLS.get_name()+"-people.json")
+        return people
+
+    @staticmethod
+    def get_person_evol(upeople_id, period, startdate, enddate, identities_db, type_analysis):
+        evol = GetEvolPeopleMLS(upeople_id, period, startdate, enddate)
+        evol = completePeriodIds(evol)
+        return evol
+
+    @staticmethod
+    def get_person_agg(upeople_id, startdate, enddate, identities_db, type_analysis):
+        return GetStaticPeopleMLS(upeople_id, startdate, enddate)
+
+    @staticmethod
+    def create_people_report(period, startdate, enddate, identities_db):
+        opts = read_options()
+        people = MLS.get_top_people(startdate, enddate, identities_db, opts.npeople)
+        fpeople = os.path.join(opts.destdir,MLS.get_top_people_file(MLS.get_name()))
+        createJSON(people, fpeople)
 
         for upeople_id in people:
-            evol = GetEvolPeopleMLS(upeople_id, period, startdate, enddate)
-            evol = completePeriodIds(evol)
-            createJSON(evol, opts.destdir+"/people-"+str(upeople_id)+"-"+MLS.get_name()+"-evolutionary.json")
+            evol = MLS.get_person_evol(upeople_id, period, startdate, enddate,
+                                       identities_db, type_analysis = None)
+            fperson = os.path.join(opts.destdir,MLS.get_person_evol_file(upeople_id, MLS.get_name()))
+            createJSON(evol, fperson)
 
-            static = GetStaticPeopleMLS(upeople_id, startdate, enddate)
-            createJSON(static, opts.destdir+"/people-"+str(upeople_id)+"-"+MLS.get_name()+"-static.json")
+            fperson = os.path.join(opts.destdir,MLS.get_person_agg_file(upeople_id, MLS.get_name()))
+            static = MLS.get_person_agg(upeople_id, startdate, enddate,
+                                        identities_db, type_analysis = None)
+            createJSON(static, fperson)
 
     @staticmethod
     def create_r_reports(vizr, enddate):

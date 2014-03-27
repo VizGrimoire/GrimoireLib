@@ -110,6 +110,32 @@ class DataSource(object):
         raise NotImplementedError
 
     @staticmethod
+    def get_top_people_file(ds):
+        return ds+"-people.json"
+
+    @staticmethod
+    def get_top_people(startdate, enddate, identities_db, npeople):
+        raise NotImplementedError
+
+    @staticmethod
+    def get_person_evol_file(upeople_id, ds):
+        name = "people-"+str(upeople_id)+"-"+ds+"-evolutionary.json"
+        return name
+
+    @staticmethod
+    def get_person_evol(upeople_id, period, startdate, enddate, identities_db, type_analysis):
+        raise NotImplementedError
+
+    @staticmethod
+    def get_person_agg_file(upeople_id, ds):
+        name = "people-"+str(upeople_id)+"-"+ds+"-static.json"
+        return name
+
+    @staticmethod
+    def get_person_agg(upeople_id, startdate, enddate, identities_db, type_analysis):
+        raise NotImplementedError
+
+    @staticmethod
     def create_people_report(period, startdate, enddate, identities_db):
         raise NotImplementedError
 

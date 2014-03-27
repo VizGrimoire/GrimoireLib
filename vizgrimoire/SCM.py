@@ -235,23 +235,44 @@ class SCM(DataSource):
             createJSON (summary, opts.destdir+"/"+ SCM.get_filter_summary_file(filter_))
 
     @staticmethod
-    def create_people_report(period, startdate, enddate, identities_db):
-        opts = read_options()
-        top_authors_data = SCM.get_top_data (startdate, enddate, identities_db, opts.npeople)
+    def get_top_people(startdate, enddate, identities_db, npeople):
+        top_authors_data = SCM.get_top_data (startdate, enddate, identities_db, npeople)
         top = top_authors_data['authors.']["id"]
         top += top_authors_data['authors.last year']["id"]
         top += top_authors_data['authors.last month']["id"]
         # remove duplicates
         people = list(set(top))
-        createJSON(people, opts.destdir+"/"+SCM.get_name()+"-people.json")
+
+        return people
+
+    @staticmethod
+    def get_person_evol(upeople_id, period, startdate, enddate, identities_db, type_analysis):
+        evol_data = GetEvolPeopleSCM(upeople_id, period, startdate, enddate)
+        evol_data = completePeriodIds(evol_data)
+        return evol_data
+
+    @staticmethod
+    def get_person_agg(upeople_id, startdate, enddate, identities_db, type_analysis):
+        agg = GetStaticPeopleSCM(upeople_id,  startdate, enddate)
+        return agg
+
+    @staticmethod
+    def create_people_report(period, startdate, enddate, identities_db):
+        opts = read_options()
+        fpeople = os.path.join(opts.destdir,SCM.get_top_people_file(SCM.get_name()))
+        people = SCM.get_top_people(startdate, enddate, identities_db, opts.npeople)
+        createJSON(people, fpeople)
 
         for upeople_id in people :
-            evol_data = GetEvolPeopleSCM(upeople_id, period, startdate, enddate)
-            evol_data = completePeriodIds(evol_data)
-            createJSON (evol_data, opts.destdir+"/people-"+str(upeople_id)+"-"+SCM.get_name()+"-evolutionary.json")
+            evol_data = SCM.get_person_evol(upeople_id, period, startdate, enddate,
+                                            identities_db, type_analysis = None)
+            fperson = os.path.join(opts.destdir,SCM.get_person_evol_file(upeople_id, SCM.get_name()))
+            createJSON (evol_data, fperson)
 
-            agg = GetStaticPeopleSCM(upeople_id,  startdate, enddate)
-            createJSON (agg, opts.destdir+"/people-"+str(upeople_id)+"-"+SCM.get_name()+"-static.json")
+            agg = SCM.get_person_agg(upeople_id, startdate, enddate,
+                                     identities_db, type_analysis = None)
+            fperson = os.path.join(opts.destdir,SCM.get_person_agg_file(upeople_id, SCM.get_name()))
+            createJSON (agg, fperson)
 
     # Studies implemented in R
     @staticmethod

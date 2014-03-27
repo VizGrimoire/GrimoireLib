@@ -303,11 +303,8 @@ class ITS(DataSource):
             createJSON (closed, opts.destdir+"/"+ ITS.get_filter_summary_file(filter_))
 
     @staticmethod
-    def create_people_report(period, startdate, enddate, identities_db):
-        opts = read_options()
-        closed_condition =  ITS._get_closed_condition()
-
-        top_data = ITS.get_top_data (startdate, enddate, identities_db, opts.npeople)
+    def get_top_people(startdate, enddate, identities_db, npeople):
+        top_data = ITS.get_top_data (startdate, enddate, identities_db, npeople)
 
         top = top_data['closers.']["id"]
         top += top_data['closers.last year']["id"]
@@ -317,15 +314,40 @@ class ITS(DataSource):
         top += top_data['openers.last month']["id"]
         # remove duplicates
         people = list(set(top))
-        createJSON(people, opts.destdir+"/"+ITS.get_name()+"-people.json")
+
+        return people
+
+    @staticmethod
+    def get_person_evol(upeople_id, period, startdate, enddate, identities_db, type_analysis):
+        closed_condition =  ITS._get_closed_condition()
+
+        evol = GetPeopleEvolITS(upeople_id, period, startdate, enddate, closed_condition)
+        evol = completePeriodIds(evol)
+        return evol
+
+    @staticmethod
+    def get_person_agg(upeople_id, startdate, enddate, identities_db, type_analysis):
+        closed_condition =  ITS._get_closed_condition()
+        return GetPeopleStaticITS(upeople_id, startdate, enddate, closed_condition)
+
+
+    @staticmethod
+    def create_people_report(period, startdate, enddate, identities_db):
+        opts = read_options()
+        people = ITS.get_top_people(startdate, enddate, identities_db, opts.npeople)
+        fpeople = os.path.join(opts.destdir,ITS.get_top_people_file(ITS.get_name()))
+        createJSON(people, fpeople)
 
         for upeople_id in people :
-            evol = GetPeopleEvolITS(upeople_id, period, startdate, enddate, closed_condition)
-            evol = completePeriodIds(evol)
-            createJSON (evol, opts.destdir+"/people-"+str(upeople_id)+"-"+ITS.get_name()+"-evolutionary.json")
+            evol = ITS.get_person_evol(upeople_id, period, startdate, enddate,
+                                       identities_db, type_analysis = None)
+            fperson = os.path.join(opts.destdir,ITS.get_person_evol_file(upeople_id, ITS.get_name()))
+            createJSON (evol, fperson)
 
-            data = GetPeopleStaticITS(upeople_id, startdate, enddate, closed_condition)
-            createJSON (data, opts.destdir+"/people-"+str(upeople_id)+"-"+ITS.get_name()+"-static.json")
+            data = ITS.get_person_agg(upeople_id, startdate, enddate,
+                                      identities_db, type_analysis = None)
+            fperson = os.path.join(opts.destdir,ITS.get_person_agg_file(upeople_id, ITS.get_name()))
+            createJSON (data, fperson)
 
     @staticmethod
     def create_r_reports(vizr, enddate):

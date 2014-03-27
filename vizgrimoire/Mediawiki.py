@@ -119,24 +119,44 @@ class Mediawiki(DataSource):
         if (items == None): return
 
     @staticmethod
-    def create_people_report(period, startdate, enddate, identities_db):
-        opts = read_options()
-        top_data = Mediawiki.get_top_data (startdate, enddate, identities_db, opts.npeople)
+    def get_top_people(startdate, enddate, identities_db, npeople):
+
+        top_data = Mediawiki.get_top_data (startdate, enddate, identities_db, npeople)
 
         top = top_data['authors.']["id"]
         top += top_data['authors.last year']["id"]
         top += top_data['authors.last month']["id"]
         # remove duplicates
         people = list(set(top))
-        createJSON(people, opts.destdir+"/"+Mediawiki.get_name()+"-people.json")
+        return people
+
+    @staticmethod
+    def get_person_evol(upeople_id, period, startdate, enddate, identities_db, type_analysis):
+        evol = GetEvolPeopleMediaWiki(upeople_id, period, startdate, enddate)
+        evol = completePeriodIds(evol)
+        return evol
+
+    @staticmethod
+    def get_person_agg(upeople_id, startdate, enddate, identities_db, type_analysis):
+        return GetStaticPeopleMediaWiki(upeople_id, startdate, enddate)
+
+    @staticmethod
+    def create_people_report(period, startdate, enddate, identities_db):
+        opts = read_options()
+        people = Mediawiki.get_top_people(startdate, enddate, identities_db, opts.npeople)
+        fpeople = os.path.join(opts.destdir,Mediawiki.get_top_people_file(Mediawiki.get_name()))
+        createJSON(people, fpeople)
 
         for upeople_id in people:
-            evol = GetEvolPeopleMediaWiki(upeople_id, period, startdate, enddate)
-            evol = completePeriodIds(evol)
-            createJSON(evol, opts.destdir+"/people-"+str(upeople_id)+"-"+Mediawiki.get_name()+"-evolutionary.json")
+            evol = Mediawiki.get_person_evol(upeople_id, period, startdate, enddate,
+                                             identities_db, type_analysis = None)
+            fperson = os.path.join(opts.destdir,Mediawiki.get_person_evol_file(upeople_id, Mediawiki.get_name()))
+            createJSON(evol, fperson)
 
-            static = GetStaticPeopleMediaWiki(upeople_id, startdate, enddate)
-            createJSON(static, opts.destdir+"/people-"+str(upeople_id)+"-"+Mediawiki.get_name()+"-static.json")
+            fperson = os.path.join(opts.destdir,Mediawiki.get_person_agg_file(upeople_id, Mediawiki.get_name()))
+            static = Mediawiki.get_person_agg(upeople_id, startdate, enddate,
+                                              identities_db, type_analysis = None)
+            createJSON(static, fperson)
 
     @staticmethod
     def create_r_reports(vizr, enddate):
