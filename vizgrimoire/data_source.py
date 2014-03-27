@@ -98,11 +98,11 @@ class DataSource(object):
         raise NotImplementedError
 
     @staticmethod
-    def get_filter_item_top_file(filter_, type_analysis):
+    def get_filter_item_top_file(item, filter_):
         raise NotImplementedError
 
     @staticmethod
-    def get_filter_item_top(filter_, startdate, enddate, identities_db, type_analysis, npeople):
+    def get_filter_item_top(item, filter_, startdate, enddate, identities_db, npeople):
         raise NotImplementedError
 
     @staticmethod
