@@ -163,7 +163,7 @@ class ITS(DataSource):
         createJSON (data, os.path.join(opts.destdir, filename))
 
     @staticmethod
-    def get_top_data (period, startdate, enddate, identities_db, npeople):
+    def get_top_data (startdate, enddate, identities_db, npeople):
         bots = ITS.get_bots()
         closed_condition =  ITS._get_closed_condition()
 
@@ -185,10 +185,10 @@ class ITS(DataSource):
         return all_top
 
     @staticmethod
-    def create_top_report (period, startdate, enddate, i_db):
+    def create_top_report (startdate, enddate, i_db):
         opts = read_options()
-        data = ITS.get_top_data (period, startdate, enddate, i_db, opts.npeople)
-        createJSON (data, opts.destdir+"/its-top.json")
+        data = ITS.get_top_data (startdate, enddate, i_db, opts.npeople)
+        createJSON (data, opts.destdir+"/"+ITS.get_name()+"-top.json")
 
     @staticmethod
     def get_filter_items(filter_, startdate, enddate, identities_db, bots):

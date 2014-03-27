@@ -111,7 +111,7 @@ class MLS(DataSource):
         createJSON (data, os.path.join(opts.destdir, filename))
 
     @staticmethod
-    def get_top_data (period, startdate, enddate, identities_db, npeople):
+    def get_top_data (startdate, enddate, identities_db, npeople):
         bots = MLS.get_bots()
 
         top_senders_data = {}
@@ -122,10 +122,10 @@ class MLS(DataSource):
         return top_senders_data
 
     @staticmethod
-    def create_top_report (period, startdate, enddate, i_db):
+    def create_top_report (startdate, enddate, i_db):
         opts = read_options()
-        data = MLS.get_top_data (period, startdate, enddate, i_db, opts.npeople)
-        top_file = opts.destdir+"/mls-top.json"
+        data = MLS.get_top_data (startdate, enddate, i_db, opts.npeople)
+        top_file = opts.destdir+"/"+MLS.get_name()+"-top.json"
         createJSON (data, top_file)
 
     @staticmethod
@@ -954,7 +954,7 @@ def top_senders (days, startdate, enddate, identities_db, filter_, limit) :
             "  m.first_date < "+enddate +\
             date_limit+ " "+\
             "GROUP BY up.identifier "+\
-            "ORDER BY sent desc "+\
+            "ORDER BY sent desc, senders "+\
             "LIMIT " + limit
     data = ExecuteQuery(q)
     return (data)

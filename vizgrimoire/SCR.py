@@ -164,7 +164,7 @@ class SCR(DataSource):
         createJSON (data, os.path.join(opts.destdir, filename))
 
     @staticmethod
-    def get_top_data (period, startdate, enddate, identities_db, npeople):
+    def get_top_data (startdate, enddate, identities_db, npeople):
         bots = SCR.get_bots()
 
         top_reviewers = {}
@@ -190,10 +190,10 @@ class SCR(DataSource):
         return (top_all)
 
     @staticmethod
-    def create_top_report (period, startdate, enddate, i_db):
+    def create_top_report (startdate, enddate, i_db):
         opts = read_options()
-        data = SCR.get_top_data (period, startdate, enddate, i_db, opts.npeople)
-        createJSON (data, opts.destdir+"/scr-top.json")
+        data = SCR.get_top_data (startdate, enddate, i_db, opts.npeople)
+        createJSON (data, opts.destdir+"/"+SCR.get_name()+"-top.json")
 
     @staticmethod
     def get_filter_items(filter_, startdate, enddate, identities_db, bots):

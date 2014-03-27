@@ -117,7 +117,7 @@ class SCM(DataSource):
         createJSON (data, os.path.join(opts.destdir, filename))
 
     @staticmethod
-    def get_top_data (period, startdate, enddate, i_db, npeople):
+    def get_top_data (startdate, enddate, i_db, npeople):
         top_authors_data =  {}
         top_authors_data['authors.'] = top_people(0, startdate, enddate, "author" , "" , npeople)
         top_authors_data['authors.last month']= top_people(31, startdate, enddate, "author", "", npeople)
@@ -126,10 +126,10 @@ class SCM(DataSource):
         return top_authors_data
 
     @staticmethod
-    def create_top_report (period, startdate, enddate, i_db):
+    def create_top_report (startdate, enddate, i_db):
         opts = read_options()
-        data = SCM.get_top_data (period, startdate, enddate, i_db, opts.npeople)
-        createJSON (data, opts.destdir+"/scm-top.json")
+        data = SCM.get_top_data (startdate, enddate, i_db, opts.npeople)
+        createJSON (data, opts.destdir+"/"+SCM.get_name()+"-top.json")
 
     @staticmethod
     def get_filter_items(filter_, startdate, enddate, identities_db, bots):
@@ -1207,7 +1207,7 @@ def top_people (days, startdate, enddate, role, filters, limit) :
         " s.date < upc.end and "+ affiliations+ " "+\
         " upc.company_id = c.id "+\
         " GROUP BY u.identifier "+\
-        " ORDER BY commits desc "+\
+        " ORDER BY commits desc, "+role+"s "+\
         " LIMIT "+ limit
 
     data = ExecuteQuery(q)
