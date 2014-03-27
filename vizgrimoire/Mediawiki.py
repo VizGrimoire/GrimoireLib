@@ -77,7 +77,7 @@ class Mediawiki(DataSource):
         createJSON (data, os.path.join(opts.destdir, filename))
 
     @staticmethod
-    def get_top_data (period, startdate, enddate, identities_db, npeople):
+    def get_top_data (startdate, enddate, identities_db, npeople):
         bots = Mediawiki.get_bots()
 
         top_authors = {}
@@ -88,9 +88,9 @@ class Mediawiki(DataSource):
         return(top_authors)
 
     @staticmethod
-    def create_top_report (period, startdate, enddate, i_db):
+    def create_top_report (startdate, enddate, i_db):
         opts = read_options()
-        data = Mediawiki.get_top_data (period, startdate, enddate, i_db, opts.npeople)
+        data = Mediawiki.get_top_data (startdate, enddate, i_db, opts.npeople)
         top_file = opts.destdir+"/"+Mediawiki.get_name()+"-top.json"
         createJSON (data, top_file)
 
@@ -121,7 +121,7 @@ class Mediawiki(DataSource):
     @staticmethod
     def create_people_report(period, startdate, enddate, identities_db):
         opts = read_options()
-        top_data = Mediawiki.get_top_data (period, startdate, enddate, identities_db, opts.npeople)
+        top_data = Mediawiki.get_top_data (startdate, enddate, identities_db, opts.npeople)
 
         top = top_data['authors.']["id"]
         top += top_data['authors.last year']["id"]

@@ -311,7 +311,7 @@ class SCR(DataSource):
     def create_people_report(period, startdate, enddate, identities_db):
         opts = read_options()
 
-        top_data = SCR.get_top_data (period, startdate, enddate, identities_db, opts.npeople)
+        top_data = SCR.get_top_data (startdate, enddate, identities_db, opts.npeople)
 
         top  = SCR._safeTopIds(top_data['reviewers'])
         top += SCR._safeTopIds(top_data['reviewers.last year'])

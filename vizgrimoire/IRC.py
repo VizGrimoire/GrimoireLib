@@ -164,7 +164,7 @@ class IRC(DataSource):
     def create_people_report(period, startdate, enddate, identities_db):
         opts = read_options()
 
-        top_data = IRC.get_top_data (period, startdate, enddate, identities_db, opts.npeople)
+        top_data = IRC.get_top_data (startdate, enddate, identities_db, opts.npeople)
 
         top = top_data['senders.']["id"]
         top += top_data['senders.last year']["id"]

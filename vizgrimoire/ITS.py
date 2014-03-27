@@ -271,7 +271,7 @@ class ITS(DataSource):
         opts = read_options()
         closed_condition =  ITS._get_closed_condition()
 
-        top_data = ITS.get_top_data (period, startdate, enddate, identities_db, opts.npeople)
+        top_data = ITS.get_top_data (startdate, enddate, identities_db, opts.npeople)
 
         top = top_data['closers.']["id"]
         top += top_data['closers.last year']["id"]
