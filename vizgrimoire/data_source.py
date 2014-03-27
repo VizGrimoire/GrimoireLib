@@ -70,11 +70,11 @@ class DataSource(object):
         raise NotImplementedError
 
     @staticmethod
-    def get_top_data (period, startdate, enddate, identities_db, npeople):
+    def get_top_data (startdate, enddate, identities_db, npeople):
         raise NotImplementedError
 
     @staticmethod
-    def create_top_report (period, startdate, enddate, identities_db):
+    def create_top_report (startdate, enddate, identities_db):
         raise NotImplementedError
 
     @staticmethod
