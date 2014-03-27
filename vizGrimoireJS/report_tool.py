@@ -58,14 +58,14 @@ def get_top_report(startdate, enddate, identities_db, bots):
 
     for ds in Report.get_data_sources():
         Report.connect_ds(ds)
-        top = ds.get_top_data (period, startdate, enddate, identities_db, opts.npeople)
+        top = ds.get_top_data (startdate, enddate, identities_db, opts.npeople)
         all_ds_top[ds.get_name()] = top 
     return all_ds_top
 
 def create_top_report(startdate, enddate, identities_db, bots):
     for ds in Report.get_data_sources():
         Report.connect_ds(ds)
-        ds.create_top_report (period, startdate, enddate, identities_db)
+        ds.create_top_report (startdate, enddate, identities_db)
 
 def create_reports_filters(startdate, enddate, identities_db, bots):
     for ds in Report.get_data_sources():
