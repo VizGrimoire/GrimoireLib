@@ -86,6 +86,49 @@ class Condition ():
         return query
 
 
+class NomergesCondition (Condition):
+    """No merges Condition for qualifying a variable
+
+    Specifies that only "no merges" commits are to be considered,
+    that is, commits that touch files"""
+
+    def filter (self, query):
+        """Filter to apply for this condition
+
+        - query: query to which the filter will be applied
+        """
+
+        return query.filter_nomerges()
+
+    def __init__ (self):
+        """Instatiation of the object.
+        """
+
+        pass
+
+
+class BranchesCondition (Condition):
+    """Branches Condition for qualifying a variable
+
+    Specifies the branches to be considered"""
+
+    def filter (self, query):
+        """Filter to apply for this condition
+
+        - query: query to which the filter will be applied
+        """
+
+        return query.filter_branches(branches = self.branches)
+
+    def __init__ (self, branches):
+        """Instatiation of the object.
+
+        - branches (list of string): list of branches to consider
+        """
+
+        self.branches = branches
+
+
 class PeriodCondition (Condition):
     """Period Condition for qualifying a variable
 
@@ -113,28 +156,6 @@ class PeriodCondition (Condition):
         self.start = start
         self.end = end
         self.date = date
-
-
-class BranchesCondition (Condition):
-    """Branches Condition for qualifying a variable
-
-    Specifies the branches to be considered"""
-
-    def filter (self, query):
-        """Filter to apply for this condition
-
-        - query: query to which the filter will be applied
-        """
-
-        return query.filter_branches(branches = self.branches)
-
-    def __init__ (self, branches):
-        """Instatiation of the object.
-
-        - branches (list of string): list of branches to consider
-        """
-
-        self.branches = branches
 
 
 if __name__ == "__main__":

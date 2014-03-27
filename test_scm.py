@@ -23,7 +23,7 @@
 ##
 
 from datetime import datetime
-from scm import SCM, PeriodCondition, BranchesCondition
+from scm import SCM, NomergesCondition, BranchesCondition, PeriodCondition
 import unittest
 
 database = 'mysql://jgb:XXX@localhost/vizgrimoire_cvsanaly'
@@ -55,6 +55,25 @@ class TestSCM (unittest.TestCase):
         data = SCM (database = database, var = "ncommits")
         self.assertEqual (data.total(), 4465)
 
+
+    def test_nomerges_condition (self):
+        """Test SCM object with a no merges condition"""
+
+        nomerges = NomergesCondition ()
+        data = SCM (database = database, var = "ncommits",
+                    conditions = (nomerges,))
+        self.assertEqual (data.total(), 4206)
+
+
+    def test_branches_condition (self):
+        """Test SCM object with a branches condition"""
+
+        # Master branch
+        branches = BranchesCondition (branches = ("master",))
+        data = SCM (database = database, var = "ncommits",
+                    conditions = (branches,))
+        self.assertEqual (data.total(), 3685)
+
     def test_period_condition (self):
         """Test SCM object with a period condition"""
 
@@ -75,14 +94,6 @@ class TestSCM (unittest.TestCase):
                     conditions = (period,))
         self.assertEqual (data.total(), 728)
 
-    def test_branches_condition (self):
-        """Test SCM object with a branches condition"""
-
-        # Master branch
-        branches = BranchesCondition (branches = ("master",))
-        data = SCM (database = database, var = "ncommits",
-                    conditions = (branches,))
-        self.assertEqual (data.total(), 3685)
 
     def test_combined_conditions (self):
         """Test SCM object with a combination of conditions"""
