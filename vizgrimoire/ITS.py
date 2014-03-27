@@ -224,6 +224,16 @@ class ITS(DataSource):
         return agg
 
     @staticmethod
+    def get_filter_summary(filter_, period, startdate, enddate, identities_db, limit):
+        summary = None
+        filter_name = filter_.get_name()
+        closed_condition =  ITS._get_closed_condition()
+
+        if (filter_name == "company"):
+            summary =  GetClosedSummaryCompanies(period, startdate, enddate, identities_db, closed_condition, limit)
+        return summary
+
+    @staticmethod
     def create_filter_report(filter_, startdate, enddate, identities_db, bots):
         opts = read_options()
         period = getPeriod(opts.granularity)
@@ -263,7 +273,7 @@ class ITS(DataSource):
                 createJSON(top, opts.destdir+"/"+item+"-"+ITS.get_name()+"-"+filter_name_short+"-top-closers.json")
 
         if (filter_name == "company"):
-            closed = GetClosedSummaryCompanies(period, startdate, enddate, identities_db, closed_condition, 10)
+            closed = ITS.get_filter_summary(filter_, period, startdate, enddate, identities_db, 10)
             createJSON (closed, opts.destdir+"/"+ITS.get_name()+"-closed-companies-summary.json")
 
     @staticmethod

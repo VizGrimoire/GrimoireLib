@@ -82,6 +82,14 @@ class DataSource(object):
         raise NotImplementedError
 
     @staticmethod
+    def get_filter_summary(filter_, period, startdate, enddate, identities_db, limit):
+        raise NotImplementedError
+
+    @staticmethod
+    def get_filter_top(filter_, period, startdate, enddate, identities_db):
+        raise NotImplementedError
+
+    @staticmethod
     def create_filter_report(filter_, startdate, enddate, identities_db, bots):
         raise NotImplementedError
 

@@ -163,6 +163,20 @@ class SCM(DataSource):
         return SCM.get_agg_data (period, startdate, enddate, identities_db, type_analysis)
 
     @staticmethod
+    def get_filter_summary(filter_, period, startdate, enddate, identities_db, limit):
+        summary = None
+        filter_name = filter_.get_name()
+
+        if (filter_name == "company"):
+            summary =  GetCommitsSummaryCompanies(period, startdate, enddate, identities_db, limit)
+        return summary
+
+    @staticmethod
+    def get_filter_top(filter_, period, startdate, enddate, identities_db):
+        top = None
+        filter_name = filter_.get_name()
+
+    @staticmethod
     def create_filter_report(filter_, startdate, enddate, identities_db, bots):
         opts = read_options()
         period = getPeriod(opts.granularity)
@@ -199,8 +213,8 @@ class SCM(DataSource):
                     createJSON(data, opts.destdir+"/"+item+"-"+SCM.get_name()+"-top-authors_"+str(i)+".json")
 
         if (filter_name == "company"):
-                commits =  GetCommitsSummaryCompanies(period, startdate, enddate, identities_db, 10)
-                createJSON (commits, opts.destdir+"/"+SCM.get_name()+"-companies-commits-summary.json")
+            summary =  SCM.get_filter_summary(filter_, period, startdate, enddate, identities_db, 10)
+            createJSON (summary, opts.destdir+"/"+SCM.get_name()+"-companies-commits-summary.json")
 
     @staticmethod
     def create_people_report(period, startdate, enddate, identities_db):

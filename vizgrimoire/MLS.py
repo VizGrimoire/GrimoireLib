@@ -163,6 +163,15 @@ class MLS(DataSource):
         return agg
 
     @staticmethod
+    def get_filter_summary(filter_, period, startdate, enddate, identities_db, limit):
+        summary = None
+        filter_name = filter_.get_name()
+
+        if (filter_name == "company"):
+            summary =  GetSentSummaryCompanies(period, startdate, enddate, identities_db, limit)
+        return summary
+
+    @staticmethod
     def create_filter_report(filter_, startdate, enddate, identities_db, bots):
         opts = read_options()
         period = getPeriod(opts.granularity)
@@ -207,9 +216,8 @@ class MLS(DataSource):
                 top_senders = repoTopSenders (item, identities_db, startdate, enddate, rfield, opts.npeople)
                 createJSON(top_senders, opts.destdir+ "/"+item_file+"-"+MLS.get_name()+"-rep-top-senders.json")
 
-
         if (filter_name == "company"):
-            sent = GetSentSummaryCompanies(period, startdate, enddate, identities_db, 10)
+            sent = MLS.get_filter_summary(filter_, period, startdate, enddate, identities_db, 10)
             createJSON (sent, opts.destdir+"/"+MLS.get_name()+"-sent-companies-summary.json")
 
     @staticmethod
