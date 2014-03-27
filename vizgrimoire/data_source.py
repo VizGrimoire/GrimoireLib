@@ -90,19 +90,23 @@ class DataSource(object):
         raise NotImplementedError
 
     @staticmethod
-    def get_filter_top(filter_, period, startdate, enddate, identities_db):
-        raise NotImplementedError
-
-    @staticmethod
-    def create_filter_report(filter_, startdate, enddate, identities_db, bots):
-        raise NotImplementedError
-
-    @staticmethod
     def get_filter_item_evol(startdate, enddate, identities_db, type_analysis):
         raise NotImplementedError
 
     @staticmethod
     def get_filter_item_agg(startdate, enddate, identities_db, type_analysis):
+        raise NotImplementedError
+
+    @staticmethod
+    def get_filter_item_top_file(filter_, type_analysis):
+        raise NotImplementedError
+
+    @staticmethod
+    def get_filter_item_top(filter_, startdate, enddate, identities_db, type_analysis, npeople):
+        raise NotImplementedError
+
+    @staticmethod
+    def create_filter_report(filter_, startdate, enddate, identities_db, bots):
         raise NotImplementedError
 
     @staticmethod

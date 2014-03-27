@@ -242,10 +242,30 @@ class ITS(DataSource):
         return summary
 
     @staticmethod
+    def get_filter_item_top_file(item, filter_):
+        filter_name_short = filter_.get_name_short()
+        fname = item+"-"+ITS.get_name()+"-"+filter_name_short+"top-closers.json"
+        return fname
+
+    @staticmethod
+    def get_filter_item_top(item, filter_, startdate, enddate, identities_db, npeople):
+        top = None
+        filter_name = filter_.get_name()
+        closed_condition =  ITS._get_closed_condition()
+        bots = ITS.get_bots()
+
+
+        if (filter_name == "company"):
+            top = GetCompanyTopClosers(item, startdate, enddate, identities_db, bots, closed_condition, npeople)
+
+        elif (filter_name == "domain"):
+                top = GetDomainTopClosers(item, startdate, enddate, identities_db, bots, closed_condition, npeople)
+        return top
+
+    @staticmethod
     def create_filter_report(filter_, startdate, enddate, identities_db, bots):
         opts = read_options()
         period = getPeriod(opts.granularity)
-        closed_condition =  ITS._get_closed_condition()
 
         items = ITS.get_filter_items(filter_, startdate, enddate, identities_db, bots)
         if (items == None): return
@@ -272,13 +292,9 @@ class ITS(DataSource):
             agg = ITS.get_filter_item_agg(startdate, enddate, identities_db, type_analysis)
             createJSON(agg, opts.destdir+"/"+item_file+"-"+ITS.get_name()+"-"+filter_name_short+"-static.json")
 
-            if (filter_name == "company"):
-                top = GetCompanyTopClosers(item_name, startdate, enddate, identities_db, bots, closed_condition, opts.npeople)
-                createJSON(top, opts.destdir+"/"+item+"-"+ITS.get_name()+"-"+filter_name_short+"-top-closers.json")
-
-            if (filter_name == "domain"):
-                top = GetDomainTopClosers(item_name, startdate, enddate, identities_db, bots, closed_condition, opts.npeople)
-                createJSON(top, opts.destdir+"/"+item+"-"+ITS.get_name()+"-"+filter_name_short+"-top-closers.json")
+            if (filter_name in ["company","domain"]):
+                top = ITS.get_filter_item_top(item_name, filter_, startdate, enddate, identities_db, opts.npeople)
+                createJSON(top, opts.destdir+"/"+ITS.get_filter_item_top_file(item, filter_))
 
         if (filter_name == "company"):
             closed = ITS.get_filter_summary(filter_, period, startdate, enddate, identities_db, 10)

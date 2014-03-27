@@ -180,6 +180,28 @@ class MLS(DataSource):
         return summary
 
     @staticmethod
+    def get_filter_item_top_file(item, filter_):
+        filter_name_short = filter_.get_name_short()
+        fname = item+"-"+MLS.get_name()+"-"+filter_name_short+"-top-senders.json"
+        return fname
+
+    @staticmethod
+    def get_filter_item_top(item, filter_, startdate, enddate, identities_db, npeople):
+        top_senders = None
+        filter_name = filter_.get_name()
+
+        if (filter_name == "company"):
+            top_senders = companyTopSenders (item, identities_db, startdate, enddate, npeople)
+        elif (filter_name == "country"):
+            top_senders = countryTopSenders (item, identities_db, startdate, enddate, npeople)
+        elif (filter_name == "domain"):
+            top_senders = domainTopSenders(item, identities_db, startdate, enddate, npeople)
+        elif (filter_name == "repository"):
+            rfield = MLS.get_repo_field()
+            top_senders = repoTopSenders (item, identities_db, startdate, enddate, rfield, npeople)
+        return top_senders
+
+    @staticmethod
     def create_filter_report(filter_, startdate, enddate, identities_db, bots):
         opts = read_options()
         period = getPeriod(opts.granularity)
@@ -210,19 +232,8 @@ class MLS(DataSource):
             agg = MLS.get_filter_item_agg(startdate, enddate, identities_db, type_analysis)
             createJSON(agg, opts.destdir+"/"+item_file+"-"+MLS.get_name()+"-"+filter_name_short+"-static.json")
 
-            if (filter_name == "company"):
-                top_senders = companyTopSenders (item, identities_db, startdate, enddate, opts.npeople)
-                createJSON(top_senders, opts.destdir+"/"+item_file+"-"+MLS.get_name()+"-"+filter_name_short+"-top-senders.json")
-            elif (filter_name == "country"):
-                top_senders = countryTopSenders (item, identities_db, startdate, enddate, opts.npeople)
-                createJSON(top_senders, opts.destdir+"/"+item_file+"-"+MLS.get_name()+"-"+filter_name_short+"-top-senders.json")
-            elif (filter_name == "domain"):
-                top_senders = domainTopSenders(item, identities_db, startdate, enddate, opts.npeople)
-                createJSON(top_senders, opts.destdir+"/"+item_file+"-"+MLS.get_name()+"-"+filter_name_short+"-top-senders.json")
-            elif (filter_name == "repository"):
-                rfield = MLS.get_repo_field()
-                top_senders = repoTopSenders (item, identities_db, startdate, enddate, rfield, opts.npeople)
-                createJSON(top_senders, opts.destdir+ "/"+item_file+"-"+MLS.get_name()+"-rep-top-senders.json")
+            top_senders = MLS.get_filter_item_top(item, filter_, startdate, enddate, identities_db, opts.npeople)
+            createJSON(top_senders, opts.destdir+"/"+MLS.get_filter_item_top_file(item_file, filter_))
 
         if (filter_name == "company"):
             sent = MLS.get_filter_summary(filter_, period, startdate, enddate, identities_db, 10)
