@@ -31,14 +31,6 @@ database = 'mysql://jgb:XXX@localhost/vizgrimoire_cvsanaly'
 # which is said to be more efficient
 database += '?charset=utf8&use_unicode=0'
 
-# class TestBuildSession (unittest.TestCase):
-
-#     def setUp (self):
-#         self.database = database
-
-#     def test_get_session (self):
-
-#         session = buildSession(database=self.database, echo=False)
 
 class TestSCM (unittest.TestCase):
 
