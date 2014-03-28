@@ -34,13 +34,22 @@ class VariableFactory:
     This factory helps to avoid repeating some patameters in all
     instantiations of variables, such as the database name"""
 
-    def make (self, variable):
+    def make (self, variable, conditions = {}):
         """Create a variable.
 
         - variable (string): name of the variable
+        - conditions (dictionary): conditions to apply
+            Format: {"cond_name": params,
+                    ...}
+            "cond_name" is the name of each condition
+            (eg. "period", "branches")
+            params is the parameters for that condition,
+            in the format relevant for it.
+
         """
 
-        return Variable (variable = variable, database = self.database)
+        return Variable (variable = variable, conditions = conditions,
+                         database = self.database)
 
 
     def __init__(self, database):
@@ -60,6 +69,14 @@ class Variable:
         """Initialize object
 
         - variable (string): name of the variable
+        - conditions (dictionary): conditions to apply
+            Format: {"cond_name": params,
+                     ...}
+            "cond_name" is the name of each condition
+               (eg. "period", "branches")
+            params is the parameters for that condition,
+            in the format relevant for it.
+
         """        
 
         self.database = database
@@ -90,7 +107,6 @@ class Variable:
             in the format relevant for it.
         """
 
-        print conditions
         self.conditions = []
         for cond, params in conditions.iteritems():
             if cond == "period":

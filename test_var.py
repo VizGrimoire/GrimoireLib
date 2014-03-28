@@ -51,6 +51,19 @@ class TestVar (unittest.TestCase):
         self.start = "2013-11-13"
         self.end = "2014-2-1"
 
+    def test_variable_conditions (self):
+        """Test adding conditions to a variable"""
+
+        var_factory = VariableFactory (database = database)
+        ncommits = var_factory.make("scm/ncommits")
+        self.assertEqual (ncommits.value(), 4465)
+        ncommits.set_conditions ({"period": (self.start, self.end)})
+        self.assertEqual (ncommits.value(), 730)
+        ncommits = var_factory.make("scm/ncommits",
+                                    conditions = {"period": (self.start,
+                                                             self.end)})
+        self.assertEqual (ncommits.value(), 730)
+
 
     def test_variable_scm_ncommits (self):
         """Test scm/ncommits variable"""
