@@ -35,7 +35,7 @@ from timeseries import TimeSeries
 
 Base = declarative_base(cls=DeferredReflection)
 
-def buildSession(database, echo):
+def buildSession(database, id_database = None, echo = False):
     """Create a session with the database
         
     - database: string, url of the database, in the format
@@ -44,13 +44,28 @@ def buildSession(database, echo):
         
     Instantiatates an engine and a session to work with it
     """
-
+    
+    if id_database is None:
+        id_database = database
     engine = create_engine(database, encoding='utf8', echo=echo)
+    id_engine = create_engine(id_database, encoding='utf8', echo=echo)
     Base.prepare(engine)
+    Base.prepare(id_engine)
+    bindings = {Actions: engine,
+                Branches: engine,
+                Files: engine,
+                FileLinks: engine,
+                People: engine,
+                PeopleUPeople: id_engine,
+                Repositories: engine,
+                SCMLog: engine,
+                UPeople: id_engine}
     # Create a session linked to the SCMQuery class
-    Session = sessionmaker(bind=engine, query_cls=SCMQuery)
+    #Session = sessionmaker(bind=engine, query_cls=SCMQuery)
+    Session = sessionmaker(binds=bindings, query_cls=SCMQuery)
     session = Session()
     return (session)
+
 
 class Actions(Base):
     """actions table"""
