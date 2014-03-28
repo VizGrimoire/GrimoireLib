@@ -88,16 +88,10 @@ print data.timeseries()
 
 ## Tests
 
-There are some tests available. Before running the test, you need to load the test databases into MySQL. For example, for loading the SCM testing database:
+There are some tests available. Before running the test, you need to load the test databases into MySQL. For example, for loading the SCM testing database (run from the shell prompt):
 
 ```
-[Shell prompt]
-mysql -u jgb -pXXX
-...
-[MySQL prompt]
-CREATE DATABASE IF NOT EXISTS cp_cvsanaly_GrimoireLibTests;
-quit
-[Back in shell prompt]
+mysql -u jgb -pXXX -e "CREATE DATABASE cp_cvsanaly_GrimoireLibTests"
 mysql -u jgb -pXXX  cp_cvsanaly_GrimoireLibTests  < source_code.mysql
 ```
 
