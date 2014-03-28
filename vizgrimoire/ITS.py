@@ -330,25 +330,6 @@ class ITS(DataSource):
         closed_condition =  ITS._get_closed_condition()
         return GetPeopleStaticITS(upeople_id, startdate, enddate, closed_condition)
 
-
-    @staticmethod
-    def create_people_report(period, startdate, enddate, identities_db):
-        opts = read_options()
-        people = ITS.get_top_people(startdate, enddate, identities_db, opts.npeople)
-        fpeople = os.path.join(opts.destdir,ITS.get_top_people_file(ITS.get_name()))
-        createJSON(people, fpeople)
-
-        for upeople_id in people :
-            evol = ITS.get_person_evol(upeople_id, period, startdate, enddate,
-                                       identities_db, type_analysis = None)
-            fperson = os.path.join(opts.destdir,ITS.get_person_evol_file(upeople_id, ITS.get_name()))
-            createJSON (evol, fperson)
-
-            data = ITS.get_person_agg(upeople_id, startdate, enddate,
-                                      identities_db, type_analysis = None)
-            fperson = os.path.join(opts.destdir,ITS.get_person_agg_file(upeople_id, ITS.get_name()))
-            createJSON (data, fperson)
-
     @staticmethod
     def create_r_reports(vizr, enddate):
         opts = read_options()

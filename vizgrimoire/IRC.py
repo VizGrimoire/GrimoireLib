@@ -183,25 +183,6 @@ class IRC(DataSource):
         return GetStaticPeopleIRC(upeople_id, startdate, enddate)
 
     @staticmethod
-    def create_people_report(period, startdate, enddate, identities_db):
-        opts = read_options()
-
-        people = IRC.get_top_people(startdate, enddate, identities_db, opts.npeople)
-        fpeople = os.path.join(opts.destdir,IRC.get_top_people_file(IRC.get_name()))
-        createJSON(people, fpeople)
-
-        for upeople_id in people:
-            evol = IRC.get_person_evol(upeople_id, period, startdate, enddate,
-                                       identities_db, type_analysis = None)
-            person_file = os.path.join(opts.destdir,IRC.get_person_evol_file(upeople_id, IRC.get_name()))
-            createJSON(evol, person_file)
-
-            person_file = os.path.join(opts.destdir,IRC.get_person_agg_file(upeople_id, IRC.get_name()))
-            aggdata = IRC.get_person_agg(upeople_id, startdate, enddate,
-                                         identities_db, type_analysis = None)
-            createJSON(aggdata, person_file)
-
-    @staticmethod
     def create_r_reports(vizr, enddate):
         pass
 

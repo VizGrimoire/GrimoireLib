@@ -337,25 +337,6 @@ class SCR(DataSource):
         return GetPeopleStaticSCR(upeople_id, startdate, enddate)
 
     @staticmethod
-    def create_people_report(period, startdate, enddate, identities_db):
-        opts = read_options()
-
-        people = SCR.get_top_people(startdate, enddate, identities_db, opts.npeople)
-        fpeople = os.path.join(opts.destdir,SCR.get_top_people_file(SCR.get_name()))
-        createJSON(people, fpeople)
-
-        for upeople_id in people:
-            evol = SCR.get_person_evol(upeople_id, period, startdate, enddate,
-                                        identities_db, type_analysis = None)
-            fperson = os.path.join(opts.destdir, SCR.get_person_evol_file(upeople_id, SCR.get_name()))
-            createJSON(evol, fperson)
-
-            agg = SCR.get_person_agg(upeople_id, startdate, enddate,
-                                     identities_db, type_analysis = None)
-            fperson = os.path.join(opts.destdir, SCR.get_person_agg_file(upeople_id, SCR.get_name()))
-            createJSON(agg, fperson)
-
-    @staticmethod
     def create_r_reports(vizr, enddate):
         pass
 

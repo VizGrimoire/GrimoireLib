@@ -141,24 +141,6 @@ class Mediawiki(DataSource):
         return GetStaticPeopleMediaWiki(upeople_id, startdate, enddate)
 
     @staticmethod
-    def create_people_report(period, startdate, enddate, identities_db):
-        opts = read_options()
-        people = Mediawiki.get_top_people(startdate, enddate, identities_db, opts.npeople)
-        fpeople = os.path.join(opts.destdir,Mediawiki.get_top_people_file(Mediawiki.get_name()))
-        createJSON(people, fpeople)
-
-        for upeople_id in people:
-            evol = Mediawiki.get_person_evol(upeople_id, period, startdate, enddate,
-                                             identities_db, type_analysis = None)
-            fperson = os.path.join(opts.destdir,Mediawiki.get_person_evol_file(upeople_id, Mediawiki.get_name()))
-            createJSON(evol, fperson)
-
-            fperson = os.path.join(opts.destdir,Mediawiki.get_person_agg_file(upeople_id, Mediawiki.get_name()))
-            static = Mediawiki.get_person_agg(upeople_id, startdate, enddate,
-                                              identities_db, type_analysis = None)
-            createJSON(static, fperson)
-
-    @staticmethod
     def create_r_reports(vizr, enddate):
         pass
 

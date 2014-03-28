@@ -79,7 +79,7 @@ def create_report_people(startdate, enddate, identities_db, bots):
     for ds in Report.get_data_sources():
         Report.connect_ds(ds)
         logging.info("Creating people for " + ds.get_name())
-        ds.create_people_report(period, startdate, enddate, identities_db)
+        ds().create_people_report(period, startdate, enddate, identities_db)
 
 def create_reports_r(enddate):
     from rpy2.robjects.packages import importr

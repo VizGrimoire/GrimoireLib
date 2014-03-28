@@ -14,19 +14,22 @@
 ## along with this program; if not, write to the Free Software
 ## Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 ##
-## This file is a part of the vizGrimoire R package
-##  (an R library for the MetricsGrimoire and vizGrimoire systems)
+## This file is a part of GrimoireLib
+##  (an Python library for the MetricsGrimoire and vizGrimoire systems)
 ##
-## AuxiliarySCM.R
-##
-## Queries for SCM data analysis
 ##
 ## Authors:
 ##   Alvaro del Castillo <acs@bitergia.com>
 
+import logging, os
+from GrimoireUtils import read_options, createJSON
 
 class DataSource(object):
     _bots = []
+
+    @staticmethod
+    def get_name():
+        raise NotImplementedError
 
     @staticmethod
     def get_bots():
@@ -35,10 +38,6 @@ class DataSource(object):
     @staticmethod
     def set_bots(ds_bots):
         DataSource._bots = ds_bots
-
-    @staticmethod
-    def get_name():
-        raise NotImplementedError
 
     # Automatoc config name for the data source database
     @staticmethod
@@ -135,9 +134,23 @@ class DataSource(object):
     def get_person_agg(upeople_id, startdate, enddate, identities_db, type_analysis):
         raise NotImplementedError
 
-    @staticmethod
-    def create_people_report(period, startdate, enddate, identities_db):
-        raise NotImplementedError
+    def create_people_report(self, period, startdate, enddate, identities_db):
+        opts = read_options()
+        fpeople = os.path.join(opts.destdir,self.get_top_people_file(self.get_name()))
+        logging.info(fpeople)
+        people = self.get_top_people(startdate, enddate, identities_db, opts.npeople)
+        createJSON(people, fpeople)
+
+        for upeople_id in people :
+            evol_data = self.get_person_evol(upeople_id, period, startdate, enddate,
+                                            identities_db, type_analysis = None)
+            fperson = os.path.join(opts.destdir,self.get_person_evol_file(upeople_id, self.get_name()))
+            createJSON (evol_data, fperson)
+
+            agg = self.get_person_agg(upeople_id, startdate, enddate,
+                                     identities_db, type_analysis = None)
+            fperson = os.path.join(opts.destdir,self.get_person_agg_file(upeople_id, self.get_name()))
+            createJSON (agg, fperson)
 
     @staticmethod
     def create_r_reports(vizr, enddate):
