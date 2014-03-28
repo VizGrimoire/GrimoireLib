@@ -46,7 +46,7 @@ class IRC(DataSource):
     def create_evolutionary_report (period, startdate, enddate, identities_db, type_analysis = None):
         opts = read_options()
         data =  IRC.get_evolutionary_data (period, startdate, enddate, identities_db, type_analysis)
-        filename = IRC.get_evolutionary_filename(IRC.get_name())
+        filename = IRC().get_evolutionary_filename()
         createJSON (data, os.path.join(opts.destdir, filename))
 
     @staticmethod
@@ -70,7 +70,7 @@ class IRC(DataSource):
     def create_agg_report (period, startdate, enddate, i_db, type_analysis = None):
         opts = read_options()
         data = IRC.get_agg_data (period, startdate, enddate, i_db, type_analysis)
-        filename = IRC.get_agg_filename(IRC.get_name())
+        filename = IRC().get_agg_filename()
         createJSON (data, os.path.join(opts.destdir, filename))
 
     @staticmethod
@@ -140,12 +140,11 @@ class IRC(DataSource):
         items = IRC.get_filter_items(filter_, startdate, enddate, identities_db, bots)
         if (items == None): return
 
-        filter_name_short = filter_.get_name_short()
-
         if not isinstance(items, (list)):
             items = [items]
 
-        createJSON(items, opts.destdir+"/irc-"+filter_.get_name_plural()+".json")
+        fn = os.path.join(opts.destdir, IRC().get_filter_file(filter_))
+        createJSON(items, fn)
 
         for item in items :
             # item_name = "'"+ item+ "'"
@@ -153,12 +152,12 @@ class IRC(DataSource):
             type_analysis = [filter_.get_name(), item]
 
             evol_data = IRC.get_filter_item_evol(startdate, enddate, identities_db, type_analysis)
-            fn = item+"-"+IRC.get_name()+"-"+filter_name_short+"-evolutionary.json";
-            createJSON(completePeriodIds(evol_data), opts.destdir+"/"+fn)
+            fn = os.path.join(opts.destdir, IRC().get_filter_item_evol_file(item, filter_))
+            createJSON(completePeriodIds(evol_data), fn)
 
             agg = IRC.get_filter_item_agg(startdate, enddate, identities_db, type_analysis)
-            fn = item+"-"+IRC.get_name()+"-"+filter_name_short+"-static.json"
-            createJSON(agg, opts.destdir+"/"+ fn)
+            fn = os.path.join(opts.destdir, IRC().get_filter_item_agg_file(item, filter_))
+            createJSON(agg, fn)
 
     @staticmethod
     def get_top_people(startdate, enddate, identities_db, npeople):

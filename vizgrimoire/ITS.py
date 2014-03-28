@@ -112,7 +112,7 @@ class ITS(DataSource):
     def create_evolutionary_report (period, startdate, enddate, i_db, type_analysis = None):
         opts = read_options()
         data =  ITS.get_evolutionary_data (period, startdate, enddate, i_db, type_analysis)
-        filename = ITS.get_evolutionary_filename(ITS.get_name())
+        filename = ITS().get_evolutionary_filename()
         createJSON (data, os.path.join(opts.destdir, filename))
 
     @staticmethod
@@ -159,7 +159,7 @@ class ITS(DataSource):
     def create_agg_report (period, startdate, enddate, i_db, type_analysis = None):
         opts = read_options()
         data = ITS.get_agg_data (period, startdate, enddate, i_db, type_analysis)
-        filename = ITS.get_agg_filename(ITS.get_name())
+        filename = ITS().get_agg_filename()
         createJSON (data, os.path.join(opts.destdir, filename))
 
     @staticmethod
@@ -261,7 +261,8 @@ class ITS(DataSource):
             top = GetCompanyTopClosers(item, startdate, enddate, identities_db, bots, closed_condition, npeople)
 
         elif (filter_name == "domain"):
-                top = GetDomainTopClosers(item, startdate, enddate, identities_db, bots, closed_condition, npeople)
+            top = GetDomainTopClosers(item, startdate, enddate, identities_db, bots, closed_condition, npeople)
+
         return top
 
     @staticmethod
@@ -279,7 +280,8 @@ class ITS(DataSource):
         if not isinstance(items, (list)):
             items = [items]
 
-        createJSON(items, opts.destdir+"/"+ITS.get_name()+"-"+filter_.get_name_plural()+".json")
+        fn = os.path.join(opts.destdir, ITS().get_filter_file(filter_))
+        createJSON(items, fn)
 
         for item in items :
             item_name = "'"+ item+ "'"
@@ -288,15 +290,16 @@ class ITS(DataSource):
             type_analysis = [filter_.get_name(), item_name]
 
             evol_data = ITS.get_filter_item_evol(startdate, enddate, identities_db, type_analysis)
-            evol_data = completePeriodIds(evol_data)
-            createJSON(evol_data, opts.destdir+"/"+item_file+"-"+ITS.get_name()+"-"+filter_name_short+"-evolutionary.json")
+            fn = os.path.join(opts.destdir, ITS().get_filter_item_evol_file(item_file, filter_))
+            createJSON(evol_data, fn)
 
             agg = ITS.get_filter_item_agg(startdate, enddate, identities_db, type_analysis)
-            createJSON(agg, opts.destdir+"/"+item_file+"-"+ITS.get_name()+"-"+filter_name_short+"-static.json")
+            fn = os.path.join(opts.destdir, ITS().get_filter_item_agg_file(item_file, filter_))
+            createJSON(agg, fn)
 
             if (filter_name in ["company","domain"]):
                 top = ITS.get_filter_item_top(item, filter_, startdate, enddate, identities_db, opts.npeople)
-                createJSON(top, opts.destdir+"/"+ITS.get_filter_item_top_file(item, filter_))
+                createJSON(top, opts.destdir+"/"+ITS.get_filter_item_top_file(item_file, filter_))
 
         if (filter_name == "company"):
             closed = ITS.get_filter_summary(filter_, period, startdate, enddate, identities_db, 10)

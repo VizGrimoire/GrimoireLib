@@ -100,7 +100,7 @@ class SCR(DataSource):
     def create_evolutionary_report (period, startdate, enddate, i_db, type_analysis = None):
         opts = read_options()
         data =  SCR.get_evolutionary_data (period, startdate, enddate, i_db, type_analysis)
-        filename = SCR.get_evolutionary_filename(SCR.get_name())
+        filename = SCR().get_evolutionary_filename()
         createJSON (data, os.path.join(opts.destdir, filename))
 
     @staticmethod
@@ -160,7 +160,7 @@ class SCR(DataSource):
     def create_agg_report (period, startdate, enddate, i_db, type_analysis = None):
         opts = read_options()
         data = SCR.get_agg_data (period, startdate, enddate, i_db, type_analysis)
-        filename = SCR.get_agg_filename(SCR.get_name())
+        filename = SCR().get_agg_filename()
         createJSON (data, os.path.join(opts.destdir, filename))
 
     @staticmethod
@@ -268,7 +268,6 @@ class SCR(DataSource):
 
 
         filter_name = filter_.get_name()
-        filter_name_short = filter_.get_name_short()
 
         if not isinstance(items, (list)):
             items = [items]
@@ -288,16 +287,19 @@ class SCR(DataSource):
             type_analysis = [filter_.get_name(), item]
 
             evol = SCR.get_filter_item_evol(startdate, enddate, identities_db, type_analysis)
-            createJSON(evol, opts.destdir+"/"+item_file+"-"+SCR.get_name()+"-"+filter_name_short+"-evolutionary.json")
+            fn = os.path.join(opts.destdir, SCR().get_filter_item_evol_file(item_file, filter_))
+            createJSON(evol, fn)
 
             # Static
             agg = SCR.get_filter_item_agg(startdate, enddate, identities_db, type_analysis)
-            createJSON(agg, opts.destdir + "/"+item_file + "-"+SCR.get_name()+"-"+filter_name_short+"-static.json")
+            fn = os.path.join(opts.destdir, SCR().get_filter_item_agg_file(item_file, filter_))
+            createJSON(agg, fn)
             if (filter_name == "repository"):
                 items_list["submitted"].append(agg["submitted"])
                 items_list["review_time_days_median"].append(agg['review_time_days_median'])
 
-        createJSON(items_list, opts.destdir+"/"+SCR.get_name()+"-"+filter_.get_name_plural()+".json")
+        fn = os.path.join(opts.destdir, SCR().get_filter_file(filter_))
+        createJSON(items_list, fn)
 
     # Unify top format
     @staticmethod

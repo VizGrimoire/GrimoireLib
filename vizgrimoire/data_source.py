@@ -44,9 +44,8 @@ class DataSource(object):
     def get_db_name(self):
         raise NotImplementedError
 
-    @staticmethod
-    def get_evolutionary_filename (ds_name):
-        return ds_name+"-evolutionary.json"
+    def get_evolutionary_filename (self):
+        return self.get_name()+"-evolutionary.json"
 
     @staticmethod
     def get_evolutionary_data (period, startdate, enddate, identities_db, type_analysis = None):
@@ -56,9 +55,8 @@ class DataSource(object):
     def create_evolutionary_report (period, startdate, enddate, identities_db, type_analysis = None):
         raise NotImplementedError
 
-    @staticmethod
-    def get_agg_filename (ds_name):
-        return ds_name+"-static.json"
+    def get_agg_filename (self):
+        return self.get_name()+"-static.json"
 
     @staticmethod
     def get_agg_data (period, startdate, enddate, identities_db, type_analysis = None):
@@ -76,6 +74,9 @@ class DataSource(object):
     def create_top_report (startdate, enddate, identities_db):
         raise NotImplementedError
 
+    def get_filter_file(self, filter_):
+        return self.get_name()+"-"+filter_.get_name_plural()+".json"
+
     @staticmethod
     def get_filter_items(period, startdate, enddate, identities_db, filter_):
         raise NotImplementedError
@@ -88,9 +89,19 @@ class DataSource(object):
     def get_filter_summary(filter_, period, startdate, enddate, identities_db, limit):
         raise NotImplementedError
 
+    def get_filter_item_evol_file(self, item, filter_):
+        filter_name_short = filter_.get_name_short()
+        item = item.replace("/","_").replace("<","__").replace(">","___")
+        return item+"-"+self.get_name()+"-"+filter_name_short+"-evolutionary.json"
+
     @staticmethod
     def get_filter_item_evol(startdate, enddate, identities_db, type_analysis):
         raise NotImplementedError
+
+    def get_filter_item_agg_file(self, item, filter_):
+        filter_name_short = filter_.get_name_short()
+        item = item.replace("/","_").replace("<","__").replace(">","___")
+        return item+"-"+self.get_name()+"-"+filter_name_short+"-static.json"
 
     @staticmethod
     def get_filter_item_agg(startdate, enddate, identities_db, type_analysis):
@@ -116,8 +127,8 @@ class DataSource(object):
     def get_top_people(startdate, enddate, identities_db, npeople):
         raise NotImplementedError
 
-    @staticmethod
-    def get_person_evol_file(upeople_id, ds):
+    def get_person_evol_file(self, upeople_id):
+        ds = self.get_name()
         name = "people-"+str(upeople_id)+"-"+ds+"-evolutionary.json"
         return name
 
@@ -125,8 +136,8 @@ class DataSource(object):
     def get_person_evol(upeople_id, period, startdate, enddate, identities_db, type_analysis):
         raise NotImplementedError
 
-    @staticmethod
-    def get_person_agg_file(upeople_id, ds):
+    def get_person_agg_file(self, upeople_id):
+        ds = self.get_name()
         name = "people-"+str(upeople_id)+"-"+ds+"-static.json"
         return name
 
@@ -137,7 +148,6 @@ class DataSource(object):
     def create_people_report(self, period, startdate, enddate, identities_db):
         opts = read_options()
         fpeople = os.path.join(opts.destdir,self.get_top_people_file(self.get_name()))
-        logging.info(fpeople)
         people = self.get_top_people(startdate, enddate, identities_db, opts.npeople)
         createJSON(people, fpeople)
 

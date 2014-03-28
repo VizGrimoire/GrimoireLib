@@ -65,7 +65,7 @@ class SCM(DataSource):
     def create_evolutionary_report (period, startdate, enddate, i_db, type_analysis = None):
         opts = read_options()
         data =  SCM.get_evolutionary_data (period, startdate, enddate, i_db, type_analysis)
-        filename = SCM.get_evolutionary_filename(SCM.get_name())
+        filename = SCM().get_evolutionary_filename()
         createJSON (data, os.path.join(opts.destdir, filename))
 
     @staticmethod
@@ -111,7 +111,7 @@ class SCM(DataSource):
     def create_agg_report (period, startdate, enddate, i_db, type_analysis = None):
         opts = read_options()
         data = SCM.get_agg_data (period, startdate, enddate, i_db, type_analysis)
-        filename = SCM.get_agg_filename(SCM.get_name())
+        filename = SCM().get_agg_filename()
         createJSON (data, os.path.join(opts.destdir, filename))
 
     @staticmethod
@@ -202,12 +202,12 @@ class SCM(DataSource):
         items = items['name']
 
         filter_name = filter_.get_name()
-        filter_name_short = filter_.get_name_short()
 
         if not isinstance(items, (list)):
             items = [items]
 
-        createJSON(items, opts.destdir+"/"+SCM.get_name()+"-"+filter_.get_name_plural()+".json")
+        fn = os.path.join(opts.destdir, SCM().get_filter_file(filter_))
+        createJSON(items, fn)
 
         for item in items :
             item_name = "'"+ item+ "'"
@@ -215,10 +215,12 @@ class SCM(DataSource):
             type_analysis = [filter_.get_name(), item_name]
 
             evol_data = SCM.get_filter_item_evol(startdate, enddate, identities_db, type_analysis)
-            createJSON(evol_data, opts.destdir+"/"+item+"-"+SCM.get_name()+"-"+filter_name_short+"-evolutionary.json")
+            fn = os.path.join(opts.destdir, SCM().get_filter_item_evol_file(item, filter_))
+            createJSON(evol_data, fn)
 
             agg = SCM.get_filter_item_agg(startdate, enddate, identities_db, type_analysis)
-            createJSON(agg, opts.destdir+"/"+item+"-"+SCM.get_name()+"-"+filter_name_short+"-static.json")
+            fn = os.path.join(opts.destdir, SCM().get_filter_item_agg_file(item, filter_))
+            createJSON(agg, fn)
 
             if (filter_name == "company"):
                 top_authors = SCM.get_filter_item_top(item, filter_, startdate, enddate, identities_db, opts.npeople)

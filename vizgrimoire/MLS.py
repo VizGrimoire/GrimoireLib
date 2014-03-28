@@ -71,7 +71,7 @@ class MLS(DataSource):
     def create_evolutionary_report (period, startdate, enddate, i_db, type_analysis = None):
         opts = read_options()
         data =  MLS.get_evolutionary_data (period, startdate, enddate, i_db, type_analysis)
-        filename = MLS.get_evolutionary_filename(MLS.get_name())
+        filename = MLS().get_evolutionary_filename()
         createJSON (data, os.path.join(opts.destdir, filename))
 
     @staticmethod
@@ -107,7 +107,7 @@ class MLS(DataSource):
     def create_agg_report (period, startdate, enddate, i_db, type_analysis = None):
         opts = read_options()
         data = MLS.get_agg_data (period, startdate, enddate, i_db, type_analysis)
-        filename = MLS.get_agg_filename(MLS.get_name())
+        filename = MLS().get_agg_filename()
         createJSON (data, os.path.join(opts.destdir, filename))
 
     @staticmethod
@@ -219,7 +219,8 @@ class MLS(DataSource):
         items_files = [item.replace('/', '_').replace("<","__").replace(">","___")
             for item in items]
 
-        createJSON(items_files, opts.destdir+"/"+MLS.get_name()+"-"+filter_.get_name_plural()+".json")
+        fn = os.path.join(opts.destdir, MLS().get_filter_file(filter_))
+        createJSON(items_files, fn)
 
         for item in items :
             item_name = "'"+ item+ "'"
@@ -228,13 +229,15 @@ class MLS(DataSource):
             type_analysis = [filter_.get_name(), item_name]
 
             evol_data = MLS.get_filter_item_evol(startdate, enddate, identities_db, type_analysis)
-            createJSON(evol_data, opts.destdir+"/"+item_file+"-"+MLS.get_name()+"-"+filter_name_short+"-evolutionary.json")
+            fn = os.path.join(opts.destdir, MLS().get_filter_item_evol_file(item_file, filter_))
+            createJSON(evol_data, fn)
 
             agg = MLS.get_filter_item_agg(startdate, enddate, identities_db, type_analysis)
-            createJSON(agg, opts.destdir+"/"+item_file+"-"+MLS.get_name()+"-"+filter_name_short+"-static.json")
+            fn = os.path.join(opts.destdir, MLS().get_filter_item_agg_file(item_file, filter_))
+            createJSON(agg, fn)
 
             top_senders = MLS.get_filter_item_top(item, filter_, startdate, enddate, identities_db, opts.npeople)
-            createJSON(top_senders, opts.destdir+"/"+MLS.get_filter_item_top_file(item, filter_))
+            createJSON(top_senders, opts.destdir+"/"+MLS.get_filter_item_top_file(item_file, filter_))
 
         if (filter_name == "company"):
             sent = MLS.get_filter_summary(filter_, period, startdate, enddate, identities_db, 10)

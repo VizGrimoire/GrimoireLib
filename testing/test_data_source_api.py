@@ -67,7 +67,7 @@ class DataSourceTest(unittest.TestCase):
 
     def test_get_evolutionary_filename(self):
         for ds in Report.get_data_sources():
-            f_evol = ds.get_evolutionary_filename(ds.get_name())
+            f_evol = ds().get_evolutionary_filename()
             self.assertNotEqual(f_evol, "")
 
     def test_get_evolutionary_data(self):
@@ -87,7 +87,7 @@ class DataSourceTest(unittest.TestCase):
             ds_data = ds.get_evolutionary_data (period, startdate,
                                                 enddate, identities_db)
 
-            test_json = ds.get_evolutionary_filename(ds.get_name())
+            test_json = ds().get_evolutionary_filename()
             f_test_json = os.path.join("json", test_json)
 
             self.assertTrue(DataSourceTest._compare_data(ds_data, f_test_json))
@@ -109,7 +109,7 @@ class DataSourceTest(unittest.TestCase):
             ds.create_evolutionary_report (period, startdate,
                                            enddate, identities_db)
 
-            ds_json = ds.get_evolutionary_filename(ds.get_name())
+            ds_json = ds().get_evolutionary_filename()
             f_test_json = os.path.join("json", ds_json)
             f_report_json = os.path.join(opts.destdir, ds_json)
 
@@ -128,7 +128,7 @@ class DataSourceTest(unittest.TestCase):
 
     def test_get_agg_filename(self):
         for ds in Report.get_data_sources():
-            f_agg = ds.get_agg_filename(ds.get_name())
+            f_agg = ds().get_agg_filename()
             self.assertNotEqual(f_agg, "")
 
     def test_get_agg_data(self):
@@ -148,7 +148,7 @@ class DataSourceTest(unittest.TestCase):
             ds_data = ds.get_agg_data (period, startdate,
                                                 enddate, identities_db)
 
-            test_json = os.path.join("json",ds.get_agg_filename(ds.get_name()))
+            test_json = os.path.join("json",ds().get_agg_filename())
 
             self.assertTrue(DataSourceTest._compare_data(ds_data, test_json))
 
@@ -169,7 +169,7 @@ class DataSourceTest(unittest.TestCase):
             ds.create_agg_report (period, startdate,
                                   enddate, identities_db)
 
-            ds_json = ds.get_agg_filename(ds.get_name())
+            ds_json = ds().get_agg_filename()
             f_test_json = os.path.join("json", ds_json)
             f_report_json = os.path.join(opts.destdir, ds_json)
 
@@ -358,14 +358,14 @@ class DataSourceTest(unittest.TestCase):
             for upeople_id in people :
                 evol_data = ds.get_person_evol(upeople_id, period, startdate, enddate,
                                                 identities_db, type_analysis = None)
-                fperson = ds.get_person_evol_file(upeople_id, ds.get_name())
+                fperson = ds().get_person_evol_file(upeople_id)
                 test_json = os.path.join("json",fperson)
                 self.assertTrue(DataSourceTest._compare_data(evol_data, test_json))
 
 
                 agg = ds.get_person_agg(upeople_id, startdate, enddate,
                                          identities_db, type_analysis = None)
-                fperson = ds.get_person_agg_file(upeople_id, ds.get_name())
+                fperson = ds().get_person_agg_file(upeople_id)
                 test_json = os.path.join("json",fperson)
                 self.assertTrue(DataSourceTest._compare_data(agg, test_json))
 
