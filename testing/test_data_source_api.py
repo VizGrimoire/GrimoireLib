@@ -315,7 +315,6 @@ class DataSourceTest(unittest.TestCase):
         enddate = "'"+opts.enddate+"'"
         npeople = opts.npeople
 
-
         automator = read_main_conf(opts.config_file)
         identities_db = automator['generic']['db_identities']
 
@@ -335,8 +334,49 @@ class DataSourceTest(unittest.TestCase):
                                                  enddate, identities_db, npeople)
                     if top is None: continue
                     test_json = os.path.join("json",ds.get_filter_item_top_file(item, filter_))
-                    print(test_json)
                     self.assertTrue(DataSourceTest._compare_data(top, test_json))
+
+    # get_top_people, get_person_evol, get_person_agg tests included
+    def test_create_people_report(self):
+        #period, startdate, enddate, identities_db):
+        opts = read_options()
+        startdate = "'"+opts.startdate+"'"
+        enddate = "'"+opts.enddate+"'"
+        period = getPeriod(opts.granularity)
+
+        automator = read_main_conf(opts.config_file)
+        identities_db = automator['generic']['db_identities']
+
+        for ds in Report.get_data_sources():
+            Report.connect_ds(ds)
+
+            fpeople = ds.get_top_people_file(ds.get_name())
+            people = ds.get_top_people(startdate, enddate, identities_db, opts.npeople)
+            test_json = os.path.join("json",fpeople)
+            self.assertTrue(DataSourceTest._compare_data(people, test_json))
+
+            for upeople_id in people :
+                evol_data = ds.get_person_evol(upeople_id, period, startdate, enddate,
+                                                identities_db, type_analysis = None)
+                fperson = ds.get_person_evol_file(upeople_id, ds.get_name())
+                test_json = os.path.join("json",fperson)
+                self.assertTrue(DataSourceTest._compare_data(evol_data, test_json))
+
+
+                agg = ds.get_person_agg(upeople_id, startdate, enddate,
+                                         identities_db, type_analysis = None)
+                fperson = ds.get_person_agg_file(upeople_id, ds.get_name())
+                test_json = os.path.join("json",fperson)
+                self.assertTrue(DataSourceTest._compare_data(agg, test_json))
+
+    def test_create_r_reports(self):
+        pass
+        # vizr, enddate):
+        for ds in Report.get_data_sources():
+            if ds.get_name() in ['scr','mediawiki','irc']:
+                continue
+            Report.connect_ds(ds)
+
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.WARN,format='%(asctime)s %(message)s')
