@@ -88,7 +88,22 @@ print data.timeseries()
 
 ## Tests
 
-There are some tests available:
+There are some tests available. Before running the test, you need to load the test databases into MySQL. For example, for loading the SCM testing database:
+
+```
+[Shell prompt]
+mysql -u jgb -pXXX
+...
+[MySQL prompt]
+CREATE DATABASE IF NOT EXISTS cp_cvsanaly_GrimoireLibTests;
+quit
+[Back in shell prompt]
+mysql -u jgb -pXXX  cp_cvsanaly_GrimoireLibTests  < source_code.mysql
+```
+
+Databases for testing can be obtained from the [testing/db directory](https://github.com/VizGrimoire/GrimoireLib/tree/master/testing/db) in the GrimoireLib repository 
+
+Tests:
 
 * test_scm_query.py
 
