@@ -370,12 +370,8 @@ class DataSourceTest(unittest.TestCase):
                 self.assertTrue(DataSourceTest._compare_data(agg, test_json))
 
     def test_create_r_reports(self):
+        # R black box generated reports. Can not test
         pass
-        # vizr, enddate):
-        for ds in Report.get_data_sources():
-            if ds.get_name() in ['scr','mediawiki','irc']:
-                continue
-            Report.connect_ds(ds)
 
 
 if __name__ == '__main__':
