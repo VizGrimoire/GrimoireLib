@@ -92,17 +92,18 @@ class TestSCMQuery (unittest.TestCase):
             Each item in results corresponds to an item in variables
         """
 
-        # Test for nauthors
+        # Test for variable (count)
         res = self.session.query().select_nscmlog(variables) \
             .filter_period(start=self.start,end=self.end).all()
         self.assertEqual (res, results[0])
-        # Test for nauthors that "touch files" (merges are excluded)
+        # Test for variable (count) considering only commits "touch files"
+        #  (that is, merges are excluded)
         res = self.session.query().select_nscmlog(variables) \
             .filter_nomerges() \
             .filter_period(start=self.start, end=self.end) \
             .all()
         self.assertEqual (res, results[1])
-        # Test for nauthors, using authoring date
+        # Test for variable (count), using authoring date for commits
         res = self.session.query().select_nscmlog(variables) \
             .filter_period(start=self.start, end=self.end, date="author") \
             .all()
