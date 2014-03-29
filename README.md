@@ -88,7 +88,7 @@ print data.timeseries()
 
 ## Tests
 
-There are some tests available. Before running the test, you need to load the test databases into MySQL. For example, for loading the SCM testing database (run from the shell prompt):
+There are some tests available. Before running them, you need to load the test databases into MySQL. For example, for loading the SCM testing database (run from the shell prompt):
 
 ```
 mysql -u jgb -pXXX -e "CREATE DATABASE cp_cvsanaly_GrimoireLibTests"
@@ -97,8 +97,11 @@ mysql -u jgb -pXXX  cp_cvsanaly_GrimoireLibTests  < source_code.mysql
 
 Databases for testing can be obtained from the [testing/db directory](https://github.com/VizGrimoire/GrimoireLib/tree/master/testing/db) in the GrimoireLib repository 
 
+In addition, you'll need to change the database url in the test programs to match the exact location where you uploaded the database dumps.
+
 Tests:
 
 * test_scm_query.py
+* test_query.py
+* test_var.py
 
-For testing, the vizgrimoire_cvsanaly MySQL database is used. A dump of the exact version used for that purpose is available in the file vizgrimoire_cvsanaly.mysql.gz. Before running the tests, create that database, load the dump, and change the database url in the test file to the one you are using.

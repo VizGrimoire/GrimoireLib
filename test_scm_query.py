@@ -27,19 +27,24 @@ from datetime import datetime
 from timeseries import TimeSeries
 import unittest
 
-database = 'mysql://jgb:XXX@localhost/vizgrimoire_cvsanaly'
+db_prefix = 'mysql://jgb:XXX@localhost/'
 # Set UTF-8, and avoid the DBAPI Unicode support, to use SQLAlchemy's,
 # which is said to be more efficient
-database += '?charset=utf8&use_unicode=0'
+db_suffix = '?charset=utf8&use_unicode=0'
+database = db_prefix + "cp_cvsanaly_GrimoireLibTests" + db_suffix
+database_id = db_prefix + "cp_cvsanaly_GrimoireLibTests" + db_suffix
 
 class TestBuildSession (unittest.TestCase):
 
     def setUp (self):
         self.database = database
+        self.database_id = database_id
 
     def test_get_session (self):
 
-        session = buildSession(database=self.database, echo=False)
+        session = buildSession(database=self.database,
+                               database_id = self.database_id,
+                               echo=False)
 
 class TestSCMQuery (unittest.TestCase):
 
