@@ -29,10 +29,11 @@ class Filter(object):
     name = None
     name_short = None
 
-    def __init__(self, name, name_short, name_plural):
+    def __init__(self, name, name_short, name_plural, item):
         self.name = name
         self.name_short = name_short
         self.name_plural = name_plural
+        self.item = item
 
     def get_name(self):
         return self.name
