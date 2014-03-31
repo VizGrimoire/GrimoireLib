@@ -267,7 +267,7 @@ class DataSourceTest(unittest.TestCase):
 
         for ds in Report.get_data_sources():
             Report.connect_ds(ds)
-            top = ds.get_top_data(startdate, enddate, identities_db, npeople)
+            top = ds.get_top_data(startdate, enddate, identities_db, None, npeople)
             test_json = os.path.join("json",ds.get_name()+"-top.json")
             self.assertTrue(DataSourceTest._compare_data(top, test_json))
 
@@ -325,15 +325,16 @@ class DataSourceTest(unittest.TestCase):
             Report.connect_ds(ds)
             bots = ds.get_bots()
             for filter_ in Report.get_filters():
-                items = ds.get_filter_items(filter_, startdate, enddate, identities_db, bots)
+                items = ds.get_filter_items(filter_, startdate, enddate,
+                                            identities_db, bots)
                 if items is None: continue
                 if (isinstance(items, dict)): items = items['name']
                 if not isinstance(items, (list)): items = [items]
 
                 for item in items:
                     filter_item = Filter(filter_.get_name(), item)
-                    top = ds.get_filter_item_top(item, filter_, startdate,
-                                                 enddate, identities_db, npeople)
+                    top = ds.get_top_data(startdate, enddate, identities_db,
+                                          filter_item, npeople)
                     if top is None: continue
                     test_json = os.path.join("json",filter_item.get_top_filename(ds()))
                     self.assertTrue(DataSourceTest._compare_data(top, test_json))

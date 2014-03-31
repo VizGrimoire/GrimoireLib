@@ -164,31 +164,41 @@ class ITS(DataSource):
         createJSON (data, os.path.join(opts.destdir, filename))
 
     @staticmethod
-    def get_top_data (startdate, enddate, identities_db, npeople):
+    def get_top_data (startdate, enddate, identities_db, filter_, npeople):
         bots = ITS.get_bots()
         closed_condition =  ITS._get_closed_condition()
+        top = None
 
-        # Top closers
-        top_closers_data = {}
-        # top_closers_data['closers.']=dataFrame2Dict(vizr.GetTopClosers(0, startdate, enddate,identities_db, bots, closed_condition))
-        top_closers_data['closers.']=GetTopClosers(0, startdate, enddate,identities_db, bots, closed_condition, npeople)
-        top_closers_data['closers.last year']=GetTopClosers(365, startdate, enddate,identities_db, bots, closed_condition, npeople)
-        top_closers_data['closers.last month']=GetTopClosers(31, startdate, enddate,identities_db, bots, closed_condition, npeople)
+        if filter_ is None:
+            top_closers_data = {}
+            top_closers_data['closers.']=GetTopClosers(0, startdate, enddate,identities_db, bots, closed_condition, npeople)
+            top_closers_data['closers.last year']=GetTopClosers(365, startdate, enddate,identities_db, bots, closed_condition, npeople)
+            top_closers_data['closers.last month']=GetTopClosers(31, startdate, enddate,identities_db, bots, closed_condition, npeople)
 
-        # Top openers
-        top_openers_data = {}
-        top_openers_data['openers.']=GetTopOpeners(0, startdate, enddate,identities_db, bots, closed_condition, npeople)
-        top_openers_data['openers.last year']=GetTopOpeners(365, startdate, enddate,identities_db, bots, closed_condition, npeople)
-        top_openers_data['openers.last month']=GetTopOpeners(31, startdate, enddate,identities_db, bots, closed_condition, npeople)
+            top_openers_data = {}
+            top_openers_data['openers.']=GetTopOpeners(0, startdate, enddate,identities_db, bots, closed_condition, npeople)
+            top_openers_data['openers.last year']=GetTopOpeners(365, startdate, enddate,identities_db, bots, closed_condition, npeople)
+            top_openers_data['openers.last month']=GetTopOpeners(31, startdate, enddate,identities_db, bots, closed_condition, npeople)
 
-        all_top = dict(top_closers_data.items() + top_openers_data.items())
+            top = dict(top_closers_data.items() + top_openers_data.items())
 
-        return all_top
+        else:
+            filter_name = filter_.get_name()
+            item = "'"+filter_.get_item()+"'"
+
+            if (filter_name == "company"):
+                top = GetCompanyTopClosers(item, startdate, enddate, identities_db, bots, closed_condition, npeople)
+            elif (filter_name == "domain"):
+                top = GetDomainTopClosers(item, startdate, enddate, identities_db, bots, closed_condition, npeople)
+            else:
+                top = None
+
+        return top
 
     @staticmethod
     def create_top_report (startdate, enddate, i_db):
         opts = read_options()
-        data = ITS.get_top_data (startdate, enddate, i_db, opts.npeople)
+        data = ITS.get_top_data (startdate, enddate, i_db, None, opts.npeople)
         createJSON (data, opts.destdir+"/"+ITS().get_top_filename())
 
     @staticmethod
@@ -243,23 +253,6 @@ class ITS(DataSource):
         return summary
 
     @staticmethod
-    def get_filter_item_top(item, filter_, startdate, enddate, identities_db, npeople):
-        top = None
-        filter_name = filter_.get_name()
-        closed_condition =  ITS._get_closed_condition()
-        bots = ITS.get_bots()
-        item = "'"+item+"'"
-
-
-        if (filter_name == "company"):
-            top = GetCompanyTopClosers(item, startdate, enddate, identities_db, bots, closed_condition, npeople)
-
-        elif (filter_name == "domain"):
-            top = GetDomainTopClosers(item, startdate, enddate, identities_db, bots, closed_condition, npeople)
-
-        return top
-
-    @staticmethod
     def create_filter_report(filter_, startdate, enddate, identities_db, bots):
         opts = read_options()
         period = getPeriod(opts.granularity)
@@ -293,7 +286,7 @@ class ITS(DataSource):
             createJSON(agg, fn)
 
             if (filter_name in ["company","domain"]):
-                top = ITS.get_filter_item_top(item, filter_, startdate, enddate, identities_db, opts.npeople)
+                top = ITS.get_top_data(startdate, enddate, identities_db, filter_item, opts.npeople)
                 fn = os.path.join(opts.destdir, filter_item.get_top_filename(ITS()))
                 createJSON(top, fn)
 
@@ -303,7 +296,7 @@ class ITS(DataSource):
 
     @staticmethod
     def get_top_people(startdate, enddate, identities_db, npeople):
-        top_data = ITS.get_top_data (startdate, enddate, identities_db, npeople)
+        top_data = ITS.get_top_data (startdate, enddate, identities_db, None, npeople)
 
         top = top_data['closers.']["id"]
         top += top_data['closers.last year']["id"]

@@ -116,18 +116,23 @@ class SCM(DataSource):
         createJSON (data, os.path.join(opts.destdir, filename))
 
     @staticmethod
-    def get_top_data (startdate, enddate, i_db, npeople):
-        top_authors_data =  {}
-        top_authors_data['authors.'] = top_people(0, startdate, enddate, "author" , "" , npeople)
-        top_authors_data['authors.last month']= top_people(31, startdate, enddate, "author", "", npeople)
-        top_authors_data['authors.last year']= top_people(365, startdate, enddate, "author", "", npeople)
+    def get_top_data (startdate, enddate, i_db, filter_, npeople):
+        top = {}
 
-        return top_authors_data
+        if filter_ is None:
+            top['authors.'] = top_people(0, startdate, enddate, "author" , "" , npeople)
+            top['authors.last month']= top_people(31, startdate, enddate, "author", "", npeople)
+            top['authors.last year']= top_people(365, startdate, enddate, "author", "", npeople)
+        elif filter_.get_name() == "company":
+            top = company_top_authors("'"+filter_.get_item()+"'", startdate, enddate, npeople)
+        else:
+            top = None
+        return top
 
     @staticmethod
     def create_top_report (startdate, enddate, i_db):
         opts = read_options()
-        data = SCM.get_top_data (startdate, enddate, i_db, opts.npeople)
+        data = SCM.get_top_data (startdate, enddate, i_db, None, opts.npeople)
         createJSON (data, opts.destdir+"/"+SCM().get_top_filename())
 
     @staticmethod
@@ -179,15 +184,6 @@ class SCM(DataSource):
         return summary
 
     @staticmethod
-    def get_filter_item_top(item, filter_, startdate, enddate, identities_db, npeople):
-        top = None
-        filter_name = filter_.get_name()
-
-        if (filter_name == "company"):
-            top = company_top_authors("'"+item+"'", startdate, enddate, npeople)
-        return top
-
-    @staticmethod
     def create_filter_report(filter_, startdate, enddate, identities_db, bots):
         opts = read_options()
         period = getPeriod(opts.granularity)
@@ -219,7 +215,7 @@ class SCM(DataSource):
             createJSON(agg, fn)
 
             if (filter_name == "company"):
-                top_authors = SCM.get_filter_item_top(item, filter_, startdate, enddate, identities_db, opts.npeople)
+                top_authors = SCM.get_top_data(startdate, enddate, identities_db, filter_item, opts.npeople)
                 fn = os.path.join(opts.destdir, filter_item.get_top_filename(SCM()))
                 createJSON(top_authors, fn)
 
@@ -234,7 +230,7 @@ class SCM(DataSource):
 
     @staticmethod
     def get_top_people(startdate, enddate, identities_db, npeople):
-        top_authors_data = SCM.get_top_data (startdate, enddate, identities_db, npeople)
+        top_authors_data = SCM.get_top_data (startdate, enddate, identities_db, None, npeople)
         top = top_authors_data['authors.']["id"]
         top += top_authors_data['authors.last year']["id"]
         top += top_authors_data['authors.last month']["id"]

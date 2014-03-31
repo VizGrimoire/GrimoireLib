@@ -85,15 +85,12 @@ class DataSource(object):
         return name
 
     @staticmethod
-    def get_top_data (startdate, enddate, identities_db, npeople):
+    def get_top_data (startdate, enddate, identities_db, filter_, npeople):
         raise NotImplementedError
 
     @staticmethod
     def create_top_report (startdate, enddate, identities_db):
         raise NotImplementedError
-
-    def __get_filter_file(self, filter_):
-        return self.get_name()+"-"+filter_.get_name_plural()+".json"
 
     @staticmethod
     def get_filter_items(period, startdate, enddate, identities_db, filter_):
@@ -113,10 +110,6 @@ class DataSource(object):
 
     @staticmethod
     def get_filter_item_agg(startdate, enddate, identities_db, type_analysis):
-        raise NotImplementedError
-
-    @staticmethod
-    def get_filter_item_top(item, filter_, startdate, enddate, identities_db, npeople):
         raise NotImplementedError
 
     @staticmethod

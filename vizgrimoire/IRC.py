@@ -76,7 +76,7 @@ class IRC(DataSource):
         createJSON (data, os.path.join(opts.destdir, filename))
 
     @staticmethod
-    def get_top_data (startdate, enddate, identities_db, npeople):
+    def get_top_data (startdate, enddate, identities_db, filter_, npeople):
         bots = IRC.get_bots()
 
         top_senders = {}
@@ -92,7 +92,7 @@ class IRC(DataSource):
     @staticmethod
     def create_top_report (startdate, enddate, i_db):
         opts = read_options()
-        data = IRC.get_top_data (startdate, enddate, i_db, opts.npeople)
+        data = IRC.get_top_data (startdate, enddate, i_db, None, opts.npeople)
         top_file = opts.destdir+"/"+IRC().get_top_filename()
         createJSON (data, top_file)
 
@@ -164,7 +164,7 @@ class IRC(DataSource):
 
     @staticmethod
     def get_top_people(startdate, enddate, identities_db, npeople):
-        top_data = IRC.get_top_data (startdate, enddate, identities_db, npeople)
+        top_data = IRC.get_top_data (startdate, enddate, identities_db, None, npeople)
 
         top = top_data['senders.']["id"]
         top += top_data['senders.last year']["id"]

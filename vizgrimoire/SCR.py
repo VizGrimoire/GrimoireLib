@@ -166,7 +166,7 @@ class SCR(DataSource):
         createJSON (data, os.path.join(opts.destdir, filename))
 
     @staticmethod
-    def get_top_data (startdate, enddate, identities_db, npeople):
+    def get_top_data (startdate, enddate, identities_db, filter_, npeople):
         bots = SCR.get_bots()
 
         top_reviewers = {}
@@ -194,7 +194,7 @@ class SCR(DataSource):
     @staticmethod
     def create_top_report (startdate, enddate, i_db):
         opts = read_options()
-        data = SCR.get_top_data (startdate, enddate, i_db, opts.npeople)
+        data = SCR.get_top_data (startdate, enddate, i_db, None, opts.npeople)
         createJSON (data, opts.destdir+"/"+SCR().get_top_filename())
 
     @staticmethod
@@ -315,7 +315,7 @@ class SCR(DataSource):
     @staticmethod
     def get_top_people(startdate, enddate, identities_db, npeople):
 
-        top_data = SCR.get_top_data (startdate, enddate, identities_db, npeople)
+        top_data = SCR.get_top_data (startdate, enddate, identities_db, None, npeople)
 
         top  = SCR._safeTopIds(top_data['reviewers'])
         top += SCR._safeTopIds(top_data['reviewers.last year'])

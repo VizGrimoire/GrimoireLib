@@ -113,20 +113,35 @@ class MLS(DataSource):
         createJSON (data, os.path.join(opts.destdir, filename))
 
     @staticmethod
-    def get_top_data (startdate, enddate, identities_db, npeople):
+    def get_top_data (startdate, enddate, identities_db, filter_, npeople):
         bots = MLS.get_bots()
+        if filter_ is None:
+            top = {}
+            top['senders.']=top_senders(0, startdate, enddate,identities_db,bots, npeople)
+            top['senders.last year']=top_senders(365, startdate, enddate,identities_db, bots, npeople)
+            top['senders.last month']=top_senders(31, startdate, enddate,identities_db,bots, npeople)
+        else:
+            filter_name = filter_.get_name()
+            item = filter_.get_item()
 
-        top_senders_data = {}
-        top_senders_data['senders.']=top_senders(0, startdate, enddate,identities_db,bots, npeople)
-        top_senders_data['senders.last year']=top_senders(365, startdate, enddate,identities_db, bots, npeople)
-        top_senders_data['senders.last month']=top_senders(31, startdate, enddate,identities_db,bots, npeople)
+            if (filter_name == "company"):
+                top = companyTopSenders (item, identities_db, startdate, enddate, npeople)
+            elif (filter_name == "country"):
+                top = countryTopSenders (item, identities_db, startdate, enddate, npeople)
+            elif (filter_name == "domain"):
+                top = domainTopSenders(item, identities_db, startdate, enddate, npeople)
+            elif (filter_name == "repository"):
+                rfield = MLS.get_repo_field()
+                top = repoTopSenders (item, identities_db, startdate, enddate, rfield, npeople)
+            else:
+                top = None
 
-        return top_senders_data
+        return top
 
     @staticmethod
     def create_top_report (startdate, enddate, i_db):
         opts = read_options()
-        data = MLS.get_top_data (startdate, enddate, i_db, opts.npeople)
+        data = MLS.get_top_data (startdate, enddate, i_db, None, opts.npeople)
         top_file = opts.destdir+"/"+MLS().get_top_filename()
         createJSON (data, top_file)
 
@@ -182,22 +197,6 @@ class MLS(DataSource):
         return summary
 
     @staticmethod
-    def get_filter_item_top(item, filter_, startdate, enddate, identities_db, npeople):
-        top_senders = None
-        filter_name = filter_.get_name()
-
-        if (filter_name == "company"):
-            top_senders = companyTopSenders (item, identities_db, startdate, enddate, npeople)
-        elif (filter_name == "country"):
-            top_senders = countryTopSenders (item, identities_db, startdate, enddate, npeople)
-        elif (filter_name == "domain"):
-            top_senders = domainTopSenders(item, identities_db, startdate, enddate, npeople)
-        elif (filter_name == "repository"):
-            rfield = MLS.get_repo_field()
-            top_senders = repoTopSenders (item, identities_db, startdate, enddate, rfield, npeople)
-        return top_senders
-
-    @staticmethod
     def create_filter_report(filter_, startdate, enddate, identities_db, bots):
         opts = read_options()
         period = getPeriod(opts.granularity)
@@ -206,7 +205,6 @@ class MLS(DataSource):
         if (items == None): return
 
         filter_name = filter_.get_name()
-        filter_name_short = filter_.get_name_short()
 
         if not isinstance(items, (list)):
             items = [items]
@@ -219,7 +217,6 @@ class MLS(DataSource):
 
         for item in items :
             item_name = "'"+ item+ "'"
-            item_file = item.replace("/","_").replace("<","__").replace(">","___")
             logging.info (item_name)
             filter_item = Filter(filter_.get_name(), item)
             type_analysis = [filter_.get_name(), item_name]
@@ -232,7 +229,7 @@ class MLS(DataSource):
             fn = os.path.join(opts.destdir, filter_item.get_static_filename(MLS()))
             createJSON(agg, fn)
 
-            top_senders = MLS.get_filter_item_top(item, filter_, startdate, enddate, identities_db, opts.npeople)
+            top_senders = MLS.get_top_data(startdate, enddate, identities_db, filter_item, opts.npeople)
             createJSON(top_senders, opts.destdir+"/"+filter_item.get_top_filename(MLS()))
 
         if (filter_name == "company"):
@@ -241,7 +238,7 @@ class MLS(DataSource):
 
     @staticmethod
     def get_top_people(startdate, enddate, identities_db, npeople):
-        top_data = MLS.get_top_data (startdate, enddate, identities_db, npeople)
+        top_data = MLS.get_top_data (startdate, enddate, identities_db, None, npeople)
 
         top = top_data['senders.']["id"]
         top += top_data['senders.last year']["id"]
