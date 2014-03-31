@@ -1345,7 +1345,7 @@ class Backend(object):
             Backend.reopened_status = 'Reopened'
             Backend.name_log_table = 'issues_log_jira'
 
-        if (its_type == 'launchpad'):
+        if (its_type == 'lp'):
             #Backend.closed_condition = "(new_value='Fix Released' or new_value='Invalid' or new_value='Expired' or new_value='Won''t Fix')"
             Backend.closed_condition = "(new_value='Fix Committed')"
             Backend.statuses = ["Confirmed", "Fix Committed", "New", "In Progress", "Triaged", "Incomplete", "Invalid", "Won\\'t Fix", "Fix Released", "Opinion", "Unknown", "Expired"]
