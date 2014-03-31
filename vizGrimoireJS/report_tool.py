@@ -22,7 +22,7 @@
 #   Alvaro del Castillo <acs@bitergia.com>
 #
 
-import logging
+import logging, sys
 
 from GrimoireUtils import read_options, getPeriod, read_main_conf
 from report import Report
@@ -94,6 +94,18 @@ def create_reports_r(enddate):
         logging.info("Creating R reports for " + ds.get_name())
         ds.create_r_reports(vizr, enddate)
 
+def set_data_source(ds_name):
+    ds_ok = False
+    dss_active = Report.get_data_sources()
+    for ds in dss_active:
+        if ds.get_name() == opts.data_source:
+            ds_ok = True
+            Report.set_data_sources([ds])
+    if not ds_ok:
+        logging.error(opts.data_source + " not available")
+        sys.exit(1)
+
+
 if __name__ == '__main__':
 
     Report.init()
@@ -109,6 +121,9 @@ if __name__ == '__main__':
 
     automator = read_main_conf(opts.config_file)
     identities_db = automator['generic']['db_identities']
+
+    if (opts.data_source):
+        set_data_source(opts.data_source)
 
     bots = []
 

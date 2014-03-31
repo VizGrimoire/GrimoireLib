@@ -96,6 +96,10 @@ def read_options():
                       action="store",
                       dest="config_file",
                       help="Automator config file")
+    parser.add_option("--data-source",
+                      action="store",
+                      dest="data_source",
+                      help="data source to be generated")
 
 
     (opts, args) = parser.parse_args()

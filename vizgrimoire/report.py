@@ -80,5 +80,9 @@ class Report(object):
         return data_sources
 
     @staticmethod
+    def set_data_sources(dss):
+        Report._all_data_sources = dss 
+
+    @staticmethod
     def get_filters():
         return Report._filters
