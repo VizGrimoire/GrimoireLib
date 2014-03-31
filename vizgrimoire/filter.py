@@ -24,16 +24,21 @@
 ## Authors:
 ##   Alvaro del Castillo <acs@bitergia.com>
 
+import logging
 
 class Filter(object):
     name = None
     name_short = None
 
-    def __init__(self, name, name_short, name_plural, item):
+    def __init__(self, name, item = None):
         self.name = name
-        self.name_short = name_short
-        self.name_plural = name_plural
-        self.item = item
+        filters_data = [["repository","rep","repos"],["company","com","companies"],
+                        ["country","cou","countries"],["domain","dom","domains"]]
+        for filter_data in filters_data:
+            if name in filter_data:
+                self.name_short = filter_data[1]
+                self.name_plural = filter_data[2]
+        self.item = item 
 
     def get_name(self):
         return self.name
@@ -43,3 +48,55 @@ class Filter(object):
 
     def get_name_plural(self):
         return self.name_plural
+
+    def get_item(self):
+        return self.item
+
+    def get_filename (self, ds):
+        return ds.get_name()+"-"+self.get_name_plural()+".json"
+
+    def get_evolutionary_filename (self, ds):
+        name  = None
+
+        if (self.get_item() is None):
+            logging.warn("No item defined in get_evolutionary_filename")
+        else:
+            selfname_short = self.get_name_short()
+            item = self.get_item().replace("/","_").replace("<","__").replace(">","___")
+            name = item+"-"+ds.get_name()+"-"+selfname_short+"-evolutionary.json"
+
+        return name
+
+    def get_static_filename (self, ds):
+        name  = None
+
+        if (self.get_item() is None):
+            logging.warn("No item defined in get_static_filename")
+        else:
+            selfname_short = self.get_name_short()
+            item = self.get_item().replace("/","_").replace("<","__").replace(">","___")
+            name = item+"-"+ds.get_name()+"-"+selfname_short+"-static.json"
+
+        return name
+
+    def get_top_filename (self, ds):
+        name  = None
+
+        if (self.get_item() is None):
+            logging.warning("No filename for filter top " + self.get_name())
+        else:
+            item = self.get_item().replace("/","_").replace("<","__").replace(">","___")
+
+            name = item+"-"+ds.get_name()+"-"+self.get_name_short()+"-top-"
+            if (ds.get_name() == "scm"):
+                name += "authors.json"
+            elif (ds.get_name() == "its"):
+                name += "closers.json"
+            elif (ds.get_name() == "mls"): 
+                name += "senders.json"
+            else:
+                logging.warning("No filename for filter top %s %s"
+                                % (self.get_name(), self.get_item()))
+
+        return name
+

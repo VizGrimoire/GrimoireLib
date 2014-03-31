@@ -28,6 +28,8 @@ from GrimoireSQL import GetSQLGlobal, GetSQLPeriod, GetSQLReportFrom
 from GrimoireSQL import GetSQLReportWhere, ExecuteQuery, BuildQuery
 from GrimoireUtils import GetPercentageDiff, GetDates, read_options, getPeriod, createJSON, completePeriodIds
 from data_source import DataSource
+from filter import Filter
+
 
 class IRC(DataSource):
 
@@ -91,7 +93,7 @@ class IRC(DataSource):
     def create_top_report (startdate, enddate, i_db):
         opts = read_options()
         data = IRC.get_top_data (startdate, enddate, i_db, opts.npeople)
-        top_file = opts.destdir+"/"+IRC.get_name()+"-top.json"
+        top_file = opts.destdir+"/"+IRC().get_top_filename()
         createJSON (data, top_file)
 
     @staticmethod
@@ -143,20 +145,21 @@ class IRC(DataSource):
         if not isinstance(items, (list)):
             items = [items]
 
-        fn = os.path.join(opts.destdir, IRC().get_filter_file(filter_))
+        fn = os.path.join(opts.destdir, filter_.get_filename(IRC()))
         createJSON(items, fn)
 
         for item in items :
             # item_name = "'"+ item+ "'"
             logging.info (item)
+            filter_item = Filter(filter_.get_name(), item)
             type_analysis = [filter_.get_name(), item]
 
             evol_data = IRC.get_filter_item_evol(startdate, enddate, identities_db, type_analysis)
-            fn = os.path.join(opts.destdir, IRC().get_filter_item_evol_file(item, filter_))
+            fn = os.path.join(opts.destdir, filter_item.get_evolutionary_filename(IRC()))
             createJSON(completePeriodIds(evol_data), fn)
 
             agg = IRC.get_filter_item_agg(startdate, enddate, identities_db, type_analysis)
-            fn = os.path.join(opts.destdir, IRC().get_filter_item_agg_file(item, filter_))
+            fn = os.path.join(opts.destdir, filter_item.get_static_filename(IRC()))
             createJSON(agg, fn)
 
     @staticmethod

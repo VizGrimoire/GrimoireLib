@@ -35,6 +35,7 @@ from GrimoireUtils import GetPercentageDiff, GetDates, completePeriodIds, read_o
 from GrimoireUtils import createJSON
 
 from data_source import DataSource
+from filter import Filter
 import report
 
 class ITS(DataSource):
@@ -188,7 +189,7 @@ class ITS(DataSource):
     def create_top_report (startdate, enddate, i_db):
         opts = read_options()
         data = ITS.get_top_data (startdate, enddate, i_db, opts.npeople)
-        createJSON (data, opts.destdir+"/"+ITS.get_name()+"-top.json")
+        createJSON (data, opts.destdir+"/"+ITS().get_top_filename())
 
     @staticmethod
     def get_filter_items(filter_, startdate, enddate, identities_db, bots):
@@ -242,13 +243,6 @@ class ITS(DataSource):
         return summary
 
     @staticmethod
-    def get_filter_item_top_file(item, filter_):
-        filter_name_short = filter_.get_name_short()
-        item = item.replace("/","_")
-        fname = item+"-"+ITS.get_name()+"-"+filter_name_short+"-top-closers.json"
-        return fname
-
-    @staticmethod
     def get_filter_item_top(item, filter_, startdate, enddate, identities_db, npeople):
         top = None
         filter_name = filter_.get_name()
@@ -280,26 +274,28 @@ class ITS(DataSource):
         if not isinstance(items, (list)):
             items = [items]
 
-        fn = os.path.join(opts.destdir, ITS().get_filter_file(filter_))
+        fn = os.path.join(opts.destdir, filter_.get_filename(ITS()))
         createJSON(items, fn)
 
         for item in items :
             item_name = "'"+ item+ "'"
             logging.info (item_name)
             item_file = item.replace("/","_")
+            filter_item = Filter(filter_name, item)
             type_analysis = [filter_.get_name(), item_name]
 
             evol_data = ITS.get_filter_item_evol(startdate, enddate, identities_db, type_analysis)
-            fn = os.path.join(opts.destdir, ITS().get_filter_item_evol_file(item_file, filter_))
+            fn = os.path.join(opts.destdir, filter_item.get_evolutionary_filename(ITS()))
             createJSON(evol_data, fn)
 
             agg = ITS.get_filter_item_agg(startdate, enddate, identities_db, type_analysis)
-            fn = os.path.join(opts.destdir, ITS().get_filter_item_agg_file(item_file, filter_))
+            fn = os.path.join(opts.destdir, filter_item.get_static_filename(ITS()))
             createJSON(agg, fn)
 
             if (filter_name in ["company","domain"]):
                 top = ITS.get_filter_item_top(item, filter_, startdate, enddate, identities_db, opts.npeople)
-                createJSON(top, opts.destdir+"/"+ITS.get_filter_item_top_file(item_file, filter_))
+                fn = os.path.join(opts.destdir, filter_item.get_top_filename(ITS()))
+                createJSON(top, fn)
 
         if (filter_name == "company"):
             closed = ITS.get_filter_summary(filter_, period, startdate, enddate, identities_db, 10)

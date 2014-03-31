@@ -33,6 +33,8 @@ from GrimoireSQL import ExecuteQuery, BuildQuery
 from GrimoireUtils import GetPercentageDiff, GetDates, completePeriodIds, read_options, getPeriod, createJSON
 
 from data_source import DataSource
+from filter import Filter
+
 
 class MLS(DataSource):
 
@@ -125,7 +127,7 @@ class MLS(DataSource):
     def create_top_report (startdate, enddate, i_db):
         opts = read_options()
         data = MLS.get_top_data (startdate, enddate, i_db, opts.npeople)
-        top_file = opts.destdir+"/"+MLS.get_name()+"-top.json"
+        top_file = opts.destdir+"/"+MLS().get_top_filename()
         createJSON (data, top_file)
 
     @staticmethod
@@ -180,13 +182,6 @@ class MLS(DataSource):
         return summary
 
     @staticmethod
-    def get_filter_item_top_file(item, filter_):
-        filter_name_short = filter_.get_name_short()
-        item = item.replace("/","_").replace("<","__").replace(">","___")
-        fname = item+"-"+MLS.get_name()+"-"+filter_name_short+"-top-senders.json"
-        return fname
-
-    @staticmethod
     def get_filter_item_top(item, filter_, startdate, enddate, identities_db, npeople):
         top_senders = None
         filter_name = filter_.get_name()
@@ -219,25 +214,26 @@ class MLS(DataSource):
         items_files = [item.replace('/', '_').replace("<","__").replace(">","___")
             for item in items]
 
-        fn = os.path.join(opts.destdir, MLS().get_filter_file(filter_))
+        fn = os.path.join(opts.destdir, filter_.get_filename(MLS()))
         createJSON(items_files, fn)
 
         for item in items :
             item_name = "'"+ item+ "'"
             item_file = item.replace("/","_").replace("<","__").replace(">","___")
             logging.info (item_name)
+            filter_item = Filter(filter_.get_name(), item)
             type_analysis = [filter_.get_name(), item_name]
 
             evol_data = MLS.get_filter_item_evol(startdate, enddate, identities_db, type_analysis)
-            fn = os.path.join(opts.destdir, MLS().get_filter_item_evol_file(item_file, filter_))
+            fn = os.path.join(opts.destdir, filter_item.get_evolutionary_filename(MLS()))
             createJSON(evol_data, fn)
 
             agg = MLS.get_filter_item_agg(startdate, enddate, identities_db, type_analysis)
-            fn = os.path.join(opts.destdir, MLS().get_filter_item_agg_file(item_file, filter_))
+            fn = os.path.join(opts.destdir, filter_item.get_static_filename(MLS()))
             createJSON(agg, fn)
 
             top_senders = MLS.get_filter_item_top(item, filter_, startdate, enddate, identities_db, opts.npeople)
-            createJSON(top_senders, opts.destdir+"/"+MLS.get_filter_item_top_file(item_file, filter_))
+            createJSON(top_senders, opts.destdir+"/"+filter_item.get_top_filename(MLS()))
 
         if (filter_name == "company"):
             sent = MLS.get_filter_summary(filter_, period, startdate, enddate, identities_db, 10)

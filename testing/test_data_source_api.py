@@ -27,6 +27,7 @@
 
 import json, os, unittest
 from report import Report
+from filter import Filter
 import logging
 
 from GrimoireUtils import read_options, getPeriod, read_main_conf
@@ -330,10 +331,11 @@ class DataSourceTest(unittest.TestCase):
                 if not isinstance(items, (list)): items = [items]
 
                 for item in items:
+                    filter_item = Filter(filter_.get_name(), item)
                     top = ds.get_filter_item_top(item, filter_, startdate,
                                                  enddate, identities_db, npeople)
                     if top is None: continue
-                    test_json = os.path.join("json",ds.get_filter_item_top_file(item, filter_))
+                    test_json = os.path.join("json",filter_item.get_top_filename(ds()))
                     self.assertTrue(DataSourceTest._compare_data(top, test_json))
 
     # get_top_people, get_person_evol, get_person_agg tests included

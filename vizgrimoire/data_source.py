@@ -39,13 +39,18 @@ class DataSource(object):
     def set_bots(ds_bots):
         DataSource._bots = ds_bots
 
-    # Automatoc config name for the data source database
+    # Automator config name for the data source database
     @staticmethod
     def get_db_name(self):
         raise NotImplementedError
 
-    def get_evolutionary_filename (self):
-        return self.get_name()+"-evolutionary.json"
+    def get_evolutionary_filename (self, filter_ = None):
+        name = None
+        if (filter_ is None):
+            name = self.get_name()+"-evolutionary.json"
+        else:
+            name = filter_.get_evolutionary_filename(self)
+        return name
 
     @staticmethod
     def get_evolutionary_data (period, startdate, enddate, identities_db, type_analysis = None):
@@ -55,8 +60,13 @@ class DataSource(object):
     def create_evolutionary_report (period, startdate, enddate, identities_db, type_analysis = None):
         raise NotImplementedError
 
-    def get_agg_filename (self):
-        return self.get_name()+"-static.json"
+    def get_agg_filename (self, filter_ = None):
+        name = None
+        if (filter_ is None):
+            name = self.get_name()+"-static.json"
+        else:
+            name = filter_.get_static_filename(self)
+        return name
 
     @staticmethod
     def get_agg_data (period, startdate, enddate, identities_db, type_analysis = None):
@@ -66,6 +76,14 @@ class DataSource(object):
     def create_agg_report (period, startdate, enddate, identities_db, type_analysis = None):
         raise NotImplementedError
 
+    def get_top_filename (self, filter_ = None):
+        name = None
+        if filter_ is None:
+            name = self.get_name()+"-top.json"
+        else:
+            name = filter_.get_top_filename(self)
+        return name
+
     @staticmethod
     def get_top_data (startdate, enddate, identities_db, npeople):
         raise NotImplementedError
@@ -74,7 +92,7 @@ class DataSource(object):
     def create_top_report (startdate, enddate, identities_db):
         raise NotImplementedError
 
-    def get_filter_file(self, filter_):
+    def __get_filter_file(self, filter_):
         return self.get_name()+"-"+filter_.get_name_plural()+".json"
 
     @staticmethod
@@ -89,26 +107,12 @@ class DataSource(object):
     def get_filter_summary(filter_, period, startdate, enddate, identities_db, limit):
         raise NotImplementedError
 
-    def get_filter_item_evol_file(self, item, filter_):
-        filter_name_short = filter_.get_name_short()
-        item = item.replace("/","_").replace("<","__").replace(">","___")
-        return item+"-"+self.get_name()+"-"+filter_name_short+"-evolutionary.json"
-
     @staticmethod
     def get_filter_item_evol(startdate, enddate, identities_db, type_analysis):
         raise NotImplementedError
 
-    def get_filter_item_agg_file(self, item, filter_):
-        filter_name_short = filter_.get_name_short()
-        item = item.replace("/","_").replace("<","__").replace(">","___")
-        return item+"-"+self.get_name()+"-"+filter_name_short+"-static.json"
-
     @staticmethod
     def get_filter_item_agg(startdate, enddate, identities_db, type_analysis):
-        raise NotImplementedError
-
-    @staticmethod
-    def get_filter_item_top_file(item, filter_):
         raise NotImplementedError
 
     @staticmethod
@@ -154,12 +158,12 @@ class DataSource(object):
         for upeople_id in people :
             evol_data = self.get_person_evol(upeople_id, period, startdate, enddate,
                                             identities_db, type_analysis = None)
-            fperson = os.path.join(opts.destdir,self.get_person_evol_file(upeople_id, self.get_name()))
+            fperson = os.path.join(opts.destdir,self.get_person_evol_file(upeople_id))
             createJSON (evol_data, fperson)
 
             agg = self.get_person_agg(upeople_id, startdate, enddate,
                                      identities_db, type_analysis = None)
-            fperson = os.path.join(opts.destdir,self.get_person_agg_file(upeople_id, self.get_name()))
+            fperson = os.path.join(opts.destdir,self.get_person_agg_file(upeople_id))
             createJSON (agg, fperson)
 
     @staticmethod

@@ -28,7 +28,7 @@
 from GrimoireSQL import SetDBChannel
 from GrimoireUtils import read_options, read_main_conf
 import SCM, ITS, MLS, SCR, Mediawiki, IRC
-from filters import Filter
+from filter import Filter
 
 class Report(object):
 
@@ -42,14 +42,16 @@ class Report(object):
 
     @staticmethod
     def _init_filters():
-        # people report is a bit different. Not included
-        filters_ = [["repository","rep","repos"],["company","com","companies"],["country","cou","countries"],["domain","dom","domains"]]
+        # people report is a bit different. Not included yet
+        # this list should be read from automator config for the report
+        filters_ = ["repository","company","country","domain"]
         for filter_ in filters_:
-            Report._filters.append(Filter(filter_[0],filter_[1],filter_[2]))
+            Report._filters.append(Filter(filter_))
 
     @staticmethod
     def _init_data_sources():
-        Report._all_data_sources = [SCM.SCM, ITS.ITS, MLS.MLS, SCR.SCR, Mediawiki.Mediawiki, IRC.IRC]
+        Report._all_data_sources = [SCM.SCM, ITS.ITS, MLS.MLS, SCR.SCR, 
+                                        Mediawiki.Mediawiki, IRC.IRC]
 
     @staticmethod
     def get_config():

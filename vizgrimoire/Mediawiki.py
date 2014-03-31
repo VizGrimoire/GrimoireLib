@@ -32,6 +32,7 @@ from GrimoireUtils import GetPercentageDiff, GetDates, completePeriodIds, read_o
 
 from data_source import DataSource
 
+
 class Mediawiki(DataSource):
 
     @staticmethod
@@ -91,7 +92,7 @@ class Mediawiki(DataSource):
     def create_top_report (startdate, enddate, i_db):
         opts = read_options()
         data = Mediawiki.get_top_data (startdate, enddate, i_db, opts.npeople)
-        top_file = opts.destdir+"/"+Mediawiki.get_name()+"-top.json"
+        top_file = opts.destdir+"/"+Mediawiki().get_top_filename()
         createJSON (data, top_file)
 
     @staticmethod

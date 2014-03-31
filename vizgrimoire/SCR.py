@@ -34,6 +34,8 @@ from GrimoireUtils import GetPercentageDiff, GetDates, completePeriodIds, checkL
 from GrimoireUtils import getPeriod, createJSON, checkFloatArray
 
 from data_source import DataSource
+from filter import Filter
+
 
 class SCR(DataSource):
 
@@ -193,7 +195,7 @@ class SCR(DataSource):
     def create_top_report (startdate, enddate, i_db):
         opts = read_options()
         data = SCR.get_top_data (startdate, enddate, i_db, opts.npeople)
-        createJSON (data, opts.destdir+"/"+SCR.get_name()+"-top.json")
+        createJSON (data, opts.destdir+"/"+SCR().get_top_filename())
 
     @staticmethod
     def get_filter_items(filter_, startdate, enddate, identities_db, bots):
@@ -284,21 +286,22 @@ class SCR(DataSource):
                 items_list["name"].append(item_file)
 
             logging.info (item)
+            filter_item = Filter(filter_name, item)
             type_analysis = [filter_.get_name(), item]
 
             evol = SCR.get_filter_item_evol(startdate, enddate, identities_db, type_analysis)
-            fn = os.path.join(opts.destdir, SCR().get_filter_item_evol_file(item_file, filter_))
+            fn = os.path.join(opts.destdir, filter_item.get_evolutionary_filename(SCR()))
             createJSON(evol, fn)
 
             # Static
             agg = SCR.get_filter_item_agg(startdate, enddate, identities_db, type_analysis)
-            fn = os.path.join(opts.destdir, SCR().get_filter_item_agg_file(item_file, filter_))
+            fn = os.path.join(opts.destdir, filter_item.get_static_filename(SCR()))
             createJSON(agg, fn)
             if (filter_name == "repository"):
                 items_list["submitted"].append(agg["submitted"])
                 items_list["review_time_days_median"].append(agg['review_time_days_median'])
 
-        fn = os.path.join(opts.destdir, SCR().get_filter_file(filter_))
+        fn = os.path.join(opts.destdir, filter_.get_filename(SCR()))
         createJSON(items_list, fn)
 
     # Unify top format
