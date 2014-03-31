@@ -106,10 +106,6 @@ class Mediawiki(DataSource):
         return items
 
     @staticmethod
-    def get_filter_item_evol(startdate, enddate, identities_db, type_analysis):
-        raise NotImplementedError
-
-    @staticmethod
     def create_filter_report(filter_, startdate, enddate, identities_db, bots):
         # opts = read_options()
         # period = getPeriod(opts.granularity)

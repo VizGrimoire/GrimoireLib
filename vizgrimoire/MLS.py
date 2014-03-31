@@ -51,14 +51,21 @@ class MLS(DataSource):
     def get_name(): return "mls"
 
     @staticmethod
-    def get_evolutionary_data (period, startdate, enddate, identities_db, type_analysis = None):
+    def get_evolutionary_data (period, startdate, enddate, identities_db, filter_ = None):
         rfield = MLS.get_repo_field()
         evol = {}
 
-        data = EvolMLSInfo(period, startdate, enddate, identities_db, rfield, type_analysis)
-        evol = dict(evol.items() + completePeriodIds(data).items())
+        if filter_ is not None:
+            opts = read_options()
+            period = getPeriod(opts.granularity)
+            type_analysis = [filter_.get_name(), "'"+filter_.get_item()+"'"]
+            data = EvolMLSInfo(period, startdate, enddate, identities_db, rfield, type_analysis)
+            evol = dict(evol.items() + completePeriodIds(data).items())
 
-        if (type_analysis is None):
+        else:
+            data = EvolMLSInfo(period, startdate, enddate, identities_db, rfield, None)
+            evol = dict(evol.items() + completePeriodIds(data).items())
+    
             data  = EvolMLSCompanies(period, startdate, enddate, identities_db)
             evol = dict(evol.items() + completePeriodIds(data).items())
 
@@ -170,14 +177,6 @@ class MLS(DataSource):
         return items
 
     @staticmethod
-    def get_filter_item_evol(startdate, enddate, identities_db, type_analysis):
-        opts = read_options()
-        period = getPeriod(opts.granularity)
-
-        evol = MLS.get_evolutionary_data (period, startdate, enddate, identities_db, type_analysis)
-        return evol
-
-    @staticmethod
     def get_filter_summary_file(filter_):
         name = None
         filter_name = filter_.get_name()
@@ -217,9 +216,9 @@ class MLS(DataSource):
             item_name = "'"+ item+ "'"
             logging.info (item_name)
             filter_item = Filter(filter_.get_name(), item)
-            type_analysis = [filter_.get_name(), item_name]
 
-            evol_data = MLS.get_filter_item_evol(startdate, enddate, identities_db, type_analysis)
+            evol_data = MLS.get_evolutionary_data(period, startdate, enddate, 
+                                                  identities_db, filter_item)
             fn = os.path.join(opts.destdir, filter_item.get_evolutionary_filename(MLS()))
             createJSON(evol_data, fn)
 

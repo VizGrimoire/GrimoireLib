@@ -47,12 +47,19 @@ class SCM(DataSource):
         return "scm"
 
     @staticmethod
-    def get_evolutionary_data (period, startdate, enddate, identities_db, type_analysis = None):
+    def get_evolutionary_data (period, startdate, enddate, identities_db, filter_ = None):
 
-        data = GetSCMEvolutionaryData(period, startdate, enddate, identities_db, type_analysis)
-        evol_data = completePeriodIds(data)
+        if filter_ is not None:
+            opts = read_options()
+            period = getPeriod(opts.granularity)
+            type_analysis = [filter_.get_name(), "'"+filter_.get_item()+"'"]
+            evol_data = GetSCMEvolutionaryData(period, startdate, enddate, 
+                                               identities_db, type_analysis)
 
-        if (type_analysis is None):
+        else:
+            data = GetSCMEvolutionaryData(period, startdate, enddate, identities_db, None)
+            evol_data = completePeriodIds(data)
+
             data = EvolCompanies(period, startdate, enddate)
             evol_data = dict(evol_data.items() + completePeriodIds(data).items())
             data = EvolCountries(period, startdate, enddate)
@@ -63,9 +70,9 @@ class SCM(DataSource):
         return evol_data
 
     @staticmethod
-    def create_evolutionary_report (period, startdate, enddate, i_db, type_analysis = None):
+    def create_evolutionary_report (period, startdate, enddate, i_db, filter_ = None):
         opts = read_options()
-        data =  SCM.get_evolutionary_data (period, startdate, enddate, i_db, type_analysis)
+        data =  SCM.get_evolutionary_data (period, startdate, enddate, i_db, filter_)
         filename = SCM().get_evolutionary_filename()
         createJSON (data, os.path.join(opts.destdir, filename))
 
@@ -158,13 +165,6 @@ class SCM(DataSource):
         return items
 
     @staticmethod
-    def get_filter_item_evol(startdate, enddate, identities_db, type_analysis):
-        opts = read_options()
-        period = getPeriod(opts.granularity)
-
-        return SCM.get_evolutionary_data (period, startdate, enddate, identities_db, type_analysis)
-
-    @staticmethod
     def get_filter_summary_file(filter_):
         name = None
         filter_name = filter_.get_name()
@@ -202,9 +202,8 @@ class SCM(DataSource):
             item_name = "'"+ item+ "'"
             logging.info (item_name)
             filter_item = Filter(filter_name, item)
-            type_analysis = [filter_.get_name(), item_name]
 
-            evol_data = SCM.get_filter_item_evol(startdate, enddate, identities_db, type_analysis)
+            evol_data = SCM.get_evolutionary_data(period, startdate, enddate, identities_db, filter_item)
             fn = os.path.join(opts.destdir, filter_item.get_evolutionary_filename(SCM()))
             createJSON(evol_data, fn)
 

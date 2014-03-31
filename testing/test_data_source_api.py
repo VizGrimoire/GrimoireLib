@@ -202,10 +202,9 @@ class DataSourceTest(unittest.TestCase):
 
                 for item in items:
                     filter_item = Filter(filter_.get_name(), item)
-                    item_name = item
-                    if ds.get_name() not in ["irc","scr"]:
-                        item_name = "'"+item+"'"
-                    type_analysis = [filter_name, item_name]
+#                    item_name = item
+#                    if ds.get_name() not in ["irc","scr"]:
+#                        item_name = "'"+item+"'"
                     item_file = item
                     if ds.get_name() in ["its","scr"] :
                         item_file = item.replace("/","_")
@@ -220,7 +219,7 @@ class DataSourceTest(unittest.TestCase):
                     self.assertTrue(DataSourceTest._compare_data(agg, test_json))
 
                     logging.info(ds.get_name() +","+ filter_name+","+ item+","+ "evol")
-                    evol = ds.get_filter_item_evol(startdate, enddate, identities_db, type_analysis)
+                    evol = ds.get_evolutionary_data(period, startdate, enddate, identities_db, filter_item)
                     fn = item_file+"-"+ds.get_name()+"-"+filter_name_short+"-evolutionary.json"
                     test_json = os.path.join("json",fn)
                     self.assertTrue(DataSourceTest._compare_data(evol, test_json))

@@ -41,13 +41,27 @@ class IRC(DataSource):
     def get_name(): return "irc"
 
     @staticmethod
-    def get_evolutionary_data (period, startdate, enddate, identities_db, type_analysis = None):
-        return completePeriodIds(GetEvolDataIRC (period, startdate, enddate, identities_db, type_analysis))
+    def get_evolutionary_data (period, startdate, enddate, identities_db, filter_ = None):
+        evol = {}
+        if filter_ is not None:
+            opts = read_options()
+            period = getPeriod(opts.granularity)
+            type_analysis = [filter_.get_name(), filter_.get_item()]
+
+            if (filter_ == "repository"):
+                # evol = GetRepoEvolSentSendersIRC(filter_.get_item(), period, startdate, enddate)
+                evol = GetEvolDataIRC (period, startdate, enddate, identities_db, type_analysis)
+                evol = completePeriodIds(evol)
+        else:
+            evol = GetEvolDataIRC (period, startdate, enddate, identities_db, None)
+            evol = completePeriodIds(evol)
+
+        return evol
 
     @staticmethod
-    def create_evolutionary_report (period, startdate, enddate, identities_db, type_analysis = None):
+    def create_evolutionary_report (period, startdate, enddate, identities_db, filter_ = None):
         opts = read_options()
-        data =  IRC.get_evolutionary_data (period, startdate, enddate, identities_db, type_analysis)
+        data =  IRC.get_evolutionary_data (period, startdate, enddate, identities_db, filter_)
         filename = IRC().get_evolutionary_filename()
         createJSON (data, os.path.join(opts.destdir, filename))
 
@@ -115,22 +129,6 @@ class IRC(DataSource):
         return items
 
     @staticmethod
-    def get_filter_item_evol(startdate, enddate, identities_db, type_analysis):
-        evol = {}
-
-        filter_ = type_analysis[0]
-        item = type_analysis[1]
-
-        opts = read_options()
-        period = getPeriod(opts.granularity)
-
-        if (filter_ == "repository"):
-            evol = GetRepoEvolSentSendersIRC(item, period, startdate, enddate)
-            evol = completePeriodIds(evol)
-
-        return evol 
-
-    @staticmethod
     def create_filter_report(filter_, startdate, enddate, identities_db, bots):
         opts = read_options()
         period = getPeriod(opts.granularity)
@@ -149,9 +147,8 @@ class IRC(DataSource):
             # item_name = "'"+ item+ "'"
             logging.info (item)
             filter_item = Filter(filter_.get_name(), item)
-            type_analysis = [filter_.get_name(), item]
 
-            evol_data = IRC.get_filter_item_evol(startdate, enddate, identities_db, type_analysis)
+            evol_data = IRC.get_evolutionary_data(period, startdate, enddate, identities_db, filter_item)
             fn = os.path.join(opts.destdir, filter_item.get_evolutionary_filename(IRC()))
             createJSON(completePeriodIds(evol_data), fn)
 

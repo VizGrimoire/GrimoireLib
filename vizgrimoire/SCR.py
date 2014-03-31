@@ -47,61 +47,84 @@ class SCR(DataSource):
     def get_name(): return "scr"
 
     @staticmethod
-    def get_evolutionary_data (period, startdate, enddate, i_db, type_analysis = None):
+    def get_evolutionary_data (period, startdate, enddate, identities_db, filter_ = None):
         evol = {}
-        data = EvolReviewsSubmitted(period, startdate, enddate)
-        evol = dict(evol.items() + completePeriodIds(data).items())
-        data = EvolReviewsOpened(period, startdate, enddate)
-        evol = dict(evol.items() + completePeriodIds(data).items())
-        data = EvolReviewsNew(period, startdate, enddate)
-        evol = dict(evol.items() + completePeriodIds(data).items())
-        data = EvolReviewsNewChanges(period, startdate, enddate)
-        evol = dict(evol.items() + completePeriodIds(data).items())
-        # data = EvolReviewsInProgress(period, startdate, enddate)
-        # evol = dict(evol.items() + completePeriodIds(data).items())
-        data = EvolReviewsClosed(period, startdate, enddate)
-        evol = dict(evol.items() + completePeriodIds(data).items())
-        data = EvolReviewsMerged(period, startdate, enddate)
-        evol = dict(evol.items() + completePeriodIds(data).items())
-        data = EvolReviewsMergedChanges(period, startdate, enddate)
-        evol = dict(evol.items() + completePeriodIds(data).items())
-        data = EvolReviewsAbandoned(period, startdate, enddate)
-        evol = dict(evol.items() + completePeriodIds(data).items())
-        data = EvolReviewsAbandonedChanges(period, startdate, enddate)
-        evol = dict(evol.items() + completePeriodIds(data).items())
-        data = EvolReviewsPending(period, startdate, enddate, [])
-        evol = dict(evol.items() + completePeriodIds(data).items())
-        #Patches info
-        data = EvolPatchesVerified(period, startdate, enddate)
-        evol = dict(evol.items() + completePeriodIds(data).items())
-        # data = EvolPatchesApproved(period, startdate, enddate)
-        # evol = dict(evol.items() + completePeriodIds(data).items())
-        data = EvolPatchesCodeReview(period, startdate, enddate)
-        evol = dict(evol.items() + completePeriodIds(data).items())
-        data = EvolPatchesSent(period, startdate, enddate)
-        evol = dict(evol.items() + completePeriodIds(data).items())
-        #Waiting for actions info
-        data = EvolWaiting4Reviewer(period, startdate, enddate)
-        evol = dict(evol.items() + completePeriodIds(data).items())
-        data = EvolWaiting4Submitter(period, startdate, enddate)
-        evol = dict(evol.items() + completePeriodIds(data).items())
-        #Reviewers info
-        data = EvolReviewers(period, startdate, enddate)
-        evol = dict(evol.items() + completePeriodIds(data).items())
-        # Time to Review info
-        if period == "month": # only month supported now
-            data = EvolTimeToReviewSCR (period, startdate, enddate)
-            for i in range(0,len(data['review_time_days_avg'])):
-                val = data['review_time_days_avg'][i] 
-                data['review_time_days_avg'][i] = float(val)
-                if (val == 0): data['review_time_days_avg'][i] = 0
+
+        if (filter_ is not None):
+            type_analysis = [filter_.get_name(), filter_.get_item()]
+
+            opts = read_options()
+            period = getPeriod(opts.granularity)
+
+            data = EvolReviewsSubmitted(period, startdate, enddate, type_analysis, identities_db)
             evol = dict(evol.items() + completePeriodIds(data).items())
-        return evol
+            data = EvolReviewsMerged(period, startdate, enddate, type_analysis, identities_db)
+            evol = dict(evol.items() + completePeriodIds(data).items())
+            data = EvolReviewsAbandoned(period, startdate, enddate, type_analysis, identities_db)
+            evol = dict(evol.items() + completePeriodIds(data).items())
+            data = EvolReviewsPending(period, startdate, enddate, type_analysis, identities_db)
+            evol = dict(evol.items() + completePeriodIds(data).items())
+            if (period == "month"):
+                data = EvolTimeToReviewSCR(period, startdate, enddate, identities_db, type_analysis)
+                data['review_time_days_avg'] = checkFloatArray(data['review_time_days_avg'])
+                data['review_time_days_median'] = checkFloatArray(data['review_time_days_median'])
+                evol = dict(evol.items() + completePeriodIds(data).items())
+            return evol
+
+        else:
+            data = EvolReviewsSubmitted(period, startdate, enddate)
+            evol = dict(evol.items() + completePeriodIds(data).items())
+            data = EvolReviewsOpened(period, startdate, enddate)
+            evol = dict(evol.items() + completePeriodIds(data).items())
+            data = EvolReviewsNew(period, startdate, enddate)
+            evol = dict(evol.items() + completePeriodIds(data).items())
+            data = EvolReviewsNewChanges(period, startdate, enddate)
+            evol = dict(evol.items() + completePeriodIds(data).items())
+            # data = EvolReviewsInProgress(period, startdate, enddate)
+            # evol = dict(evol.items() + completePeriodIds(data).items())
+            data = EvolReviewsClosed(period, startdate, enddate)
+            evol = dict(evol.items() + completePeriodIds(data).items())
+            data = EvolReviewsMerged(period, startdate, enddate)
+            evol = dict(evol.items() + completePeriodIds(data).items())
+            data = EvolReviewsMergedChanges(period, startdate, enddate)
+            evol = dict(evol.items() + completePeriodIds(data).items())
+            data = EvolReviewsAbandoned(period, startdate, enddate)
+            evol = dict(evol.items() + completePeriodIds(data).items())
+            data = EvolReviewsAbandonedChanges(period, startdate, enddate)
+            evol = dict(evol.items() + completePeriodIds(data).items())
+            data = EvolReviewsPending(period, startdate, enddate, [])
+            evol = dict(evol.items() + completePeriodIds(data).items())
+            #Patches info
+            data = EvolPatchesVerified(period, startdate, enddate)
+            evol = dict(evol.items() + completePeriodIds(data).items())
+            # data = EvolPatchesApproved(period, startdate, enddate)
+            # evol = dict(evol.items() + completePeriodIds(data).items())
+            data = EvolPatchesCodeReview(period, startdate, enddate)
+            evol = dict(evol.items() + completePeriodIds(data).items())
+            data = EvolPatchesSent(period, startdate, enddate)
+            evol = dict(evol.items() + completePeriodIds(data).items())
+            #Waiting for actions info
+            data = EvolWaiting4Reviewer(period, startdate, enddate)
+            evol = dict(evol.items() + completePeriodIds(data).items())
+            data = EvolWaiting4Submitter(period, startdate, enddate)
+            evol = dict(evol.items() + completePeriodIds(data).items())
+            #Reviewers info
+            data = EvolReviewers(period, startdate, enddate)
+            evol = dict(evol.items() + completePeriodIds(data).items())
+            # Time to Review info
+            if period == "month": # only month supported now
+                data = EvolTimeToReviewSCR (period, startdate, enddate)
+                for i in range(0,len(data['review_time_days_avg'])):
+                    val = data['review_time_days_avg'][i] 
+                    data['review_time_days_avg'][i] = float(val)
+                    if (val == 0): data['review_time_days_avg'][i] = 0
+                evol = dict(evol.items() + completePeriodIds(data).items())
+            return evol
 
     @staticmethod
-    def create_evolutionary_report (period, startdate, enddate, i_db, type_analysis = None):
+    def create_evolutionary_report (period, startdate, enddate, i_db, filter_ = None):
         opts = read_options()
-        data =  SCR.get_evolutionary_data (period, startdate, enddate, i_db, type_analysis)
+        data =  SCR.get_evolutionary_data (period, startdate, enddate, i_db, filter_)
         filename = SCR().get_evolutionary_filename()
         createJSON (data, os.path.join(opts.destdir, filename))
 
@@ -238,27 +261,6 @@ class SCR(DataSource):
         return items
 
     @staticmethod
-    def get_filter_item_evol(startdate, enddate, identities_db, type_analysis):
-        opts = read_options()
-        period = getPeriod(opts.granularity)
-
-        evol = {}
-        data = EvolReviewsSubmitted(period, startdate, enddate, type_analysis, identities_db)
-        evol = dict(evol.items() + completePeriodIds(data).items())
-        data = EvolReviewsMerged(period, startdate, enddate, type_analysis, identities_db)
-        evol = dict(evol.items() + completePeriodIds(data).items())
-        data = EvolReviewsAbandoned(period, startdate, enddate, type_analysis, identities_db)
-        evol = dict(evol.items() + completePeriodIds(data).items())
-        data = EvolReviewsPending(period, startdate, enddate, type_analysis, identities_db)
-        evol = dict(evol.items() + completePeriodIds(data).items())
-        if (period == "month"):
-            data = EvolTimeToReviewSCR(period, startdate, enddate, identities_db, type_analysis)
-            data['review_time_days_avg'] = checkFloatArray(data['review_time_days_avg'])
-            data['review_time_days_median'] = checkFloatArray(data['review_time_days_median'])
-            evol = dict(evol.items() + completePeriodIds(data).items())
-        return evol
-
-    @staticmethod
     def create_filter_report(filter_, startdate, enddate, identities_db, bots):
         opts = read_options()
         period = getPeriod(opts.granularity)
@@ -287,9 +289,9 @@ class SCR(DataSource):
 
             logging.info (item)
             filter_item = Filter(filter_name, item)
-            type_analysis = [filter_.get_name(), item]
 
-            evol = SCR.get_filter_item_evol(startdate, enddate, identities_db, type_analysis)
+            evol = SCR.get_evolutionary_data(period, startdate, enddate, 
+                                               identities_db, filter_item)
             fn = os.path.join(opts.destdir, filter_item.get_evolutionary_filename(SCR()))
             createJSON(evol, fn)
 

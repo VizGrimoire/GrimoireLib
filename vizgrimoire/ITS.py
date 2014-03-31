@@ -85,13 +85,18 @@ class ITS(DataSource):
         return evol
 
     @staticmethod
-    def get_evolutionary_data (period, startdate, enddate, identities_db, type_analysis = None):
+    def get_evolutionary_data (period, startdate, enddate, identities_db, filter_ = None):
         closed_condition = ITS._get_closed_condition()
 
-        data = EvolITSInfo(period, startdate, enddate, identities_db, type_analysis, closed_condition)
-        evol = completePeriodIds(data)
+        if (filter_ is not None):
+            type_analysis = [filter_.get_name(), "'"+filter_.get_item()+"'"]
+            evol = EvolITSInfo(period, startdate, enddate, identities_db, 
+                               type_analysis, closed_condition)
 
-        if (type_analysis is None):
+        else:
+            data = EvolITSInfo(period, startdate, enddate, identities_db, None, closed_condition)
+            evol = completePeriodIds(data)
+
             data = EvolIssuesCompanies(period, startdate, enddate, identities_db)
             evol = dict(evol.items() + completePeriodIds(data).items())
 
@@ -110,9 +115,9 @@ class ITS(DataSource):
         return evol
 
     @staticmethod
-    def create_evolutionary_report (period, startdate, enddate, i_db, type_analysis = None):
+    def create_evolutionary_report (period, startdate, enddate, i_db, filter_ = None):
         opts = read_options()
-        data =  ITS.get_evolutionary_data (period, startdate, enddate, i_db, type_analysis)
+        data =  ITS.get_evolutionary_data (period, startdate, enddate, i_db, filter_)
         filename = ITS().get_evolutionary_filename()
         createJSON (data, os.path.join(opts.destdir, filename))
 
@@ -222,14 +227,6 @@ class ITS(DataSource):
         return items
 
     @staticmethod
-    def get_filter_item_evol(startdate, enddate, identities_db, type_analysis):
-        opts = read_options()
-        period = getPeriod(opts.granularity)
-
-        evol = ITS.get_evolutionary_data (period, startdate, enddate, identities_db, type_analysis)
-        return evol
-
-    @staticmethod
     def get_filter_summary_file(filter_):
         name = None
         filter_name = filter_.get_name()
@@ -268,9 +265,8 @@ class ITS(DataSource):
             item_name = "'"+ item+ "'"
             logging.info (item_name)
             filter_item = Filter(filter_name, item)
-            type_analysis = [filter_.get_name(), item_name]
 
-            evol_data = ITS.get_filter_item_evol(startdate, enddate, identities_db, type_analysis)
+            evol_data = ITS.get_evolutionary_data(period, startdate, enddate, identities_db, filter_item)
             fn = os.path.join(opts.destdir, filter_item.get_evolutionary_filename(ITS()))
             createJSON(evol_data, fn)
 
