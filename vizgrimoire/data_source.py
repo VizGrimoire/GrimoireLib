@@ -21,7 +21,10 @@
 ## Authors:
 ##   Alvaro del Castillo <acs@bitergia.com>
 
-import logging, os
+""" DataSource offers the API to get aggregated, evolutionary and top data with filter 
+    support for Grimoire supported data sources """ 
+
+import os
 from GrimoireUtils import read_options, createJSON
 
 class DataSource(object):
@@ -29,22 +32,26 @@ class DataSource(object):
 
     @staticmethod
     def get_name():
+        """Get the name"""
         raise NotImplementedError
 
     @staticmethod
     def get_bots():
+        """Get the bots to be filtered"""
         return DataSource._bots
 
     @staticmethod
     def set_bots(ds_bots):
+        """Set the bots to be filtered"""
         DataSource._bots = ds_bots
 
-    # Automator config name for the data source database
     @staticmethod
     def get_db_name(self):
+        """Get the name of the database with the data"""
         raise NotImplementedError
 
     def get_evolutionary_filename (self, filter_ = None):
+        """Get the filename used to store evolutionary data"""
         name = None
         if (filter_ is None):
             name = self.get_name()+"-evolutionary.json"
@@ -54,13 +61,16 @@ class DataSource(object):
 
     @staticmethod
     def get_evolutionary_data (period, startdate, enddate, identities_db, filter_ = None):
+        """Get the evolutionary data"""
         raise NotImplementedError
 
     @staticmethod
     def create_evolutionary_report (period, startdate, enddate, identities_db, filter_ = None):
+        """Create the evolutionary data report"""
         raise NotImplementedError
 
     def get_agg_filename (self, filter_ = None):
+        """Get the filename used to store aggregated data"""
         name = None
         if (filter_ is None):
             name = self.get_name()+"-static.json"
@@ -70,13 +80,16 @@ class DataSource(object):
 
     @staticmethod
     def get_agg_data (period, startdate, enddate, identities_db, filter_ = None):
+        """Get the aggregated data"""
         raise NotImplementedError
 
     @staticmethod
     def create_agg_report (period, startdate, enddate, identities_db, type_analysis = None):
+        """Create the aggregated report"""
         raise NotImplementedError
 
     def get_top_filename (self, filter_ = None):
+        """Get the filename used to store top data"""
         name = None
         if filter_ is None:
             name = self.get_name()+"-top.json"
@@ -86,51 +99,63 @@ class DataSource(object):
 
     @staticmethod
     def get_top_data (startdate, enddate, identities_db, filter_, npeople):
+        """Get the top data"""
         raise NotImplementedError
 
     @staticmethod
     def create_top_report (startdate, enddate, identities_db):
+        """Create the top data report"""
         raise NotImplementedError
 
     @staticmethod
     def get_filter_items(filter_, period, startdate, enddate, identities_db, bots = None):
+        """Get the items in the data source available for the filter"""
         raise NotImplementedError
 
     @staticmethod
     def get_filter_summary(filter_, period, startdate, enddate, identities_db, limit):
+        """Get items with a summary for the data source available for the filter"""
         raise NotImplementedError
 
     @staticmethod
     def create_filter_report(filter_, startdate, enddate, identities_db, bots):
+        """Create all files related to all filters in all data sources"""
         raise NotImplementedError
 
     @staticmethod
     def get_top_people_file(ds):
+        """Get the filename used to store top people data"""
         return ds+"-people.json"
 
     @staticmethod
     def get_top_people(startdate, enddate, identities_db, npeople):
+        """Get top people data"""
         raise NotImplementedError
 
     def get_person_evol_file(self, upeople_id):
+        """Get the filename used to store evolutionary data for a person activity"""
         ds = self.get_name()
         name = "people-"+str(upeople_id)+"-"+ds+"-evolutionary.json"
         return name
 
     @staticmethod
     def get_person_evol(upeople_id, period, startdate, enddate, identities_db, type_analysis):
+        """Get the evolutionary data for a person activity"""
         raise NotImplementedError
 
     def get_person_agg_file(self, upeople_id):
+        """Get the filename used to store aggregated data for a person activity"""
         ds = self.get_name()
         name = "people-"+str(upeople_id)+"-"+ds+"-static.json"
         return name
 
     @staticmethod
     def get_person_agg(upeople_id, startdate, enddate, identities_db, type_analysis):
+        """Get aggregated data for a person activity"""
         raise NotImplementedError
 
     def create_people_report(self, period, startdate, enddate, identities_db):
+        """Create all files related to people activity (aggregated, evolutionary)"""
         opts = read_options()
         fpeople = os.path.join(opts.destdir,self.get_top_people_file(self.get_name()))
         people = self.get_top_people(startdate, enddate, identities_db, opts.npeople)
@@ -149,4 +174,5 @@ class DataSource(object):
 
     @staticmethod
     def create_r_reports(vizr, enddate):
+        """Create all files related to R reports"""
         raise NotImplementedError
