@@ -100,6 +100,10 @@ def read_options():
                       action="store",
                       dest="data_source",
                       help="data source to be generated")
+    parser.add_option("--filter",
+                      action="store",
+                      dest="filter",
+                      help="filter to be generated")
 
 
     (opts, args) = parser.parse_args()

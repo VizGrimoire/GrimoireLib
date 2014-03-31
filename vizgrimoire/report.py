@@ -86,3 +86,7 @@ class Report(object):
     @staticmethod
     def get_filters():
         return Report._filters
+
+    @staticmethod
+    def set_filters(filters):
+        Report._filters = filters 

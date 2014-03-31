@@ -102,9 +102,19 @@ def set_data_source(ds_name):
             ds_ok = True
             Report.set_data_sources([ds])
     if not ds_ok:
-        logging.error(opts.data_source + " not available")
+        logging.error(opts.data_source + " data source not available")
         sys.exit(1)
 
+def set_filter(filter_name):
+    filter_ok = False
+    filters_active = Report.get_filters()
+    for filter_ in filters_active:
+        if filter_.get_name() == opts.filter:
+            filter_ok = True
+            Report.set_filters([filter_])
+    if not filter_ok:
+        logging.error(opts.filter + " filter not available")
+        sys.exit(1)
 
 if __name__ == '__main__':
 
@@ -124,6 +134,9 @@ if __name__ == '__main__':
 
     if (opts.data_source):
         set_data_source(opts.data_source)
+    if (opts.filter):
+        set_filter(opts.filter)
+
 
     bots = []
 
