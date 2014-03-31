@@ -97,10 +97,6 @@ class DataSource(object):
         raise NotImplementedError
 
     @staticmethod
-    def get_filter_summary_file(filter_):
-        raise NotImplementedError
-
-    @staticmethod
     def get_filter_summary(filter_, period, startdate, enddate, identities_db, limit):
         raise NotImplementedError
 

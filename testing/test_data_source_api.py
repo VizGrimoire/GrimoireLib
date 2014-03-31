@@ -309,7 +309,7 @@ class DataSourceTest(unittest.TestCase):
                 if (filter_.get_name() == "company"):
                     summary = ds.get_filter_summary(filter_, period, startdate,
                                           enddate, identities_db, 10)
-                    test_json = os.path.join("json",ds.get_filter_summary_file(filter_))
+                    test_json = os.path.join("json",filter_.get_summary_filename(ds))
                     self.assertTrue(DataSourceTest._compare_data(summary, test_json))
 
     def test_get_filter_item_top (self):

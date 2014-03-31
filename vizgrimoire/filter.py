@@ -100,3 +100,18 @@ class Filter(object):
 
         return name
 
+    def get_summary_filename(self, ds):
+        name = ds.get_name()+"-"
+
+        if (ds.get_name() == "scm"):
+            if (self.get_name() == "company"):
+                name += "companies-commits-summary.json"
+        elif (ds.get_name() == "its"):
+            if (self.get_name() == "company"):
+                name += "closed-companies-summary.json"
+        elif (ds.get_name() == "mls"):
+            if (self.get_name() == "company"):
+                name += "sent-companies-summary.json"
+        else:
+            logging.warning("No filename for filter summary %s " % (ds.get_name()))
+        return name

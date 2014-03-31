@@ -165,14 +165,6 @@ class SCM(DataSource):
         return items
 
     @staticmethod
-    def get_filter_summary_file(filter_):
-        name = None
-        filter_name = filter_.get_name()
-        if (filter_name == "company"):
-            name = SCM.get_name()+"-companies-commits-summary.json"
-        return name
-
-    @staticmethod
     def get_filter_summary(filter_, period, startdate, enddate, identities_db, limit):
         summary = None
         filter_name = filter_.get_name()
@@ -223,7 +215,7 @@ class SCM(DataSource):
 
         if (filter_name == "company"):
             summary =  SCM.get_filter_summary(filter_, period, startdate, enddate, identities_db, 10)
-            createJSON (summary, opts.destdir+"/"+ SCM.get_filter_summary_file(filter_))
+            createJSON (summary, opts.destdir+"/"+ filter_.get_summary_filename(SCM))
 
     @staticmethod
     def get_top_people(startdate, enddate, identities_db, npeople):
