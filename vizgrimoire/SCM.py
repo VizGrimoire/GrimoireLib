@@ -70,11 +70,11 @@ class SCM(DataSource):
         createJSON (data, os.path.join(opts.destdir, filename))
 
     @staticmethod
-    def get_agg_data (period, startdate, enddate, identities_db, type_analysis = None):
-        data = GetSCMStaticData(period, startdate, enddate, identities_db, type_analysis)
-        agg = data
+    def get_agg_data (period, startdate, enddate, identities_db, filter_= None):
 
-        if (type_analysis is None):
+
+        if (filter_ is None):
+            agg  = GetSCMStaticData(period, startdate, enddate, identities_db, filter_)
             static_url = StaticURL()
             agg = dict(agg.items() + static_url.items())
 
@@ -105,13 +105,18 @@ class SCM(DataSource):
             for i in [7,14,30,60,90,180,365,730]:
                 data = last_activity(i)
                 agg = dict(agg.items() + data.items())
+        else:
+            type_analysis = [filter_.get_name(), "'"+filter_.get_item()+"'"]
+
+            data = GetSCMStaticData(period, startdate, enddate, identities_db, type_analysis)
+            agg = data
 
         return agg
 
     @staticmethod
-    def create_agg_report (period, startdate, enddate, i_db, type_analysis = None):
+    def create_agg_report (period, startdate, enddate, i_db, filter_= None):
         opts = read_options()
-        data = SCM.get_agg_data (period, startdate, enddate, i_db, type_analysis)
+        data = SCM.get_agg_data (period, startdate, enddate, i_db, filter_)
         filename = SCM().get_agg_filename()
         createJSON (data, os.path.join(opts.destdir, filename))
 
@@ -160,13 +165,6 @@ class SCM(DataSource):
         return SCM.get_evolutionary_data (period, startdate, enddate, identities_db, type_analysis)
 
     @staticmethod
-    def get_filter_item_agg(startdate, enddate, identities_db, type_analysis):
-        opts = read_options()
-        period = getPeriod(opts.granularity)
-
-        return SCM.get_agg_data (period, startdate, enddate, identities_db, type_analysis)
-
-    @staticmethod
     def get_filter_summary_file(filter_):
         name = None
         filter_name = filter_.get_name()
@@ -210,7 +208,7 @@ class SCM(DataSource):
             fn = os.path.join(opts.destdir, filter_item.get_evolutionary_filename(SCM()))
             createJSON(evol_data, fn)
 
-            agg = SCM.get_filter_item_agg(startdate, enddate, identities_db, type_analysis)
+            agg = SCM.get_agg_data(period, startdate, enddate, identities_db, filter_item)
             fn = os.path.join(opts.destdir, filter_item.get_static_filename(SCM()))
             createJSON(agg, fn)
 

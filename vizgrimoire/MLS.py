@@ -33,6 +33,7 @@ from GrimoireSQL import ExecuteQuery, BuildQuery
 from GrimoireUtils import GetPercentageDiff, GetDates, completePeriodIds, read_options, getPeriod, createJSON
 
 from data_source import DataSource
+import report
 from filter import Filter
 
 
@@ -77,20 +78,12 @@ class MLS(DataSource):
         createJSON (data, os.path.join(opts.destdir, filename))
 
     @staticmethod
-    def get_agg_data (period, startdate, enddate, identities_db, type_analysis = None):
+    def get_agg_data (period, startdate, enddate, identities_db, filter_ = None):
         rfield = MLS.get_repo_field()
-        agg = StaticMLSInfo(period, startdate, enddate, identities_db, rfield, type_analysis)
 
-        if (type_analysis is None):
-            data = AggMLSCompanies(period, startdate, enddate, identities_db)
-            agg = dict(agg.items() + data.items())
 
-            data = AggMLSCountries(period, startdate, enddate, identities_db)
-            agg = dict(agg.items() + data.items())
-
-            data = AggMLSDomains(period, startdate, enddate, identities_db)
-            agg = dict(agg.items() + data.items())
-
+        if (filter_ is None):
+            agg = StaticMLSInfo(period, startdate, enddate, identities_db, rfield, None)
             # Tendencies
             for i in [7,30,365]:
                 period_data = GetDiffSentDays(period, enddate, i)
@@ -103,12 +96,25 @@ class MLS(DataSource):
                 period_activity = lastActivity(i)
                 agg = dict(agg.items() + period_activity.items())
 
+            data = AggMLSCompanies(period, startdate, enddate, identities_db)
+            agg = dict(agg.items() + data.items())
+
+            data = AggMLSCountries(period, startdate, enddate, identities_db)
+            agg = dict(agg.items() + data.items())
+
+            data = AggMLSDomains(period, startdate, enddate, identities_db)
+            agg = dict(agg.items() + data.items())
+
+        else:
+            type_analysis = [filter_.get_name(), "'"+filter_.get_item()+"'"]
+            agg = StaticMLSInfo(period, startdate, enddate, identities_db, rfield, type_analysis)
+
         return agg
 
     @staticmethod
-    def create_agg_report (period, startdate, enddate, i_db, type_analysis = None):
+    def create_agg_report (period, startdate, enddate, i_db, filter_ = None):
         opts = read_options()
-        data = MLS.get_agg_data (period, startdate, enddate, i_db, type_analysis)
+        data = MLS.get_agg_data (period, startdate, enddate, i_db, filter_)
         filename = MLS().get_agg_filename()
         createJSON (data, os.path.join(opts.destdir, filename))
 
@@ -172,14 +178,6 @@ class MLS(DataSource):
         return evol
 
     @staticmethod
-    def get_filter_item_agg(startdate, enddate, identities_db, type_analysis):
-        opts = read_options()
-        period = getPeriod(opts.granularity)
-
-        agg = MLS.get_agg_data (period, startdate, enddate, identities_db, type_analysis)
-        return agg
-
-    @staticmethod
     def get_filter_summary_file(filter_):
         name = None
         filter_name = filter_.get_name()
@@ -225,7 +223,7 @@ class MLS(DataSource):
             fn = os.path.join(opts.destdir, filter_item.get_evolutionary_filename(MLS()))
             createJSON(evol_data, fn)
 
-            agg = MLS.get_filter_item_agg(startdate, enddate, identities_db, type_analysis)
+            agg = MLS.get_agg_data(period, startdate, enddate, identities_db, filter_item)
             fn = os.path.join(opts.destdir, filter_item.get_static_filename(MLS()))
             createJSON(agg, fn)
 

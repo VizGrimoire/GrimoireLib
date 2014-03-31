@@ -51,7 +51,7 @@ class Report(object):
     @staticmethod
     def _init_data_sources():
         Report._all_data_sources = [SCM.SCM, ITS.ITS, MLS.MLS, SCR.SCR, 
-                                        Mediawiki.Mediawiki, IRC.IRC]
+                                    Mediawiki.Mediawiki, IRC.IRC]
 
     @staticmethod
     def get_config():

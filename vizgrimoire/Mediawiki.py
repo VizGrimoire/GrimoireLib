@@ -54,19 +54,21 @@ class Mediawiki(DataSource):
         createJSON (data, os.path.join(opts.destdir, filename))
 
     @staticmethod
-    def get_agg_data (period, startdate, enddate, identities_db, type_analysis = None):
+    def get_agg_data (period, startdate, enddate, identities_db, filter_ = None):
         # Tendencies
         agg = {}
 
-        if (type_analysis is None):
+        if (filter_ is None):
             for i in [7,30,365]:
                 data = GetMediaWikiDiffReviewsDays(period, enddate, identities_db, i)
                 agg = dict(agg.items() + data.items())
                 data = GetMediaWikiDiffAuthorsDays(period, enddate, identities_db, i)
                 agg = dict(agg.items() + data.items())
 
-        data = GetStaticDataMediaWiki(period, startdate, enddate, identities_db, type_analysis)
-        agg = dict(agg.items() + data.items())
+            data = GetStaticDataMediaWiki(period, startdate, enddate, identities_db, None)
+            agg = dict(agg.items() + data.items())
+        else:
+            logging.warn("Mediawiki does not support filters yet.")
 
         return agg
 
@@ -105,10 +107,6 @@ class Mediawiki(DataSource):
 
     @staticmethod
     def get_filter_item_evol(startdate, enddate, identities_db, type_analysis):
-        raise NotImplementedError
-
-    @staticmethod
-    def get_filter_item_agg(startdate, enddate, identities_db, type_analysis):
         raise NotImplementedError
 
     @staticmethod

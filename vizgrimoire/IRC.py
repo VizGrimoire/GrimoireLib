@@ -52,10 +52,17 @@ class IRC(DataSource):
         createJSON (data, os.path.join(opts.destdir, filename))
 
     @staticmethod
-    def get_agg_data (period, startdate, enddate, identities_db, type_analysis = None):
+    def get_agg_data (period, startdate, enddate, identities_db, filter_ = None):
         agg_data = {}
 
-        if (type_analysis is None):
+        if filter_ is not None:
+            filter_name = filter_.get_name()
+            item = filter_.get_item()
+
+            if (filter_name == "repository"):
+                agg_data = GetRepoStaticSentSendersIRC(item, startdate, enddate)
+
+        else:
             # Tendencies
             for i in [7,30,365]:
                 period_data = GetIRCDiffSentDays(period, enddate, i)
@@ -63,15 +70,15 @@ class IRC(DataSource):
                 period_data = GetIRCDiffSendersDays(period, enddate, identities_db, i)
                 agg_data = dict(agg_data.items() + period_data.items())
 
-        static_data = GetStaticDataIRC(period, startdate, enddate, identities_db, type_analysis)
-        agg_data = dict(agg_data.items() + static_data.items())
+            static_data = GetStaticDataIRC(period, startdate, enddate, identities_db, None)
+            agg_data = dict(agg_data.items() + static_data.items())
 
         return agg_data
 
     @staticmethod
-    def create_agg_report (period, startdate, enddate, i_db, type_analysis = None):
+    def create_agg_report (period, startdate, enddate, i_db, filter_ = None):
         opts = read_options()
-        data = IRC.get_agg_data (period, startdate, enddate, i_db, type_analysis)
+        data = IRC.get_agg_data (period, startdate, enddate, i_db, filter_)
         filename = IRC().get_agg_filename()
         createJSON (data, os.path.join(opts.destdir, filename))
 
@@ -124,20 +131,10 @@ class IRC(DataSource):
         return evol 
 
     @staticmethod
-    def get_filter_item_agg(startdate, enddate, identities_db, type_analysis):
-        agg = {}
-
-        filter_ = type_analysis[0]
-        item = type_analysis[1]
-
-        if (filter_ == "repository"):
-            agg = GetRepoStaticSentSendersIRC(item, startdate, enddate)
-
-        return agg
-
-    @staticmethod
     def create_filter_report(filter_, startdate, enddate, identities_db, bots):
         opts = read_options()
+        period = getPeriod(opts.granularity)
+
 
         items = IRC.get_filter_items(filter_, startdate, enddate, identities_db, bots)
         if (items == None): return
@@ -158,7 +155,7 @@ class IRC(DataSource):
             fn = os.path.join(opts.destdir, filter_item.get_evolutionary_filename(IRC()))
             createJSON(completePeriodIds(evol_data), fn)
 
-            agg = IRC.get_filter_item_agg(startdate, enddate, identities_db, type_analysis)
+            agg = IRC.get_agg_data(period, startdate, enddate, identities_db, filter_item)
             fn = os.path.join(opts.destdir, filter_item.get_static_filename(IRC()))
             createJSON(agg, fn)
 

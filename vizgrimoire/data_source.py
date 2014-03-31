@@ -69,7 +69,7 @@ class DataSource(object):
         return name
 
     @staticmethod
-    def get_agg_data (period, startdate, enddate, identities_db, type_analysis = None):
+    def get_agg_data (period, startdate, enddate, identities_db, filter_ = None):
         raise NotImplementedError
 
     @staticmethod
@@ -109,7 +109,7 @@ class DataSource(object):
         raise NotImplementedError
 
     @staticmethod
-    def get_filter_item_agg(startdate, enddate, identities_db, type_analysis):
+    def __get_filter_item_agg(startdate, enddate, identities_db, type_analysis):
         raise NotImplementedError
 
     @staticmethod

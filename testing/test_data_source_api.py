@@ -147,7 +147,7 @@ class DataSourceTest(unittest.TestCase):
             # Create the evolutionary data from dbs and check with test JSON
             Report.connect_ds(ds)
             ds_data = ds.get_agg_data (period, startdate,
-                                                enddate, identities_db)
+                                        enddate, identities_db)
 
             test_json = os.path.join("json",ds().get_agg_filename())
 
@@ -181,6 +181,8 @@ class DataSourceTest(unittest.TestCase):
         opts = read_options()
         startdate = "'"+opts.startdate+"'"
         enddate = "'"+opts.enddate+"'"
+        period = getPeriod(opts.granularity)
+
 
         automator = read_main_conf(opts.config_file)
         identities_db = automator['generic']['db_identities']
@@ -199,6 +201,7 @@ class DataSourceTest(unittest.TestCase):
                 if not isinstance(items, (list)): items = [items]
 
                 for item in items:
+                    filter_item = Filter(filter_.get_name(), item)
                     item_name = item
                     if ds.get_name() not in ["irc","scr"]:
                         item_name = "'"+item+"'"
@@ -211,7 +214,7 @@ class DataSourceTest(unittest.TestCase):
                         item_file = item.replace("/","_").replace("<","__").replace(">","___")
 
                     logging.info(ds.get_name() +","+ filter_name+","+ item+","+ "agg")
-                    agg = ds.get_filter_item_agg(startdate, enddate, identities_db, type_analysis)
+                    agg = ds.get_agg_data(period, startdate, enddate, identities_db, filter_item)
                     fn = item_file+"-"+ds.get_name()+"-"+filter_name_short+"-static.json"
                     test_json = os.path.join("json",fn)
                     self.assertTrue(DataSourceTest._compare_data(agg, test_json))

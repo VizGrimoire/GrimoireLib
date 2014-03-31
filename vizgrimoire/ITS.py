@@ -117,13 +117,16 @@ class ITS(DataSource):
         createJSON (data, os.path.join(opts.destdir, filename))
 
     @staticmethod
-    def get_agg_data (period, startdate, enddate, identities_db, type_analysis = None):
+    def get_agg_data (period, startdate, enddate, identities_db, filter_ = None):
         closed_condition = ITS._get_closed_condition()
 
-        data = AggITSInfo(period, startdate, enddate, identities_db, type_analysis, closed_condition)
-        agg = data
+        if (filter_ is not None):
+            type_analysis = [filter_.get_name(), "'"+filter_.get_item()+"'"]
+            data = AggITSInfo(period, startdate, enddate, identities_db, type_analysis, closed_condition)
+            agg = data
 
-        if (type_analysis is None):
+        else:
+            agg = AggITSInfo(period, startdate, enddate, identities_db, None, closed_condition)
             data = AggAllParticipants(startdate, enddate)
             agg = dict(agg.items() +  data.items())
             data = TrackerURL()
@@ -157,9 +160,9 @@ class ITS(DataSource):
         return agg
 
     @staticmethod
-    def create_agg_report (period, startdate, enddate, i_db, type_analysis = None):
+    def create_agg_report (period, startdate, enddate, i_db, filter_ = None):
         opts = read_options()
-        data = ITS.get_agg_data (period, startdate, enddate, i_db, type_analysis)
+        data = ITS.get_agg_data (period, startdate, enddate, i_db, filter_)
         filename = ITS().get_agg_filename()
         createJSON (data, os.path.join(opts.destdir, filename))
 
@@ -227,14 +230,6 @@ class ITS(DataSource):
         return evol
 
     @staticmethod
-    def get_filter_item_agg(startdate, enddate, identities_db, type_analysis):
-        opts = read_options()
-        period = getPeriod(opts.granularity)
-
-        agg = ITS.get_agg_data (period, startdate, enddate, identities_db, type_analysis)
-        return agg
-
-    @staticmethod
     def get_filter_summary_file(filter_):
         name = None
         filter_name = filter_.get_name()
@@ -262,7 +257,6 @@ class ITS(DataSource):
         items = items['name']
 
         filter_name = filter_.get_name()
-        filter_name_short = filter_.get_name_short()
 
         if not isinstance(items, (list)):
             items = [items]
@@ -273,7 +267,6 @@ class ITS(DataSource):
         for item in items :
             item_name = "'"+ item+ "'"
             logging.info (item_name)
-            item_file = item.replace("/","_")
             filter_item = Filter(filter_name, item)
             type_analysis = [filter_.get_name(), item_name]
 
@@ -281,7 +274,7 @@ class ITS(DataSource):
             fn = os.path.join(opts.destdir, filter_item.get_evolutionary_filename(ITS()))
             createJSON(evol_data, fn)
 
-            agg = ITS.get_filter_item_agg(startdate, enddate, identities_db, type_analysis)
+            agg = ITS.get_agg_data(period, startdate, enddate, identities_db, filter_item)
             fn = os.path.join(opts.destdir, filter_item.get_static_filename(ITS()))
             createJSON(agg, fn)
 

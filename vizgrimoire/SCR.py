@@ -106,62 +106,85 @@ class SCR(DataSource):
         createJSON (data, os.path.join(opts.destdir, filename))
 
     @staticmethod
-    def get_agg_data (period, startdate, enddate, i_db, type_analysis = None):
-        agg = StaticReviewsSubmitted(period, startdate, enddate)
-        data = StaticReviewsOpened(period, startdate, enddate)
-        agg = dict(agg.items() + data.items())
-        data = StaticReviewsNew(period, startdate, enddate)
-        agg = dict(agg.items() + data.items())
-        data = StaticReviewsInProgress(period, startdate, enddate)
-        agg = dict(agg.items() + data.items())
-        data = StaticReviewsClosed(period, startdate, enddate)
-        agg = dict(agg.items() + data.items())
-        data = StaticReviewsMerged(period, startdate, enddate)
-        agg = dict(agg.items() + data.items())
-        data = StaticReviewsAbandoned(period, startdate, enddate)
-        agg = dict(agg.items() + data.items())
-        data = StaticReviewsPending(period, startdate, enddate)
-        agg = dict(agg.items() + data.items())
-        data = StaticPatchesVerified(period, startdate, enddate)
-        agg = dict(agg.items() + data.items())
-        data = StaticPatchesApproved(period, startdate, enddate)
-        agg = dict(agg.items() + data.items())
-        data = StaticPatchesCodeReview(period, startdate, enddate)
-        agg = dict(agg.items() + data.items())
-        data = StaticPatchesSent(period, startdate, enddate)
-        agg = dict(agg.items() + data.items())
-        data = StaticWaiting4Reviewer(period, startdate, enddate)
-        agg = dict(agg.items() + data.items())
-        data = StaticWaiting4Submitter(period, startdate, enddate)
-        agg = dict(agg.items() + data.items())
-        #Reviewers info
-        data = StaticReviewers(period, startdate, enddate)
-        agg = dict(agg.items() + data.items())
-        # Time to Review info
-        data = StaticTimeToReviewSCR(startdate, enddate)
-        data['review_time_days_avg'] = float(data['review_time_days_avg'])
-        data['review_time_days_median'] = float(data['review_time_days_median'])
-        agg = dict(agg.items() + data.items())
+    def get_agg_data (period, startdate, enddate, identities_db, filter_ = None):
+        opts = read_options()
+        period = getPeriod(opts.granularity)
 
-        if (type_analysis is None):
+        agg = {}
+
+        if (filter_ is not None):
+            type_analysis = [filter_.get_name(), filter_.get_item()]
+            data = StaticReviewsSubmitted(period, startdate, enddate, type_analysis, identities_db)
+            agg = dict(agg.items() + data.items())
+            data = StaticReviewsMerged(period, startdate, enddate, type_analysis, identities_db)
+            agg = dict(agg.items() + data.items())
+            data = StaticReviewsAbandoned(period, startdate, enddate, type_analysis, identities_db)
+            agg = dict(agg.items() + data.items())
+            data = StaticReviewsPending(period, startdate, enddate, type_analysis, identities_db)
+            agg = dict(agg.items() + data.items())
+            data = StaticTimeToReviewSCR(startdate, enddate, identities_db, type_analysis, identities_db)
+            val = data['review_time_days_avg']
+            if (not val or val == 0): data['review_time_days_avg'] = 0
+            else: data['review_time_days_avg'] = float(val)
+            val = data['review_time_days_median']
+            if (not val or val == 0): data['review_time_days_median'] = 0
+            else: data['review_time_days_median'] = float(val)
+            agg = dict(agg.items() + data.items())
+
+        else:
+            agg = StaticReviewsSubmitted(period, startdate, enddate)
+            data = StaticReviewsOpened(period, startdate, enddate)
+            agg = dict(agg.items() + data.items())
+            data = StaticReviewsNew(period, startdate, enddate)
+            agg = dict(agg.items() + data.items())
+            data = StaticReviewsInProgress(period, startdate, enddate)
+            agg = dict(agg.items() + data.items())
+            data = StaticReviewsClosed(period, startdate, enddate)
+            agg = dict(agg.items() + data.items())
+            data = StaticReviewsMerged(period, startdate, enddate)
+            agg = dict(agg.items() + data.items())
+            data = StaticReviewsAbandoned(period, startdate, enddate)
+            agg = dict(agg.items() + data.items())
+            data = StaticReviewsPending(period, startdate, enddate)
+            agg = dict(agg.items() + data.items())
+            data = StaticPatchesVerified(period, startdate, enddate)
+            agg = dict(agg.items() + data.items())
+            data = StaticPatchesApproved(period, startdate, enddate)
+            agg = dict(agg.items() + data.items())
+            data = StaticPatchesCodeReview(period, startdate, enddate)
+            agg = dict(agg.items() + data.items())
+            data = StaticPatchesSent(period, startdate, enddate)
+            agg = dict(agg.items() + data.items())
+            data = StaticWaiting4Reviewer(period, startdate, enddate)
+            agg = dict(agg.items() + data.items())
+            data = StaticWaiting4Submitter(period, startdate, enddate)
+            agg = dict(agg.items() + data.items())
+            #Reviewers info
+            data = StaticReviewers(period, startdate, enddate)
+            agg = dict(agg.items() + data.items())
+            # Time to Review info
+            data = StaticTimeToReviewSCR(startdate, enddate)
+            data['review_time_days_avg'] = float(data['review_time_days_avg'])
+            data['review_time_days_median'] = float(data['review_time_days_median'])
+            agg = dict(agg.items() + data.items())
 
             # Tendencies
             for i in [7,30,365]:
-                period_data = GetSCRDiffSubmittedDays(period, enddate, i, i_db)
+                period_data = GetSCRDiffSubmittedDays(period, enddate, i, identities_db)
                 agg = dict(agg.items() + period_data.items())
-                period_data = GetSCRDiffMergedDays(period, enddate, i, i_db)
+                period_data = GetSCRDiffMergedDays(period, enddate, i, identities_db)
                 agg = dict(agg.items() + period_data.items())
-                period_data = GetSCRDiffPendingDays(period, enddate, i, i_db)
+                period_data = GetSCRDiffPendingDays(period, enddate, i, identities_db)
                 agg = dict(agg.items() + period_data.items())
-                period_data = GetSCRDiffAbandonedDays(period, enddate, i, i_db)
+                period_data = GetSCRDiffAbandonedDays(period, enddate, i, identities_db)
                 agg = dict(agg.items() + period_data.items())
 
         return agg
 
     @staticmethod
-    def create_agg_report (period, startdate, enddate, i_db, type_analysis = None):
+    def create_agg_report (period, startdate, enddate, i_db, filter_ = None):
         opts = read_options()
-        data = SCR.get_agg_data (period, startdate, enddate, i_db, type_analysis)
+        data = SCR.get_agg_data (period, startdate, enddate, i_db, filter_)
         filename = SCR().get_agg_filename()
         createJSON (data, os.path.join(opts.destdir, filename))
 
@@ -236,33 +259,10 @@ class SCR(DataSource):
         return evol
 
     @staticmethod
-    def get_filter_item_agg(startdate, enddate, identities_db, type_analysis):
+    def create_filter_report(filter_, startdate, enddate, identities_db, bots):
         opts = read_options()
         period = getPeriod(opts.granularity)
 
-        agg = {}
-        data = StaticReviewsSubmitted(period, startdate, enddate, type_analysis, identities_db)
-        agg = dict(agg.items() + data.items())
-        data = StaticReviewsMerged(period, startdate, enddate, type_analysis, identities_db)
-        agg = dict(agg.items() + data.items())
-        data = StaticReviewsAbandoned(period, startdate, enddate, type_analysis, identities_db)
-        agg = dict(agg.items() + data.items())
-        data = StaticReviewsPending(period, startdate, enddate, type_analysis, identities_db)
-        agg = dict(agg.items() + data.items())
-        data = StaticTimeToReviewSCR(startdate, enddate, identities_db, type_analysis, identities_db)
-        val = data['review_time_days_avg']
-        if (not val or val == 0): data['review_time_days_avg'] = 0
-        else: data['review_time_days_avg'] = float(val)
-        val = data['review_time_days_median']
-        if (not val or val == 0): data['review_time_days_median'] = 0
-        else: data['review_time_days_median'] = float(val)
-        agg = dict(agg.items() + data.items())
-
-        return agg
-
-    @staticmethod
-    def create_filter_report(filter_, startdate, enddate, identities_db, bots):
-        opts = read_options()
 
         items = SCR.get_filter_items(filter_, startdate, enddate, identities_db, bots)
         if (items == None): return
@@ -294,7 +294,7 @@ class SCR(DataSource):
             createJSON(evol, fn)
 
             # Static
-            agg = SCR.get_filter_item_agg(startdate, enddate, identities_db, type_analysis)
+            agg = SCR.get_agg_data(period, startdate, enddate, identities_db, filter_item)
             fn = os.path.join(opts.destdir, filter_item.get_static_filename(SCR()))
             createJSON(agg, fn)
             if (filter_name == "repository"):
