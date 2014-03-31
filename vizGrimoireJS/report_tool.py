@@ -145,7 +145,8 @@ if __name__ == '__main__':
     top = create_top_report(startdate, enddate, identities_db, bots)
 
     create_reports_filters(startdate, enddate, identities_db, bots)
-    create_report_people(startdate, enddate, identities_db, bots)
+    if (automator['r']['reports'].find('people')>-1):
+        create_report_people(startdate, enddate, identities_db, bots)
     create_reports_r(opts.enddate)
 
     logging.info("Report data source analysis OK")

@@ -27,18 +27,23 @@
 import logging
 
 class Filter(object):
-    name = None
-    name_short = None
+
+    _filters_data = [["repository","rep","repos"],["company","com","companies"],
+                    ["country","cou","countries"],["domain","dom","domains"]]
 
     def __init__(self, name, item = None):
         self.name = name
-        filters_data = [["repository","rep","repos"],["company","com","companies"],
-                        ["country","cou","countries"],["domain","dom","domains"]]
-        for filter_data in filters_data:
+        for filter_data in Filter._filters_data:
             if name in filter_data:
                 self.name_short = filter_data[1]
                 self.name_plural = filter_data[2]
         self.item = item 
+
+    @staticmethod
+    def get_filter_from_plural(plural):
+        for data in Filter._filters_data:
+            if (data[2] == plural):
+                return Filter(data[0])
 
     def get_name(self):
         return self.name

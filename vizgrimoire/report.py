@@ -42,11 +42,16 @@ class Report(object):
 
     @staticmethod
     def _init_filters():
-        # people report is a bit different. Not included yet
-        # this list should be read from automator config for the report
-        filters_ = ["repository","company","country","domain"]
-        for filter_ in filters_:
-            Report._filters.append(Filter(filter_))
+        opts = read_options()
+        automator = read_main_conf(opts.config_file)
+        reports = automator['r']['reports']
+        # Hack because we use repos in filters
+        reports = reports.replace("repositories","repos")
+        filters = reports.split(",")
+        # people not a filter yet
+        if 'people' in filters: filters.remove('people')
+        for name in filters:
+            Report._filters.append(Filter.get_filter_from_plural(name))
 
     @staticmethod
     def _init_data_sources():
