@@ -227,14 +227,6 @@ class ITS(DataSource):
         return items
 
     @staticmethod
-    def get_filter_summary_file(filter_):
-        name = None
-        filter_name = filter_.get_name()
-        if (filter_name == "company"):
-            name = ITS.get_name()+"-closed-companies-summary.json"
-        return name
-
-    @staticmethod
     def get_filter_summary(filter_, period, startdate, enddate, identities_db, limit):
         summary = None
         filter_name = filter_.get_name()
@@ -281,7 +273,7 @@ class ITS(DataSource):
 
         if (filter_name == "company"):
             closed = ITS.get_filter_summary(filter_, period, startdate, enddate, identities_db, 10)
-            createJSON (closed, opts.destdir+"/"+ ITS.get_filter_summary_file(filter_))
+            createJSON (closed, opts.destdir+"/"+ filter_.get_summary_filename(ITS))
 
     @staticmethod
     def get_top_people(startdate, enddate, identities_db, npeople):

@@ -177,14 +177,6 @@ class MLS(DataSource):
         return items
 
     @staticmethod
-    def get_filter_summary_file(filter_):
-        name = None
-        filter_name = filter_.get_name()
-        if (filter_name == "company"):
-            name = MLS.get_name()+"-sent-companies-summary.json"
-        return name
-
-    @staticmethod
     def get_filter_summary(filter_, period, startdate, enddate, identities_db, limit):
         summary = None
         filter_name = filter_.get_name()
@@ -231,7 +223,7 @@ class MLS(DataSource):
 
         if (filter_name == "company"):
             sent = MLS.get_filter_summary(filter_, period, startdate, enddate, identities_db, 10)
-            createJSON (sent, opts.destdir+"/"+MLS.get_filter_summary_file(filter_))
+            createJSON (sent, opts.destdir+"/"+filter_.get_summary_filename(MLS))
 
     @staticmethod
     def get_top_people(startdate, enddate, identities_db, npeople):
