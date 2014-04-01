@@ -58,14 +58,14 @@ class SCM(DataSource):
 
         else:
             data = GetSCMEvolutionaryData(period, startdate, enddate, identities_db, None)
-            evol_data = completePeriodIds(data)
+            evol_data = completePeriodIds(data, period, startdate, enddate)
 
             data = EvolCompanies(period, startdate, enddate)
-            evol_data = dict(evol_data.items() + completePeriodIds(data).items())
+            evol_data = dict(evol_data.items() + completePeriodIds(data).items(), period, startdate, enddate)
             data = EvolCountries(period, startdate, enddate)
-            evol_data = dict(evol_data.items() + completePeriodIds(data).items())
+            evol_data = dict(evol_data.items() + completePeriodIds(data).items(), period, startdate, endddate)
             data = EvolDomains(period, startdate, enddate)
-            evol_data = dict(evol_data.items() + completePeriodIds(data).items())
+            evol_data = dict(evol_data.items() + completePeriodIds(data).items(), period, startdate, enddate)
 
         return evol_data
 
@@ -231,7 +231,7 @@ class SCM(DataSource):
     @staticmethod
     def get_person_evol(upeople_id, period, startdate, enddate, identities_db, type_analysis):
         evol_data = GetEvolPeopleSCM(upeople_id, period, startdate, enddate)
-        evol_data = completePeriodIds(evol_data)
+        evol_data = completePeriodIds(evol_data, period, startdate, enddate)
         return evol_data
 
     @staticmethod
@@ -259,13 +259,13 @@ def GetSCMEvolutionaryData (period, startdate, enddate, i_db, type_analysis):
     # management system. Those are merged and returned.
 
     # 1- Retrieving information
-    commits = completePeriodIds(EvolCommits(period, startdate, enddate, i_db, type_analysis))
-    authors = completePeriodIds(EvolAuthors(period, startdate, enddate, i_db, type_analysis))
-    committers = completePeriodIds(EvolCommitters(period, startdate, enddate, i_db, type_analysis))
-    files = completePeriodIds(EvolFiles(period, startdate, enddate, i_db, type_analysis))
-    lines = completePeriodIds(EvolLines(period, startdate, enddate, i_db, type_analysis))
-    branches = completePeriodIds(EvolBranches(period, startdate, enddate, i_db, type_analysis))
-    repositories = completePeriodIds(EvolRepositories(period, startdate, enddate, i_db, type_analysis))
+    commits = completePeriodIds(EvolCommits(period, startdate, enddate, i_db, type_analysis), period, startdate, enddate)
+    authors = completePeriodIds(EvolAuthors(period, startdate, enddate, i_db, type_analysis), period, startdate, enddate)
+    committers = completePeriodIds(EvolCommitters(period, startdate, enddate, i_db, type_analysis), period, startdate, enddate)
+    files = completePeriodIds(EvolFiles(period, startdate, enddate, i_db, type_analysis), period, startdate, enddate)
+    lines = completePeriodIds(EvolLines(period, startdate, enddate, i_db, type_analysis), period, startdate, enddate)
+    branches = completePeriodIds(EvolBranches(period, startdate, enddate, i_db, type_analysis), period, startdate, enddate)
+    repositories = completePeriodIds(EvolRepositories(period, startdate, enddate, i_db, type_analysis), period, startdate, enddate)
 
     # 2- Merging information
     evol = dict(commits.items() + repositories.items() + committers.items())
@@ -1777,7 +1777,7 @@ def GetCommitsSummaryCompanies (period, startdate, enddate, identities_db, num_c
         company_name = "'"+company+"'"
 
         commits = EvolCommits(period, startdate, enddate, identities_db, ["company", company_name])
-        commits = completePeriodIds(commits)
+        commits = completePeriodIds(commits, period, startdate, enddate)
         # Rename field commits to company name
         commits[company] = commits["commits"]
         del commits['commits']
@@ -1794,6 +1794,6 @@ def GetCommitsSummaryCompanies (period, startdate, enddate, identities_db, num_c
         count = count + 1
 
     #TODO: remove global variables...
-    first_companies = completePeriodIds(first_companies)
+    first_companies = completePeriodIds(first_companies, period, startdate, enddate)
 
     return(first_companies)

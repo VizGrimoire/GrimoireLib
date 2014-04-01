@@ -262,16 +262,20 @@ def completePeriodIdsWeeks(ts_data, start, end):
 
     return new_ts_data
 
-def completePeriodIds(ts_data):
+def completePeriodIds(ts_data, period, startdate, enddate):
     # If already complete, return
     if "id" in ts_data: return ts_data
 
     if len(ts_data.keys()) == 0: return ts_data
     new_ts_data = ts_data
     opts = read_options()
-    period = getPeriod(opts.granularity)
-    start = datetime.strptime(opts.startdate, "%Y-%m-%d")
-    end = datetime.strptime(opts.enddate, "%Y-%m-%d")
+    #period = getPeriod(opts.granularity)
+    #start = datetime.strptime(opts.startdate, "%Y-%m-%d")
+    #end = datetime.strptime(opts.enddate, "%Y-%m-%d")
+    startdate = startdate.replace("'", "")
+    enddate = enddate.replace("'", "")
+    start = datetime.strptime(startdate, "%Y-%m-%d")
+    end = datetime.strptime(enddate, "%Y-%m-%d")
 
     if period == "week":
         new_ts_data = completePeriodIdsWeeks(ts_data, start, end)
