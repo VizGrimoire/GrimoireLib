@@ -268,10 +268,6 @@ def completePeriodIds(ts_data, period, startdate, enddate):
 
     if len(ts_data.keys()) == 0: return ts_data
     new_ts_data = ts_data
-    opts = read_options()
-    #period = getPeriod(opts.granularity)
-    #start = datetime.strptime(opts.startdate, "%Y-%m-%d")
-    #end = datetime.strptime(opts.enddate, "%Y-%m-%d")
     startdate = startdate.replace("'", "")
     enddate = enddate.replace("'", "")
     start = datetime.strptime(startdate, "%Y-%m-%d")
