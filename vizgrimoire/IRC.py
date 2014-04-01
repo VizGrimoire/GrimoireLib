@@ -51,10 +51,10 @@ class IRC(DataSource):
             if (filter_ == "repository"):
                 # evol = GetRepoEvolSentSendersIRC(filter_.get_item(), period, startdate, enddate)
                 evol = GetEvolDataIRC (period, startdate, enddate, identities_db, type_analysis)
-                evol = completePeriodIds(evol)
+                evol = completePeriodIds(evol, period, startdate, enddate)
         else:
             evol = GetEvolDataIRC (period, startdate, enddate, identities_db, None)
-            evol = completePeriodIds(evol)
+            evol = completePeriodIds(evol, period, startdate, enddate)
 
         return evol
 
@@ -150,7 +150,7 @@ class IRC(DataSource):
 
             evol_data = IRC.get_evolutionary_data(period, startdate, enddate, identities_db, filter_item)
             fn = os.path.join(opts.destdir, filter_item.get_evolutionary_filename(IRC()))
-            createJSON(completePeriodIds(evol_data), fn)
+            createJSON(completePeriodIds(evol_data, period, statdate, enddate), fn)
 
             agg = IRC.get_agg_data(period, startdate, enddate, identities_db, filter_item)
             fn = os.path.join(opts.destdir, filter_item.get_static_filename(IRC()))
@@ -170,7 +170,7 @@ class IRC(DataSource):
     @staticmethod
     def get_person_evol(upeople_id, period, startdate, enddate, identities_db, type_analysis):
         evol = GetEvolPeopleIRC(upeople_id, period, startdate, enddate)
-        evol = completePeriodIds(evol)
+        evol = completePeriodIds(evol, period, startdate, enddate)
         return evol
 
 
