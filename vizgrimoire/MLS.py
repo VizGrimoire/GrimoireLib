@@ -60,20 +60,20 @@ class MLS(DataSource):
             period = getPeriod(opts.granularity)
             type_analysis = [filter_.get_name(), "'"+filter_.get_item()+"'"]
             data = EvolMLSInfo(period, startdate, enddate, identities_db, rfield, type_analysis)
-            evol = dict(evol.items() + completePeriodIds(data).items(), period, startdate, enddate)
+            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
 
         else:
             data = EvolMLSInfo(period, startdate, enddate, identities_db, rfield, None)
-            evol = dict(evol.items() + completePeriodIds(data).items(), period, startdate, enddate)
+            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
     
             data  = EvolMLSCompanies(period, startdate, enddate, identities_db)
-            evol = dict(evol.items() + completePeriodIds(data).items(), period, startdate, enddate)
+            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
 
             data = EvolMLSCountries(period, startdate, enddate, identities_db)
-            evol = dict(evol.items() + completePeriodIds(data).items(), period, startdate, enddate)
+            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
 
             data = EvolMLSDomains(period, startdate, enddate, identities_db)
-            evol = dict(evol.items() + completePeriodIds(data).items(), period, startdate, enddate)
+            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
 
         return evol
 

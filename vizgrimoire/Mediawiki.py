@@ -128,7 +128,7 @@ class Mediawiki(DataSource):
     @staticmethod
     def get_person_evol(upeople_id, period, startdate, enddate, identities_db, type_analysis):
         evol = GetEvolPeopleMediaWiki(upeople_id, period, startdate, enddate)
-        evol = completePeriodIds(evol)
+        evol = completePeriodIds(evol, period, startdate, enddate)
         return evol
 
     @staticmethod
@@ -166,9 +166,9 @@ def GetStaticDataMediaWiki (period, startdate, enddate, i_db, type_analysis):
 def GetEvolDataMediaWiki (period, startdate, enddate, i_db, type_analysis):
 
     # 1- Retrieving information
-    reviews = completePeriodIds(EvolReviewsMediaWiki(period, startdate, enddate, i_db, type_analysis))
-    authors = completePeriodIds(EvolAuthorsMediaWiki(period, startdate, enddate, i_db, type_analysis))
-    pages = completePeriodIds(EvolPagesMediaWiki(period, startdate, enddate, i_db, type_analysis))
+    reviews = completePeriodIds(EvolReviewsMediaWiki(period, startdate, enddate, i_db, type_analysis), period, startdate, enddate)
+    authors = completePeriodIds(EvolAuthorsMediaWiki(period, startdate, enddate, i_db, type_analysis), period, startdate, enddate)
+    pages = completePeriodIds(EvolPagesMediaWiki(period, startdate, enddate, i_db, type_analysis), period, startdate, enddate)
 
     # 2- Merging information
     evol_data = dict(reviews.items()+ authors.items() + pages.items())

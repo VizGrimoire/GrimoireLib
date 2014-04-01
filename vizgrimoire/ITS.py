@@ -98,19 +98,19 @@ class ITS(DataSource):
             evol = completePeriodIds(data, period, startdate, enddate)
 
             data = EvolIssuesCompanies(period, startdate, enddate, identities_db)
-            evol = dict(evol.items() + completePeriodIds(data).items(), period, startdate, enddate)
+            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
 
             data = EvolIssuesCountries(period, startdate, enddate, identities_db)
-            evol = dict(evol.items() + completePeriodIds(data).items(), period, startdate, enddate)
+            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
 
             data = EvolIssuesRepositories(period, startdate, enddate, identities_db)
-            evol = dict(evol.items() + completePeriodIds(data).items(), period, startdate, enddate)
+            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
 
             data = EvolIssuesDomains(period, startdate, enddate, identities_db)
-            evol = dict(evol.items() + completePeriodIds(data).items(), period, startdate, enddate)
+            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
 
             data = ITS.get_tickets_states(period, startdate, enddate, identities_db, ITS._get_backend())
-            evol = dict(evol.items() + data.items(), period, startdate, enddate)
+            evol = dict(evol.items() + data.items())
 
         return evol
 

@@ -61,11 +61,11 @@ class SCM(DataSource):
             evol_data = completePeriodIds(data, period, startdate, enddate)
 
             data = EvolCompanies(period, startdate, enddate)
-            evol_data = dict(evol_data.items() + completePeriodIds(data).items(), period, startdate, enddate)
+            evol_data = dict(evol_data.items() + completePeriodIds(data, period, startdate, enddate).items())
             data = EvolCountries(period, startdate, enddate)
-            evol_data = dict(evol_data.items() + completePeriodIds(data).items(), period, startdate, endddate)
+            evol_data = dict(evol_data.items() + completePeriodIds(data, period, startdate, enddate).items())
             data = EvolDomains(period, startdate, enddate)
-            evol_data = dict(evol_data.items() + completePeriodIds(data).items(), period, startdate, enddate)
+            evol_data = dict(evol_data.items() + completePeriodIds(data, period, startdate, enddate).items())
 
         return evol_data
 
