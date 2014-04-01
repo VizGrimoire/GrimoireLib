@@ -57,60 +57,60 @@ class SCR(DataSource):
             period = getPeriod(opts.granularity)
 
             data = EvolReviewsSubmitted(period, startdate, enddate, type_analysis, identities_db)
-            evol = dict(evol.items() + completePeriodIds(data).items())
+            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
             data = EvolReviewsMerged(period, startdate, enddate, type_analysis, identities_db)
-            evol = dict(evol.items() + completePeriodIds(data).items())
+            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
             data = EvolReviewsAbandoned(period, startdate, enddate, type_analysis, identities_db)
-            evol = dict(evol.items() + completePeriodIds(data).items())
+            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
             data = EvolReviewsPending(period, startdate, enddate, type_analysis, identities_db)
-            evol = dict(evol.items() + completePeriodIds(data).items())
+            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
             if (period == "month"):
                 data = EvolTimeToReviewSCR(period, startdate, enddate, identities_db, type_analysis)
                 data['review_time_days_avg'] = checkFloatArray(data['review_time_days_avg'])
                 data['review_time_days_median'] = checkFloatArray(data['review_time_days_median'])
-                evol = dict(evol.items() + completePeriodIds(data).items())
+                evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
             return evol
 
         else:
             data = EvolReviewsSubmitted(period, startdate, enddate)
-            evol = dict(evol.items() + completePeriodIds(data).items())
+            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
             data = EvolReviewsOpened(period, startdate, enddate)
-            evol = dict(evol.items() + completePeriodIds(data).items())
+            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
             data = EvolReviewsNew(period, startdate, enddate)
-            evol = dict(evol.items() + completePeriodIds(data).items())
+            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
             data = EvolReviewsNewChanges(period, startdate, enddate)
-            evol = dict(evol.items() + completePeriodIds(data).items())
+            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
             # data = EvolReviewsInProgress(period, startdate, enddate)
-            # evol = dict(evol.items() + completePeriodIds(data).items())
+            # evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
             data = EvolReviewsClosed(period, startdate, enddate)
-            evol = dict(evol.items() + completePeriodIds(data).items())
+            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
             data = EvolReviewsMerged(period, startdate, enddate)
-            evol = dict(evol.items() + completePeriodIds(data).items())
+            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
             data = EvolReviewsMergedChanges(period, startdate, enddate)
-            evol = dict(evol.items() + completePeriodIds(data).items())
+            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
             data = EvolReviewsAbandoned(period, startdate, enddate)
-            evol = dict(evol.items() + completePeriodIds(data).items())
+            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
             data = EvolReviewsAbandonedChanges(period, startdate, enddate)
-            evol = dict(evol.items() + completePeriodIds(data).items())
+            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
             data = EvolReviewsPending(period, startdate, enddate, [])
-            evol = dict(evol.items() + completePeriodIds(data).items())
+            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
             #Patches info
             data = EvolPatchesVerified(period, startdate, enddate)
-            evol = dict(evol.items() + completePeriodIds(data).items())
+            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
             # data = EvolPatchesApproved(period, startdate, enddate)
-            # evol = dict(evol.items() + completePeriodIds(data).items())
+            # evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
             data = EvolPatchesCodeReview(period, startdate, enddate)
-            evol = dict(evol.items() + completePeriodIds(data).items())
+            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
             data = EvolPatchesSent(period, startdate, enddate)
-            evol = dict(evol.items() + completePeriodIds(data).items())
+            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
             #Waiting for actions info
             data = EvolWaiting4Reviewer(period, startdate, enddate)
-            evol = dict(evol.items() + completePeriodIds(data).items())
+            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
             data = EvolWaiting4Submitter(period, startdate, enddate)
-            evol = dict(evol.items() + completePeriodIds(data).items())
+            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
             #Reviewers info
             data = EvolReviewers(period, startdate, enddate)
-            evol = dict(evol.items() + completePeriodIds(data).items())
+            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
             # Time to Review info
             if period == "month": # only month supported now
                 data = EvolTimeToReviewSCR (period, startdate, enddate)
@@ -118,7 +118,7 @@ class SCR(DataSource):
                     val = data['review_time_days_avg'][i] 
                     data['review_time_days_avg'][i] = float(val)
                     if (val == 0): data['review_time_days_avg'][i] = 0
-                evol = dict(evol.items() + completePeriodIds(data).items())
+                evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
             return evol
 
     @staticmethod
@@ -336,7 +336,7 @@ class SCR(DataSource):
     @staticmethod
     def get_person_evol(upeople_id, period, startdate, enddate, identities_db, type_analysis):
         evol = GetPeopleEvolSCR(upeople_id, period, startdate, enddate)
-        evol = completePeriodIds(evol)
+        evol = completePeriodIds(evol, period, startdate, enddate)
         return evol
 
     @staticmethod
@@ -583,11 +583,11 @@ def EvolReviewsAbandonedChanges(period, startdate, enddate, type_analysis = [], 
 
 def EvolReviewsPending(period, startdate, enddate, type_analysis = [], identities_db=None):
     data = EvolReviewsSubmitted(period, startdate, enddate, type_analysis, identities_db)
-    data = completePeriodIds(data)
+    data = completePeriodIds(data, period, startdate, enddate)
     data1 = EvolReviewsMerged(period, startdate, enddate, type_analysis, identities_db)
-    data1 = completePeriodIds(data1)
+    data1 = completePeriodIds(data1, period, startdate, enddate)
     data2 = EvolReviewsAbandoned(period, startdate, enddate, type_analysis, identities_db)
-    data2 = completePeriodIds(data2)
+    data2 = completePeriodIds(data2, period, startdate, enddate)
     evol = dict(data.items() + data1.items() + data2.items())
     pending = {"pending":[]}
 
@@ -595,17 +595,17 @@ def EvolReviewsPending(period, startdate, enddate, type_analysis = [], identitie
         pending_val = evol["submitted"][i] - evol["merged"][i] - evol["abandoned"][i]
         pending["pending"].append(pending_val)
     pending[period] = evol[period]
-    pending = completePeriodIds(pending)
+    pending = completePeriodIds(pending, period, startdate, enddate)
     return pending
 
 # PENDING = SUBMITTED - MERGED - ABANDONED
 def EvolReviewsPendingChanges(period, startdate, enddate, type_analysis = [], identities_db=None):
     data = EvolReviewsSubmitted(period, startdate, enddate, type_analysis, identities_db)
-    data = completePeriodIds(data)
+    data = completePeriodIds(data, period, startdate, enddate)
     data1 = EvolReviewsMergedChanges(period, startdate, enddate, type_analysis, identities_db)
-    data1 = completePeriodIds(data1)
+    data1 = completePeriodIds(data1, period, startdate, enddate)
     data2 = EvolReviewsAbandonedChanges(period, startdate, enddate, type_analysis, identities_db)
-    data2 = completePeriodIds(data2)
+    data2 = completePeriodIds(data2, period, startdate, enddate)
     evol = dict(data.items() + data1.items() + data2.items())
     pending = {"pending":[]}
 
@@ -613,7 +613,7 @@ def EvolReviewsPendingChanges(period, startdate, enddate, type_analysis = [], id
         pending_val = evol["submitted"][i] - evol["merged_changes"][i] - evol["abandoned_changes"][i]
         pending["pending"].append(pending_val)
     pending["month"] = evol["month"]
-    pending = completePeriodIds(pending)
+    pending = completePeriodIds(pending, period, startdate, enddate)
     return pending
 
 # STATIC META FUNCTIONS BASED ON REVIEWS
