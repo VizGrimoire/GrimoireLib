@@ -74,12 +74,12 @@ class ITS(DataSource):
             #Evolution of the backlog
             tickets_status = vizr.GetEvolBacklogTickets(period, startdate, enddate, status, backend.name_log_table)
             tickets_status = dataFrame2Dict(tickets_status)
-            tickets_status = completePeriodIds(tickets_status)
+            tickets_status = completePeriodIds(tickets_status, period, startdate, enddate)
             # rename key
             tickets_status[status] = tickets_status.pop("pending_tickets")
             #Issues per status
             current_status = vizr.GetCurrentStatus(period, startdate, enddate, identities_db, status)
-            current_status = completePeriodIds(dataFrame2Dict(current_status))
+            current_status = completePeriodIds(dataFrame2Dict(current_status), period, startdate, enddate)
             #Merging data
             evol = dict(evol.items() + current_status.items() + tickets_status.items())
         return evol
@@ -95,19 +95,19 @@ class ITS(DataSource):
 
         else:
             data = EvolITSInfo(period, startdate, enddate, identities_db, None, closed_condition)
-            evol = completePeriodIds(data)
+            evol = completePeriodIds(data, period, startdate, enddate)
 
             data = EvolIssuesCompanies(period, startdate, enddate, identities_db)
-            evol = dict(evol.items() + completePeriodIds(data).items())
+            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
 
             data = EvolIssuesCountries(period, startdate, enddate, identities_db)
-            evol = dict(evol.items() + completePeriodIds(data).items())
+            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
 
             data = EvolIssuesRepositories(period, startdate, enddate, identities_db)
-            evol = dict(evol.items() + completePeriodIds(data).items())
+            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
 
             data = EvolIssuesDomains(period, startdate, enddate, identities_db)
-            evol = dict(evol.items() + completePeriodIds(data).items())
+            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
 
             data = ITS.get_tickets_states(period, startdate, enddate, identities_db, ITS._get_backend())
             evol = dict(evol.items() + data.items())
@@ -295,7 +295,7 @@ class ITS(DataSource):
         closed_condition =  ITS._get_closed_condition()
 
         evol = GetPeopleEvolITS(upeople_id, period, startdate, enddate, closed_condition)
-        evol = completePeriodIds(evol)
+        evol = completePeriodIds(evol, period, startdate, enddate)
         return evol
 
     @staticmethod
@@ -429,19 +429,19 @@ def GetITSInfo (period, startdate, enddate, identities_db, type_analysis, closed
 
     if (evolutionary):
         closed = EvolIssuesClosed(period, startdate, enddate, identities_db, type_analysis, closed_condition)
-        closed = completePeriodIds(closed)
+        closed = completePeriodIds(closed, period, startdate, enddate)
         closers = EvolIssuesClosers(period, startdate, enddate, identities_db, type_analysis, closed_condition)
-        closers = completePeriodIds(closers)
+        closers = completePeriodIds(closers, period, startdate, enddate)
         changed = EvolIssuesChanged(period, startdate, enddate, identities_db, type_analysis)
-        changed = completePeriodIds(changed)
+        changed = completePeriodIds(changed, period, startdate, enddate)
         changers = EvolIssuesChangers(period, startdate, enddate, identities_db, type_analysis)
-        changers = completePeriodIds(changers)
+        changers = completePeriodIds(changers, period, startdate, enddate)
         open = EvolIssuesOpened(period, startdate, enddate, identities_db, type_analysis)
-        open = completePeriodIds(open)
+        open = completePeriodIds(open, period, startdate, enddate)
         openers = EvolIssuesOpeners(period, startdate, enddate, identities_db, type_analysis, closed_condition)
-        openers = completePeriodIds(openers)
+        openers = completePeriodIds(openers, period, startdate, enddate)
         repos = EvolIssuesRepositories(period, startdate, enddate, identities_db, type_analysis)
-        repos = completePeriodIds(repos)
+        repos = completePeriodIds(repos, period, startdate, enddate)
     else :
         closed = AggIssuesClosed(period, startdate, enddate, identities_db, type_analysis, closed_condition)
         closers = AggIssuesClosers(period, startdate, enddate, identities_db, type_analysis, closed_condition)
@@ -1283,7 +1283,7 @@ def GetClosedSummaryCompanies (period, startdate, enddate, identities_db, closed
     for company in companies:
         type_analysis = ["company", "'"+company+"'"]
         closed = EvolIssuesClosed(period, startdate, enddate, identities_db, type_analysis, closed_condition)
-        closed = completePeriodIds(closed)
+        closed = completePeriodIds(closed, period, startdate, enddate)
         # Rename field closed to company name
         closed[company] = closed["closed"]
         del closed['closed']
@@ -1298,7 +1298,7 @@ def GetClosedSummaryCompanies (period, startdate, enddate, identities_db, closed
             else:
                 first_companies['Others'] = [a+b for a, b in zip(first_companies['Others'],closed[company])]
         count = count + 1
-    first_companies = completePeriodIds(first_companies)
+    first_companies = completePeriodIds(first_companies, period, startdate, enddate)
 
     return(first_companies)
 

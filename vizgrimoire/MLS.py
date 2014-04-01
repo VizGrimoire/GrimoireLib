@@ -60,20 +60,20 @@ class MLS(DataSource):
             period = getPeriod(opts.granularity)
             type_analysis = [filter_.get_name(), "'"+filter_.get_item()+"'"]
             data = EvolMLSInfo(period, startdate, enddate, identities_db, rfield, type_analysis)
-            evol = dict(evol.items() + completePeriodIds(data).items())
+            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
 
         else:
             data = EvolMLSInfo(period, startdate, enddate, identities_db, rfield, None)
-            evol = dict(evol.items() + completePeriodIds(data).items())
+            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
     
             data  = EvolMLSCompanies(period, startdate, enddate, identities_db)
-            evol = dict(evol.items() + completePeriodIds(data).items())
+            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
 
             data = EvolMLSCountries(period, startdate, enddate, identities_db)
-            evol = dict(evol.items() + completePeriodIds(data).items())
+            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
 
             data = EvolMLSDomains(period, startdate, enddate, identities_db)
-            evol = dict(evol.items() + completePeriodIds(data).items())
+            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
 
         return evol
 
@@ -239,7 +239,7 @@ class MLS(DataSource):
     @staticmethod
     def get_person_evol(upeople_id, period, startdate, enddate, identities_db, type_analysis):
         evol = GetEvolPeopleMLS(upeople_id, period, startdate, enddate)
-        evol = completePeriodIds(evol)
+        evol = completePeriodIds(evol, period, startdate, enddate)
         return evol
 
     @staticmethod
@@ -414,19 +414,19 @@ def GetMLSInfo (period, startdate, enddate, identities_db, rfield, type_analysis
 
     if (evolutionary == True):
         sent = EvolEmailsSent(period, startdate, enddate, identities_db, type_analysis)
-        sent = completePeriodIds(sent)
+        sent = completePeriodIds(sent, period, startdate, enddate)
         senders = EvolMLSSenders(period, startdate, enddate, identities_db, type_analysis)
-        senders = completePeriodIds(senders)
+        senders = completePeriodIds(senders, period, startdate, enddate)
         repositories = EvolMLSRepositories(rfield, period, startdate, enddate, identities_db, type_analysis)
-        repositories = completePeriodIds(repositories)
+        repositories = completePeriodIds(repositories, period, startdate, enddate)
         threads = EvolThreads(period, startdate, enddate, identities_db, type_analysis)
-        threads = completePeriodIds(threads)
+        threads = completePeriodIds(threads, period, startdate, enddate)
         sent_response = EvolMLSResponses(period, startdate, enddate, identities_db, type_analysis)
-        sent_response = completePeriodIds(sent_response)
+        sent_response = completePeriodIds(sent_response, period, startdate, enddate)
         senders_response = EvolMLSSendersResponse(period, startdate, enddate, identities_db, type_analysis)
-        senders_response = completePeriodIds(senders_response)
+        senders_response = completePeriodIds(senders_response, period, startdate, enddate)
         senders_init = EvolMLSSendersInit(period, startdate, enddate, identities_db, type_analysis)
-        senders_init = completePeriodIds(senders_init)
+        senders_init = completePeriodIds(senders_init, period, startdate, enddate)
     else:
         sent = AggEmailsSent(period, startdate, enddate, identities_db, type_analysis)
         senders = AggMLSSenders(period, startdate, enddate, identities_db, type_analysis)
@@ -1122,7 +1122,7 @@ def GetSentSummaryCompanies (period, startdate, enddate, identities_db, num_comp
     for company in companies:
         type_analysis = ["company", "'"+company+"'"]
         sent = EvolEmailsSent(period, startdate, enddate, identities_db, type_analysis)
-        sent = completePeriodIds(sent)
+        sent = completePeriodIds(sent, period, startdate, enddate)
         # Rename field sent to company name
         sent[company] = sent["sent"]
         del sent['sent']
@@ -1138,6 +1138,6 @@ def GetSentSummaryCompanies (period, startdate, enddate, identities_db, num_comp
                 first_companies['Others'] = [a+b for a, b in zip(first_companies['Others'],sent[company])]
         count = count + 1
 
-    first_companies = completePeriodIds(first_companies)
+    first_companies = completePeriodIds(first_companies, period, startdate, enddate)
 
     return(first_companies)
