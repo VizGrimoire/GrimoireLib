@@ -25,7 +25,7 @@
 ##   Daniel Izquierdo <dizquierdo@bitergia.com>
 ##   Alvaro del Castillo San Felix <acs@bitergia.com>
 
-import logging, os
+import logging, os, sys
 from numpy import median, average
 
 from GrimoireSQL import GetSQLGlobal, GetSQLPeriod
@@ -365,7 +365,6 @@ def GetSQLProjectFromSCR ():
 
 def GetSQLProjectWhereSCR (project, identities_db):
     # include all repositories for a project
-    identities_db = "acs_cvsanaly_automatortest_2388"
     repos = """and t.url IN (
            SELECT repository_name
            FROM   %s.projects p, %s.project_repositories pr
@@ -449,7 +448,12 @@ def GetSQLReportWhereSCR (type_analysis, identities_db = None):
         if analysis == 'repository': where = GetSQLRepositoriesWhereSCR(value)
         elif analysis == 'company': where = GetSQLCompaniesWhereSCR(value)
         elif analysis == 'country': where = GetSQLCountriesWhereSCR(value)
-        elif analysis == 'project': where = GetSQLProjectWhereSCR(value, identities_db)
+        elif analysis == 'project':
+            if (identities_db is None):
+                logging.error("project filter not supported without identities_db")
+                sys.exit(0)
+            else:
+                where = GetSQLProjectWhereSCR(value, identities_db)
 
     return (where)
 
@@ -545,7 +549,7 @@ def GetReviews (period, startdate, enddate, type_, type_analysis, evolutionary, 
     elif type_ == "closed": filters = " (i.status = 'MERGED' or i.status = 'ABANDONED') "
     elif type_ == "merged": filters = " i.status = 'MERGED' "
     elif type_ == "abandoned": filters = " i.status = 'ABANDONED' "
-    filters = filters + GetSQLReportWhereSCR(type_analysis)
+    filters = filters + GetSQLReportWhereSCR(type_analysis, identities_db)
 
     #Adding dates filters (and evolutionary or static analysis)
     if (evolutionary):
@@ -563,7 +567,7 @@ def GetReviewsChanges(period, startdate, enddate, type_, type_analysis, evolutio
     tables = "changes c, issues i"
     tables = tables + GetSQLReportFromSCR(identities_db, type_analysis)
     filters = "c.issue_id = i.id AND new_value='"+type_+"'"
-    filters = filters + GetSQLReportWhereSCR(type_analysis)
+    filters = filters + GetSQLReportWhereSCR(type_analysis, identities_db)
 
     #Adding dates filters (and evolutionary or static analysis)
     if (evolutionary):
@@ -712,7 +716,7 @@ def StaticReviewsPendingChanges(period, startdate, enddate, type_analysis = [], 
 
 
 #WORK ON PATCHES: ANY REVIEW MAY HAVE MORE THAN ONE PATCH
-def GetEvaluations (period, startdate, enddate, type_, type_analysis, evolutionary):
+def GetEvaluations (period, startdate, enddate, type_, type_analysis, evolutionary, identities_db = None):
     # verified - VRIF
     # approved - APRV
     # code review - CRVW
@@ -726,7 +730,7 @@ def GetEvaluations (period, startdate, enddate, type_, type_analysis, evolutiona
     elif type_ == "codereview": filters =  "   (c.field = 'CRVW' OR c.field = 'Code-Review') "
     elif type_ == "sent": filters =  " c.field = 'SUBM'  "
     filters = filters + " and i.id = c.issue_id "
-    filters = filters + GetSQLReportWhereSCR(type_analysis)
+    filters = filters + GetSQLReportWhereSCR(type_analysis, identities_db)
 
     #Adding dates filters
     if (evolutionary):
@@ -789,7 +793,7 @@ def GetWaiting4Reviewer (period, startdate, enddate, identities_db, type_analysi
                "  and t1.id = c.id "+\
                "  and (c.field='CRVW' or c.field='Code-Review' or c.field='Verified' or c.field='VRIF') "+\
                "  and (c.new_value=1 or c.new_value=2) "
-    filters = filters + GetSQLReportWhereSCR(type_analysis)
+    filters = filters + GetSQLReportWhereSCR(type_analysis, identities_db)
 
     if (evolutionary):
         q = GetSQLPeriod(period, " c.changed_on", fields, tables, filters,
@@ -827,7 +831,7 @@ def GetWaiting4Submitter (period, startdate, enddate, identities_db, type_analys
               "  and t1.id = c.id "+\
               "  and (c.field='CRVW' or c.field='Code-Review' or c.field='Verified' or c.field='VRIF') "+\
               "  and (c.new_value=-1 or c.new_value=-2) "
-    filters = filters + GetSQLReportWhereSCR(type_analysis)
+    filters = filters + GetSQLReportWhereSCR(type_analysis, identities_db)
 
     if (evolutionary):
         q = GetSQLPeriod(period, " c.changed_on", fields, tables, filters,
@@ -909,7 +913,7 @@ def GetLongestReviews  (startdate, enddate, identities_db, type_analysis = []):
             "             c.old_value) t1 "
     tables = tables + GetSQLReportFromSCR(identities_db, type_analysis)
     filters = " t1.issue_id = i.id "
-    filters = filters + GetSQLReportWhereSCR(type_analysis)
+    filters = filters + GetSQLReportWhereSCR(type_analysis, identities_db)
 
     q = GetSQLGlobal(" i.submitted_on ", fields, tables, filters,
                            startdate, enddate)
@@ -1065,7 +1069,7 @@ def GetTimeToReviewQuerySCR (startdate, enddate, identities_db = None, type_anal
     tables = tables + GetSQLReportFromSCR(identities_db, type_analysis)
     filters = filter_bots + " i.id = changes.issue_id "
     filters += " AND people.id = changes.changed_by "
-    filters += GetSQLReportWhereSCR(type_analysis)
+    filters += GetSQLReportWhereSCR(type_analysis, identities_db)
     filters += " AND field='status' AND new_value='MERGED' "
     # remove autoreviews
     filters += " AND i.submitted_by<>changes.changed_by "
