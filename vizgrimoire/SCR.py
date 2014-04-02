@@ -375,6 +375,9 @@ def GetSQLProjectWhereSCR (project, identities_db):
 
     subprojects = ExecuteQuery(q)
 
+    if not isinstance(subprojects['subproject_id'], list):
+        subprojects['subproject_id'] = [subprojects['subproject_id']]
+
     project_with_children = subprojects['subproject_id'] + [project_id]
 
     repos = """and t.url IN (
