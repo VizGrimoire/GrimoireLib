@@ -27,6 +27,7 @@
 
 from GrimoireSQL import SetDBChannel
 from GrimoireUtils import read_options, read_main_conf
+import logging
 import SCM, ITS, MLS, SCR, Mediawiki, IRC
 from filter import Filter
 
@@ -51,7 +52,11 @@ class Report(object):
         # people not a filter yet
         if 'people' in filters: filters.remove('people')
         for name in filters:
-            Report._filters.append(Filter.get_filter_from_plural(name))
+            filter_ = Filter.get_filter_from_plural(name)
+            if filter_ is not None:
+                Report._filters.append(filter_)
+            else:
+                logging.error("Wrong filter " + name + ", review " + opts.config_file)
 
     @staticmethod
     def _init_data_sources():

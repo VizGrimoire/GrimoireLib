@@ -256,6 +256,8 @@ class SCR(DataSource):
             items = GetCountriesSCRName(startdate, enddate, identities_db)
         elif (filter_name == "domain"):
             logging.error("SCR " + filter_name + " not supported")
+        elif (filter_name == "project"):
+            items = get_projects_scr_name(startdate, enddate, identities_db)
         else:
             logging.error("SCR " + filter_name + " not supported")
         return items
@@ -269,7 +271,6 @@ class SCR(DataSource):
         items = SCR.get_filter_items(filter_, startdate, enddate, identities_db, bots)
         if (items == None): return
         items = items['name']
-
 
         filter_name = filter_.get_name()
 
@@ -354,10 +355,26 @@ def GetSQLRepositoriesFromSCR ():
     #tables necessaries for repositories
     return (" , trackers t")
 
-
 def GetSQLRepositoriesWhereSCR (repository):
     #fields necessaries to match info among tables
     return (" and t.url ='"+ repository+ "' and t.id = i.tracker_id")
+
+def GetSQLProjectFromSCR ():
+    # projects are mapped to repositories
+    return (" , trackers t")
+
+def GetSQLProjectWhereSCR (project, identities_db):
+    # include all repositories for a project
+    identities_db = "acs_cvsanaly_automatortest_2388"
+    repos = """and t.url IN (
+           SELECT repository_name
+           FROM   %s.projects p, %s.project_repositories pr
+           WHERE  p.project_id = pr.project_id AND p.id='%s'
+               AND pr.data_source='scr'
+    )""" % (identities_db, identities_db, project)
+
+    return (repos   + " and t.id = i.tracker_id")
+
 
 
 def GetSQLCompaniesFromSCR (identities_db):
@@ -411,11 +428,12 @@ def GetSQLReportFromSCR (identities_db, type_analysis):
         if analysis == 'repository': From = GetSQLRepositoriesFromSCR()
         elif analysis == 'company': From = GetSQLCompaniesFromSCR(identities_db)
         elif analysis == 'country': From = GetSQLCountriesFromSCR(identities_db)
+        elif analysis == 'project': From = GetSQLProjectFromSCR()
 
     return (From)
 
 
-def GetSQLReportWhereSCR (type_analysis):
+def GetSQLReportWhereSCR (type_analysis, identities_db = None):
     #generic function to generate 'where' clauses
 
     #"type" is a list of two values: type of analysis and value of
@@ -431,6 +449,7 @@ def GetSQLReportWhereSCR (type_analysis):
         if analysis == 'repository': where = GetSQLRepositoriesWhereSCR(value)
         elif analysis == 'company': where = GetSQLCompaniesWhereSCR(value)
         elif analysis == 'country': where = GetSQLCountriesWhereSCR(value)
+        elif analysis == 'project': where = GetSQLProjectWhereSCR(value, identities_db)
 
     return (where)
 
@@ -492,13 +511,30 @@ def GetCountriesSCRName  (startdate, enddate, identities_db, limit = 0):
            "ORDER BY issues DESC "+limit_sql
     return(ExecuteQuery(q))
 
+def get_projects_scr_name  (startdate, enddate, identities_db, limit = 0):
+    limit_sql=""
+    if (limit > 0): limit_sql = " LIMIT " + str(limit)
+
+    q = """
+        SELECT COUNT(i.id) AS total, p.id AS name
+        FROM  %s.projects p, %s.project_repositories pr,
+             issues i, trackers t
+        WHERE i.tracker_id = t.id AND t.url = pr.repository_name
+            AND p.project_id = pr.project_id and pr.data_source='scr'
+            AND i.submitted_on >= %s AND i.submitted_on < %s
+        GROUP BY p.id
+        ORDER BY total DESC, name %s
+        """ % (identities_db, identities_db, startdate, enddate, limit_sql)
+
+    return(ExecuteQuery(q))
+
+
 #########
 #Functions about the status of the review
 #########
 
 # REVIEWS
 def GetReviews (period, startdate, enddate, type_, type_analysis, evolutionary, identities_db):
-
     #Building the query
     fields = " count(distinct(i.issue)) as " + type_
     tables = "issues i" + GetSQLReportFromSCR(identities_db, type_analysis)
@@ -514,7 +550,7 @@ def GetReviews (period, startdate, enddate, type_, type_analysis, evolutionary, 
     #Adding dates filters (and evolutionary or static analysis)
     if (evolutionary):
         q = GetSQLPeriod(period, "i.submitted_on", fields, tables, filters,
-                      startdate, enddate)
+                         startdate, enddate)
     else:
         q = GetSQLGlobal(" i.submitted_on ", fields, tables, filters, startdate, enddate)
 

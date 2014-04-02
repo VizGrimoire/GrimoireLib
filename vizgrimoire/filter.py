@@ -29,7 +29,8 @@ import logging
 class Filter(object):
 
     _filters_data = [["repository","rep","repos"],["company","com","companies"],
-                    ["country","cou","countries"],["domain","dom","domains"]]
+                    ["country","cou","countries"],["domain","dom","domains"],
+                    ["project","prj","projects"]]
 
     def __init__(self, name, item = None):
         self.name = name
