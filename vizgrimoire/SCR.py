@@ -1,4 +1,4 @@
-## Copyright (C) 2013 Bitergia
+## Copyright (C) 2013-2014 Bitergia
 ##
 ## This program is free software; you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -364,17 +364,28 @@ def GetSQLProjectFromSCR ():
     return (" , trackers t")
 
 def GetSQLProjectWhereSCR (project, identities_db):
-    # include all repositories for a project
+    # include all repositories for a project and its subprojects
+
+    q = "SELECT project_id from %s.projects WHERE id='%s'" % (identities_db, project)
+    project_id = ExecuteQuery(q)['project_id']
+
+    q = """
+        SELECT subproject_id from %s.project_children pc where pc.project_id = '%s'
+    """ % (identities_db, project_id)
+
+    subprojects = ExecuteQuery(q)
+
+    project_with_children = subprojects['subproject_id'] + [project_id]
+
     repos = """and t.url IN (
            SELECT repository_name
            FROM   %s.projects p, %s.project_repositories pr
-           WHERE  p.project_id = pr.project_id AND p.id='%s'
+           WHERE  p.project_id = pr.project_id AND p.project_id IN (%s)
                AND pr.data_source='scr'
-    )""" % (identities_db, identities_db, project)
+    )""" % (identities_db, identities_db,
+            ','.join(str(x) for x in project_with_children))
 
     return (repos   + " and t.id = i.tracker_id")
-
-
 
 def GetSQLCompaniesFromSCR (identities_db):
     #tables necessaries for companies
