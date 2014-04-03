@@ -60,7 +60,7 @@ def aggData(period, startdate, enddate, idb, destdir):
 def tsData(period, startdate, enddate, idb, destdir):
     ts_data = {}
     ts_data = IRC.GetEvolDataIRC(period, startdate, enddate, idb, None)
-    ts_data = completePeriodIds(ts_data)
+    ts_data = completePeriodIds(ts_data, period, startdate, enddate)
     createJSON (ts_data, destdir+"/irc-evolutionary.json")
 
 def peopleData(period, startdate, enddate, idb, destdir, top_data):
@@ -74,7 +74,7 @@ def peopleData(period, startdate, enddate, idb, destdir, top_data):
     for upeople_id in people:
         # evol = dataFrame2Dict(vizr.GetEvolPeopleIRC(upeople_id, period, startdate, enddate))
         evol = IRC.GetEvolPeopleIRC(upeople_id, period, startdate, enddate)
-        evol = completePeriodIds(evol)
+        evol = completePeriodIds(evol, period, startdate, enddate)
         person_file = destdir+"/people-"+str(upeople_id)+"-irc-evolutionary.json"
         createJSON(evol, person_file)
 
@@ -91,7 +91,7 @@ def reposData(period, startdate, enddate, idb, destdir):
 
     for repo in repos:
         evol = IRC.GetRepoEvolSentSendersIRC(repo, period, startdate, enddate)
-        evol = completePeriodIds(evol)
+        evol = completePeriodIds(evol, period, startdate, enddate)
         repo_file = destdir+"/"+repo+"-irc-rep-evolutionary.json"
         createJSON(evol, repo_file)
 

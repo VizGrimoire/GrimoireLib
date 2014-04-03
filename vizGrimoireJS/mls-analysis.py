@@ -81,20 +81,20 @@ def tsData(period, startdate, enddate, identities_db, destdir, granularity, conf
 
     evol = {}
     data = MLS.EvolMLSInfo(period, startdate, enddate, identities_db, rfield)
-    evol = dict(evol.items() + completePeriodIds(data).items())
+    evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
 
 
     if ('companies' in reports):
         data  = MLS.EvolMLSCompanies(period, startdate, enddate, identities_db)
-        evol = dict(evol.items() + completePeriodIds(data).items())
+        evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
 
     if ('countries' in reports):
         data = MLS.EvolMLSCountries(period, startdate, enddate, identities_db)
-        evol = dict(evol.items() + completePeriodIds(data).items())
+        evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
 
     if ('domains' in reports):
         data = MLS.EvolMLSDomains(period, startdate, enddate, identities_db)
-        evol = dict(evol.items() + completePeriodIds(data).items())
+        evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
 
     createJSON (evol, destdir+"/mls-evolutionary.json")
 
@@ -109,7 +109,7 @@ def peopleData(period, startdate, enddate, identities_db, destdir, top_data):
 
     for upeople_id in people:
         evol = MLS.GetEvolPeopleMLS(upeople_id, period, startdate, enddate)
-        evol = completePeriodIds(evol)
+        evol = completePeriodIds(evol, period, startdate, enddate)
         createJSON(evol, destdir+"/people-"+str(upeople_id)+"-mls-evolutionary.json")
 
         static = MLS.GetStaticPeopleMLS(upeople_id, startdate, enddate)
@@ -131,7 +131,7 @@ def reposData(period, startdate, enddate, identities_db, destdir, conf, repofiel
         # Evol data   
         repo_name = "'"+repo+"'"
         data = MLS.EvolMLSInfo(period, startdate, enddate, identities_db, rfield, ["repository", repo_name])
-        data = completePeriodIds(data)
+        data = completePeriodIds(data, period, startdate, enddate)
         listname_file = repo.replace("/","_").replace("<","__").replace(">","___")
 
         # TODO: Multilist approach. We will obsolete it in future
@@ -156,7 +156,7 @@ def companiesData(period, startdate, enddate, identities_db, destdir, npeople):
     for company in companies:
         company_name = "'"+company+ "'"
         data = MLS.EvolMLSInfo(period, startdate, enddate, identities_db, rfield, ["company", company_name])
-        data = completePeriodIds(data)
+        data = completePeriodIds(data, period, startdate, enddate)
         createJSON(data, destdir+"/"+company+"-mls-com-evolutionary.json")
 
         top_senders = MLS.companyTopSenders (company, identities_db, startdate, enddate, npeople)
@@ -177,7 +177,7 @@ def countriesData(period, startdate, enddate, identities_db, destdir, npeople):
         country_name = "'" + country + "'"
         type_analysis = ["country", country_name]
         data = MLS.EvolMLSInfo(period, startdate, enddate, identities_db, rfield, type_analysis)
-        data = completePeriodIds(data)
+        data = completePeriodIds(data, period, startdate, enddate)
         createJSON (data, destdir+"/"+country+"-mls-cou-evolutionary.json")
 
         top_senders = MLS.countryTopSenders (country, identities_db, startdate, enddate, npeople)
@@ -195,7 +195,7 @@ def domainsData(period, startdate, enddate, identities_db, destdir, npeople):
         domain_name = "'"+domain+"'"
         type_analysis = ["domain", domain_name]
         data = MLS.EvolMLSInfo(period, startdate, enddate, identities_db, rfield, type_analysis)
-        data = completePeriodIds(data)
+        data = completePeriodIds(data, period, startdate, enddate)
         createJSON(data, destdir+"/"+domain+"-mls-dom-evolutionary.json")
 
         data = MLS.domainTopSenders(domain, identities_db, startdate, enddate, npeople)

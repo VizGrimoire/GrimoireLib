@@ -84,19 +84,19 @@ def aggData(period, startdate, enddate, identities_db, destdir):
 
 def tsData(period, startdate, enddate, identities_db, destdir, granularity, conf):
     data = SCM.GetSCMEvolutionaryData(period, startdate, enddate, identities_db, None)
-    evol_data = completePeriodIds(data)
+    evol_data = completePeriodIds(data, period, startdate, enddate)
 
     if ('companies' in reports) :
         data = SCM.EvolCompanies(period, startdate, enddate)
-        evol_data = dict(evol_data.items() + completePeriodIds(data).items())
+        evol_data = dict(evol_data.items() + completePeriodIds(data, period, startdate, enddate).items())
 
     if ('countries' in reports) :
         data = SCM.EvolCountries(period, startdate, enddate)
-        evol_data = dict(evol_data.items() + completePeriodIds(data).items())
+        evol_data = dict(evol_data.items() + completePeriodIds(data, period, startdate, enddate).items())
 
     if ('domains' in reports) :
         data = SCM.EvolDomains(period, startdate, enddate)
-        evol_data = dict(evol_data.items() + completePeriodIds(data).items())
+        evol_data = dict(evol_data.items() + completePeriodIds(data, period, startdate, enddate).items())
  
     createJSON (evol_data, destdir+"/scm-evolutionary.json")
 
@@ -113,7 +113,7 @@ def peopleData(period, startdate, enddate, identities_db, destdir, top_authors_d
 
     for upeople_id in people :
         evol_data = SCM.GetEvolPeopleSCM(upeople_id, period, startdate, enddate)
-        evol_data = completePeriodIds(evol_data)
+        evol_data = completePeriodIds(evol_data, period, startdate, enddate)
         createJSON (evol_data, destdir+"/people-"+str(upeople_id)+"-scm-evolutionary.json")
 
         agg = SCM.GetStaticPeopleSCM(upeople_id,  startdate, enddate)
@@ -133,7 +133,7 @@ def reposData(period, startdate, enddate, identities_db, destdir, conf):
         print (repo_name)
 
         evol_data = SCM.GetSCMEvolutionaryData(period, startdate, enddate, identities_db, ["repository", repo_name])
-        evol_data = completePeriodIds(evol_data)
+        evol_data = completePeriodIds(evol_data, period, startdate, enddate)
         createJSON(evol_data, destdir+"/"+repo+"-scm-rep-evolutionary.json")
 
         agg = SCM.GetSCMStaticData(period, startdate, enddate, identities_db, ["repository", repo_name])
@@ -153,7 +153,7 @@ def companiesData(period, startdate, enddate, identities_db, destdir, bots, npeo
         print (company_name)
 
         evol_data = SCM.GetSCMEvolutionaryData(period, startdate, enddate, identities_db, ["company", company_name])
-        evol_data = completePeriodIds(evol_data)
+        evol_data = completePeriodIds(evol_data, period, startdate, enddate)
         createJSON(evol_data, destdir+"/"+company+"-scm-com-evolutionary.json")
 
         agg = SCM.GetSCMStaticData(period, startdate, enddate, identities_db, ["company", company_name])
@@ -183,7 +183,7 @@ def countriesData(period, startdate, enddate, identities_db, destdir):
         country_name = "'"+country+"'"
 
         evol_data = SCM.GetSCMEvolutionaryData(period, startdate, enddate, identities_db, ["country", country_name])
-        evol_data = completePeriodIds(evol_data)
+        evol_data = completePeriodIds(evol_data, period, startdate, enddate)
         createJSON (evol_data, destdir+"/"+country+"-scm-cou-evolutionary.json")
 
         agg = SCM.GetSCMStaticData(period, startdate, enddate, identities_db, ["country", country_name])
@@ -201,7 +201,7 @@ def domainsData(period, startdate, enddate, identities_db, destdir):
         domain_name = "'"+domain+"'"
 
         evol_data = SCM.GetSCMEvolutionaryData(period, startdate, enddate, identities_db, ["domain", domain_name])
-        evol_data = completePeriodIds(evol_data)
+        evol_data = completePeriodIds(evol_data, period, startdate, enddate)
         createJSON(evol_data, destdir+"/"+domain+"-scm-dom-evolutionary.json")
 
         agg = SCM.GetSCMStaticData(period, startdate, enddate, identities_db, ["domain", domain_name])
@@ -218,7 +218,7 @@ def companies_countriesData(period, startdate, enddate, identities_db, destdir):
         for country in countries :
             print (country, "=>", company)
             data = SCM.scm_companies_countries_evol(identities_db, company, country, nperiod, startdate, enddate)
-            data = completePeriodIds(data)
+            data = completePeriodIds(data, period, startdate, enddate)
             createJSON (data, destdir + "/"+company+"_"+country+"-scm-evolutionary.json")
 
 def topData(period, startdate, enddate, identities_db, destdir, bots, npeople):

@@ -49,7 +49,7 @@ def aggData(period, startdate, enddate, identities_db, destdir):
 
 def tsData(period, startdate, enddate, identities_db, destdir, granularity, conf):
     evol_data = Mediawiki.GetEvolDataMediaWiki(period, startdate, enddate, identities_db, None)
-    evol_data = completePeriodIds(evol_data)
+    evol_data = completePeriodIds(evol_data, period, startdate, enddate)
     createJSON (evol_data, destdir+"/mediawiki-evolutionary.json")
 
 def peopleData(period, startdate, enddate, identities_db, destdir, top_data):
@@ -62,7 +62,7 @@ def peopleData(period, startdate, enddate, identities_db, destdir, top_data):
 
     for upeople_id in people:
         evol = Mediawiki.GetEvolPeopleMediaWiki(upeople_id, period, startdate, enddate)
-        evol = completePeriodIds(evol)
+        evol = completePeriodIds(evol, period, startdate, enddate)
         createJSON(evol, destdir+"/people-"+str(upeople_id)+"-mediawiki-evolutionary.json")
 
         static = Mediawiki.GetStaticPeopleMediaWiki(upeople_id, startdate, enddate)

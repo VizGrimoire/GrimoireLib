@@ -87,22 +87,22 @@ def tsData(period, startdate, enddate, identities_db, destdir, granularity,
 
     closed_condition = backend.closed_condition
     data = ITS.EvolITSInfo(period, startdate, enddate, identities_db, [], closed_condition)
-    evol = completePeriodIds(data)
+    evol = completePeriodIds(data, period, startdate, enddate)
     if ('companies' in reports) :
         data = ITS.EvolIssuesCompanies(period, startdate, enddate, identities_db)
-        evol = dict(evol.items() + completePeriodIds(data).items())
+        evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
 
     if ('countries' in reports) :
         data = ITS.EvolIssuesCountries(period, startdate, enddate, identities_db)
-        evol = dict(evol.items() + completePeriodIds(data).items())
+        evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
 
     if ('repositories' in reports) :
         data = ITS.EvolIssuesRepositories(period, startdate, enddate, identities_db)
-        evol = dict(evol.items() + completePeriodIds(data).items())
+        evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
 
     if ('domains' in reports) :
         data = ITS.EvolIssuesDomains(period, startdate, enddate, identities_db)
-        evol = dict(evol.items() + completePeriodIds(data).items())
+        evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
 
     data = ticketsStates(period, startdate, enddate, identities_db, backend)
     evol = dict(evol.items() + data.items())
@@ -123,7 +123,7 @@ def peopleData(period, startdate, enddate, identities_db, destdir, closed_condit
 
     for upeople_id in people :
         evol = ITS.GetPeopleEvolITS(upeople_id, period, startdate, enddate, closed_condition)
-        evol = completePeriodIds(evol)
+        evol = completePeriodIds(evol, period, startdate, enddate)
         createJSON (evol, destdir+"/people-"+str(upeople_id)+"-its-evolutionary.json")
 
         data = ITS.GetPeopleStaticITS(upeople_id, startdate, enddate, closed_condition)
@@ -140,7 +140,7 @@ def reposData(period, startdate, enddate, identities_db, destdir, conf, closed_c
         repo_name = "'"+ repo+ "'"
         repo_file = repo.replace("/","_")
         evol = ITS.EvolITSInfo(period, startdate, enddate, identities_db, ['repository', repo_name], closed_condition)
-        evol = completePeriodIds(evol)
+        evol = completePeriodIds(evol, period, startdate, enddate)
         createJSON(evol, destdir+"/"+repo_file+"-its-rep-evolutionary.json")
 
         agg = ITS.AggITSInfo(period, startdate, enddate, identities_db, ['repository', repo_name], closed_condition)
@@ -157,7 +157,7 @@ def companiesData(period, startdate, enddate, identities_db, destdir, closed_con
         print (company_name)
 
         evol = ITS.EvolITSInfo(period, startdate, enddate, identities_db, ['company', company_name], closed_condition)
-        evol = completePeriodIds(evol)
+        evol = completePeriodIds(evol, period, startdate, enddate)
         createJSON(evol, destdir+"/"+company+"-its-com-evolutionary.json")
 
         agg = ITS.AggITSInfo(period, startdate, enddate, identities_db, ['company', company_name], closed_condition)
@@ -179,7 +179,7 @@ def countriesData(period, startdate, enddate, identities_db, destdir, closed_con
 
         country_name = "'" + country + "'"
         evol = ITS.EvolITSInfo(period, startdate, enddate, identities_db, ['country', country_name], closed_condition)
-        evol = completePeriodIds(evol)
+        evol = completePeriodIds(evol, period, startdate, enddate)
         createJSON (evol, destdir+"/"+country+"-its-cou-evolutionary.json")
 
         data = ITS.AggITSInfo(period, startdate, enddate, identities_db, ['country', country_name], closed_condition)
@@ -195,7 +195,7 @@ def domainsData(period, startdate, enddate, identities_db, destdir, closed_condi
         print (domain_name)
 
         evol = ITS.EvolITSInfo(period, startdate, enddate, identities_db, ['domain', domain_name], closed_condition)
-        evol = completePeriodIds(evol)
+        evol = completePeriodIds(evol, period, startdate, enddate)
         createJSON(evol, destdir+"/"+domain+"-its-dom-evolutionary.json")
 
         agg = ITS.AggITSInfo(period, startdate, enddate, identities_db, ['domain', domain_name], closed_condition)
@@ -246,12 +246,12 @@ def ticketsStates(period, startdate, enddate, identities_db, backend):
         #Evolution of the backlog
         tickets_status = vizr.GetEvolBacklogTickets(period, startdate, enddate, status, backend.name_log_table)
         tickets_status = dataFrame2Dict(tickets_status)
-        tickets_status = completePeriodIds(tickets_status)
+        tickets_status = completePeriodIds(tickets_status, period, startdate, enddate)
         # rename key
         tickets_status[status] = tickets_status.pop("pending_tickets")
         #Issues per status
         current_status = vizr.GetCurrentStatus(period, startdate, enddate, identities_db, status)
-        current_status = completePeriodIds(dataFrame2Dict(current_status))
+        current_status = completePeriodIds(dataFrame2Dict(current_status), period, startdate, enddate)
         #Merging data
         evol = dict(evol.items() + current_status.items() + tickets_status.items())
     return evol
