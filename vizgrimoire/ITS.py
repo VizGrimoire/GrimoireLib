@@ -1264,10 +1264,19 @@ def EvolBMIIndex(period, startdate, enddate, identities_db, type_analysis, close
     # "Metrics and Models in Software Quality Engineering"
     # by Stephen H. Kan
     closed = EvolIssuesClosed(period, startdate, enddate, identities_db, type_analysis, closed_condition)
+    closed = completePeriodIds(closed, period, startdate, enddate)
     opened = EvolIssuesOpened(period, startdate, enddate, identities_db, type_analysis)
+    opened = completePeriodIds(opened, period, startdate, enddate)
 
-    evol_bmi = [closed['closed'][i] / float(opened['opened'][i]) * 100\
-                for i in range(len(closed['closed']))]
+    evol_bmi = []
+    for i in closed["closed"]:
+        
+        index = closed["closed"].index(i)
+        if opened["opened"][index] == 0:
+            #div by 0
+            evol_bmi.append(100) # some "neutral" value, although this should be infinite
+        else:
+            evol_bmi.append((float(i) / float(opened['opened'][index])) * 100)
 
     return {'closed' : closed['closed'],
             'opened' : opened['opened'],
