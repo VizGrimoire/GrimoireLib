@@ -530,22 +530,32 @@ def GetCountriesSCRName  (startdate, enddate, identities_db, limit = 0):
     return(ExecuteQuery(q))
 
 def get_projects_scr_name  (startdate, enddate, identities_db, limit = 0):
-    limit_sql=""
-    if (limit > 0): limit_sql = " LIMIT " + str(limit)
+    # Projects activity needs to include subprojects also
+    logging.info ("Getting projects list for SCR")
 
-    q = """
-        SELECT COUNT(i.id) AS total, p.id AS name
-        FROM  %s.projects p, %s.project_repositories pr,
-             issues i, trackers t
-        WHERE i.tracker_id = t.id AND t.url = pr.repository_name
-            AND p.project_id = pr.project_id and pr.data_source='scr'
-            AND i.submitted_on >= %s AND i.submitted_on < %s
-        GROUP BY p.id
-        ORDER BY total DESC, name %s
-        """ % (identities_db, identities_db, startdate, enddate, limit_sql)
+    # Get all projects list
+    q = "SELECT p.id AS name FROM  %s.projects p" % (identities_db)
+    projects = ExecuteQuery(q)
+    data = []
 
-    return(ExecuteQuery(q))
+    # Loop all projects getting reviews
+    for project in projects['name']:
+        type_analysis = ['project', project]
+        period = None
+        evol = False
+        reviews = GetReviews (period, startdate, enddate, "submitted",
+                              type_analysis, evol, identities_db)
+        reviews = reviews['submitted']
+        if (reviews > 0):
+            data.append([reviews,project])
 
+    # Order the list using reviews: https://wiki.python.org/moin/HowTo/Sorting
+    from operator import itemgetter
+    data_sort = sorted(data, key=itemgetter(0),reverse=True)
+    names = [name[1] for name in data_sort]
+
+    if (limit > 0): names = names[:limit]
+    return({"name":names})
 
 #########
 #Functions about the status of the review
