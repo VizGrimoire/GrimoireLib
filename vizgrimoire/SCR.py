@@ -30,7 +30,8 @@ from numpy import median, average
 
 from GrimoireSQL import GetSQLGlobal, GetSQLPeriod
 from GrimoireSQL import ExecuteQuery
-from GrimoireUtils import GetPercentageDiff, GetDates, completePeriodIds, checkListArray, removeDecimals, read_options
+from GrimoireUtils import GetPercentageDiff, GetDates, completePeriodIds
+from GrimoireUtils import checkListArray, removeDecimals, read_options, get_subprojects
 from GrimoireUtils import getPeriod, createJSON, checkFloatArray
 
 from data_source import DataSource
@@ -366,27 +367,12 @@ def GetSQLProjectFromSCR ():
 def GetSQLProjectWhereSCR (project, identities_db):
     # include all repositories for a project and its subprojects
 
-    q = "SELECT project_id from %s.projects WHERE id='%s'" % (identities_db, project)
-    project_id = ExecuteQuery(q)['project_id']
-
-    q = """
-        SELECT subproject_id from %s.project_children pc where pc.project_id = '%s'
-    """ % (identities_db, project_id)
-
-    subprojects = ExecuteQuery(q)
-
-    if not isinstance(subprojects['subproject_id'], list):
-        subprojects['subproject_id'] = [subprojects['subproject_id']]
-
-    project_with_children = subprojects['subproject_id'] + [project_id]
-
     repos = """and t.url IN (
            SELECT repository_name
            FROM   %s.projects p, %s.project_repositories pr
            WHERE  p.project_id = pr.project_id AND p.project_id IN (%s)
                AND pr.data_source='scr'
-    )""" % (identities_db, identities_db,
-            ','.join(str(x) for x in project_with_children))
+    )""" % (identities_db, identities_db, get_subprojects(project, identities_db))
 
     return (repos   + " and t.id = i.tracker_id")
 

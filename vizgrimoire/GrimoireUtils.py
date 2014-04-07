@@ -481,3 +481,25 @@ def read_main_conf(config_file):
         for o in opti:
             options[s][o] = parser.get(s, o)
     return options
+
+def get_subprojects(project, identities_db):
+    """ Return all subprojects ids for a project in a string join by comma """
+
+    from GrimoireSQL import ExecuteQuery
+
+    q = "SELECT project_id from %s.projects WHERE id='%s'" % (identities_db, project)
+    project_id = ExecuteQuery(q)['project_id']
+
+    q = """
+        SELECT subproject_id from %s.project_children pc where pc.project_id = '%s'
+    """ % (identities_db, project_id)
+
+    subprojects = ExecuteQuery(q)
+
+    if not isinstance(subprojects['subproject_id'], list):
+        subprojects['subproject_id'] = [subprojects['subproject_id']]
+
+    project_with_children = subprojects['subproject_id'] + [project_id]
+    project_with_children_str = ','.join(str(x) for x in project_with_children)
+
+    return  project_with_children_str

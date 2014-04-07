@@ -32,7 +32,8 @@ import os, logging
 from GrimoireSQL import GetSQLGlobal, GetSQLPeriod
 # TODO integrate: from GrimoireSQL import  GetSQLReportFrom 
 from GrimoireSQL import GetSQLReportWhere, ExecuteQuery, BuildQuery
-from GrimoireUtils import GetPercentageDiff, GetDates, completePeriodIds, createJSON, read_options, getPeriod
+from GrimoireUtils import GetPercentageDiff, GetDates, completePeriodIds
+from GrimoireUtils import createJSON, read_options, getPeriod, get_subprojects
 from data_source import DataSource
 from filter import Filter
 
@@ -160,6 +161,8 @@ class SCM(DataSource):
             items = scm_countries_names (identities_db, startdate, enddate)
         elif (filter_name == "domain"):
             items = scm_domains_names (identities_db, startdate, enddate)
+        elif (filter_name == "project"):
+            items = scm_projects_name (identities_db, startdate, enddate)
         else:
             logging.error(filter_name + " not supported")
         return items
@@ -316,6 +319,22 @@ def GetSQLRepositoriesWhere (repository):
     return (" and r.name ="+ repository + \
             " and r.id = s.repository_id")
 
+def GetSQLProjectFrom ():
+    #tables necessaries for repositories
+    return (" , repositories r")
+
+
+def GetSQLProjectWhere (project, role, identities_db):
+    # include all repositories for a project and its subprojects
+
+    repos = """and r.uri IN (
+           SELECT repository_name
+           FROM   %s.projects p, %s.project_repositories pr
+           WHERE  p.project_id = pr.project_id AND p.project_id IN (%s)
+            AND pr.data_source='scm'
+    )""" % (identities_db, identities_db, get_subprojects(project, identities_db))
+
+    return (repos   + " and r.id = s.repository_id")
 
 def GetSQLCompaniesFrom (identities_db):
     #tables necessaries for companies
@@ -385,10 +404,11 @@ def GetSQLReportFrom (identities_db, type_analysis):
     elif analysis == 'company': From = GetSQLCompaniesFrom(identities_db)
     elif analysis == 'country': From = GetSQLCountriesFrom(identities_db)
     elif analysis == 'domain': From = GetSQLDomainsFrom(identities_db)
+    elif analysis == 'project': From = GetSQLProjectFrom()
 
     return (From)
 
-def GetSQLReportWhere (type_analysis, role):
+def GetSQLReportWhere (type_analysis, role, identities_db = None):
     #generic function to generate 'where' clauses
 
     #"type" is a list of two values: type of analysis and value of 
@@ -405,6 +425,7 @@ def GetSQLReportWhere (type_analysis, role):
     elif analysis == 'company': where = GetSQLCompaniesWhere(value, role)
     elif analysis == 'country': where = GetSQLCountriesWhere(value, role)
     elif analysis == 'domain': where = GetSQLDomainsWhere(value, role)
+    elif analysis == 'project': where = GetSQLProjectWhere(value, role, identities_db)
 
     return (where)
 
@@ -428,7 +449,7 @@ def GetCommits (period, startdate, enddate, identities_db, type_analysis, evolut
 
     fields = " count(distinct(s.id)) as commits "
     tables = " scmlog s, actions a " + GetSQLReportFrom(identities_db, type_analysis)
-    filters = GetSQLReportWhere(type_analysis, "author") + " and s.id=a.commit_id "
+    filters = GetSQLReportWhere(type_analysis, "author", identities_db) + " and s.id=a.commit_id "
 
     q = BuildQuery(period, startdate, enddate, " s.date ", fields, tables, filters, evolutionary)
 
@@ -452,7 +473,7 @@ def GetAuthors (period, startdate, enddate, identities_db, type_analysis, evolut
 
     fields = " count(distinct(pup.upeople_id)) AS authors "
     tables = " scmlog s "
-    filters = GetSQLReportWhere(type_analysis, "author")
+    filters = GetSQLReportWhere(type_analysis, "author", identities_db)
 
     #specific parts of the query depending on the report needed
     tables += GetSQLReportFrom(identities_db, type_analysis)
@@ -503,7 +524,7 @@ def GetCommitters (period, startdate, enddate, identities_db, type_analysis, evo
 
     fields = 'count(distinct(pup.upeople_id)) AS committers '
     tables = "scmlog s "
-    filters = GetSQLReportWhere(type_analysis, "committer")
+    filters = GetSQLReportWhere(type_analysis, "committer", identities_db)
 
     #specific parts of the query depending on the report needed
     tables += GetSQLReportFrom(identities_db, type_analysis)
@@ -546,7 +567,7 @@ def GetFiles (period, startdate, enddate, identities_db, type_analysis, evolutio
     #specific parts of the query depending on the report needed
     tables += GetSQLReportFrom(identities_db, type_analysis)
     #TODO: left "author" as generic option coming from parameters (this should be specified by command line)
-    filters += GetSQLReportWhere(type_analysis, "author")
+    filters += GetSQLReportWhere(type_analysis, "author", identities_db)
 
     #executing the query
 
@@ -592,7 +613,7 @@ def GetLines (period, startdate, enddate, identities_db, type_analysis, evolutio
     # specific parts of the query depending on the report needed
     tables += GetSQLReportFrom(identities_db, type_analysis)
     #TODO: left "author" as generic option coming from parameters (this should be specified by command line)
-    filters += GetSQLReportWhere(type_analysis, "author")
+    filters += GetSQLReportWhere(type_analysis, "author", identities_db)
 
     #executing the query
     q = BuildQuery(period, startdate, enddate, " s.date ", fields, tables, filters, evolutionary)
@@ -651,7 +672,7 @@ def GetBranches (period, startdate, enddate, identities_db, type_analysis, evolu
     # specific parts of the query depending on the report needed
     tables += GetSQLReportFrom(identities_db, type_analysis)
     #TODO: left "author" as generic option coming from parameters (this should be specified by command line)
-    filters += GetSQLReportWhere(type_analysis, "author")
+    filters += GetSQLReportWhere(type_analysis, "author", identities_db)
 
     #executing the query
     q = BuildQuery(period, startdate, enddate, " s.date ", fields, tables, filters, evolutionary)
@@ -680,7 +701,7 @@ def GetRepositories (period, startdate, enddate, identities_db, type_analysis, e
     # specific parts of the query depending on the report needed
     tables += GetSQLReportFrom(identities_db, type_analysis)
     #TODO: left "author" as generic option coming from parameters (this should be specified by command line)
-    filters = GetSQLReportWhere(type_analysis, "author")
+    filters = GetSQLReportWhere(type_analysis, "author", identities_db)
 
     #executing the query
     q = BuildQuery(period, startdate, enddate, " s.date ", fields, tables, filters, evolutionary)
@@ -715,7 +736,7 @@ def StaticNumCommits (period, startdate, enddate, identities_db, type_analysis) 
     # specific parts of the query depending on the report needed
     tables += GetSQLReportFrom(identities_db, type_analysis)
     #TODO: left "author" as generic option coming from parameters (this should be specified by command line)
-    filters += GetSQLReportWhere(type_analysis, "author")
+    filters += GetSQLReportWhere(type_analysis, "author", identities_db)
 
     #executing the query
     q = fields + tables + filters
@@ -749,7 +770,7 @@ def GetActions (period, startdate, enddate, identities_db, type_analysis, evolut
     filters = " a.commit_id = s.id "
 
     tables += GetSQLReportFrom(identities_db, type_analysis)
-    filters += GetSQLReportWhere(type_analysis, "author")
+    filters += GetSQLReportWhere(type_analysis, "author", identities_db)
 
     q = BuildQuery(period, startdate, enddate, " s.date ", fields, tables, filters, evolutionary)
 
@@ -780,7 +801,7 @@ def StaticNumLines (period, startdate, enddate, identities_db, type_analysis) :
     # specific parts of the query depending on the report needed
     tables += GetSQLReportFrom(identities_db, type_analysis)
     #TODO: left "author" as generic option coming from parameters (this should be specified by command line)
-    filters += GetSQLReportWhere(type_analysis, "author")
+    filters += GetSQLReportWhere(type_analysis, "author", identities_db)
 
     #executing the query
     q = select + tables + filters
@@ -799,7 +820,7 @@ def GetAvgCommitsPeriod (period, startdate, enddate, identities_db, type_analysi
     filters = " s.id = a.commit_id "
 
     tables += GetSQLReportFrom(identities_db, type_analysis)
-    filters += GetSQLReportWhere(type_analysis, "author")
+    filters += GetSQLReportWhere(type_analysis, "author", identities_db)
 
     q = BuildQuery(period, startdate, enddate, " s.date ", fields, tables, filters, evolutionary)
     return(ExecuteQuery(q))
@@ -824,7 +845,7 @@ def GetAvgFilesPeriod (period, startdate, enddate, identities_db, type_analysis,
     filters = " s.id = a.commit_id "
 
     tables += GetSQLReportFrom(identities_db, type_analysis)
-    filters += GetSQLReportWhere(type_analysis, "author")
+    filters += GetSQLReportWhere(type_analysis, "author", identities_db)
 
     q = BuildQuery(period, startdate, enddate, " s.date ", fields, tables, filters, evolutionary)
 
@@ -849,7 +870,7 @@ def GetAvgCommitsAuthor (period, startdate, enddate, identities_db, type_analysi
     tables = " scmlog s, actions a " 
     filters = " s.id = a.commit_id " 
 
-    filters += GetSQLReportWhere(type_analysis, "author")
+    filters += GetSQLReportWhere(type_analysis, "author", identities_db)
 
     #specific parts of the query depending on the report needed
     tables += GetSQLReportFrom(identities_db, type_analysis)
@@ -890,7 +911,7 @@ def GetAvgAuthorPeriod (period, startdate, enddate, identities_db, type_analysis
     tables = " scmlog s "
     # filters = ""
 
-    filters = GetSQLReportWhere(type_analysis, "author")
+    filters = GetSQLReportWhere(type_analysis, "author", identities_db)
 
     #specific parts of the query depending on the report needed
     tables += GetSQLReportFrom(identities_db, type_analysis)
@@ -931,7 +952,7 @@ def GetAvgCommitterPeriod (period, startdate, enddate, identities_db, type_analy
     tables = " scmlog s "
     # filters = ""
 
-    filters = GetSQLReportWhere(type_analysis, "committer")
+    filters = GetSQLReportWhere(type_analysis, "committer", identities_db)
 
     #specific parts of the query depending on the report needed
     tables += GetSQLReportFrom(identities_db, type_analysis)
@@ -972,7 +993,7 @@ def GetAvgFilesAuthor (period, startdate, enddate, identities_db, type_analysis,
     tables = " scmlog s, actions a "
     filters = " s.id = a.commit_id "
 
-    filters += GetSQLReportWhere(type_analysis, "author")
+    filters += GetSQLReportWhere(type_analysis, "author", identities_db)
 
     #specific parts of the query depending on the report needed
     tables += GetSQLReportFrom(identities_db, type_analysis)
@@ -1673,6 +1694,36 @@ def scm_domains_names (identities_db, startdate, enddate) :
     data = ExecuteQuery(q)
     return (data)
 
+def scm_projects_name  (identities_db, startdate, enddate, limit = 0):
+    # Projects activity needs to include subprojects also
+    logging.info ("Getting projects list for SCM")
+
+    # Get all projects list
+    q = "SELECT p.id AS name FROM  %s.projects p" % (identities_db)
+    projects = ExecuteQuery(q)
+    data = []
+
+    # Loop all projects getting reviews
+    for project in projects['name']:
+        type_analysis = ['project', project]
+        period = None
+        evol = False
+        commits = GetCommits (period, startdate, enddate, identities_db, type_analysis, evol)
+        commits = commits['commits']
+        if (commits > 0):
+            data.append([commits,project])
+
+    print(data)
+    import sys
+    sys.exit()
+
+    # Order the list using reviews: https://wiki.python.org/moin/HowTo/Sorting
+    from operator import itemgetter
+    data_sort = sorted(data, key=itemgetter(0),reverse=True)
+    names = [name[1] for name in data_sort]
+
+    if (limit > 0): names = names[:limit]
+    return({"name":names})
 
 ##############
 # Micro Studies
