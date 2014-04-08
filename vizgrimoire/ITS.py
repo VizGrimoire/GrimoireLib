@@ -32,7 +32,7 @@ import logging, os, re
 from GrimoireSQL import GetSQLGlobal, GetSQLPeriod
 from GrimoireSQL import ExecuteQuery, BuildQuery
 from GrimoireUtils import GetPercentageDiff, GetDates, completePeriodIds, read_options, getPeriod
-from GrimoireUtils import createJSON
+from GrimoireUtils import createJSON, get_subprojects
 
 from data_source import DataSource
 from filter import Filter
@@ -222,6 +222,8 @@ class ITS(DataSource):
             items = GetCountriesNamesITS(startdate, enddate, identities_db, ITS._get_closed_condition())
         elif (filter_name == "domain"):
             items = GetDomainsNameITS(startdate, enddate, identities_db, ITS._get_closed_condition(), bots)
+        elif (filter_name == "project"):
+            items = get_projects_name(startdate, enddate, identities_db, ITS._get_closed_condition())
         else:
             logging.error(filter_name + " not supported")
         return items
@@ -329,6 +331,24 @@ def GetITSSQLRepositoriesWhere (repository):
     # fields necessary to match info among tables
     return (" i.tracker_id = t.id and t.url = "+repository+" ")
 
+def GetITSSQLProjectsFrom ():
+    # tables necessary for repositories
+    return (", trackers t")
+
+def GetITSSQLProjectsWhere (project, identities_db):
+    # include all repositories for a project and its subprojects
+
+    repos = """ t.url IN (
+           SELECT repository_name
+           FROM   %s.projects p, %s.project_repositories pr
+           WHERE  p.project_id = pr.project_id AND p.project_id IN (%s)
+               AND pr.data_source='its'
+    )""" % (identities_db, identities_db, get_subprojects(project, identities_db))
+
+    return (repos   + " and t.id = i.tracker_id")
+
+
+
 def GetITSSQLCompaniesFrom (i_db):
     # fields necessary for the companies analysis
 
@@ -395,10 +415,11 @@ def GetITSSQLReportFrom (identities_db, type_analysis):
     elif analysis == 'company': From = GetITSSQLCompaniesFrom(identities_db)
     elif analysis == 'country': From = GetITSSQLCountriesFrom(identities_db)
     elif analysis == 'domain': From = GetITSSQLDomainsFrom(identities_db)
+    elif analysis == 'project': From = GetITSSQLProjectsFrom()
 
     return (From)
 
-def GetITSSQLReportWhere (type_analysis):
+def GetITSSQLReportWhere (type_analysis, identities_db = None):
     #generic function to generate 'where' clauses
 
     #"type" is a list of two values: type of analysis and value of 
@@ -414,6 +435,7 @@ def GetITSSQLReportWhere (type_analysis):
     elif analysis == 'company': where = GetITSSQLCompaniesWhere(value)
     elif analysis == 'country': where = GetITSSQLCountriesWhere(value)
     elif analysis == 'domain': where = GetITSSQLDomainsWhere(value)
+    elif analysis == 'project': where = GetITSSQLProjectsWhere(value, identities_db)
 
     return (where)
 
@@ -481,7 +503,7 @@ def GetOpened (period, startdate, enddate, identities_db, type_analysis, evoluti
     #However this function is less time expensive.
     fields = " count(distinct(i.id)) as opened "
     tables = " issues i "+ GetITSSQLReportFrom(identities_db, type_analysis)
-    filters = GetITSSQLReportWhere(type_analysis)
+    filters = GetITSSQLReportWhere(type_analysis, identities_db)
     q = BuildQuery(period, startdate, enddate, " submitted_on ", fields, tables, filters, evolutionary)
 
     data = ExecuteQuery(q)
@@ -499,14 +521,14 @@ def GetOpeners (period, startdate, enddate, identities_db, type_analysis, evolut
     #This function returns the evolution or agg number of people opening issues
     fields = " count(distinct(pup.upeople_id)) as openers "
     tables = " issues i " + GetITSSQLReportFrom(identities_db, type_analysis)
-    filters = GetITSSQLReportWhere(type_analysis)
+    filters = GetITSSQLReportWhere(type_analysis, identities_db)
 
     if (type_analysis is None or len (type_analysis) != 2) :
         #Specific case for the basic option where people_upeople table is needed
         #and not taken into account in the initial part of the query
         tables += ", people_upeople pup"
         filters += " and i.submitted_by = pup.people_id"
-    elif (type_analysis[0] == "repository"):
+    elif (type_analysis[0] == "repository" or type_analysis[0] == "project"):
         #Adding people_upeople table
         tables += ", people_upeople pup"
         filters += " and i.submitted_by = pup.people_id "
@@ -533,13 +555,14 @@ def GetClosed (period, startdate, enddate, identities_db, type_analysis, evoluti
     tables = " issues i, changes ch " + GetITSSQLReportFrom(identities_db, type_analysis)
 
     filters = " i.id = ch.issue_id and " + closed_condition 
-    filters_ext = GetITSSQLReportWhere(type_analysis)
+    filters_ext = GetITSSQLReportWhere(type_analysis, identities_db)
     if (filters_ext != ""):
         filters += " and " + filters_ext
     #Action needed to replace issues filters by changes one
     filters = filters.replace("i.submitted", "ch.changed")
 
     q = BuildQuery(period, startdate, enddate, " ch.changed_on ", fields, tables, filters, evolutionary)
+
     data = ExecuteQuery(q)
     return (data)
 
@@ -560,7 +583,7 @@ def GetClosers (period, startdate, enddate, identities_db, type_analysis, evolut
 
     #closed condition filters
     filters = " i.id = ch.issue_id and " + closed_condition
-    filters_ext = GetITSSQLReportWhere(type_analysis)
+    filters_ext = GetITSSQLReportWhere(type_analysis, identities_db)
     if (filters_ext != ""):
         filters += " and " + filters_ext
     #unique identities filters
@@ -569,7 +592,7 @@ def GetClosers (period, startdate, enddate, identities_db, type_analysis, evolut
         #and not taken into account in the initial part of the query
         tables += ", people_upeople pup"
         filters += " and i.submitted_by = pup.people_id"
-    elif (type_analysis[0] == "repository"):
+    elif (type_analysis[0] == "repository" or type_analysis[0] == "project"):
         #Adding people_upeople table
         tables += ", people_upeople pup"
         filters += " and i.submitted_by = pup.people_id "
@@ -597,7 +620,7 @@ def GetChanged (period, startdate, enddate, identities_db, type_analysis, evolut
     tables = " issues i, changes ch " + GetITSSQLReportFrom(identities_db, type_analysis)
 
     filters = " i.id = ch.issue_id "
-    filters_ext = GetITSSQLReportWhere(type_analysis)
+    filters_ext = GetITSSQLReportWhere(type_analysis, identities_db)
     if (filters_ext != ""):
         filters += " and " + filters_ext
 
@@ -626,7 +649,7 @@ def GetChangers (period, startdate, enddate, identities_db, type_analysis, evolu
     tables = " issues i, changes ch " + GetITSSQLReportFrom(identities_db, type_analysis)
 
     filters = " i.id = ch.issue_id "
-    filters_ext = GetITSSQLReportWhere(type_analysis)
+    filters_ext = GetITSSQLReportWhere(type_analysis, identities_db)
     if (filters_ext != ""):
         filters += " and " + filters_ext
 
@@ -637,7 +660,7 @@ def GetChangers (period, startdate, enddate, identities_db, type_analysis, evolu
         tables += ", people_upeople pup"
         filters += " and i.submitted_by = pup.people_id"
 
-    elif (type_analysis[0] == "repository"):
+    elif (type_analysis[0] == "repository"or type_analysis[0] == "project"):
         #Adding people_upeople table
         tables += ", people_upeople pup"
         filters += " and i.submitted_by = pup.people_id "
@@ -663,7 +686,7 @@ def GetIssuesRepositories (period, startdate, enddate, identities_db, type_analy
 
     fields = " COUNT(DISTINCT(tracker_id)) AS trackers  "
     tables = " issues i " + GetITSSQLReportFrom(identities_db, type_analysis)
-    filters = GetITSSQLReportWhere(type_analysis)
+    filters = GetITSSQLReportWhere(type_analysis, identities_db)
 
     q = BuildQuery(period, startdate, enddate, " i.submitted_on ", fields, tables, filters, evolutionary)
     return(ExecuteQuery(q))
@@ -681,7 +704,7 @@ def GetIssuesStudies (period, startdate, enddate, identities_db, type_analysis, 
     # database schema such as domains, companies and countries
     fields = ' count(distinct(name)) as ' + study
     tables = " issues i " + GetITSSQLReportFrom(identities_db, type_analysis)
-    filters = GetITSSQLReportWhere(type_analysis)
+    filters = GetITSSQLReportWhere(type_analysis, identities_db)
 
     #Filtering last part of the query, not used in this case
     #filters = gsub("and\n( )+(d|c|cou|com).name =.*$", "", filters)
@@ -695,6 +718,10 @@ def EvolIssuesDomains (period, startdate, enddate, identities_db):
     # Evol number of domains used
     return(GetIssuesStudies(period, startdate, enddate, identities_db, ['domain', ''], True, 'domains'))
 
+def EvolIssuesProjects (period, startdate, enddate, identities_db):
+    # Evol number of projects used
+    return(GetIssuesStudies(period, startdate, enddate, identities_db, ['project', ''], True, 'projects'))
+
 def EvolIssuesCountries (period, startdate, enddate, identities_db):
     # Evol number of countries
     return(GetIssuesStudies(period, startdate, enddate, identities_db, ['country', ''], True, 'countries'))
@@ -707,6 +734,10 @@ def EvolIssuesCompanies (period, startdate, enddate, identities_db):
 def AggIssuesDomains (period, startdate, enddate, identities_db):
     # Agg number of domains
     return(GetIssuesStudies(period, startdate, enddate, identities_db, ['domain', ''], False, 'domains'))
+
+def AggIssuesProjects (period, startdate, enddate, identities_db):
+    # Agg number of projects
+    return(GetIssuesStudies(period, startdate, enddate, identities_db, ['project', ''], False, 'projects'))
 
 def AggIssuesCountries (period, startdate, enddate, identities_db):
     # Agg number of countries
@@ -724,7 +755,7 @@ def GetDate (startdate, enddate, identities_db, type_analysis, type):
         fields = " DATE_FORMAT (min(submitted_on), '%Y-%m-%d') as first_date"
 
     tables = " issues i " + GetITSSQLReportFrom(identities_db, type_analysis)
-    filters = GetITSSQLReportWhere(type_analysis)
+    filters = GetITSSQLReportWhere(type_analysis, identities_db)
 
     q = BuildQuery(None, startdate, enddate, " i.submitted_on ", fields, tables, filters, False)
     data = ExecuteQuery(q)
@@ -774,6 +805,37 @@ def GetReposNameITS (startdate, enddate) :
 
     data = ExecuteQuery(q)
     return (data)
+
+def get_projects_name (startdate, enddate, identities_db, closed_condition) :
+    # Projects activity needs to include subprojects also
+    logging.info ("Getting projects list for ITS")
+
+    # Get all projects list
+    q = "SELECT p.id AS name FROM  %s.projects p" % (identities_db)
+    projects = ExecuteQuery(q)
+    data = []
+
+    # Loop all projects getting reviews
+    for project in projects['name']:
+        type_analysis = ['project', project]
+        period = None
+        issues = AggIssuesClosed (period, startdate, enddate, identities_db,
+                                  type_analysis, closed_condition)
+        issues = issues['closed']
+        if (issues > 0):
+            data.append([issues,project])
+
+    # Order the list using reviews: https://wiki.python.org/moin/HowTo/Sorting
+    from operator import itemgetter
+    data_sort = sorted(data, key=itemgetter(0),reverse=True)
+    names = [name[1] for name in data_sort]
+
+    logging.info(names)
+
+    import sys
+    sys.exit()
+
+    return({"name":names})
 
 def GetTablesDomainsITS (i_db, table='') :
     tables = GetTablesOwnUniqueIdsITS(table)
