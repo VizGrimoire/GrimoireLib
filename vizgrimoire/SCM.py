@@ -326,6 +326,9 @@ def GetSQLProjectFrom ():
 
 def GetSQLProjectWhere (project, role, identities_db):
     # include all repositories for a project and its subprojects
+    # Remove '' from project name
+    if (project[0] == "'" and project[-1] == "'"):
+        project = project[1:-1]
 
     repos = """and r.uri IN (
            SELECT repository_name
@@ -484,7 +487,7 @@ def GetAuthors (period, startdate, enddate, identities_db, type_analysis, evolut
         tables += ",  "+identities_db+".people_upeople pup"
         filters += " and s.author_id = pup.people_id"
 
-    elif (type_analysis[0] == "repository"):
+    elif (type_analysis[0] == "repository" or type_analysis[0] == "project"):
         #Adding people_upeople table
         tables += ",  "+identities_db+".people_upeople pup"
         filters += " and s.author_id = pup.people_id "
@@ -535,7 +538,7 @@ def GetCommitters (period, startdate, enddate, identities_db, type_analysis, evo
         tables += " ,  "+identities_db+".people_upeople pup "
         filters += " and s.committer_id = pup.people_id"
 
-    elif (type_analysis[0] == "repository"):
+    elif (type_analysis[0] == "repository" or type_analysis[0] == "project"):
         #Adding people_upeople table
         tables += ",  "+identities_db+".people_upeople pup"
         filters += " and s.committer_id = pup.people_id "
@@ -881,7 +884,7 @@ def GetAvgCommitsAuthor (period, startdate, enddate, identities_db, type_analysi
         tables += ",  "+identities_db+".people_upeople pup"
         filters += " and s.author_id = pup.people_id"
 
-    elif (type_analysis[0] == "repository"):
+    elif (type_analysis[0] == "repository" or type_analysis[0] == "project"):
         #Adding people_upeople table
         tables += ",  "+identities_db+".people_upeople pup"
         filters += " and s.author_id = pup.people_id "
@@ -922,7 +925,7 @@ def GetAvgAuthorPeriod (period, startdate, enddate, identities_db, type_analysis
         tables += ",  "+identities_db+".people_upeople pup"
         filters += " and s.author_id = pup.people_id"
 
-    elif (type_analysis[0] == "repository"):
+    elif (type_analysis[0] == "repository" or type_analysis[0] == "project"):
         #Adding people_upeople table
         tables += ",  "+identities_db+".people_upeople pup"
         filters += " and s.author_id = pup.people_id "
@@ -963,7 +966,7 @@ def GetAvgCommitterPeriod (period, startdate, enddate, identities_db, type_analy
         tables += ",  "+identities_db+".people_upeople pup"
         filters += " and s.committer_id = pup.people_id"
 
-    elif (type_analysis[0] == "repository"):
+    elif (type_analysis[0] == "repository" or type_analysis[0] == "project"):
         #Adding people_upeople table
         tables += ",  "+identities_db+".people_upeople pup"
         filters += " and s.committer_id = pup.people_id "
@@ -1004,7 +1007,7 @@ def GetAvgFilesAuthor (period, startdate, enddate, identities_db, type_analysis,
         tables += ",  "+identities_db+".people_upeople pup"
         filters += " and s.author_id = pup.people_id"
 
-    elif (type_analysis[0] == "repository"):
+    elif (type_analysis[0] == "repository" or type_analysis[0] == "project"):
         #Adding people_upeople table
         tables += ",  "+identities_db+".people_upeople pup"
         filters += " and s.author_id = pup.people_id "
@@ -1712,10 +1715,6 @@ def scm_projects_name  (identities_db, startdate, enddate, limit = 0):
         commits = commits['commits']
         if (commits > 0):
             data.append([commits,project])
-
-    print(data)
-    import sys
-    sys.exit()
 
     # Order the list using reviews: https://wiki.python.org/moin/HowTo/Sorting
     from operator import itemgetter
