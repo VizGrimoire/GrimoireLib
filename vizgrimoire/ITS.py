@@ -337,6 +337,9 @@ def GetITSSQLProjectsFrom ():
 
 def GetITSSQLProjectsWhere (project, identities_db):
     # include all repositories for a project and its subprojects
+    # Remove '' from project name
+    if (project[0] == "'" and project[-1] == "'"):
+        project = project[1:-1]
 
     repos = """ t.url IN (
            SELECT repository_name
@@ -829,11 +832,6 @@ def get_projects_name (startdate, enddate, identities_db, closed_condition) :
     from operator import itemgetter
     data_sort = sorted(data, key=itemgetter(0),reverse=True)
     names = [name[1] for name in data_sort]
-
-    logging.info(names)
-
-    import sys
-    sys.exit()
 
     return({"name":names})
 
