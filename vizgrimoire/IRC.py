@@ -307,8 +307,11 @@ def GetEvolDataIRC (period, startdate, enddate, i_db, type_analysis):
 
     # 1- Retrieving information
     sent = EvolSentIRC(period, startdate, enddate, i_db, type_analysis)
+    sent = completePeriodIds(sent, period, startdate, enddate)
     senders = EvolSendersIRC(period, startdate, enddate, i_db, type_analysis)
+    senders = completePeriodIds(senders, period, startdate, enddate)
     repositories = EvolRepositoriesIRC(period, startdate, enddate, i_db, type_analysis)
+    repositories = completePeriodIds(repositories, period, startdate, enddate)
 
     # 2- Merging information
     evol_data = dict(sent.items()+ senders.items()+ repositories.items())
