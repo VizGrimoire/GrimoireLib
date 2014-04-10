@@ -150,7 +150,7 @@ class IRC(DataSource):
 
             evol_data = IRC.get_evolutionary_data(period, startdate, enddate, identities_db, filter_item)
             fn = os.path.join(opts.destdir, filter_item.get_evolutionary_filename(IRC()))
-            createJSON(completePeriodIds(evol_data, period, statdate, enddate), fn)
+            createJSON(completePeriodIds(evol_data, period, startdate, enddate), fn)
 
             agg = IRC.get_agg_data(period, startdate, enddate, identities_db, filter_item)
             fn = os.path.join(opts.destdir, filter_item.get_static_filename(IRC()))
