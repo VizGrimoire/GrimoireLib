@@ -1212,6 +1212,10 @@ def GetTopClosers (days, startdate, enddate,
         "LIMIT "+ limit
 
     data = ExecuteQuery(q)
+
+    if not isinstance(data['id'], list):
+        data = {item: [data[item]] for item in data}
+
     return (data)
 
 
