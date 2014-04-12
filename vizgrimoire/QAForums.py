@@ -231,8 +231,8 @@ class QAForums(DataSource):
         # The netvalue indicates if this is an increment (positive value) or decrement (negative value)
 
         chardates = GetDates(init_date, days)
-        lastmessages = QAForums.static_num_sent(period, chardates[1], chardates[0], type_post)
-        prevmessages = QAForums.static_num_sent(period, chardates[2], chardates[1], type_post)
+        lastmessages = QAForums.static_num_sent(period, chardates[1], chardates[0], None, None, type_post)
+        prevmessages = QAForums.static_num_sent(period, chardates[2], chardates[1], None, None, type_post)
         lastmessages = int(lastmessages['sent'])
         prevmessages = int(prevmessages['sent'])
 
