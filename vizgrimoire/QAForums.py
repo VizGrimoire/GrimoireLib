@@ -159,7 +159,7 @@ class QAForums(DataSource):
         filters = " WHERE %s = p.identifier AND %s >= %s AND %s < %s " % \
           (author_field, date_field, startdate, date_field, enddate)          
         tail = " GROUP BY senders ORDER BY sent DESC, senders LIMIT %s" % (limit)
-        q = select + fromtable + filters+ tail
+        q = select + fromtable + filters + date_limit + tail
         return(ExecuteQuery(q))
 
     @staticmethod
