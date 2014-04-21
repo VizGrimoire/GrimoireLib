@@ -22,10 +22,165 @@
 #     Alvaro del Castillo <acs@bitergia.com>
 #     Daniel Izquierdo <dizquierdo@bitergia.com>
 
+import logging, os
+
 from GrimoireSQL import GetSQLGlobal, GetSQLPeriod, GetSQLReportFrom
 from GrimoireSQL import GetSQLReportWhere, ExecuteQuery, BuildQuery
-from GrimoireUtils import GetPercentageDiff, GetDates
-import GrimoireUtils
+from GrimoireUtils import GetPercentageDiff, GetDates, read_options, getPeriod, createJSON, completePeriodIds
+from data_source import DataSource
+from filter import Filter
+
+
+class IRC(DataSource):
+
+    @staticmethod
+    def get_db_name():
+        return "db_irc"
+
+    @staticmethod
+    def get_name(): return "irc"
+
+    @staticmethod
+    def get_evolutionary_data (period, startdate, enddate, identities_db, filter_ = None):
+        evol = {}
+        if filter_ is not None:
+            opts = read_options()
+            period = getPeriod(opts.granularity)
+            type_analysis = [filter_.get_name(), filter_.get_item()]
+
+            if (filter_ == "repository"):
+                # evol = GetRepoEvolSentSendersIRC(filter_.get_item(), period, startdate, enddate)
+                evol = GetEvolDataIRC (period, startdate, enddate, identities_db, type_analysis)
+                evol = completePeriodIds(evol, period, startdate, enddate)
+        else:
+            evol = GetEvolDataIRC (period, startdate, enddate, identities_db, None)
+            evol = completePeriodIds(evol, period, startdate, enddate)
+
+        return evol
+
+    @staticmethod
+    def create_evolutionary_report (period, startdate, enddate, identities_db, filter_ = None):
+        opts = read_options()
+        data =  IRC.get_evolutionary_data (period, startdate, enddate, identities_db, filter_)
+        filename = IRC().get_evolutionary_filename()
+        createJSON (data, os.path.join(opts.destdir, filename))
+
+    @staticmethod
+    def get_agg_data (period, startdate, enddate, identities_db, filter_ = None):
+        agg_data = {}
+
+        if filter_ is not None:
+            filter_name = filter_.get_name()
+            item = filter_.get_item()
+
+            if (filter_name == "repository"):
+                agg_data = GetRepoStaticSentSendersIRC(item, startdate, enddate)
+
+        else:
+            # Tendencies
+            for i in [7,30,365]:
+                period_data = GetIRCDiffSentDays(period, enddate, i)
+                agg_data = dict(agg_data.items() + period_data.items())
+                period_data = GetIRCDiffSendersDays(period, enddate, identities_db, i)
+                agg_data = dict(agg_data.items() + period_data.items())
+
+            static_data = GetStaticDataIRC(period, startdate, enddate, identities_db, None)
+            agg_data = dict(agg_data.items() + static_data.items())
+
+        return agg_data
+
+    @staticmethod
+    def create_agg_report (period, startdate, enddate, i_db, filter_ = None):
+        opts = read_options()
+        data = IRC.get_agg_data (period, startdate, enddate, i_db, filter_)
+        filename = IRC().get_agg_filename()
+        createJSON (data, os.path.join(opts.destdir, filename))
+
+    @staticmethod
+    def get_top_data (startdate, enddate, identities_db, filter_, npeople):
+        bots = IRC.get_bots()
+
+        top_senders = {}
+        top_senders['senders.'] = \
+            GetTopSendersIRC(0, startdate, enddate, identities_db, bots, npeople)
+        top_senders['senders.last year'] = \
+            GetTopSendersIRC(365, startdate, enddate, identities_db, bots, npeople)
+        top_senders['senders.last month'] = \
+            GetTopSendersIRC(31, startdate, enddate, identities_db, bots, npeople)
+
+        return(top_senders)
+
+    @staticmethod
+    def create_top_report (startdate, enddate, i_db):
+        opts = read_options()
+        data = IRC.get_top_data (startdate, enddate, i_db, None, opts.npeople)
+        top_file = opts.destdir+"/"+IRC().get_top_filename()
+        createJSON (data, top_file)
+
+    @staticmethod
+    def get_filter_items(filter_, startdate, enddate, identities_db, bots):
+        items = None
+        filter_name = filter_.get_name()
+
+        if (filter_name == "repository"):
+            items = GetReposNameIRC()
+        else:
+            logging.error("IRC " + filter_name + " not supported")
+        return items
+
+    @staticmethod
+    def create_filter_report(filter_, startdate, enddate, identities_db, bots):
+        opts = read_options()
+        period = getPeriod(opts.granularity)
+
+
+        items = IRC.get_filter_items(filter_, startdate, enddate, identities_db, bots)
+        if (items == None): return
+
+        if not isinstance(items, (list)):
+            items = [items]
+
+        fn = os.path.join(opts.destdir, filter_.get_filename(IRC()))
+        createJSON(items, fn)
+
+        for item in items :
+            # item_name = "'"+ item+ "'"
+            logging.info (item)
+            filter_item = Filter(filter_.get_name(), item)
+
+            evol_data = IRC.get_evolutionary_data(period, startdate, enddate, identities_db, filter_item)
+            fn = os.path.join(opts.destdir, filter_item.get_evolutionary_filename(IRC()))
+            createJSON(completePeriodIds(evol_data, period, startdate, enddate), fn)
+
+            agg = IRC.get_agg_data(period, startdate, enddate, identities_db, filter_item)
+            fn = os.path.join(opts.destdir, filter_item.get_static_filename(IRC()))
+            createJSON(agg, fn)
+
+    @staticmethod
+    def get_top_people(startdate, enddate, identities_db, npeople):
+        top_data = IRC.get_top_data (startdate, enddate, identities_db, None, npeople)
+
+        top = top_data['senders.']["id"]
+        top += top_data['senders.last year']["id"]
+        top += top_data['senders.last month']["id"]
+        # remove duplicates
+        people = list(set(top)) 
+        return people
+
+    @staticmethod
+    def get_person_evol(upeople_id, period, startdate, enddate, identities_db, type_analysis):
+        evol = GetEvolPeopleIRC(upeople_id, period, startdate, enddate)
+        evol = completePeriodIds(evol, period, startdate, enddate)
+        return evol
+
+
+    @staticmethod
+    def get_person_agg(upeople_id, startdate, enddate, identities_db, type_analysis):
+        return GetStaticPeopleIRC(upeople_id, startdate, enddate)
+
+    @staticmethod
+    def create_r_reports(vizr, enddate, destdir):
+        pass
 
 # SQL Metaqueries
 def GetIRCSQLRepositoriesFrom ():
@@ -62,13 +217,12 @@ def GetIRCSQLCountriesFrom (i_db):
            i_db+".upeople_countries upc")
 
 
-def GetIRCSQLCcountriesWhere (name):
+def GetIRCSQLCountriesWhere (name):
     # filters necessary to countries analysis
     return(" i.nick = pup.people_id and "+\
            "pup.upeople_id = upc.upeople_id and "+\
            "upc.country_id = c.id and "+\
            "c.name = "+name)
-
 
 def GetIRCSQLDomainsFrom (i_db):
     # tables necessary to domains analysis
@@ -76,9 +230,7 @@ def GetIRCSQLDomainsFrom (i_db):
            i_db+".domains d, "+\
            i_db+".upeople_domains upd")
 
-
-
-def GetIRCSQLDomainsWhere ():
+def GetIRCSQLDomainsWhere (name):
     # filters necessary to domains analysis
     return(" i.nick = pup.people_id and "+\
            "pup.upeople_id = upd.upeople_id and "+\
@@ -107,7 +259,6 @@ def GetIRCSQLReportFrom (identities_db, type_analysis):
     if (len(type_analysis) != 2): return From
 
     analysis = type_analysis[0]
-    value = type_analysis[1]
 
     if analysis == 'repository': From = GetIRCSQLRepositoriesFrom()
     elif analysis == 'company': From = GetIRCSQLCompaniesFrom(identities_db)
@@ -156,8 +307,11 @@ def GetEvolDataIRC (period, startdate, enddate, i_db, type_analysis):
 
     # 1- Retrieving information
     sent = EvolSentIRC(period, startdate, enddate, i_db, type_analysis)
+    sent = completePeriodIds(sent, period, startdate, enddate)
     senders = EvolSendersIRC(period, startdate, enddate, i_db, type_analysis)
+    senders = completePeriodIds(senders, period, startdate, enddate)
     repositories = EvolRepositoriesIRC(period, startdate, enddate, i_db, type_analysis)
+    repositories = completePeriodIds(repositories, period, startdate, enddate)
 
     # 2- Merging information
     evol_data = dict(sent.items()+ senders.items()+ repositories.items())
@@ -248,7 +402,7 @@ def GetTopSendersIRC (days, startdate, enddate, identities_db, bots, limit):
         "            date >= "+ startdate+ " and "+\
         "            date  < "+ enddate+ " "+ date_limit +\
         "            GROUP BY senders "+\
-        "            ORDER BY sent desc "+\
+        "            ORDER BY sent desc, senders "+\
         "            LIMIT " + limit
     return(ExecuteQuery(q))
 
@@ -326,6 +480,12 @@ def GetEvolPeopleIRC (developer_id, period, startdate, enddate) :
 def GetStaticPeopleIRC (developer_id, startdate, enddate) :
     q = GetQueryPeopleIRC(developer_id, None, startdate, enddate, False)
     return(ExecuteQuery(q))
+
+def GetPeopleIRC():
+    # Returns the ids of the IRC participants
+    q = "SELECT DISTINCT(upeople_id) AS members FROM people_upeople"
+    data = ExecuteQuery(q)
+    return(data['members'])    
 
 ##############
 # Microstudies

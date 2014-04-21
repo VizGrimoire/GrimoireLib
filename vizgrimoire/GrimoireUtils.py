@@ -24,6 +24,7 @@
 # Misc utils to be distributed in specific modules
 
 import calendar
+from ConfigParser import SafeConfigParser
 from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
 from dateutil import parser
@@ -92,10 +93,18 @@ def read_options():
                       dest="npeople",
                       default="10",
                       help="Limit for people analysis")
-    parser.add_option("--config_file",
+    parser.add_option("-c", "--config-file",
                       action="store",
                       dest="config_file",
-                      help="Automator project config file path")
+                      help="Automator config file path")
+    parser.add_option("--data-source",
+                      action="store",
+                      dest="data_source",
+                      help="data source to be generated")
+    parser.add_option("--filter",
+                      action="store",
+                      dest="filter",
+                      help="filter to be generated")
 
 
     (opts, args) = parser.parse_args()
@@ -103,8 +112,9 @@ def read_options():
     if len(args) != 0:
         parser.error("Wrong number of arguments")
 
-    if not(opts.dbname and opts.dbuser and opts.identities_db):
-        parser.error("--database --db-user and --identities are needed")
+    if opts.config_file is None :
+        if not(opts.dbname and opts.dbuser and opts.identities_db):
+            parser.error("--database --db-user and --identities are needed")
     return opts
 
 def valRtoPython(val):
@@ -253,16 +263,16 @@ def completePeriodIdsWeeks(ts_data, start, end):
 
     return new_ts_data
 
-def completePeriodIds(ts_data):
+def completePeriodIds(ts_data, period, startdate, enddate):
     # If already complete, return
     if "id" in ts_data: return ts_data
 
     if len(ts_data.keys()) == 0: return ts_data
     new_ts_data = ts_data
-    opts = read_options()
-    period = getPeriod(opts.granularity)
-    start = datetime.strptime(opts.startdate, "%Y-%m-%d")
-    end = datetime.strptime(opts.enddate, "%Y-%m-%d")
+    startdate = startdate.replace("'", "")
+    enddate = enddate.replace("'", "")
+    start = datetime.strptime(startdate, "%Y-%m-%d")
+    end = datetime.strptime(enddate, "%Y-%m-%d")
 
     if period == "week":
         new_ts_data = completePeriodIdsWeeks(ts_data, start, end)
@@ -275,7 +285,7 @@ def completePeriodIds(ts_data):
 
 # Convert a R data frame to a python dictionary
 def dataFrame2Dict(data):
-    dict = {}
+    dict_ = {}
 
     # R start from 1 in data frames
     for i in range(1,len(data)+1):
@@ -283,14 +293,14 @@ def dataFrame2Dict(data):
         col = data.rx(i)
         colname = col.names[0]
         colvalues = col[0]
-        dict[colname] = [];
+        dict_[colname] = [];
 
         if (len(colvalues) == 1):
-            dict[colname] = valRtoPython(colvalues[0])
+            dict_[colname] = valRtoPython(colvalues[0])
         else:
             for j in colvalues: 
-                dict[colname].append(valRtoPython(j))
-    return dict
+                dict_[colname].append(valRtoPython(j))
+    return dict_
 
 def getPeriod(granularity, number = None):
     period = None
@@ -308,13 +318,13 @@ def getPeriod(granularity, number = None):
         period = 'day'
         nperiod = 1
     else: 
-        logging.error("Incorrect period:"+granularity)
+        logging.error("Incorrect period:",granularity)
         sys.exit(1)
     if (number): return nperiod
     return period
 
 
-def convertDecimals(data):
+def removeDecimals(data):
     from decimal import Decimal
     if (isinstance(data, dict)):
         for key in data:
@@ -346,12 +356,12 @@ def convertDatetime(data):
     return data
 
 # Until we use VizPy we will create JSON python files with _py
-def createJSON(data, filepath, check=True, skip_fields = []):
+def createJSON(data, filepath, check=False, skip_fields = []):
     check = False # for production mode
     filepath_tokens = filepath.split(".json")
     filepath_py = filepath_tokens[0]+"_py.json"
     filepath_r = filepath_tokens[0]+"_r.json"
-    json_data = json.dumps(convertDatetime(convertDecimals(data)), sort_keys=True)
+    json_data = json.dumps(removeDecimals(data), sort_keys=True)
     json_data = json_data.replace('NaN','"NA"')
     if check == False: #forget about R JSON checking
         jsonfile = open(filepath, 'w')
@@ -376,18 +386,31 @@ def createJSON(data, filepath, check=True, skip_fields = []):
         os.rename(filepath_py, filepath)
 
 def compareJSON(orig_file, new_file, skip_fields = []):
-    check = True
     f1 = open(orig_file)
     f2 = open(new_file)
     data1 = json.load(f1)
     data2 = json.load(f2)
+    f1.close()
+    f2.close()
 
+    return compare_json_data(data1, data2, orig_file, new_file, skip_fields)
+
+def compare_json_data(data1, data2, orig_file = "", new_file = "", skip_fields = []):
+    """ Compare two JS objects read from a JSON file or created from code """
+
+    if (orig_file == ""): orig_file = "orig data"
+    if (new_file == ""): orig_file = "new data"
+
+    check = True
     if len(data1) > len(data2):
-        logging.warn("More data in orig file than in new: " + str(len(data1)) + " " + str(len (data2)))
+        logging.warn("More data in " + orig_file + " than in "+
+                     new_file +": " + str(len(data1)) + " " + str(len (data2)))
         check = False
 
-    if isinstance(data1, list):
+    elif isinstance(data1, list):
         for i in range(0, len(data1)):
+            if isinstance(data1[i], float): data1[i] = round(data1[i],6)
+            if isinstance(data2[i], float): data2[i] = round(data2[i],6)
             if (data1[i] != data2[i]):
                 if (data1[i] == "NA" and data2[i] == 0): continue
                 logging.warn(data1[i])
@@ -401,6 +424,12 @@ def compareJSON(orig_file, new_file, skip_fields = []):
             if data2.has_key(name) is False:
                 logging.warn (name + " does not exists in " + new_file)
                 check = False
+            if isinstance(data1[name], float): data1[name] = round(data1[name],6)
+            if isinstance(data2[name], float): data2[name] = round(data2[name],6)
+            if isinstance(data1[name], list) and isinstance(data2[name], list): 
+                for i in range(0, len(data1[name])): 
+                    if isinstance(data1[name][i], float): data1[name][i] = round(data1[name][i],6)
+                    if isinstance(data2[name][i], float): data2[name][i] = round(data2[name][i],6)
             elif data1[name] != data2[name]:
                 if (data1[name] == "NA" and data2[name] == 0): continue
                 elif name in skip_fields:
@@ -412,8 +441,6 @@ def compareJSON(orig_file, new_file, skip_fields = []):
             if data1.has_key(name) is False:
                 logging.warn (name + " does not exists in " + orig_file)
 
-    f1.close()
-    f2.close()
     return check
 
 def GetDates (last_date, days):
@@ -457,6 +484,46 @@ def checkFloatArray(data):
         if (val == 0): data[i] = 0
     return data
 
+def read_main_conf(config_file):
+    options = {}
+    parser = SafeConfigParser()
+    fd = open(config_file, 'r')
+    parser.readfp(fd)
+    fd.close()
+
+    sec = parser.sections()
+    # we'll read "generic" for db information and "r" for start_date and "bicho" for backend
+    for s in sec:
+        if not((s == "generic") or (s == "r") or (s == "bicho")):
+            continue
+        options[s] = {}
+        opti = parser.options(s)
+        for o in opti:
+            options[s][o] = parser.get(s, o)
+    return options
+
+def get_subprojects(project, identities_db):
+    """ Return all subprojects ids for a project in a string join by comma """
+
+    from GrimoireSQL import ExecuteQuery
+
+    q = "SELECT project_id from %s.projects WHERE id='%s'" % (identities_db, project)
+    project_id = ExecuteQuery(q)['project_id']
+
+    q = """
+        SELECT subproject_id from %s.project_children pc where pc.project_id = '%s'
+    """ % (identities_db, project_id)
+
+    subprojects = ExecuteQuery(q)
+
+    if not isinstance(subprojects['subproject_id'], list):
+        subprojects['subproject_id'] = [subprojects['subproject_id']]
+
+    project_with_children = subprojects['subproject_id'] + [project_id]
+    project_with_children_str = ','.join(str(x) for x in project_with_children)
+
+    return  project_with_children_str
+
 def completeTops(tops, details, backend_name='bugzilla'):
     completed_tops = dict(tops.items())
     completed_tops['summary'] = []
@@ -483,56 +550,3 @@ def get_median(period_values):
     if not isinstance(period_values, list):
         return period_values
     return median(convertDecimals(period_values))
-
-
-def get_avg(period_values):
-    # No data for this period
-    if not period_values:
-        return float('nan')
-    if not isinstance(period_values, list):
-        return period_values
-    return average(convertDecimals(period_values))
-
-def medianAndAvgByPeriod(period, dates, values):
-
-    def get_period(period, date):
-        if period == 'month':
-            return date.year * 12 + date.month
-
-    if len(dates) == 0: return None
-    if not values: return None
-
-    if not isinstance(values, list):
-        values = [values]
-
-    if len(dates) != len(values): return None
-
-    result = {period  : [],
-              'median' : [],
-              'avg'    : []}
-
-    start = dates[0]
-    current_period = get_period(period, start)
-    period_values = []
-    ndates = len(dates)
-
-    for i in range(0, ndates):
-        date_period = get_period(period, dates[i])
-
-        # Change of period
-        if date_period != current_period:
-            result[period].append(current_period)
-            result['median'].append(get_median(period_values))
-            result['avg'].append(get_avg(period_values))
-
-            current_period = date_period
-            period_values = []
-
-        period_values.append(values[i])
-
-        # End of the list
-        if i == ndates - 1:
-            result[period].append(current_period)
-            result['median'].append(get_median(period_values))
-            result['avg'].append(get_avg(period_values))                        # Accumulated values
-    return result

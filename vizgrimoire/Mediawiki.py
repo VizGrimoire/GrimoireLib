@@ -24,11 +24,120 @@
 ## Authors:
 ##   Alvaro del Castillo <acs@bitergia.com>
 
+import logging, os
+
 from GrimoireSQL import GetSQLGlobal, GetSQLPeriod, GetSQLReportFrom 
 from GrimoireSQL import GetSQLReportWhere, ExecuteQuery, BuildQuery
-from GrimoireUtils import GetPercentageDiff, GetDates, completePeriodIds
-import GrimoireUtils
+from GrimoireUtils import GetPercentageDiff, GetDates, completePeriodIds, read_options, createJSON
 
+from data_source import DataSource
+
+
+class Mediawiki(DataSource):
+
+    @staticmethod
+    def get_db_name():
+        return "db_mediawiki"
+
+    @staticmethod
+    def get_name(): return "mediawiki"
+
+    @staticmethod
+    def get_evolutionary_data (period, startdate, enddate, i_db, type_analysis = None):
+        return GetEvolDataMediaWiki (period, startdate, enddate, i_db, type_analysis)
+
+    @staticmethod
+    def create_evolutionary_report (period, startdate, enddate, i_db, type_analysis = None):
+        opts = read_options()
+        data =  Mediawiki.get_evolutionary_data (period, startdate, enddate, i_db, type_analysis)
+        filename = Mediawiki().get_evolutionary_filename()
+        createJSON (data, os.path.join(opts.destdir, filename))
+
+    @staticmethod
+    def get_agg_data (period, startdate, enddate, identities_db, filter_ = None):
+        # Tendencies
+        agg = {}
+
+        if (filter_ is None):
+            for i in [7,30,365]:
+                data = GetMediaWikiDiffReviewsDays(period, enddate, identities_db, i)
+                agg = dict(agg.items() + data.items())
+                data = GetMediaWikiDiffAuthorsDays(period, enddate, identities_db, i)
+                agg = dict(agg.items() + data.items())
+
+            data = GetStaticDataMediaWiki(period, startdate, enddate, identities_db, None)
+            agg = dict(agg.items() + data.items())
+        else:
+            logging.warn("Mediawiki does not support filters yet.")
+
+        return agg
+
+    @staticmethod
+    def create_agg_report (period, startdate, enddate, i_db, type_analysis = None):
+        opts = read_options()
+        data = Mediawiki.get_agg_data (period, startdate, enddate, i_db, type_analysis)
+        filename = Mediawiki().get_agg_filename()
+        createJSON (data, os.path.join(opts.destdir, filename))
+
+    @staticmethod
+    def get_top_data (startdate, enddate, identities_db, filter_, npeople):
+        bots = Mediawiki.get_bots()
+
+        top_authors = {}
+        top_authors['authors.'] = GetTopAuthorsMediaWiki(0, startdate, enddate, identities_db, bots, npeople)
+        top_authors['authors.last year']= GetTopAuthorsMediaWiki(365, startdate, enddate, identities_db, bots, npeople)
+        top_authors['authors.last month']= GetTopAuthorsMediaWiki(31, startdate, enddate, identities_db, bots, npeople)
+
+        return(top_authors)
+
+    @staticmethod
+    def create_top_report (startdate, enddate, i_db):
+        opts = read_options()
+        data = Mediawiki.get_top_data (startdate, enddate, i_db, None, opts.npeople)
+        top_file = opts.destdir+"/"+Mediawiki().get_top_filename()
+        createJSON (data, top_file)
+
+    @staticmethod
+    def get_filter_items(filter_, startdate, enddate, identities_db, bots):
+        items = None
+        filter_name = filter_.get_name()
+
+        logging.error("Mediawiki " + filter_name + " not supported")
+        return items
+
+    @staticmethod
+    def create_filter_report(filter_, startdate, enddate, identities_db, bots):
+        # opts = read_options()
+        # period = getPeriod(opts.granularity)
+
+        items = Mediawiki.get_filter_items(filter_, startdate, enddate, identities_db, bots)
+        if (items == None): return
+
+    @staticmethod
+    def get_top_people(startdate, enddate, identities_db, npeople):
+
+        top_data = Mediawiki.get_top_data (startdate, enddate, identities_db, None, npeople)
+
+        top = top_data['authors.']["id"]
+        top += top_data['authors.last year']["id"]
+        top += top_data['authors.last month']["id"]
+        # remove duplicates
+        people = list(set(top))
+        return people
+
+    @staticmethod
+    def get_person_evol(upeople_id, period, startdate, enddate, identities_db, type_analysis):
+        evol = GetEvolPeopleMediaWiki(upeople_id, period, startdate, enddate)
+        evol = completePeriodIds(evol, period, startdate, enddate)
+        return evol
+
+    @staticmethod
+    def get_person_agg(upeople_id, startdate, enddate, identities_db, type_analysis):
+        return GetStaticPeopleMediaWiki(upeople_id, startdate, enddate)
+
+    @staticmethod
+    def create_r_reports(vizr, enddate, destdir):
+        pass
 
 # SQL Metaqueries
 
@@ -57,9 +166,9 @@ def GetStaticDataMediaWiki (period, startdate, enddate, i_db, type_analysis):
 def GetEvolDataMediaWiki (period, startdate, enddate, i_db, type_analysis):
 
     # 1- Retrieving information
-    reviews = completePeriodIds(EvolReviewsMediaWiki(period, startdate, enddate, i_db, type_analysis))
-    authors = completePeriodIds(EvolAuthorsMediaWiki(period, startdate, enddate, i_db, type_analysis))
-    pages = completePeriodIds(EvolPagesMediaWiki(period, startdate, enddate, i_db, type_analysis))
+    reviews = completePeriodIds(EvolReviewsMediaWiki(period, startdate, enddate, i_db, type_analysis), period, startdate, enddate)
+    authors = completePeriodIds(EvolAuthorsMediaWiki(period, startdate, enddate, i_db, type_analysis), period, startdate, enddate)
+    pages = completePeriodIds(EvolPagesMediaWiki(period, startdate, enddate, i_db, type_analysis), period, startdate, enddate)
 
     # 2- Merging information
     evol_data = dict(reviews.items()+ authors.items() + pages.items())

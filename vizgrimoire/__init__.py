@@ -19,5 +19,4 @@
 # Authors:
 #         Daniel Izquierdo <dizquierdo@bitergia.com>
 #         Santiago Dueñas <sduenas@bitergia.com>
-#         Alvaro del Castillo <acs@bitergia.com>
 #
