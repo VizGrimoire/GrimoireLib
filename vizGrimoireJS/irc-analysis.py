@@ -152,4 +152,5 @@ if __name__ == '__main__':
         peopleData (period, startdate, enddate, opts.identities_db, opts.destdir, top)
     if ('repositories' in reports):
         reposData (period, startdate, enddate, opts.identities_db, opts.destdir)
+    logging.info("IRC data source analysis OK")
 
