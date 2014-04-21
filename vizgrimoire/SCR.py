@@ -1,4 +1,4 @@
-## Copyright (C) 2013 Bitergia
+## Copyright (C) 2013-2014 Bitergia
 ##
 ## This program is free software; you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -27,16 +27,331 @@
 ##   Daniel Izquierdo <dizquierdo@bitergia.com>
 ##   Alvaro del Castillo San Felix <acs@bitergia.com>
 
-import time
+import logging, os, sys, time
 from datetime import datetime, timedelta
-import logging
 from numpy import median, average
 import sys
 
-from GrimoireSQL import GetSQLGlobal, GetSQLPeriod, GetSQLReportFrom
-from GrimoireSQL import GetSQLReportWhere, ExecuteQuery, BuildQuery
-from GrimoireUtils import GetPercentageDiff, GetDates, completePeriodIds, checkListArray, convertDecimals, medianAndAvgByPeriod
-import GrimoireUtils
+from GrimoireSQL import GetSQLGlobal, GetSQLPeriod
+from GrimoireSQL import ExecuteQuery
+from GrimoireUtils import GetPercentageDiff, GetDates, completePeriodIds
+from GrimoireUtils import checkListArray, removeDecimals, read_options, get_subprojects
+from GrimoireUtils import getPeriod, createJSON, checkFloatArray, medianAndAvgByPeriod
+
+from data_source import DataSource
+from filter import Filter
+
+
+class SCR(DataSource):
+
+    @staticmethod
+    def get_db_name():
+        return "db_gerrit"
+
+    @staticmethod
+    def get_name(): return "scr"
+
+    @staticmethod
+    def get_evolutionary_data (period, startdate, enddate, identities_db, filter_ = None):
+        evol = {}
+
+        if (filter_ is not None):
+            type_analysis = [filter_.get_name(), filter_.get_item()]
+
+            opts = read_options()
+            period = getPeriod(opts.granularity)
+
+            data = EvolReviewsSubmitted(period, startdate, enddate, type_analysis, identities_db)
+            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
+            data = EvolReviewsMerged(period, startdate, enddate, type_analysis, identities_db)
+            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
+            data = EvolReviewsAbandoned(period, startdate, enddate, type_analysis, identities_db)
+            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
+            data = EvolReviewsPending(period, startdate, enddate, type_analysis, identities_db)
+            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
+            if (period == "month"):
+                data = EvolTimeToReviewSCR(period, startdate, enddate, identities_db, type_analysis)
+                data['review_time_days_avg'] = checkFloatArray(data['review_time_days_avg'])
+                data['review_time_days_median'] = checkFloatArray(data['review_time_days_median'])
+                evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
+            return evol
+
+        else:
+            data = EvolReviewsSubmitted(period, startdate, enddate)
+            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
+            data = EvolReviewsOpened(period, startdate, enddate)
+            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
+            data = EvolReviewsNew(period, startdate, enddate)
+            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
+            data = EvolReviewsNewChanges(period, startdate, enddate)
+            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
+            # data = EvolReviewsInProgress(period, startdate, enddate)
+            # evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
+            data = EvolReviewsClosed(period, startdate, enddate)
+            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
+            data = EvolReviewsMerged(period, startdate, enddate)
+            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
+            data = EvolReviewsMergedChanges(period, startdate, enddate)
+            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
+            data = EvolReviewsAbandoned(period, startdate, enddate)
+            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
+            data = EvolReviewsAbandonedChanges(period, startdate, enddate)
+            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
+            data = EvolReviewsPending(period, startdate, enddate, [])
+            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
+            #Patches info
+            data = EvolPatchesVerified(period, startdate, enddate)
+            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
+            # data = EvolPatchesApproved(period, startdate, enddate)
+            # evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
+            data = EvolPatchesCodeReview(period, startdate, enddate)
+            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
+            data = EvolPatchesSent(period, startdate, enddate)
+            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
+            #Waiting for actions info
+            data = EvolWaiting4Reviewer(period, startdate, enddate)
+            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
+            data = EvolWaiting4Submitter(period, startdate, enddate)
+            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
+            #Reviewers info
+            data = EvolReviewers(period, startdate, enddate)
+            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
+            # Time to Review info
+            if period == "month": # only month supported now
+                data = EvolTimeToReviewSCR (period, startdate, enddate)
+                for i in range(0,len(data['review_time_days_avg'])):
+                    val = data['review_time_days_avg'][i] 
+                    data['review_time_days_avg'][i] = float(val)
+                    if (val == 0): data['review_time_days_avg'][i] = 0
+                evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
+            return evol
+
+    @staticmethod
+    def create_evolutionary_report (period, startdate, enddate, i_db, filter_ = None):
+        opts = read_options()
+        data =  SCR.get_evolutionary_data (period, startdate, enddate, i_db, filter_)
+        filename = SCR().get_evolutionary_filename()
+        createJSON (data, os.path.join(opts.destdir, filename))
+
+    @staticmethod
+    def get_agg_data (period, startdate, enddate, identities_db, filter_ = None):
+        opts = read_options()
+        period = getPeriod(opts.granularity)
+
+        agg = {}
+
+        if (filter_ is not None):
+            type_analysis = [filter_.get_name(), filter_.get_item()]
+            data = StaticReviewsSubmitted(period, startdate, enddate, type_analysis, identities_db)
+            agg = dict(agg.items() + data.items())
+            data = StaticReviewsMerged(period, startdate, enddate, type_analysis, identities_db)
+            agg = dict(agg.items() + data.items())
+            data = StaticReviewsAbandoned(period, startdate, enddate, type_analysis, identities_db)
+            agg = dict(agg.items() + data.items())
+            data = StaticReviewsPending(period, startdate, enddate, type_analysis, identities_db)
+            agg = dict(agg.items() + data.items())
+            data = StaticTimeToReviewSCR(startdate, enddate, identities_db, type_analysis, identities_db)
+            val = data['review_time_days_avg']
+            if (not val or val == 0): data['review_time_days_avg'] = 0
+            else: data['review_time_days_avg'] = float(val)
+            val = data['review_time_days_median']
+            if (not val or val == 0): data['review_time_days_median'] = 0
+            else: data['review_time_days_median'] = float(val)
+            agg = dict(agg.items() + data.items())
+
+        else:
+            agg = StaticReviewsSubmitted(period, startdate, enddate)
+            data = StaticReviewsOpened(period, startdate, enddate)
+            agg = dict(agg.items() + data.items())
+            data = StaticReviewsNew(period, startdate, enddate)
+            agg = dict(agg.items() + data.items())
+            data = StaticReviewsInProgress(period, startdate, enddate)
+            agg = dict(agg.items() + data.items())
+            data = StaticReviewsClosed(period, startdate, enddate)
+            agg = dict(agg.items() + data.items())
+            data = StaticReviewsMerged(period, startdate, enddate)
+            agg = dict(agg.items() + data.items())
+            data = StaticReviewsAbandoned(period, startdate, enddate)
+            agg = dict(agg.items() + data.items())
+            data = StaticReviewsPending(period, startdate, enddate)
+            agg = dict(agg.items() + data.items())
+            data = StaticPatchesVerified(period, startdate, enddate)
+            agg = dict(agg.items() + data.items())
+            data = StaticPatchesApproved(period, startdate, enddate)
+            agg = dict(agg.items() + data.items())
+            data = StaticPatchesCodeReview(period, startdate, enddate)
+            agg = dict(agg.items() + data.items())
+            data = StaticPatchesSent(period, startdate, enddate)
+            agg = dict(agg.items() + data.items())
+            data = StaticWaiting4Reviewer(period, startdate, enddate)
+            agg = dict(agg.items() + data.items())
+            data = StaticWaiting4Submitter(period, startdate, enddate)
+            agg = dict(agg.items() + data.items())
+            #Reviewers info
+            data = StaticReviewers(period, startdate, enddate)
+            agg = dict(agg.items() + data.items())
+            # Time to Review info
+            data = StaticTimeToReviewSCR(startdate, enddate)
+            data['review_time_days_avg'] = float(data['review_time_days_avg'])
+            data['review_time_days_median'] = float(data['review_time_days_median'])
+            agg = dict(agg.items() + data.items())
+
+            # Tendencies
+            for i in [7,30,365]:
+                period_data = GetSCRDiffSubmittedDays(period, enddate, i, identities_db)
+                agg = dict(agg.items() + period_data.items())
+                period_data = GetSCRDiffMergedDays(period, enddate, i, identities_db)
+                agg = dict(agg.items() + period_data.items())
+                period_data = GetSCRDiffPendingDays(period, enddate, i, identities_db)
+                agg = dict(agg.items() + period_data.items())
+                period_data = GetSCRDiffAbandonedDays(period, enddate, i, identities_db)
+                agg = dict(agg.items() + period_data.items())
+
+        return agg
+
+    @staticmethod
+    def create_agg_report (period, startdate, enddate, i_db, filter_ = None):
+        opts = read_options()
+        data = SCR.get_agg_data (period, startdate, enddate, i_db, filter_)
+        filename = SCR().get_agg_filename()
+        createJSON (data, os.path.join(opts.destdir, filename))
+
+    @staticmethod
+    def get_top_data (startdate, enddate, identities_db, filter_, npeople):
+        bots = SCR.get_bots()
+
+        top_reviewers = {}
+        top_reviewers['reviewers'] = GetTopReviewersSCR(0, startdate, enddate, identities_db, bots, npeople)
+        top_reviewers['reviewers.last year']= GetTopReviewersSCR(365, startdate, enddate, identities_db, bots, npeople)
+        top_reviewers['reviewers.last month']= GetTopReviewersSCR(31, startdate, enddate, identities_db, bots, npeople)
+
+        # Top openers
+        top_openers = {}
+        top_openers['openers.']=GetTopOpenersSCR(0, startdate, enddate,identities_db, bots, npeople)
+        top_openers['openers.last year']=GetTopOpenersSCR(365, startdate, enddate,identities_db, bots, npeople)
+        top_openers['openers.last_month']=GetTopOpenersSCR(31, startdate, enddate,identities_db, bots, npeople)
+
+        # Top mergers
+        top_mergers = {}
+        top_mergers['mergers.last year']=GetTopMergersSCR(365, startdate, enddate,identities_db, bots, npeople)
+        top_mergers['mergers.']=GetTopMergersSCR(0, startdate, enddate,identities_db, bots, npeople)
+        top_mergers['mergers.last_month']=GetTopMergersSCR(31, startdate, enddate,identities_db, bots, npeople)
+
+        # The order of the list item change so we can not check it
+        top_all = dict(top_reviewers.items() +  top_openers.items() + top_mergers.items())
+
+        return (top_all)
+
+    @staticmethod
+    def create_top_report (startdate, enddate, i_db):
+        opts = read_options()
+        data = SCR.get_top_data (startdate, enddate, i_db, None, opts.npeople)
+        createJSON (data, opts.destdir+"/"+SCR().get_top_filename())
+
+    @staticmethod
+    def get_filter_items(filter_, startdate, enddate, identities_db, bots):
+        items = None
+        filter_name = filter_.get_name()
+
+        if (filter_name == "repository"):
+            items  = GetReposSCRName(startdate, enddate)
+        elif (filter_name == "company"):
+            items  = GetCompaniesSCRName(startdate, enddate, identities_db)
+        elif (filter_name == "country"):
+            items = GetCountriesSCRName(startdate, enddate, identities_db)
+        elif (filter_name == "domain"):
+            logging.error("SCR " + filter_name + " not supported")
+        elif (filter_name == "project"):
+            items = get_projects_scr_name(startdate, enddate, identities_db)
+        else:
+            logging.error("SCR " + filter_name + " not supported")
+        return items
+
+    @staticmethod
+    def create_filter_report(filter_, startdate, enddate, identities_db, bots):
+        opts = read_options()
+        period = getPeriod(opts.granularity)
+
+
+        items = SCR.get_filter_items(filter_, startdate, enddate, identities_db, bots)
+        if (items == None): return
+        items = items['name']
+
+        filter_name = filter_.get_name()
+
+        if not isinstance(items, (list)):
+            items = [items]
+
+        # For repos aggregated data. Include metrics to sort in javascript.
+        if (filter_name == "repository"):
+            items_list = {"name":[],"review_time_days_median":[],"submitted":[]}
+        else:
+            items_list = items
+
+        for item in items :
+            item_file = item.replace("/","_")
+            if (filter_name == "repository"):
+                items_list["name"].append(item_file)
+
+            logging.info (item)
+            filter_item = Filter(filter_name, item)
+
+            evol = SCR.get_evolutionary_data(period, startdate, enddate, 
+                                               identities_db, filter_item)
+            fn = os.path.join(opts.destdir, filter_item.get_evolutionary_filename(SCR()))
+            createJSON(evol, fn)
+
+            # Static
+            agg = SCR.get_agg_data(period, startdate, enddate, identities_db, filter_item)
+            fn = os.path.join(opts.destdir, filter_item.get_static_filename(SCR()))
+            createJSON(agg, fn)
+            if (filter_name == "repository"):
+                items_list["submitted"].append(agg["submitted"])
+                items_list["review_time_days_median"].append(agg['review_time_days_median'])
+
+        fn = os.path.join(opts.destdir, filter_.get_filename(SCR()))
+        createJSON(items_list, fn)
+
+    # Unify top format
+    @staticmethod
+    def _safeTopIds(top_data_period):
+        if not isinstance(top_data_period['id'], (list)):
+            for name in top_data_period:
+                top_data_period[name] = [top_data_period[name]]
+        return top_data_period['id']
+
+    @staticmethod
+    def get_top_people(startdate, enddate, identities_db, npeople):
+
+        top_data = SCR.get_top_data (startdate, enddate, identities_db, None, npeople)
+
+        top  = SCR._safeTopIds(top_data['reviewers'])
+        top += SCR._safeTopIds(top_data['reviewers.last year'])
+        top += SCR._safeTopIds(top_data['reviewers.last month'])
+        top += SCR._safeTopIds(top_data['openers.'])
+        top += SCR._safeTopIds(top_data['openers.last year'])
+        top += SCR._safeTopIds(top_data['openers.last_month'])
+        top += SCR._safeTopIds(top_data['mergers.'])
+        top += SCR._safeTopIds(top_data['mergers.last year'])
+        top += SCR._safeTopIds(top_data['mergers.last_month'])
+        # remove duplicates
+        people = list(set(top)) 
+
+        return people
+
+    @staticmethod
+    def get_person_evol(upeople_id, period, startdate, enddate, identities_db, type_analysis):
+        evol = GetPeopleEvolSCR(upeople_id, period, startdate, enddate)
+        evol = completePeriodIds(evol, period, startdate, enddate)
+        return evol
+
+    @staticmethod
+    def get_person_agg(upeople_id, startdate, enddate, identities_db, type_analysis):
+        return GetPeopleStaticSCR(upeople_id, startdate, enddate)
+
+    @staticmethod
+    def create_r_reports(vizr, enddate, destdir):
+        pass
 
 ##########
 # Specific FROM and WHERE clauses per type of report
@@ -45,17 +360,32 @@ def GetSQLRepositoriesFromSCR ():
     #tables necessaries for repositories
     return (" , trackers t")
 
-
 def GetSQLRepositoriesWhereSCR (repository):
     #fields necessaries to match info among tables
     return (" and t.url ='"+ repository+ "' and t.id = i.tracker_id")
 
+def GetSQLProjectFromSCR ():
+    # projects are mapped to repositories
+    return (" , trackers t")
+
+def GetSQLProjectWhereSCR (project, identities_db):
+    # include all repositories for a project and its subprojects
+
+    repos = """and t.url IN (
+           SELECT repository_name
+           FROM   %s.projects p, %s.project_repositories pr
+           WHERE  p.project_id = pr.project_id AND p.project_id IN (%s)
+               AND pr.data_source='scr'
+    )""" % (identities_db, identities_db, get_subprojects(project, identities_db))
+
+    return (repos   + " and t.id = i.tracker_id")
 
 def GetSQLCompaniesFromSCR (identities_db):
     #tables necessaries for companies
     return (" , people_upeople pup,"+\
             identities_db+".upeople_companies upc,"+\
             identities_db+".companies c")
+
 
 def GetSQLCompaniesWhereSCR (company):
     #fields necessaries to match info among tables
@@ -96,17 +426,17 @@ def GetSQLReportFromSCR (identities_db, type_analysis):
     if (len(type_analysis) != 2): return From
 
     analysis = type_analysis[0]
-    value = type_analysis[1]
 
     if (analysis):
         if analysis == 'repository': From = GetSQLRepositoriesFromSCR()
         elif analysis == 'company': From = GetSQLCompaniesFromSCR(identities_db)
         elif analysis == 'country': From = GetSQLCountriesFromSCR(identities_db)
+        elif analysis == 'project': From = GetSQLProjectFromSCR()
 
     return (From)
 
 
-def GetSQLReportWhereSCR (type_analysis):
+def GetSQLReportWhereSCR (type_analysis, identities_db = None):
     #generic function to generate 'where' clauses
 
     #"type" is a list of two values: type of analysis and value of
@@ -122,6 +452,12 @@ def GetSQLReportWhereSCR (type_analysis):
         if analysis == 'repository': where = GetSQLRepositoriesWhereSCR(value)
         elif analysis == 'company': where = GetSQLCompaniesWhereSCR(value)
         elif analysis == 'country': where = GetSQLCountriesWhereSCR(value)
+        elif analysis == 'project':
+            if (identities_db is None):
+                logging.error("project filter not supported without identities_db")
+                sys.exit(0)
+            else:
+                where = GetSQLProjectWhereSCR(value, identities_db)
 
     return (where)
 
@@ -183,32 +519,56 @@ def GetCountriesSCRName  (startdate, enddate, identities_db, limit = 0):
            "ORDER BY issues DESC "+limit_sql
     return(ExecuteQuery(q))
 
+def get_projects_scr_name  (startdate, enddate, identities_db, limit = 0):
+    # Projects activity needs to include subprojects also
+    logging.info ("Getting projects list for SCR")
+
+    # Get all projects list
+    q = "SELECT p.id AS name FROM  %s.projects p" % (identities_db)
+    projects = ExecuteQuery(q)
+    data = []
+
+    # Loop all projects getting reviews
+    for project in projects['name']:
+        type_analysis = ['project', project]
+        period = None
+        evol = False
+        reviews = GetReviews (period, startdate, enddate, "submitted",
+                              type_analysis, evol, identities_db)
+        reviews = reviews['submitted']
+        if (reviews > 0):
+            data.append([reviews,project])
+
+    # Order the list using reviews: https://wiki.python.org/moin/HowTo/Sorting
+    from operator import itemgetter
+    data_sort = sorted(data, key=itemgetter(0),reverse=True)
+    names = [name[1] for name in data_sort]
+
+    if (limit > 0): names = names[:limit]
+    return({"name":names})
+
 #########
 #Functions about the status of the review
 #########
 
 # REVIEWS
-def GetReviews (period, startdate, enddate, type, type_analysis, evolutionary, identities_db):
-
+def GetReviews (period, startdate, enddate, type_, type_analysis, evolutionary, identities_db):
     #Building the query
-    fields = " count(distinct(i.issue)) as " + type
+    fields = " count(distinct(i.issue)) as " + type_
     tables = "issues i" + GetSQLReportFromSCR(identities_db, type_analysis)
-    if type == "submitted": filters = ""
-    elif type == "opened": filters = " (i.status = 'NEW' or i.status = 'WORKINPROGRESS') "
-    elif type == "new": filters = " i.status = 'NEW' "
-    elif type == "inprogress": filters = " i.status = 'WORKINGPROGRESS' "
-    elif type == "closed": filters = " (i.status = 'MERGED' or i.status = 'ABANDONED') "
-    elif type == "merged": filters = " i.status = 'MERGED' "
-    elif type == "abandoned": filters = " i.status = 'ABANDONED' "
-    filters = filters + GetSQLReportWhereSCR(type_analysis)
-
-    from Wikimedia import GetIssuesFiltered
-    if (GetIssuesFiltered() != ""): filters += " AND " + GetIssuesFiltered()
+    if type_ == "submitted": filters = ""
+    elif type_ == "opened": filters = " (i.status = 'NEW' or i.status = 'WORKINPROGRESS') "
+    elif type_ == "new": filters = " i.status = 'NEW' "
+    elif type_ == "inprogress": filters = " i.status = 'WORKINGPROGRESS' "
+    elif type_ == "closed": filters = " (i.status = 'MERGED' or i.status = 'ABANDONED') "
+    elif type_ == "merged": filters = " i.status = 'MERGED' "
+    elif type_ == "abandoned": filters = " i.status = 'ABANDONED' "
+    filters = filters + GetSQLReportWhereSCR(type_analysis, identities_db)
 
     #Adding dates filters (and evolutionary or static analysis)
     if (evolutionary):
         q = GetSQLPeriod(period, "i.submitted_on", fields, tables, filters,
-                      startdate, enddate)
+                         startdate, enddate)
     else:
         q = GetSQLGlobal(" i.submitted_on ", fields, tables, filters, startdate, enddate)
 
@@ -216,15 +576,12 @@ def GetReviews (period, startdate, enddate, type, type_analysis, evolutionary, i
 
 
 # Reviews status using changes table
-def GetReviewsChanges(period, startdate, enddate, type, type_analysis, evolutionary, identities_db):
-    fields = "count(issue_id) as "+ type+ "_changes"
+def GetReviewsChanges(period, startdate, enddate, type_, type_analysis, evolutionary, identities_db):
+    fields = "count(issue_id) as "+ type_+ "_changes"
     tables = "changes c, issues i"
     tables = tables + GetSQLReportFromSCR(identities_db, type_analysis)
-    filters = "c.issue_id = i.id AND new_value='"+type+"'"
-    filters = filters + GetSQLReportWhereSCR(type_analysis)
-
-    from Wikimedia import GetChangesFiltered
-    if (GetChangesFiltered() != ""): filters += " AND " + GetChangesFiltered()
+    filters = "c.issue_id = i.id AND new_value='"+type_+"'"
+    filters = filters + GetSQLReportWhereSCR(type_analysis, identities_db)
 
     #Adding dates filters (and evolutionary or static analysis)
     if (evolutionary):
@@ -277,30 +634,32 @@ def EvolReviewsAbandoned(period, startdate, enddate, type_analysis = [], identit
 def EvolReviewsAbandonedChanges(period, startdate, enddate, type_analysis = [], identities_db=None):
     return (GetReviewsChanges(period, startdate, enddate, "abandoned", type_analysis, True, identities_db))
 
-def EvolReviewsPending(period, startdate, enddate, config, type_analysis = [], identities_db=None):
+
+def EvolReviewsPending(period, startdate, enddate, type_analysis = [], identities_db=None):
     data = EvolReviewsSubmitted(period, startdate, enddate, type_analysis, identities_db)
-    data = completePeriodIds(data)
+    data = completePeriodIds(data, period, startdate, enddate)
     data1 = EvolReviewsMerged(period, startdate, enddate, type_analysis, identities_db)
-    data1 = completePeriodIds(data1)
+    data1 = completePeriodIds(data1, period, startdate, enddate)
     data2 = EvolReviewsAbandoned(period, startdate, enddate, type_analysis, identities_db)
-    data2 = completePeriodIds(data2)
+    data2 = completePeriodIds(data2, period, startdate, enddate)
     evol = dict(data.items() + data1.items() + data2.items())
     pending = {"pending":[]}
-    for i in range(0, len(data['submitted'])):
+
+    for i in range(0, len(evol['merged'])):
         pending_val = evol["submitted"][i] - evol["merged"][i] - evol["abandoned"][i]
         pending["pending"].append(pending_val)
-    pending["month"] = evol["month"]
-    pending = completePeriodIds(pending)
+    pending[period] = evol[period]
+    pending = completePeriodIds(pending, period, startdate, enddate)
     return pending
 
 # PENDING = SUBMITTED - MERGED - ABANDONED
-def EvolReviewsPendingChanges(period, startdate, enddate, config, type_analysis = [], identities_db=None):
+def EvolReviewsPendingChanges(period, startdate, enddate, type_analysis = [], identities_db=None):
     data = EvolReviewsSubmitted(period, startdate, enddate, type_analysis, identities_db)
-    data = completePeriodIds(data)
+    data = completePeriodIds(data, period, startdate, enddate)
     data1 = EvolReviewsMergedChanges(period, startdate, enddate, type_analysis, identities_db)
-    data1 = completePeriodIds(data1)
+    data1 = completePeriodIds(data1, period, startdate, enddate)
     data2 = EvolReviewsAbandonedChanges(period, startdate, enddate, type_analysis, identities_db)
-    data2 = completePeriodIds(data2)
+    data2 = completePeriodIds(data2, period, startdate, enddate)
     evol = dict(data.items() + data1.items() + data2.items())
     pending = {"pending":[]}
 
@@ -308,7 +667,7 @@ def EvolReviewsPendingChanges(period, startdate, enddate, config, type_analysis 
         pending_val = evol["submitted"][i] - evol["merged_changes"][i] - evol["abandoned_changes"][i]
         pending["pending"].append(pending_val)
     pending["month"] = evol["month"]
-    pending = completePeriodIds(pending)
+    pending = completePeriodIds(pending, period, startdate, enddate)
     return pending
 
 # STATIC META FUNCTIONS BASED ON REVIEWS
@@ -371,21 +730,21 @@ def StaticReviewsPendingChanges(period, startdate, enddate, type_analysis = [], 
 
 
 #WORK ON PATCHES: ANY REVIEW MAY HAVE MORE THAN ONE PATCH
-def GetEvaluations (period, startdate, enddate, type, type_analysis, evolutionary):
+def GetEvaluations (period, startdate, enddate, type_, type_analysis, evolutionary, identities_db = None):
     # verified - VRIF
     # approved - APRV
     # code review - CRVW
     # submitted - SUBM
 
     #Building the query
-    fields = " count(distinct(c.id)) as " + type
+    fields = " count(distinct(c.id)) as " + type_
     tables = " changes c, issues i " + GetSQLReportFromSCR(None, type_analysis)
-    if type == "verified": filters =  " (c.field = 'VRIF' OR c.field = 'Verified') "
-    elif type == "approved": filters =  " c.field = 'APRV'  "
-    elif type == "codereview": filters =  "   (c.field = 'CRVW' OR c.field = 'Code-Review') "
-    elif type == "sent": filters =  " c.field = 'SUBM'  "
+    if type_ == "verified": filters =  " (c.field = 'VRIF' OR c.field = 'Verified') "
+    elif type_ == "approved": filters =  " c.field = 'APRV'  "
+    elif type_ == "codereview": filters =  "   (c.field = 'CRVW' OR c.field = 'Code-Review') "
+    elif type_ == "sent": filters =  " c.field = 'SUBM'  "
     filters = filters + " and i.id = c.issue_id "
-    filters = filters + GetSQLReportWhereSCR(type_analysis)
+    filters = filters + GetSQLReportWhereSCR(type_analysis, identities_db)
 
     #Adding dates filters
     if (evolutionary):
@@ -432,32 +791,32 @@ def StaticPatchesSent (period, startdate, enddate, type_analysis = []):
 
 #PATCHES WAITING FOR REVIEW FROM REVIEWER
 def GetWaiting4Reviewer (period, startdate, enddate, identities_db, type_analysis, evolutionary):
-     fields = " count(distinct(c.id)) as WaitingForReviewer "
-     tables = " changes c, "+\
-              "  issues i, "+\
-              "        (select c.issue_id as issue_id, "+\
-              "                c.old_value as old_value, "+\
-              "                max(c.id) as id "+\
-              "         from changes c, "+\
-              "              issues i "+\
-              "         where c.issue_id = i.id and "+\
-              "               i.status='NEW' "+\
-              "         group by c.issue_id, c.old_value) t1 "
-     tables = tables + GetSQLReportFromSCR(identities_db, type_analysis)
-     filters =  " i.id = c.issue_id  "+\
-                "  and t1.id = c.id "+\
-                "  and (c.field='CRVW' or c.field='Code-Review' or c.field='Verified' or c.field='VRIF') "+\
-                "  and (c.new_value=1 or c.new_value=2) "
-     filters = filters + GetSQLReportWhereSCR(type_analysis)
+    fields = " count(distinct(c.id)) as WaitingForReviewer "
+    tables = " changes c, "+\
+             "  issues i, "+\
+             "        (select c.issue_id as issue_id, "+\
+             "                c.old_value as old_value, "+\
+             "                max(c.id) as id "+\
+             "         from changes c, "+\
+             "              issues i "+\
+             "         where c.issue_id = i.id and "+\
+             "               i.status='NEW' "+\
+             "         group by c.issue_id, c.old_value) t1 "
+    tables = tables + GetSQLReportFromSCR(identities_db, type_analysis)
+    filters =  " i.id = c.issue_id  "+\
+               "  and t1.id = c.id "+\
+               "  and (c.field='CRVW' or c.field='Code-Review' or c.field='Verified' or c.field='VRIF') "+\
+               "  and (c.new_value=1 or c.new_value=2) "
+    filters = filters + GetSQLReportWhereSCR(type_analysis, identities_db)
 
-     if (evolutionary):
-         q = GetSQLPeriod(period, " c.changed_on", fields, tables, filters,
-                           startdate, enddate)
-     else:
-         q = GetSQLGlobal(" c.changed_on ", fields, tables, filters,
-                           startdate, enddate)
+    if (evolutionary):
+        q = GetSQLPeriod(period, " c.changed_on", fields, tables, filters,
+                          startdate, enddate)
+    else:
+        q = GetSQLGlobal(" c.changed_on ", fields, tables, filters,
+                          startdate, enddate)
 
-     return(ExecuteQuery(q))
+    return(ExecuteQuery(q))
 
 
 def EvolWaiting4Reviewer (period, startdate, enddate, identities_db=None, type_analysis = []):
@@ -470,33 +829,31 @@ def StaticWaiting4Reviewer (period, startdate, enddate, identities_db=None, type
 
 def GetWaiting4Submitter (period, startdate, enddate, identities_db, type_analysis, evolutionary):
 
-     fields = "count(distinct(c.id)) as WaitingForSubmitter "
-     tables = "  changes c, "+\
-              "   issues i, "+\
-              "        (select c.issue_id as issue_id, "+\
-              "                c.old_value as old_value, "+\
-              "                max(c.id) as id "+\
-              "         from changes c, "+\
-              "              issues i "+\
-              "         where c.issue_id = i.id and "+\
-              "               i.status='NEW' "+\
-              "         group by c.issue_id, c.old_value) t1 "
-     tables = tables + GetSQLReportFromSCR(identities_db, type_analysis)
-     filters = " i.id = c.issue_id "+\
-               "  and t1.id = c.id "+\
-	           "  and (c.field='CRVW' or c.field='Code-Review' or c.field='Verified' or c.field='VRIF') "+\
-               "  and (c.new_value=-1 or c.new_value=-2) "
-     filters = filters + GetSQLReportWhereSCR(type_analysis)
+    fields = "count(distinct(c.id)) as WaitingForSubmitter "
+    tables = "  changes c, "+\
+             "   issues i, "+\
+             "        (select c.issue_id as issue_id, "+\
+             "                c.old_value as old_value, "+\
+             "                max(c.id) as id "+\
+             "         from changes c, "+\
+             "              issues i "+\
+             "         where c.issue_id = i.id and "+\
+             "               i.status='NEW' "+\
+             "         group by c.issue_id, c.old_value) t1 "
+    tables = tables + GetSQLReportFromSCR(identities_db, type_analysis)
+    filters = " i.id = c.issue_id "+\
+              "  and t1.id = c.id "+\
+              "  and (c.field='CRVW' or c.field='Code-Review' or c.field='Verified' or c.field='VRIF') "+\
+              "  and (c.new_value=-1 or c.new_value=-2) "
+    filters = filters + GetSQLReportWhereSCR(type_analysis, identities_db)
 
-     if (evolutionary):
-         q = GetSQLPeriod(period, " c.changed_on", fields, tables, filters,
-                           startdate, enddate)
-     else:
-         q = GetSQLGlobal(" c.changed_on ", fields, tables, filters,
-                           startdate, enddate)
-
-
-     return(ExecuteQuery(q))
+    if (evolutionary):
+        q = GetSQLPeriod(period, " c.changed_on", fields, tables, filters,
+                          startdate, enddate)
+    else:
+        q = GetSQLGlobal(" c.changed_on ", fields, tables, filters,
+                          startdate, enddate)
+    return(ExecuteQuery(q))
 
 
 def EvolWaiting4Submitter (period, startdate, enddate, identities_db=None, type_analysis = []):
@@ -533,26 +890,27 @@ def StaticReviewers  (period, startdate, enddate, identities_db = None, type_ana
     return (GetReviewers(period, startdate, enddate, identities_db, type_analysis, False))
 
 
+# Nobody is using it yet
 def GetLongestReviews  (startdate, enddate, identities_db, type_analysis = []):
 
-    q = "select i.issue as review, "+\
-        "         t1.old_value as patch, "+\
-        "         timestampdiff (HOUR, t1.min_time, t1.max_time) as timeOpened "+\
-        "  from ( "+\
-        "        select c.issue_id as issue_id, "+\
-        "               c.old_value as old_value, "+\
-        "               min(c.changed_on) as min_time, "+\
-        "               max(c.changed_on) as max_time "+\
-        "        from changes c, "+\
-        "             issues i "+\
-        "        where c.issue_id = i.id and "+\
-        "              i.status='NEW' "+\
-        "        group by c.issue_id, "+\
-        "                 c.old_value) t1, "+\
-        "       issues i "+\
-        "  where t1.issue_id = i.id "+\
-        "  order by timeOpened desc "+\
-        "  limit 20"
+#    q = "select i.issue as review, "+\
+#        "         t1.old_value as patch, "+\
+#        "         timestampdiff (HOUR, t1.min_time, t1.max_time) as timeOpened "+\
+#        "  from ( "+\
+#        "        select c.issue_id as issue_id, "+\
+#        "               c.old_value as old_value, "+\
+#        "               min(c.changed_on) as min_time, "+\
+#        "               max(c.changed_on) as max_time "+\
+#        "        from changes c, "+\
+#        "             issues i "+\
+#        "        where c.issue_id = i.id and "+\
+#        "              i.status='NEW' "+\
+#        "        group by c.issue_id, "+\
+#        "                 c.old_value) t1, "+\
+#        "       issues i "+\
+#        "  where t1.issue_id = i.id "+\
+#        "  order by timeOpened desc "+\
+#        "  limit 20"
     fields = " i.issue as review, " + \
              " t1.old_value as patch, " + \
             " timestampdiff (HOUR, t1.min_time, t1.max_time) as timeOpened, "
@@ -569,7 +927,7 @@ def GetLongestReviews  (startdate, enddate, identities_db, type_analysis = []):
             "             c.old_value) t1 "
     tables = tables + GetSQLReportFromSCR(identities_db, type_analysis)
     filters = " t1.issue_id = i.id "
-    filters = filters + GetSQLReportWhereSCR(type_analysis)
+    filters = filters + GetSQLReportWhereSCR(type_analysis, identities_db)
 
     q = GetSQLGlobal(" i.submitted_on ", fields, tables, filters,
                            startdate, enddate)
@@ -682,6 +1040,22 @@ def GetPeopleListSCR (startdate, enddate, bots):
     return(ExecuteQuery(q))
 
 
+def GetPeopleQuerySCR (developer_id, period, startdate, enddate, evol):
+    fields = "COUNT(c.id) AS closed"
+    tables = GetTablesOwnUniqueIdsSCR()
+    filters = GetFiltersOwnUniqueIdsSCR()+ " AND pup.upeople_id = "+ str(developer_id)
+
+    if (evol):
+        q = GetSQLPeriod(period,'changed_on', fields, tables, filters,
+                startdate, enddate)
+    else:
+        fields = fields + \
+                ",DATE_FORMAT (min(changed_on),'%Y-%m-%d') as first_date, "+\
+                "  DATE_FORMAT (max(changed_on),'%Y-%m-%d') as last_date"
+        q = GetSQLGlobal('changed_on', fields, tables, filters,
+                startdate, enddate)
+    return (q)
+
 def GetPeopleQuerySCRChanges (developer_id, period, startdate, enddate, evol):
     fields = "COUNT(c.id) AS changes"
     tables = GetTablesOwnUniqueIdsSCR()
@@ -717,11 +1091,11 @@ def GetPeopleQuerySCRSubmissions (developer_id, period, startdate, enddate, evol
 
 
 def GetPeopleEvolSCR (developer_id, period, startdate, enddate):
-    q = GetPeopleQuerySCRSubmissions(developer_id, period, startdate, enddate, True)
+    q = GetPeopleQuerySCR(developer_id, period, startdate, enddate, True)
     return(ExecuteQuery(q))
 
 def GetPeopleStaticSCR (developer_id, startdate, enddate):
-    q = GetPeopleQuerySCRSubmissions(developer_id, None, startdate, enddate, False)
+    q = GetPeopleQuerySCR(developer_id, None, startdate, enddate, False)
     return(ExecuteQuery(q))
 
 ################
@@ -759,12 +1133,14 @@ def GetTimeToReviewQuerySCR (startdate, enddate, identities_db = None, type_anal
         filter_bots = filter_bots + " people.name<>'"+bot+"' and "
 
     # Subquery to get the time to review for all reviews
+    # fields = "DATEDIFF(changed_on,submitted_on) AS revtime, changed_on "
+    # fields = "TIMEDIFF(changed_on,submitted_on)/(24*3600) AS revtime, changed_on "
     fields = "TIMESTAMPDIFF(SECOND, submitted_on, changed_on)/(24*3600) AS revtime, changed_on "
     tables = "issues i, changes, people "
     tables = tables + GetSQLReportFromSCR(identities_db, type_analysis)
     filters = filter_bots + " i.id = changes.issue_id "
     filters += " AND people.id = changes.changed_by "
-    filters += GetSQLReportWhereSCR(type_analysis)
+    filters += GetSQLReportWhereSCR(type_analysis, identities_db)
     filters += " AND field='status' AND new_value='MERGED' "
     # remove autoreviews
     filters += " AND i.submitted_by<>changes.changed_by "
@@ -775,8 +1151,8 @@ def GetTimeToReviewQuerySCR (startdate, enddate, identities_db = None, type_anal
     filters += " ORDER BY changed_on "
     q = GetSQLGlobal('changed_on', fields, tables, filters,
                     startdate, enddate)
-    # min_days_for_review = 0.042 # one hour
-    # q = "SELECT revtime, changed_on FROM ("+q+") qrevs WHERE revtime>"+str(min_days_for_review)
+    min_days_for_review = 0.042 # one hour
+    q = "SELECT revtime, changed_on FROM ("+q+") qrevs WHERE revtime>"+str(min_days_for_review)
     return (q)
 
 # Average can be calculate directly from SQL. But not used.
@@ -809,8 +1185,8 @@ def StaticTimeToReviewSCR (startdate, enddate, identities_db = None, type_analys
         ttr_median = float("nan")
         ttr_avg = float("nan")
     else:
-        ttr_median = median(convertDecimals(data))
-        ttr_avg = average(convertDecimals(data))
+        ttr_median = median(removeDecimals(data))
+        ttr_avg = average(removeDecimals(data))
     return {"review_time_days_median":ttr_median, "review_time_days_avg":ttr_avg}
 
 def StaticTimeToReviewPendingSCR (startdate, enddate, identities_db = None, type_analysis = [], bots = []):
