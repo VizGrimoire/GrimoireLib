@@ -331,9 +331,9 @@ def removeDecimals(data):
             if (isinstance(data[key], Decimal)):
                 data[key] = float(data[key])
             elif (isinstance(data[key], list)):
-                data[key] = convertDecimals(data[key])
+                data[key] = removeDecimals(data[key])
             elif (isinstance(data[key], dict)):
-                data[key] = convertDecimals(data[key])
+                data[key] = removeDecimals(data[key])
     if (isinstance(data, list)):
         for i in range(0,len(data)):
             if (isinstance(data[i], Decimal)):
