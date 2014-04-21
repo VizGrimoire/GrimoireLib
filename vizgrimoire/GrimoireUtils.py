@@ -550,3 +550,56 @@ def get_median(period_values):
     if not isinstance(period_values, list):
         return period_values
     return median(convertDecimals(period_values))
+
+
+def get_avg(period_values):
+    # No data for this period
+    if not period_values:
+        return float('nan')
+    if not isinstance(period_values, list):
+        return period_values
+    return average(convertDecimals(period_values))
+
+def medianAndAvgByPeriod(period, dates, values):
+
+    def get_period(period, date):
+        if period == 'month':
+            return date.year * 12 + date.month
+
+    if len(dates) == 0: return None
+    if not values: return None
+
+    if not isinstance(values, list):
+        values = [values]
+
+    if len(dates) != len(values): return None
+
+    result = {period  : [],
+              'median' : [],
+              'avg'    : []}
+
+    start = dates[0]
+    current_period = get_period(period, start)
+    period_values = []
+    ndates = len(dates)
+
+    for i in range(0, ndates):
+        date_period = get_period(period, dates[i])
+
+        # Change of period
+        if date_period != current_period:
+            result[period].append(current_period)
+            result['median'].append(get_median(period_values))
+            result['avg'].append(get_avg(period_values))
+
+            current_period = date_period
+            period_values = []
+
+        period_values.append(values[i])
+
+        # End of the list
+        if i == ndates - 1:
+            result[period].append(current_period)
+            result['median'].append(get_median(period_values))
+            result['avg'].append(get_avg(period_values))                        # Accumulated values
+    return result
