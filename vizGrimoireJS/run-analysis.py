@@ -219,6 +219,16 @@ def execute_downloads_script(env):
     os.system(cmd)
     print("Downloads analysis finished")
 
+def execute_qaforums_script(env):
+    # Execute Question&Answer script
+    if not 'db_qaforums' in env:
+        print("q&a analysis disabled")
+        return
+    print("Starting Q&A analysis")
+    cmd = get_analysis_cmd(env, "qaforums-analysis.py", env["db_qaforums"])
+    os.system(cmd)
+    print("Q&A analysis finished")
+
 tasks_section = {
     'scm':execute_scm_script,
     'people':execute_people_script,
@@ -229,8 +239,10 @@ tasks_section = {
     'mediawiki':execute_mediawiki_script,
     'downloads':execute_downloads_script,
     'irc': execute_irc_script,
+    'qaforums': execute_qaforums_script
 }
-tasks_order = ['scm','people','its','mls','scr','mediawiki','downloads','irc']
+
+tasks_order = ['scm','people','its','mls','scr','mediawiki','downloads','irc', 'qaforums']
 #tasks_order = ['scm','people','its','mls','scr','mediawiki','irc','people_experimental']
 
 

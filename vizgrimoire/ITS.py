@@ -908,6 +908,8 @@ def GetCompaniesNameITS (startdate, enddate, identities_db, closed_condition, fi
         "      upc.company_id = c.id and "+\
         "      ch.changed_on >= "+ startdate+ " and "+\
         "      ch.changed_on < "+ enddate+" and "+\
+        "      i.submitted_on >= upc.init and "+\
+        "      i.submitted_on < upc.end and "+\
         "      "+ affiliations  +\
                closed_condition +\
         "      group by c.name  "+\
