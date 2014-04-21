@@ -26,11 +26,7 @@
 
 
 import logging
-# from rpy2.robjects.packages import importr
 import sys
-
-# isoweek = importr("ISOweek")
-# vizr = importr("vizgrimoire")
 
 import GrimoireUtils, GrimoireSQL
 from GrimoireUtils import dataFrame2Dict, createJSON, completePeriodIds
@@ -41,8 +37,6 @@ def aggData(period, startdate, enddate, identities_db, destdir):
     # Tendencies
     agg = {}
     for i in [7,30,365]:
-#        data = vizr.GetMediaWikiDiffReviewsDays(period, enddate, i)
-#        agg = dict(agg.items() + data.items())
         data = Mediawiki.GetMediaWikiDiffReviewsDays(period, enddate, identities_db, i)
         agg = dict(agg.items() + data.items())
         data = Mediawiki.GetMediaWikiDiffAuthorsDays(period, enddate, identities_db, i)
@@ -55,7 +49,7 @@ def aggData(period, startdate, enddate, identities_db, destdir):
 
 def tsData(period, startdate, enddate, identities_db, destdir, granularity, conf):
     evol_data = Mediawiki.GetEvolDataMediaWiki(period, startdate, enddate, identities_db, None)
-    evol_data = completePeriodIds(evol_data)
+    evol_data = completePeriodIds(evol_data, period, startdate, enddate)
     createJSON (evol_data, destdir+"/mediawiki-evolutionary.json")
 
 def peopleData(period, startdate, enddate, identities_db, destdir, top_data):
@@ -64,12 +58,11 @@ def peopleData(period, startdate, enddate, identities_db, destdir, top_data):
     top += top_data['authors.last month']["id"]
     # remove duplicates
     people = list(set(top))
-    # the order is not the same than in R json 
-    createJSON(people, destdir+"/mediawiki-people.json", False)
+    createJSON(people, destdir+"/mediawiki-people.json")
 
     for upeople_id in people:
         evol = Mediawiki.GetEvolPeopleMediaWiki(upeople_id, period, startdate, enddate)
-        evol = completePeriodIds(evol)
+        evol = completePeriodIds(evol, period, startdate, enddate)
         createJSON(evol, destdir+"/people-"+str(upeople_id)+"-mediawiki-evolutionary.json")
 
         static = Mediawiki.GetStaticPeopleMediaWiki(upeople_id, startdate, enddate)
@@ -106,8 +99,6 @@ if __name__ == '__main__':
     startdate = "'"+opts.startdate+"'"
     enddate = "'"+opts.enddate+"'"
 
-    # Working at the same time with VizR and VizPy yet
-    # vizr.SetDBChannel (database=opts.dbname, user=opts.dbuser, password=opts.dbpassword)
     GrimoireSQL.SetDBChannel (database=opts.dbname, user=opts.dbuser, password=opts.dbpassword)
 
     tsData (period, startdate, enddate, opts.identities_db, opts.destdir, opts.granularity, opts)
