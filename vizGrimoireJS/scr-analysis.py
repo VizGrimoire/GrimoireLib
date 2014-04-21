@@ -34,16 +34,12 @@ from datetime import datetime, timedelta
 
 from dateutil.relativedelta import relativedelta
 import logging
-# from rpy2.robjects.packages import importr
 import sys
 from Wikimedia import GetCompaniesQuartersSCR, GetPeopleQuartersSCR
 from Wikimedia import GetNewSubmitters, GetNewMergers, GetNewAbandoners
 from Wikimedia import GetGoneSubmitters, GetGoneMergers, GetGoneAbandoners
 from Wikimedia import GetNewSubmittersActivity, GetGoneSubmittersActivity
 from Wikimedia import GetPeopleIntakeSQL
-
-# isoweek = importr("ISOweek")
-# vizr = importr("vizgrimoire")
 
 import GrimoireUtils, GrimoireSQL
 from GrimoireUtils import dataFrame2Dict, createJSON, completePeriodIds
@@ -54,8 +50,6 @@ def aggData(period, startdate, enddate, idb, destdir, bots):
     # Wikimedia data ok after '2013-04-30' for changes based metrics
     startok = "'2013-04-30'"
 
-    # data = vizr.StaticReviewsSubmitted(period, startdate, enddate)
-    # agg = dataFrame2Dict(data)
     agg = SCR.StaticReviewsSubmitted(period, startdate, enddate)
     data = SCR.StaticReviewsOpened(period, startdate, enddate)
     agg = dict(agg.items() + data.items())
@@ -115,58 +109,52 @@ def tsData(period, startdate, enddate, idb, destdir, granularity, conf):
     startok = "'2013-04-30'"
 
     evol = {}
-
-    # data = vizr.EvolReviewsSubmitted(period, startdate, enddate)
-    # evol = dict(evol.items() + completePeriodIds(dataFrame2Dict(data)).items())
     data = SCR.EvolReviewsSubmitted(period, startdate, enddate)
-    evol = dict(evol.items() + completePeriodIds(data).items())
+    evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
     data = SCR.EvolReviewsOpened(period, startdate, enddate)
-    evol = dict(evol.items() + completePeriodIds(data).items())
+    evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
     data = SCR.EvolReviewsNew(period, startdate, enddate)
-    evol = dict(evol.items() + completePeriodIds(data).items())
+    evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
     data = SCR.EvolReviewsNewChanges(period, startok, enddate)
-    evol = dict(evol.items() + completePeriodIds(data).items())
+    evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
     # data = SCR.EvolReviewsInProgress(period, startdate, enddate)
     # evol = dict(evol.items() + completePeriodIds(data).items())
     data = SCR.EvolReviewsClosed(period, startdate, enddate)
-    evol = dict(evol.items() + completePeriodIds(data).items())
+    evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
     data = SCR.EvolReviewsMerged(period, startdate, enddate)
-    evol = dict(evol.items() + completePeriodIds(data).items())
+    evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
     data = SCR.EvolReviewsMergedChanges(period, startok, enddate)
-    evol = dict(evol.items() + completePeriodIds(data).items())
+    evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
     data = SCR.EvolReviewsAbandoned(period, startok, enddate)
-    evol = dict(evol.items() + completePeriodIds(data).items())
+    evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
     data = SCR.EvolReviewsAbandonedChanges(period, startok, enddate)
-    evol = dict(evol.items() + completePeriodIds(data).items())
-    # TODO: We can not use this R API because Python conf can't be pass to R  
-    # data = dataFrame2Dict(vizr.EvolReviewsPendingChanges(period, startdate, enddate, conf))
-    # data = SCR.EvolReviewsPendingChanges(period, startdate, enddate, conf, [])
-    data = SCR.EvolReviewsPending(period, startdate, enddate, conf, [])
-    evol = dict(evol.items() + completePeriodIds(data).items())
+    evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
+    data = SCR.EvolReviewsPending(period, startdate, enddate, [])
+    evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
     #Patches info
     data = SCR.EvolPatchesVerified(period, startdate, enddate)
-    evol = dict(evol.items() + completePeriodIds(data).items())
+    evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
     # data = SCR.EvolPatchesApproved(period, startdate, enddate)
     # evol = dict(evol.items() + completePeriodIds(data).items())
     data = SCR.EvolPatchesCodeReview(period, startdate, enddate)
-    evol = dict(evol.items() + completePeriodIds(data).items())
+    evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
     data = SCR.EvolPatchesSent(period, startdate, enddate)
-    evol = dict(evol.items() + completePeriodIds(data).items())
+    evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
     #Waiting for actions info
     data = SCR.EvolWaiting4Reviewer(period, startdate, enddate)
-    evol = dict(evol.items() + completePeriodIds(data).items())
+    evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
     data = SCR.EvolWaiting4Submitter(period, startdate, enddate)
-    evol = dict(evol.items() + completePeriodIds(data).items())
+    evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
     #Reviewers info
     data = SCR.EvolReviewers(period, startdate, enddate)
-    evol = dict(evol.items() + completePeriodIds(data).items())
+    evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
     # Time to Review info
     data = SCR.EvolTimeToReviewSCR (period, startok, enddate)
 #    for i in range(0,len(data['review_time_days_avg'])):
 #        val = data['review_time_days_avg'][i]
 #        data['review_time_days_avg'][i] = float(val)
 #        if (val == 0): data['review_time_days_avg'][i] = 0
-    evol = dict(evol.items() + completePeriodIds(data).items())
+    evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
 
     data = SCR.EvolTimeToReviewPendingSCR(period, startdate, enddate)
 
@@ -174,7 +162,7 @@ def tsData(period, startdate, enddate, idb, destdir, granularity, conf):
 #        val = data['review_time_pending_days_avg'][i]
 #        data['review_time_pending_days_avg'][i] = float(val)
 #        if (val == 0): data['review_time_pending_days_avg'][i] = 0
-    evol = dict(evol.items() + completePeriodIds(data).items())
+    evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
     # Create JSON
     createJSON(evol, destdir+"/scr-evolutionary.json")
 
@@ -196,18 +184,14 @@ def peopleData(period, startdate, enddate, idb, destdir, top_data):
     top += safeTopIds(top_data['mergers.last year'])
     top += safeTopIds(top_data['mergers.last_month'])
     # remove duplicates
-    people = list(set(top))
-    # the order is not the same than in R json 
-    createJSON(people, destdir+"/scr-people.json", False)
+    people = list(set(top)) 
+    createJSON(people, destdir+"/scr-people.json")
 
     for upeople_id in people:
-        # evol = vizr.GetPeopleEvolSCR(upeople_id, period, startdate, enddate)
-        # evol = completePeriodIds(dataFrame2Dict(evol))
         evol = SCR.GetPeopleEvolSCR(upeople_id, period, startdate, enddate)
-        evol = completePeriodIds(evol)
+        evol = completePeriodIds(evol, period, startdate, enddate)
         createJSON(evol, destdir+"/people-"+str(upeople_id)+"-scr-evolutionary.json")
 
-        # agg = dataFrame2Dict(vizr.GetPeopleStaticSCR(upeople_id, startdate, enddate))
         agg = SCR.GetPeopleStaticSCR(upeople_id, startdate, enddate)
         createJSON(agg, destdir+"/people-"+str(upeople_id)+"-scr-static.json")
 
@@ -221,34 +205,33 @@ def reposData(period, startdate, enddate, idb, destdir, conf):
     # missing information from the rest of type of reviews, patches and
     # number of patches waiting for reviewer and submitter 
     for repo in repos:
-        # repo = "gerrit.wikimedia.org_mediawiki/extensions/TorBlock"
         repo_file = repo.replace("/","_")
+        logging.info(repo_file)
         repos_list["name"].append(repo_file)
-        logging.info("Repo: " + repo)
+        # logging.info("Repo: " + repo_file)
         type_analysis = ['repository', repo]
 
         evol = {}
-        # data = vizr.EvolReviewsSubmitted(period, startdate, enddate, type_analysis)
         data = SCR.EvolReviewsSubmitted(period, startdate, enddate, type_analysis)
-        evol = dict(evol.items() + completePeriodIds(data).items())
+        evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
         data = SCR.EvolReviewsMerged(period, startdate, enddate, type_analysis)
-        evol = dict(evol.items() + completePeriodIds(data).items())
+        evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
         data = SCR.EvolReviewsAbandoned(period, startdate, enddate, type_analysis)
-        evol = dict(evol.items() + completePeriodIds(data).items())
+        evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
         data = SCR.EvolReviewsNew(period, startdate, enddate, type_analysis)
-        evol = dict(evol.items() + completePeriodIds(data).items())
+        evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
 
         # data = vizr.EvolReviewsPendingChanges(period, startdate, enddate, conf, type_analysis)
-        # evol = dict(evol.items() + completePeriodIds(dataFrame2Dict(data)).items())
+        # evol = dict(evol.items() + completePeriodIds(dataFrame2Dict(data, period, startdate, enddate)).items())
         # data = SCR.EvolReviewsPendingChanges(period, startdate, enddate, conf, type_analysis, idb)
         data = SCR.EvolReviewsPending(period, startdate, enddate, conf, type_analysis, idb)
-        evol = dict(evol.items() + completePeriodIds(data).items())
+        evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
         data = SCR.EvolTimeToReviewSCR(period, startok, enddate, idb, type_analysis)
         data['review_time_days_avg'] = checkFloatArray(data['review_time_days_avg'])
         data['review_time_days_median'] = checkFloatArray(data['review_time_days_median'])
-        evol = dict(evol.items() + completePeriodIds(data).items())
+        evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
         data = SCR.EvolTimeToReviewPendingSCR (period, startok, enddate, idb, type_analysis)
-        evol = dict(evol.items() + completePeriodIds(data).items())
+        evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
         createJSON(evol, destdir+ "/"+repo_file+"-scr-rep-evolutionary.json")
 
         # Static
@@ -280,8 +263,6 @@ def reposData(period, startdate, enddate, idb, destdir, conf):
         repos_list["review_time_pending_update_days_median"].append(data['review_time_pending_update_days_median'])
         createJSON(agg, destdir + "/"+repo_file + "-scr-rep-static.json")
 
-        # sys.exit()
-
     createJSON(repos_list, destdir+"/scr-repos.json")
 
 def companiesData(period, startdate, enddate, idb, destdir):
@@ -300,25 +281,21 @@ def companiesData(period, startdate, enddate, idb, destdir):
         type_analysis = ['company', company]
         # Evol
         evol = {}
-        # data = vizr.EvolReviewsSubmitted(period, startdate, enddate, type_analysis, idb)
-        # evol = dict(evol.items() + completePeriodIds(dataFrame2Dict(data)).items())
         data = SCR.EvolReviewsSubmitted(period, startdate, enddate, type_analysis, idb)
-        evol = dict(evol.items() + completePeriodIds(data).items())
+        evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
         data = SCR.EvolReviewsMerged(period, startdate, enddate, type_analysis, idb)
-        evol = dict(evol.items() + completePeriodIds(data).items())
+        evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
         data = SCR.EvolReviewsAbandoned(period, startdate, enddate, type_analysis, idb)
-        evol = dict(evol.items() + completePeriodIds(data).items())
+        evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
         data = SCR.EvolTimeToReviewSCR(period, startok, enddate, idb, type_analysis)
         data['review_time_days_avg'] = checkFloatArray(data['review_time_days_avg'])
         data['review_time_days_median'] = checkFloatArray(data['review_time_days_median'])
-        evol = dict(evol.items() + completePeriodIds(data).items())
+        evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
         data = SCR.EvolTimeToReviewPendingSCR (period, startok, enddate, idb, type_analysis)
-        evol = dict(evol.items() + completePeriodIds(data).items())
+        evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
         createJSON(evol, destdir+ "/"+company_file+"-scr-com-evolutionary.json")
         # Static
         agg = {}
-#        data = vizr.StaticReviewsSubmitted(period, startdate, enddate, type_analysis, idb)
-#        agg = dict(agg.items() + dataFrame2Dict(data).items())
         data = SCR.StaticReviewsSubmitted(period, startdate, enddate, type_analysis, idb)
         agg = dict(agg.items() + data.items())
         data = SCR.StaticReviewsMerged(period, startdate, enddate, type_analysis, idb)
@@ -339,7 +316,6 @@ def companiesData(period, startdate, enddate, idb, destdir):
 
 
 def countriesData(period, startdate, enddate, idb, destdir):
-    # countries  = dataFrame2Dict(vizr.GetCountriesSCRName(startdate, enddate, idb))
     countries  = SCR.GetCountriesSCRName(startdate, enddate, idb)
     countries = countries['name']
     countries_files = [country.replace('/', '_') for country in countries]
@@ -352,20 +328,16 @@ def countriesData(period, startdate, enddate, idb, destdir):
         type_analysis = ['country', country]
         # Evol
         evol = {}
-#        data = vizr.EvolReviewsSubmitted(period, startdate, enddate, type_analysis, idb)
-#        evol = dict(evol.items() + completePeriodIds(dataFrame2Dict(data)).items())
         data = SCR.EvolReviewsSubmitted(period, startdate, enddate, type_analysis, idb)
-        evol = dict(evol.items() + completePeriodIds(data).items())
+        evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
         data = SCR.EvolReviewsMerged(period, startdate, enddate, type_analysis, idb)
-        evol = dict(evol.items() + completePeriodIds(data).items())
+        evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
         data = SCR.EvolReviewsAbandoned(period, startdate, enddate, type_analysis, idb)
-        evol = dict(evol.items() + completePeriodIds(data).items())
-        # TODO: when empty abandoned does not appeat at all in R JSON 
-        createJSON(evol, destdir+ "/"+country_file+"-scr-cou-evolutionary.json",False)
+        evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items()) 
+        createJSON(evol, destdir+ "/"+country_file+"-scr-cou-evolutionary.json")
+
         # Static
         agg = {}
-#        data = vizr.StaticReviewsSubmitted(period, startdate, enddate, type_analysis, idb)
-#        agg = dict(agg.items() + dataFrame2Dict(data).items())
         data = SCR.StaticReviewsSubmitted(period, startdate, enddate, type_analysis, idb)
         agg = dict(agg.items() + data.items())
         data = SCR.StaticReviewsMerged(period, startdate, enddate, type_analysis, idb)
@@ -376,7 +348,6 @@ def countriesData(period, startdate, enddate, idb, destdir):
 
 def topData(period, startdate, enddate, idb, destdir, bots, npeople):
     top_reviewers = {}
-#    top_reviewers['reviewers'] = dataFrame2Dict(vizr.GetTopReviewersSCR(0, startdate, enddate, idb, bots))
     top_reviewers['reviewers'] = SCR.GetTopReviewersSCR(0, startdate, enddate, idb, bots, npeople)
     top_reviewers['reviewers.last year']= SCR.GetTopReviewersSCR(365, startdate, enddate, idb, bots, npeople)
     top_reviewers['reviewers.last month']= SCR.GetTopReviewersSCR(31, startdate, enddate, idb, bots, npeople)
@@ -395,7 +366,7 @@ def topData(period, startdate, enddate, idb, destdir, bots, npeople):
 
     # The order of the list item change so we can not check it
     top_all = dict(top_reviewers.items() +  top_openers.items() + top_mergers.items())
-    createJSON (top_all, destdir+"/scr-top.json",False)
+    createJSON (top_all, destdir+"/scr-top.json")
 
     return (top_all)
 
@@ -447,7 +418,7 @@ def CodeContribKPI(destdir):
     evol['people'] = {}
     for upeople_id in data['upeople_id']:
         pdata = SCR.GetPeopleEvolSCR(upeople_id, period, startdate, enddate)
-        pdata = completePeriodIds(pdata)
+        pdata = completePeriodIds(pdata, period, startdate, enddate)
         evol['people'][upeople_id] = {"submissions":pdata['submissions']}
         # Just to have the time series data
         evol = dict(evol.items() + pdata.items())
@@ -460,7 +431,7 @@ def CodeContribKPI(destdir):
     evol['people'] = {}
     for upeople_id in data['upeople_id']:
         pdata = SCR.GetPeopleEvolSCR(upeople_id, period, startdate, enddate)
-        pdata = completePeriodIds(pdata)
+        pdata = completePeriodIds(pdata, period, startdate, enddate)
         evol['people'][upeople_id] = {"submissions":pdata['submissions']}
         # Just to have the time series data
         evol = dict(evol.items() + pdata.items())
@@ -472,13 +443,13 @@ def CodeContribKPI(destdir):
     # createJSON(data, destdir+"/leaving-people-scr.json")
 
     evol = {}
-    data = completePeriodIds(GetPeopleIntakeSQL(0,1))
+    data = completePeriodIds(GetPeopleIntakeSQL(0,1), period, startdate, enddate)
     evol['month'] = data['month']
     evol['id'] = data['id']
     evol['date'] = data['date']
     evol['num_people_1'] = data['people']
-    evol['num_people_1_5'] = completePeriodIds(GetPeopleIntakeSQL(1,5))['people']
-    evol['num_people_5_10'] = completePeriodIds(GetPeopleIntakeSQL(5,10))['people']
+    evol['num_people_1_5'] = completePeriodIds(GetPeopleIntakeSQL(1,5),period, startdate, enddate)['people']
+    evol['num_people_5_10'] = completePeriodIds(GetPeopleIntakeSQL(5,10), period, startdate, enddate)['people']
     createJSON(evol, destdir+"/scr-people-intake-evolutionary.json")
 
 if __name__ == '__main__':
@@ -494,8 +465,6 @@ if __name__ == '__main__':
     startdate = "'"+opts.startdate+"'"
     enddate = "'"+opts.enddate+"'"
 
-    # Working at the same time with VizR and VizPy yet
-    # vizr.SetDBChannel (database=opts.dbname, user=opts.dbuser, password=opts.dbpassword)
     GrimoireSQL.SetDBChannel (database=opts.dbname, user=opts.dbuser, password=opts.dbpassword)
 
     tsData (period, startdate, enddate, opts.identities_db, opts.destdir, opts.granularity, opts)
