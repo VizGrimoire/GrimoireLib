@@ -244,12 +244,11 @@ class SCM(DataSource):
 
     # Studies implemented in R
     @staticmethod
-    def create_r_reports(vizr, enddate):
-        opts = read_options()
-
+    def create_r_reports(vizr, enddate, destdir):
+        unique_ids = True
         # Demographics
-        vizr.ReportDemographicsAgingSCM(enddate, opts.destdir)
-        vizr.ReportDemographicsBirthSCM(enddate, opts.destdir)
+        vizr.ReportDemographicsAgingSCM(enddate, destdir, unique_ids)
+        vizr.ReportDemographicsBirthSCM(enddate, destdir, unique_ids)
 
 
 ##########

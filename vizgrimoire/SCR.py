@@ -346,7 +346,7 @@ class SCR(DataSource):
         return GetPeopleStaticSCR(upeople_id, startdate, enddate)
 
     @staticmethod
-    def create_r_reports(vizr, enddate):
+    def create_r_reports(vizr, enddate, destdir):
         pass
 
 ##########

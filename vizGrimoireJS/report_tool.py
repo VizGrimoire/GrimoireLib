@@ -22,7 +22,7 @@
 #   Alvaro del Castillo <acs@bitergia.com>
 #
 
-import logging, sys
+import logging, sys, time
 
 from GrimoireUtils import read_options, getPeriod, read_main_conf
 from report import Report
@@ -81,7 +81,7 @@ def create_report_people(startdate, enddate, identities_db, bots):
         logging.info("Creating people for " + ds.get_name())
         ds().create_people_report(period, startdate, enddate, identities_db)
 
-def create_reports_r(enddate):
+def create_reports_r(enddate, destdir):
     from rpy2.robjects.packages import importr
     opts = read_options()
 
@@ -92,7 +92,7 @@ def create_reports_r(enddate):
         db = automator['generic'][ds.get_db_name()]
         vizr.SetDBChannel (database=db, user=opts.dbuser, password=opts.dbpassword)
         logging.info("Creating R reports for " + ds.get_name())
-        ds.create_r_reports(vizr, enddate)
+        ds.create_r_reports(vizr, enddate, destdir)
 
 def set_data_source(ds_name):
     ds_ok = False
@@ -125,18 +125,27 @@ if __name__ == '__main__':
     opts = read_options()
     period = getPeriod(opts.granularity)
     reports = opts.reports.split(",")
-    # TODO: hack because VizR library needs. Fix in lib in future
-    startdate = "'"+opts.startdate+"'"
-    enddate = "'"+opts.enddate+"'"
 
     automator = read_main_conf(opts.config_file)
+    if 'start_date' not in automator['r']:
+        logging.error("start_date (yyyy-mm-dd) not found in " + opts.config_file)
+        sys.exit()
+    start_date = automator['r']['start_date']
+    if 'end_date' not in automator['r']:
+        end_date = time.strftime('%Y-%m-%d')
+    else:
+        end_date = automator['r']['end_date']
+
+    # TODO: hack because VizR library needs. Fix in lib in future
+    startdate = "'"+start_date+"'"
+    enddate = "'"+end_date+"'"
+
     identities_db = automator['generic']['db_identities']
 
     if (opts.data_source):
         set_data_source(opts.data_source)
     if (opts.filter):
         set_filter(opts.filter)
-
 
     bots = []
 
@@ -147,6 +156,6 @@ if __name__ == '__main__':
     create_reports_filters(startdate, enddate, identities_db, bots)
     if (automator['r']['reports'].find('people')>-1):
         create_report_people(startdate, enddate, identities_db, bots)
-    create_reports_r(opts.enddate)
+    create_reports_r(end_date, opts.destdir)
 
     logging.info("Report data source analysis OK")

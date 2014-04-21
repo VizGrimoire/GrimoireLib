@@ -179,7 +179,7 @@ class IRC(DataSource):
         return GetStaticPeopleIRC(upeople_id, startdate, enddate)
 
     @staticmethod
-    def create_r_reports(vizr, enddate):
+    def create_r_reports(vizr, enddate, destdir):
         pass
 
 # SQL Metaqueries

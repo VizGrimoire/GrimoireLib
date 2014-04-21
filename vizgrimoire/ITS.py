@@ -306,18 +306,19 @@ class ITS(DataSource):
         return GetPeopleStaticITS(upeople_id, startdate, enddate, closed_condition)
 
     @staticmethod
-    def create_r_reports(vizr, enddate):
+    def create_r_reports(vizr, enddate, destdir):
         opts = read_options()
 
         # Time to Close: Other backends not yet supported
-        vizr.ReportTimeToCloseITS(opts.backend, opts.destdir)
+        vizr.ReportTimeToCloseITS(opts.backend, destdir)
+        unique_ids = True
 
         # Demographics
-        vizr.ReportDemographicsAgingITS(opts.enddate, opts.destdir)
-        vizr.ReportDemographicsBirthITS(opts.enddate, opts.destdir)
+        vizr.ReportDemographicsAgingITS(enddate, destdir, unique_ids)
+        vizr.ReportDemographicsBirthITS(enddate, destdir, unique_ids)
 
         # Markov
-        vizr.ReportMarkovChain(opts.destdir)
+        vizr.ReportMarkovChain(destdir)
 
 ##############
 # Specific FROM and WHERE clauses per type of report

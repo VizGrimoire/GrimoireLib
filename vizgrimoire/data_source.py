@@ -173,6 +173,6 @@ class DataSource(object):
             createJSON (agg, fperson)
 
     @staticmethod
-    def create_r_reports(vizr, enddate):
+    def create_r_reports(vizr, enddate, destdir):
         """Create all files related to R reports"""
         raise NotImplementedError
