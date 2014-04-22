@@ -53,7 +53,7 @@ if __name__ == '__main__':
     protocols = EvolProtocols(period, startdate, enddate)
     ips = EvolIPs(period, startdate, enddate)
     evol = dict(downloads.items() + packages.items() + protocols.items() + ips.items())
-    evol = completePeriodIds(evol)
+    evol = completePeriodIds(evol,  period, startdate, enddate)
     createJSON (evol, destdir+"/downloads-evolutionary.json")
 
     downloads = AggDownloads(period, startdate, enddate)
