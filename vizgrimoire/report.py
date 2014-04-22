@@ -28,7 +28,7 @@
 from GrimoireSQL import SetDBChannel
 from GrimoireUtils import read_options, read_main_conf
 import logging
-import SCM, ITS, MLS, SCR, Mediawiki, IRC
+import SCM, ITS, MLS, SCR, Mediawiki, IRC, Downloads
 from filter import Filter
 
 class Report(object):
@@ -61,7 +61,7 @@ class Report(object):
     @staticmethod
     def _init_data_sources():
         Report._all_data_sources = [SCM.SCM, ITS.ITS, MLS.MLS, SCR.SCR, 
-                                    Mediawiki.Mediawiki, IRC.IRC]
+                                    Mediawiki.Mediawiki, IRC.IRC, Downloads.Downloads]
 
     @staticmethod
     def get_config():

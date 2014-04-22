@@ -159,6 +159,7 @@ class DataSource(object):
         opts = read_options()
         fpeople = os.path.join(opts.destdir,self.get_top_people_file(self.get_name()))
         people = self.get_top_people(startdate, enddate, identities_db, opts.npeople)
+        if people is None: return
         createJSON(people, fpeople)
 
         for upeople_id in people :
