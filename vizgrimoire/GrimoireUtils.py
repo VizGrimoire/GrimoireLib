@@ -361,7 +361,8 @@ def createJSON(data, filepath, check=False, skip_fields = []):
     filepath_tokens = filepath.split(".json")
     filepath_py = filepath_tokens[0]+"_py.json"
     filepath_r = filepath_tokens[0]+"_r.json"
-    json_data = json.dumps(removeDecimals(data), sort_keys=True)
+
+    json_data = json.dumps(convertDatetime(removeDecimals(data)), sort_keys=True)
     json_data = json_data.replace('NaN','"NA"')
     if check == False: #forget about R JSON checking
         jsonfile = open(filepath, 'w')

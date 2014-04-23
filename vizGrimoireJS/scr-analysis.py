@@ -224,7 +224,7 @@ def reposData(period, startdate, enddate, idb, destdir, conf):
         # data = vizr.EvolReviewsPendingChanges(period, startdate, enddate, conf, type_analysis)
         # evol = dict(evol.items() + completePeriodIds(dataFrame2Dict(data, period, startdate, enddate)).items())
         # data = SCR.EvolReviewsPendingChanges(period, startdate, enddate, conf, type_analysis, idb)
-        data = SCR.EvolReviewsPending(period, startdate, enddate, conf, type_analysis, idb)
+        data = SCR.EvolReviewsPending(period, startdate, enddate, type_analysis, idb)
         evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
         data = SCR.EvolTimeToReviewSCR(period, startok, enddate, idb, type_analysis)
         data['review_time_days_avg'] = checkFloatArray(data['review_time_days_avg'])
