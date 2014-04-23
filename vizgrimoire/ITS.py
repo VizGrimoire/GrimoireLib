@@ -30,7 +30,7 @@
 import logging, os, re
 
 from GrimoireSQL import GetSQLGlobal, GetSQLPeriod
-from GrimoireSQL import ExecuteQuery, BuildQuery
+from GrimoireSQL import ExecuteQuery, ExecuteViewQuery, BuildQuery
 from GrimoireUtils import GetPercentageDiff, GetDates, completePeriodIds, read_options, getPeriod
 from GrimoireUtils import createJSON, get_subprojects
 
