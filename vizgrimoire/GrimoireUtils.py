@@ -549,7 +549,7 @@ def get_median(period_values):
         return float('nan')
     if not isinstance(period_values, list):
         return period_values
-    return median(convertDecimals(period_values))
+    return median(removeDecimals(period_values))
 
 
 def get_avg(period_values):
@@ -558,7 +558,7 @@ def get_avg(period_values):
         return float('nan')
     if not isinstance(period_values, list):
         return period_values
-    return average(convertDecimals(period_values))
+    return average(removeDecimals(period_values))
 
 def medianAndAvgByPeriod(period, dates, values):
 
