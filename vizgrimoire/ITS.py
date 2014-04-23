@@ -1413,6 +1413,7 @@ class Backend(object):
             Backend.statuses = ["ASSIGNED", "CLOSED", "MODIFIED", "NEW", "ON_DEV", \
                     "ON_QA", "POST", "RELEASE_PENDING", "VERIFIED"]
             Backend.priority = ["Unprioritized", "Low", "Normal", "High", "Highest", "Immediate"]
+            Backend.severity = ["trivial", "minor", "normal", "major", "blocker", "critical", "enhancement"]
 
         if (its_type == 'github'):
             Backend.closed_condition = "field='closed'"

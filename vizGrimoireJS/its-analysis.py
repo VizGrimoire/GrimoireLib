@@ -296,12 +296,12 @@ def ticketsTimeOpened(period, startdate, enddate, identities_db, backend):
     evol = {}
 
     for result_type in ['action', 'comment', 'open']:
-        time_opened = ticketsTimeOpenedByType(period, startdate, log_close_condition_mediawiki, result_type)
+        time_opened = ticketsTimeOpenedByType(period, startdate, enddate, log_close_condition_mediawiki, result_type)
 
-        time_opened_priority = ticketsTimeOpenedByField(period, startdate, log_close_condition_mediawiki,
+        time_opened_priority = ticketsTimeOpenedByField(period, startdate, enddate, log_close_condition_mediawiki,
                                                         'priority', backend.priority, result_type)
 
-        time_opened_severity = ticketsTimeOpenedByField(period, startdate, log_close_condition_mediawiki,
+        time_opened_severity = ticketsTimeOpenedByField(period, startdate, enddate, log_close_condition_mediawiki,
                                                         'type', backend.severity, result_type)
 
         evol = dict(evol.items() + time_opened.items() + time_opened_priority.items() + time_opened_severity.items())
@@ -317,21 +317,24 @@ def ticketsTimeToResponseByField(period, startdate, enddate, closed_condition, f
         fa_alias = 'tfa_%s' % field_value
         data = ITS.GetTimeToFirstAction(period, startdate, enddate, field_condition, fa_alias)
         time_to_fa = getMedianAndAvg(period, fa_alias, data['date'], data[fa_alias])
+        time_to_fa = completePeriodIds(time_to_fa, period, startdate, enddate)
 
         fc_alias = 'tfc_%s' % field_value
         data = ITS.GetTimeToFirstComment(period, startdate, enddate, field_condition, fc_alias)
         time_to_fc = getMedianAndAvg(period, fc_alias, data['date'], data[fc_alias])
+        time_to_fc = completePeriodIds(time_to_fc, period, startdate, enddate)
 
         tclosed_alias = 'ttc_%s' % field_value
         data = ITS.GetTimeClosed(period, startdate, enddate, closed_condition, field_condition, tclosed_alias)
         time_closed = getMedianAndAvg(period, tclosed_alias, data['date'], data[tclosed_alias])
+        time_closed = completePeriodIds(time_closed, period, startdate, enddate)
 
         evol = dict(evol.items() + time_to_fa.items() + time_to_fc.items() + time_closed.items())
     return evol
 
-def ticketsTimeOpenedByType(period, startdate, closed_condition, result_type):
+def ticketsTimeOpenedByType(period, startdate, enddate, closed_condition, result_type):
     # Build a set of dates
-    dates = completePeriodIds({period : []})[period]
+    dates = completePeriodIds({period : []}, period, startdate, enddate)[period]
     dates.append(dates[-1] + 1) # add one more month
 
     if result_type == 'action':
@@ -342,14 +345,15 @@ def ticketsTimeOpenedByType(period, startdate, closed_condition, result_type):
         alias = "topened"
 
     time_opened = getTicketsTimeOpened(period, dates, closed_condition, result_type, alias)
+    time_opened = completePeriodIds(time_opened, period, startdate, enddate)
     return time_opened
 
-def ticketsTimeOpenedByField(period, startdate, closed_condition, field, values_set, result_type):
+def ticketsTimeOpenedByField(period, startdate, enddate, closed_condition, field, values_set, result_type):
     condition = "AND " + field + " = '%s'"
     evol = {}
 
     # Build a set of dates
-    dates = completePeriodIds({period : []})[period]
+    dates = completePeriodIds({period : []}, period, startdate, enddate)[period]
     dates.append(dates[-1] + 1) # add one more month
 
     for field_value in values_set:
@@ -363,6 +367,7 @@ def ticketsTimeOpenedByField(period, startdate, closed_condition, field, values_
             alias = "topened_%s" % field_value
 
         time_opened = getTicketsTimeOpened(period, dates, closed_condition, result_type, alias, field_condition)
+        time_opened = completePeriodIds(time_opened, period, startdate, enddate)
         evol = dict(evol.items() + time_opened.items())
 
     return evol
@@ -403,7 +408,6 @@ def getTicketsTimeOpened(period, dates, closed_condition, result_type, alias, fi
     time_opened = {period : period_dates,
                    'median_' + alias : median_values,
                    'avg_' + alias : avg_values}
-    time_opened = completePeriodIds(time_opened)
     return time_opened
 
 def getMedianAndAvg(period, alias, dates, values):
@@ -411,7 +415,7 @@ def getMedianAndAvg(period, alias, dates, values):
     result = {period : data[period],
               'median_' + alias : data['median'],
               'avg_' + alias : data['avg']}
-    return completePeriodIds(result)
+    return result
 
 
 if __name__ == '__main__':
