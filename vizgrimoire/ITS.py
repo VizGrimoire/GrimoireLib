@@ -1412,6 +1412,7 @@ class Backend(object):
             #Pretty specific states in Red Hat's Bugzilla
             Backend.statuses = ["ASSIGNED", "CLOSED", "MODIFIED", "NEW", "ON_DEV", \
                     "ON_QA", "POST", "RELEASE_PENDING", "VERIFIED"]
+            Backend.priority = ["Unprioritized", "Low", "Normal", "High", "Highest", "Immediate"]
 
         if (its_type == 'github'):
             Backend.closed_condition = "field='closed'"
