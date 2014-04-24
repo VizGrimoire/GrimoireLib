@@ -79,14 +79,6 @@ def read_main_conf(config_file):
             options[s][o] = parser.get(s, o)
     return options
 
-
-def check_configuration():
-    if 'db_bicho' in options['generic']:
-        if not 'backend' in options['generic']:
-            print "Configuration error: Configuration section for [generic] with 'backend'\
- variable expected"
-            sys.exit(-1)
-
 def get_vars():
     v = {}
     v = options['generic']
@@ -164,7 +156,7 @@ def execute_people_experimental_script(env):
     print("People EXPERIMENTAL analysis finished")
 
 def execute_its_script(env):
-    if not 'db_bicho' in env:
+    if not 'db_bicho' in env or not 'bicho' in options:
         print("ITS analysis disabled")
         return
     print("Starting ITS analysis  ..")
@@ -251,7 +243,6 @@ if __name__ == '__main__':
     opt = get_options()
     read_main_conf(opt.config_file)
     env = get_vars()
-    check_configuration()
 
     if opt.section is not None:
         tasks_section[opt.section](env)
