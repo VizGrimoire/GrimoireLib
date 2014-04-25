@@ -355,6 +355,8 @@ class DataSourceTest(unittest.TestCase):
         for ds in Report.get_data_sources():
             Report.connect_ds(ds)
 
+            if ds.get_name() == "downloads": continue
+
             fpeople = ds.get_top_people_file(ds.get_name())
             people = ds.get_top_people(startdate, enddate, identities_db, opts.npeople)
             test_json = os.path.join("json",fpeople)
