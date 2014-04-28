@@ -349,6 +349,129 @@ class SCR(DataSource):
     def create_r_reports(vizr, enddate, destdir):
         pass
 
+    @staticmethod
+    def get_metrics_definition ():
+        mdef =  {
+            "scr_merged" : {
+                "divid" : "scr_merged",
+                "column" : "merged",
+                "name" : "Merged changes",
+                "desc" : "Number of changes merged into the source code"
+            },
+            "scr_mergers" : {
+                "divid" : "scr_mergers",
+                "column" : "mergers",
+                "name" : "Successful submitters",
+                "action" : "merged",
+                "desc" : "Number of persons submitting changes that got accepted"
+            },
+            "scr_opened" : {
+                "divid" : "scr_opened",
+                "column" : "opened",
+                "name" : "Opened reviews",
+                "desc" : "Number of review processes opened"
+            },
+            "scr_closed" : {
+                "divid" : "scr_closed",
+                "column" : "closed",
+                "name" : "Closed reviews",
+                "desc" : "Number of closed review processes (merged or abandoned)"
+            },
+            "scr_new" : {
+                "divid" : "scr_new",
+                "column" : "new",
+                "name" : "New reviews",
+                "desc" : "Number of new review processes"
+            },
+            "scr_abandoned" : {
+                "divid" : "scr_abandoned",
+                "column" : "abandoned",
+                "name" : "Abandoned",
+                "desc" : "Number of abandoned review processes"
+            },
+            "scr_verified" : {
+                "divid" : "scr_verified",
+                "column" : "verified",
+                "name" : "Verified",
+                "desc" : "Number of verified changes"
+            },
+            "scr_approved" : {
+                "divid" : "scr_approved",
+                "column" : "approved",
+                "name" : "Approved",
+                "desc" : "Number of code review processes in approved state"
+            },
+            "scr_codereview" : {
+                "divid" : "scr_codereview",
+                "column" : "codereview",
+                "name" : "Code review",
+                "desc" : "Number of code review processes in code review state"
+            },
+            "scr_WaitingForReviewer" : {
+                "divid" : "scr_WaitingForReviewer",
+                "column" : "WaitingForReviewer",
+                "name" : "Waiting for reviewer",
+                "desc" : "Number of code review processes waiting for reviewer"
+            },        
+            "scr_WaitingForSubmitter" : {
+                "divid" : "scr_WaitingForSubmitter",
+                "column" : "WaitingForSubmitter",
+                "name" : "Waiting for submitter",
+                "desc" : "Number of code review processes waiting for submitter"
+            },
+            "scr_submitted" : {
+                "divid" : "scr_submitted",
+                "column" : "submitted",
+                "name" : "submitted",
+                "desc" : "Number of submitted code review processes"
+            },
+            "scr_companies" : {
+                "divid" : "scr_companies",
+                "column" : "companies",
+                "name" : "Organizations",
+                "desc" : "Number of organizations (companies, etc.) with persons active in code review"
+            },
+            "scr_countries" : {
+                "divid" : "scr_countries",
+                "column" : "countries",
+                "name" : "Countries",
+                "desc" : "Number of countries with persons active in code review"
+            },
+            "scr_domains" : {
+                "divid" : "scr_domains",
+                "column" : "domains",
+                "name" : "Domains",
+                "desc" : "Number of domains with persons active in code review"
+            },
+            "scr_repositories" : {
+                "divid" : "scr_repositories",
+                "column" : "repositories",
+                "name" : "Repositories",
+                "desc" : "Number of respositories with active code review activities"
+            },
+            "scr_people" : {
+                "divid" : "scr_people",
+                "column" : "people",
+                "name" : "People",
+                "desc" : "Number of persons active in code review activities"
+            },
+            "scr_closers" : {
+                "divid" : "scr_closers",
+                "column" : "closers",
+                "name" : "Closers",
+                "desc" : "Number of persons closing code review processes",
+                "action" : "closed"
+            },
+            "scr_openers" : {
+                "divid" : "scr_openers",
+                "column" : "openers",
+                "name" : "Openers",
+                "desc" : "Number of persons closing code review processes",
+                "action" : "opened"
+            }
+        }
+        return mdef
+
 ##########
 # Specific FROM and WHERE clauses per type of report
 ##########

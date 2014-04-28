@@ -354,3 +354,7 @@ class QAForums(DataSource):
         data = QAForums.get_top_data(startdate, enddate, i_db, None, opts.npeople)
         top_file = opts.destdir+"/"+QAForums().get_top_filename()
         createJSON(data, top_file)
+
+    @staticmethod
+    def get_metrics_definition ():
+        pass

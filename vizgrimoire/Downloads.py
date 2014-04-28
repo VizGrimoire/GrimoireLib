@@ -132,6 +132,11 @@ class Downloads(DataSource):
     def create_r_reports(vizr, enddate, destdir):
         pass
 
+    @staticmethod
+    def get_metrics_definition ():
+        pass
+
+
 def GetDownloads(period, startdate, enddate, evolutionary):
     # Generic function to obtain number of downloads 
     fields = "count(*) as downloads"
@@ -229,4 +234,3 @@ def TopPackages(startdate, enddate, numTop):
             limit %s
             """ % (startdate, enddate, str(numTop))
     return ExecuteQuery(query)
-

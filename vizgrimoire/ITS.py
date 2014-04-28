@@ -320,6 +320,94 @@ class ITS(DataSource):
         # Markov
         vizr.ReportMarkovChain(destdir)
 
+    @staticmethod
+    def get_metrics_definition ():
+        mdef = {
+           "its_opened" : {
+                "divid" : "its_opened",
+                "column" : "opened",
+                "name" : "Opened tickets",
+                "desc" : "Number of opened tickets",
+                "envision" : {
+                    "y_labels" : "true",
+                    "show_markers" : "true"
+                }
+            },
+            "its_openers" : {
+                "divid" : "its_openers",
+                "column" : "openers",
+                "name" : "Ticket submitters",
+                "desc" : "Number of persons submitting new tickets",
+                "action" : "opened",
+                "envision" : {
+                    "gtype" : "whiskers"
+                }
+            },
+            "its_closed" : {
+                "divid" : "its_closed",
+                "column" : "closed",
+                "name" : "Closed tickets",
+                "desc" : "Number of closed tickets"
+            },
+            "its_closers" : {
+                "divid" : "its_closers",
+                "column" : "closers",
+                "name" : "Ticket closers",
+                "desc" : "Number of persons closing tickets",
+                "action" : "closed",
+                "envision" : {
+                    "gtype" : "whiskers"
+                }
+            },
+            "its_changed" : {
+                "divid" : "its_changed",
+                "column" : "changed",
+                "name" : "Changed tickets",
+                "desc" : "Number of changes to the state of tickets"
+            },
+            "its_changers" : {
+                "divid" : "its_changers",
+                "column" : "changers",
+                "name" : "Ticket state changers",
+                "desc" : "Number of persons changing the state of tickets",
+                "action" : "changed",
+                "envision" : {
+                    "gtype" : "whiskers"
+                }
+            },
+            "its_companies" : {
+                "divid" : "its_companies",
+                "column" : "companies",
+                "name" : "Organziations",
+                "desc" : "Number of organizations (companies, etc.) with persons active in the ticketing system"
+            }, 
+            "its_countries" : {
+                "divid" : "its_countries",
+                "column" : "countries",
+                "name" : "Countries",
+                "desc" : "Number of countries with persons active in the ticketing system"
+            },
+            "its_domains" : {
+                "divid" : "its_domains",
+                "column" : "domains",
+                "name" : "Domains",
+                "desc" : "Number of distinct domains with persons active in the ticketing system"
+            },
+            "its_repositories" : {
+                "divid" : "its_repositories",
+                "column" : "repositories",
+                "name" : "Trackers",
+                "desc" : "Number of active trackers"
+            },
+            "its_people" : {
+                "divid" : "its_people",
+                "column" : "people",
+                "name" : "Active persons",
+                "desc" : "Number of persons active in the ticketing system"
+            }
+        }
+        return mdef
+
 ##############
 # Specific FROM and WHERE clauses per type of report
 ##############

@@ -139,6 +139,10 @@ class Mediawiki(DataSource):
     def create_r_reports(vizr, enddate, destdir):
         pass
 
+    @staticmethod
+    def get_metrics_definition ():
+        pass
+
 # SQL Metaqueries
 
 def GetTablesOwnUniqueIdsMediaWiki () :

@@ -177,3 +177,8 @@ class DataSource(object):
     def create_r_reports(vizr, enddate, destdir):
         """Create all files related to R reports"""
         raise NotImplementedError
+
+    @staticmethod
+    def get_metrics_definition ():
+        """Return all metrics definition available"""
+        raise NotImplementedError
