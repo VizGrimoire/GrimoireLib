@@ -35,17 +35,18 @@ class Report(object):
 
     _filters = []
     _all_data_sources = []
+    _automator = None
 
     @staticmethod
-    def init():
+    def init(automator_file):
+        Report._automator = read_main_conf(automator_file)
         Report._init_filters()
         Report._init_data_sources()
 
     @staticmethod
     def _init_filters():
         opts = read_options()
-        automator = read_main_conf(opts.config_file)
-        reports = automator['r']['reports']
+        reports = Report._automator['r']['reports']
         # Hack because we use repos in filters
         reports = reports.replace("repositories","repos")
         filters = reports.split(",")
@@ -65,27 +66,22 @@ class Report(object):
 
     @staticmethod
     def get_config():
-        opts = read_options()
-
-        # opts.config_file = "../../../conf/main.conf"
-        automator = read_main_conf(opts.config_file)
-
-        return automator
+        return Report._automator
 
     @staticmethod
     def connect_ds(ds):
-        opts = read_options()
-        automator = Report.get_config()
-        db = automator['generic'][ds.get_db_name()]
-        SetDBChannel (database=db, user=opts.dbuser, password=opts.dbpassword)
+        db = Report._automator['generic'][ds.get_db_name()]
+        dbuser = Report._automator['generic']['db_user']
+        dbpassword = Report._automator['generic']['db_password']
+        SetDBChannel (database=db, user=dbuser, password=dbpassword)
 
     @staticmethod
     def get_data_sources():
-        automator = Report.get_config() 
+
         data_sources= []
 
         for ds in Report._all_data_sources:
-            if not ds.get_db_name() in automator['generic']: continue
+            if not ds.get_db_name() in Report._automator['generic']: continue
             else: data_sources.append(ds)
         return data_sources
 

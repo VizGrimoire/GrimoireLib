@@ -118,13 +118,13 @@ def set_filter(filter_name):
 
 if __name__ == '__main__':
 
-    Report.init()
-
     logging.basicConfig(level=logging.INFO,format='%(asctime)s %(message)s')
     logging.info("Starting Report analysis")
     opts = read_options()
     period = getPeriod(opts.granularity)
     reports = opts.reports.split(",")
+
+    Report.init(opts.config_file)
 
     automator = read_main_conf(opts.config_file)
     if 'start_date' not in automator['r']:

@@ -37,7 +37,8 @@ from GrimoireUtils import createJSON, compareJSON
 class DataSourceTest(unittest.TestCase):
     @staticmethod
     def init():
-        Report.init()
+        opts = read_options()
+        Report.init(opts.config_file)
         logging.info("Init Data Source")
 
     @staticmethod
