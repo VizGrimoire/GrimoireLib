@@ -424,6 +424,18 @@ class SCR(DataSource):
                 "name" : "Waiting for submitter",
                 "desc" : "Number of code review processes waiting for submitter"
             },
+            "scr_ReviewsWaitingForReviewer" : {
+                "divid" : "scr_ReviewsWaitingForReviewer",
+                "column" : "ReviewsWaitingForReviewer",
+                "name" : "Reviews waiting for reviewer",
+                "desc" : "Number of code reviews  waiting for reviewer"
+            },
+            "scr_ReviewsWaitingForSubmitter" : {
+                "divid" : "scr_ReviewsWaitingForSubmitter",
+                "column" : "ReviewsWaitingForSubmitter",
+                "name" : "Reviews Waiting for submitter",
+                "desc" : "Number of code reviews waiting for submitter"
+            },
             "scr_submitted" : {
                 "divid" : "scr_submitted",
                 "column" : "submitted",
