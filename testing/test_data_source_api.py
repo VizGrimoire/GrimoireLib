@@ -109,7 +109,7 @@ class DataSourceTest(unittest.TestCase):
             logging.info(ds.get_name() + " create_evolutionary_report")
             Report.connect_ds(ds)
             ds.create_evolutionary_report (period, startdate,
-                                           enddate, identities_db)
+                                           enddate, opts.destdir, identities_db)
 
             ds_json = ds().get_evolutionary_filename()
             f_test_json = os.path.join("json", ds_json)
@@ -169,7 +169,7 @@ class DataSourceTest(unittest.TestCase):
             # Create the evolutionary data from dbs and check with test JSON
             Report.connect_ds(ds)
             ds.create_agg_report (period, startdate,
-                                  enddate, identities_db)
+                                  enddate, opts.destdir, identities_db)
 
             ds_json = ds().get_agg_filename()
             f_test_json = os.path.join("json", ds_json)
@@ -284,7 +284,7 @@ class DataSourceTest(unittest.TestCase):
 
         for ds in Report.get_data_sources():
             Report.connect_ds(ds)
-            ds.create_top_report(startdate, enddate, identities_db)
+            ds.create_top_report(startdate, enddate, opts.destdir, opts.npeople, identities_db)
 
             fn = ds.get_name()+"-top.json"
             test_json = os.path.join("json",fn)

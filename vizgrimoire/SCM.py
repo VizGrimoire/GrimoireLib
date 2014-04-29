@@ -33,7 +33,7 @@ from GrimoireSQL import GetSQLGlobal, GetSQLPeriod
 # TODO integrate: from GrimoireSQL import  GetSQLReportFrom 
 from GrimoireSQL import GetSQLReportWhere, ExecuteQuery, BuildQuery
 from GrimoireUtils import GetPercentageDiff, GetDates, completePeriodIds
-from GrimoireUtils import createJSON, read_options, getPeriod, get_subprojects
+from GrimoireUtils import createJSON, getPeriod, get_subprojects
 from data_source import DataSource
 from filter import Filter
 
@@ -49,10 +49,7 @@ class SCM(DataSource):
 
     @staticmethod
     def get_evolutionary_data (period, startdate, enddate, identities_db, filter_ = None):
-
         if filter_ is not None:
-            opts = read_options()
-            period = getPeriod(opts.granularity)
             type_analysis = [filter_.get_name(), "'"+filter_.get_item()+"'"]
             evol_data = GetSCMEvolutionaryData(period, startdate, enddate, 
                                                identities_db, type_analysis)
@@ -71,11 +68,10 @@ class SCM(DataSource):
         return evol_data
 
     @staticmethod
-    def create_evolutionary_report (period, startdate, enddate, i_db, filter_ = None):
-        opts = read_options()
+    def create_evolutionary_report (period, startdate, enddate, destdir, i_db, filter_ = None):
         data =  SCM.get_evolutionary_data (period, startdate, enddate, i_db, filter_)
         filename = SCM().get_evolutionary_filename()
-        createJSON (data, os.path.join(opts.destdir, filename))
+        createJSON (data, os.path.join(destdir, filename))
 
     @staticmethod
     def get_agg_data (period, startdate, enddate, identities_db, filter_= None):
@@ -122,11 +118,10 @@ class SCM(DataSource):
         return agg
 
     @staticmethod
-    def create_agg_report (period, startdate, enddate, i_db, filter_= None):
-        opts = read_options()
+    def create_agg_report (period, startdate, enddate, destdir, i_db, filter_= None):
         data = SCM.get_agg_data (period, startdate, enddate, i_db, filter_)
         filename = SCM().get_agg_filename()
-        createJSON (data, os.path.join(opts.destdir, filename))
+        createJSON (data, os.path.join(destdir, filename))
 
     @staticmethod
     def get_top_data (startdate, enddate, i_db, filter_, npeople):
@@ -143,10 +138,9 @@ class SCM(DataSource):
         return top
 
     @staticmethod
-    def create_top_report (startdate, enddate, i_db):
-        opts = read_options()
-        data = SCM.get_top_data (startdate, enddate, i_db, None, opts.npeople)
-        createJSON (data, opts.destdir+"/"+SCM().get_top_filename())
+    def create_top_report (startdate, enddate, destdir, npeople, i_db):
+        data = SCM.get_top_data (startdate, enddate, i_db, None, npeople)
+        createJSON (data, destdir+"/"+SCM().get_top_filename())
 
     @staticmethod
     def get_filter_items(filter_, startdate, enddate, identities_db, bots):
@@ -177,10 +171,7 @@ class SCM(DataSource):
         return summary
 
     @staticmethod
-    def create_filter_report(filter_, startdate, enddate, identities_db, bots):
-        opts = read_options()
-        period = getPeriod(opts.granularity)
-
+    def create_filter_report(filter_, period, startdate, enddate, destdir, npeople, identities_db, bots):
         items = SCM.get_filter_items(filter_, startdate, enddate, identities_db, bots)
         if (items == None): return
         items = items['name']
@@ -190,7 +181,7 @@ class SCM(DataSource):
         if not isinstance(items, (list)):
             items = [items]
 
-        fn = os.path.join(opts.destdir, filter_.get_filename(SCM()))
+        fn = os.path.join(destdir, filter_.get_filename(SCM()))
         createJSON(items, fn)
 
         for item in items :
@@ -199,26 +190,26 @@ class SCM(DataSource):
             filter_item = Filter(filter_name, item)
 
             evol_data = SCM.get_evolutionary_data(period, startdate, enddate, identities_db, filter_item)
-            fn = os.path.join(opts.destdir, filter_item.get_evolutionary_filename(SCM()))
+            fn = os.path.join(destdir, filter_item.get_evolutionary_filename(SCM()))
             createJSON(evol_data, fn)
 
             agg = SCM.get_agg_data(period, startdate, enddate, identities_db, filter_item)
-            fn = os.path.join(opts.destdir, filter_item.get_static_filename(SCM()))
+            fn = os.path.join(destdir, filter_item.get_static_filename(SCM()))
             createJSON(agg, fn)
 
             if (filter_name == "company"):
-                top_authors = SCM.get_top_data(startdate, enddate, identities_db, filter_item, opts.npeople)
-                fn = os.path.join(opts.destdir, filter_item.get_top_filename(SCM()))
+                top_authors = SCM.get_top_data(startdate, enddate, identities_db, filter_item, npeople)
+                fn = os.path.join(destdir, filter_item.get_top_filename(SCM()))
                 createJSON(top_authors, fn)
 
                 # Old code not used. To be removed.
                 for i in [2006,2009,2012]:
-                    data = company_top_authors_year(item_name, i, opts.npeople)
-                    createJSON(data, opts.destdir+"/"+item+"-"+SCM.get_name()+"-top-authors_"+str(i)+".json")
+                    data = company_top_authors_year(item_name, i, npeople)
+                    createJSON(data, destdir+"/"+item+"-"+SCM.get_name()+"-top-authors_"+str(i)+".json")
 
         if (filter_name == "company"):
             summary =  SCM.get_filter_summary(filter_, period, startdate, enddate, identities_db, 10)
-            createJSON (summary, opts.destdir+"/"+ filter_.get_summary_filename(SCM))
+            createJSON (summary, destdir+"/"+ filter_.get_summary_filename(SCM))
 
     @staticmethod
     def get_top_people(startdate, enddate, identities_db, npeople):

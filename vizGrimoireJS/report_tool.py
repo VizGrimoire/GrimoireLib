@@ -35,10 +35,10 @@ def get_evol_report(startdate, enddate, identities_db, bots):
         all_ds[ds.get_name()] = ds.get_evolutionary_data (period, startdate, enddate, identities_db)
     return all_ds
 
-def create_evol_report(startdate, enddate, identities_db, bots):
+def create_evol_report(startdate, enddate, destdir, identities_db, bots):
     for ds in Report.get_data_sources():
         Report.connect_ds(ds)
-        ds.create_evolutionary_report (period, startdate, enddate, identities_db)
+        ds.create_evolutionary_report (period, startdate, enddate, destdir, identities_db)
 
 def get_agg_report(startdate, enddate, identities_db, bots):
     all_ds = {}
@@ -48,10 +48,10 @@ def get_agg_report(startdate, enddate, identities_db, bots):
         all_ds[ds.get_name()] = ds.get_agg_data (period, startdate, enddate, identities_db)
     return all_ds
 
-def create_agg_report(startdate, enddate, identities_db, bots):
+def create_agg_report(startdate, enddate, destdir, identities_db, bots):
     for ds in Report.get_data_sources():
         Report.connect_ds(ds)
-        ds.create_agg_report (period, startdate, enddate, identities_db)
+        ds.create_agg_report (period, startdate, enddate, destdir, identities_db)
 
 def get_top_report(startdate, enddate, identities_db, bots):
     all_ds_top = {}
@@ -62,24 +62,24 @@ def get_top_report(startdate, enddate, identities_db, bots):
         all_ds_top[ds.get_name()] = top 
     return all_ds_top
 
-def create_top_report(startdate, enddate, identities_db, bots):
+def create_top_report(startdate, enddate, destdir, npeople, identities_db, bots):
     for ds in Report.get_data_sources():
         Report.connect_ds(ds)
-        ds.create_top_report (startdate, enddate, identities_db)
+        ds.create_top_report (startdate, enddate, destdir, npeople, identities_db)
 
-def create_reports_filters(startdate, enddate, identities_db, bots):
+def create_reports_filters(period, startdate, enddate, destdir, npeople, identities_db, bots):
     for ds in Report.get_data_sources():
         Report.connect_ds(ds)
         logging.info("Creating filter reports for " + ds.get_name())
         for filter_ in Report.get_filters():
             logging.info("-> " + filter_.get_name())
-            ds.create_filter_report(filter_, startdate, enddate, identities_db, bots)
+            ds.create_filter_report(filter_, period, startdate, enddate, destdir, npeople, identities_db, bots)
 
-def create_report_people(startdate, enddate, identities_db, bots):
+def create_report_people(startdate, enddate, destdir, npeople, identities_db, bots):
     for ds in Report.get_data_sources():
         Report.connect_ds(ds)
         logging.info("Creating people for " + ds.get_name())
-        ds().create_people_report(period, startdate, enddate, identities_db)
+        ds().create_people_report(period, startdate, enddate, destdir, npeople, identities_db)
 
 def create_reports_r(enddate, destdir):
     from rpy2.robjects.packages import importr
@@ -149,13 +149,13 @@ if __name__ == '__main__':
 
     bots = []
 
-    evol = create_evol_report(startdate, enddate, identities_db, bots)
-    agg = create_agg_report(startdate, enddate, identities_db, bots)
-    top = create_top_report(startdate, enddate, identities_db, bots)
+    evol = create_evol_report(startdate, enddate, opts.destdir, identities_db, bots)
+    agg = create_agg_report(startdate, enddate, opts.destdir, identities_db, bots)
+    top = create_top_report(startdate, enddate, opts.destdir, opts.npeople, identities_db, bots)
 
-    create_reports_filters(startdate, enddate, identities_db, bots)
+    create_reports_filters(period, startdate, enddate, opts.destdir, opts.npeople, identities_db, bots)
     if (automator['r']['reports'].find('people')>-1):
-        create_report_people(startdate, enddate, identities_db, bots)
+        create_report_people(startdate, enddate, opts.destdir, opts.npeople, identities_db, bots)
     create_reports_r(end_date, opts.destdir)
 
     logging.info("Report data source analysis OK")

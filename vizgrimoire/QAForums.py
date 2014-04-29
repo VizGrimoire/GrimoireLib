@@ -28,7 +28,7 @@ import os
 
 from GrimoireSQL import GetSQLGlobal, GetSQLPeriod, GetSQLReportFrom
 from GrimoireSQL import GetSQLReportWhere, ExecuteQuery, BuildQuery
-from GrimoireUtils import GetPercentageDiff, GetDates, read_options, getPeriod, createJSON, completePeriodIds
+from GrimoireUtils import GetPercentageDiff, GetDates, getPeriod, createJSON, completePeriodIds
 from data_source import DataSource
 from filter import Filter
 
@@ -211,18 +211,17 @@ class QAForums(DataSource):
         asenders = completePeriodIds(asenders, period, startdate, enddate)
         qsenders = completePeriodIds(qsenders, period, startdate, enddate)
         csenders = completePeriodIds(csenders, period, startdate, enddate)
-        
+
         evol_data = dict(asent.items() + qsent.items() + csent.items() +
                          asenders.items() + qsenders.items() + csenders.items())
-        
+
         return (evol_data)
 
     @staticmethod
-    def create_evolutionary_report(period, startdate, enddate, identities_db, filter_ = None):
-        opts = read_options()
+    def create_evolutionary_report(period, startdate, enddate, destdir, identities_db, filter_ = None):
         data =  QAForums.get_evolutionary_data(period, startdate, enddate, identities_db, filter_)
         filename = QAForums().get_evolutionary_filename()
-        createJSON(data, os.path.join(opts.destdir, filename))
+        createJSON(data, os.path.join(destdir, filename))
 
     @staticmethod
     def get_diff_sent_days(period, init_date, days, type_post="questions"):
@@ -237,7 +236,7 @@ class QAForums(DataSource):
         prevmessages = int(prevmessages['sent'])
 
         metric_str = QAForums.__get_metric_name(type_post, "sent")
-        
+
         name_diff_metric = 'diff_net' + metric_str + '_'+str(days)
         name_perc_metric = 'percentage_' + metric_str + '_'+str(days)
         name_days_metric = metric_str + '_'+str(days)
@@ -299,7 +298,7 @@ class QAForums(DataSource):
         agg_data = {}
 
         type_messages = ['questions','comments','answers']
-        
+
         # Tendencies
         for i in [7, 30, 365]:
             for tm in type_messages:
@@ -314,11 +313,10 @@ class QAForums(DataSource):
         return agg_data
 
     @staticmethod
-    def create_agg_report(period, startdate, enddate, i_db, filter_ = None):
-        opts = read_options()
+    def create_agg_report(period, startdate, enddate, destdir, i_db, filter_ = None):
         data = QAForums.get_agg_data(period, startdate, enddate, i_db, filter_)
         filename = QAForums().get_agg_filename()
-        createJSON(data, os.path.join(opts.destdir, filename))
+        createJSON(data, os.path.join(destdir, filename))
 
     @staticmethod
     def get_top_data(startdate, enddate, identities_db, filter_, npeople):
@@ -349,10 +347,9 @@ class QAForums(DataSource):
         return(top_senders)
 
     @staticmethod
-    def create_top_report(startdate, enddate, i_db):
-        opts = read_options()
-        data = QAForums.get_top_data(startdate, enddate, i_db, None, opts.npeople)
-        top_file = opts.destdir+"/"+QAForums().get_top_filename()
+    def create_top_report(startdate, enddate, destdir, npeople, i_db):
+        data = QAForums.get_top_data(startdate, enddate, i_db, None, npeople)
+        top_file = destdir+"/"+QAForums().get_top_filename()
         createJSON(data, top_file)
 
     @staticmethod

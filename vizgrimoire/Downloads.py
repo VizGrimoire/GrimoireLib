@@ -31,7 +31,7 @@
 import logging, os
 
 from GrimoireSQL import ExecuteQuery, BuildQuery
-from GrimoireUtils import completePeriodIds, read_options, createJSON
+from GrimoireUtils import completePeriodIds, createJSON
 
 from data_source import DataSource
 
@@ -56,11 +56,10 @@ class Downloads(DataSource):
         return evol
 
     @staticmethod
-    def create_evolutionary_report (period, startdate, enddate, i_db, type_analysis = None):
-        opts = read_options()
+    def create_evolutionary_report (period, startdate, enddate, destdir, i_db, type_analysis = None):
         data =  Downloads.get_evolutionary_data (period, startdate, enddate, i_db, type_analysis)
         filename = Downloads().get_evolutionary_filename()
-        createJSON (data, os.path.join(opts.destdir, filename))
+        createJSON (data, os.path.join(destdir, filename))
 
     @staticmethod
     def get_agg_data (period, startdate, enddate, identities_db, filter_ = None):
@@ -79,11 +78,10 @@ class Downloads(DataSource):
         return agg
 
     @staticmethod
-    def create_agg_report (period, startdate, enddate, i_db, type_analysis = None):
-        opts = read_options()
+    def create_agg_report (period, startdate, enddate, destdir, i_db, type_analysis = None):
         data = Downloads.get_agg_data (period, startdate, enddate, i_db, type_analysis)
         filename = Downloads().get_agg_filename()
-        createJSON (data, os.path.join(opts.destdir, filename))
+        createJSON (data, os.path.join(destdir, filename))
 
     @staticmethod
     def get_top_data (startdate, enddate, identities_db, filter_ = None, npeople = None):
@@ -94,10 +92,9 @@ class Downloads(DataSource):
 
 
     @staticmethod
-    def create_top_report (startdate, enddate, i_db):
-        opts = read_options()
-        data = Downloads.get_top_data (startdate, enddate, i_db, None, opts.npeople)
-        top_file = opts.destdir+"/"+Downloads().get_top_filename()
+    def create_top_report (startdate, enddate, destdir, npeople, i_db):
+        data = Downloads.get_top_data (startdate, enddate, i_db, None, npeople)
+        top_file = destdir+"/"+Downloads().get_top_filename()
         createJSON (data, top_file)
 
     @staticmethod
@@ -109,10 +106,7 @@ class Downloads(DataSource):
         return items
 
     @staticmethod
-    def create_filter_report(filter_, startdate, enddate, identities_db, bots):
-        # opts = read_options()
-        # period = getPeriod(opts.granularity)
-
+    def create_filter_report(filter_, period, startdate, enddate, destdir, npeople, identities_db, bots):
         items = Downloads.get_filter_items(filter_, startdate, enddate, identities_db, bots)
         if (items == None): return
 

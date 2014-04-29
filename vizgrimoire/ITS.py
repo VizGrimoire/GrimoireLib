@@ -31,7 +31,7 @@ import logging, os, re
 
 from GrimoireSQL import GetSQLGlobal, GetSQLPeriod
 from GrimoireSQL import ExecuteQuery, BuildQuery
-from GrimoireUtils import GetPercentageDiff, GetDates, completePeriodIds, read_options, getPeriod
+from GrimoireUtils import GetPercentageDiff, GetDates, completePeriodIds, getPeriod
 from GrimoireUtils import createJSON, get_subprojects
 
 from data_source import DataSource
@@ -115,11 +115,10 @@ class ITS(DataSource):
         return evol
 
     @staticmethod
-    def create_evolutionary_report (period, startdate, enddate, i_db, filter_ = None):
-        opts = read_options()
+    def create_evolutionary_report (period, startdate, enddate, destdir, i_db, filter_ = None):
         data =  ITS.get_evolutionary_data (period, startdate, enddate, i_db, filter_)
         filename = ITS().get_evolutionary_filename()
-        createJSON (data, os.path.join(opts.destdir, filename))
+        createJSON (data, os.path.join(destdir, filename))
 
     @staticmethod
     def get_agg_data (period, startdate, enddate, identities_db, filter_ = None):
@@ -165,11 +164,10 @@ class ITS(DataSource):
         return agg
 
     @staticmethod
-    def create_agg_report (period, startdate, enddate, i_db, filter_ = None):
-        opts = read_options()
+    def create_agg_report (period, startdate, enddate, destdir, i_db, filter_ = None):
         data = ITS.get_agg_data (period, startdate, enddate, i_db, filter_)
         filename = ITS().get_agg_filename()
-        createJSON (data, os.path.join(opts.destdir, filename))
+        createJSON (data, os.path.join(destdir, filename))
 
     @staticmethod
     def get_top_data (startdate, enddate, identities_db, filter_, npeople):
@@ -204,10 +202,9 @@ class ITS(DataSource):
         return top
 
     @staticmethod
-    def create_top_report (startdate, enddate, i_db):
-        opts = read_options()
-        data = ITS.get_top_data (startdate, enddate, i_db, None, opts.npeople)
-        createJSON (data, opts.destdir+"/"+ITS().get_top_filename())
+    def create_top_report (startdate, enddate, destdir, npeople, i_db):
+        data = ITS.get_top_data (startdate, enddate, i_db, None, npeople)
+        createJSON (data, destdir+"/"+ITS().get_top_filename())
 
     @staticmethod
     def get_filter_items(filter_, startdate, enddate, identities_db, bots):
@@ -239,10 +236,7 @@ class ITS(DataSource):
         return summary
 
     @staticmethod
-    def create_filter_report(filter_, startdate, enddate, identities_db, bots):
-        opts = read_options()
-        period = getPeriod(opts.granularity)
-
+    def create_filter_report(filter_, period, startdate, enddate, destdir, npeople, identities_db, bots):
         items = ITS.get_filter_items(filter_, startdate, enddate, identities_db, bots)
         if (items == None): return
         items = items['name']
@@ -252,7 +246,7 @@ class ITS(DataSource):
         if not isinstance(items, (list)):
             items = [items]
 
-        fn = os.path.join(opts.destdir, filter_.get_filename(ITS()))
+        fn = os.path.join(destdir, filter_.get_filename(ITS()))
         createJSON(items, fn)
 
         for item in items :
@@ -261,21 +255,21 @@ class ITS(DataSource):
             filter_item = Filter(filter_name, item)
 
             evol_data = ITS.get_evolutionary_data(period, startdate, enddate, identities_db, filter_item)
-            fn = os.path.join(opts.destdir, filter_item.get_evolutionary_filename(ITS()))
+            fn = os.path.join(destdir, filter_item.get_evolutionary_filename(ITS()))
             createJSON(evol_data, fn)
 
             agg = ITS.get_agg_data(period, startdate, enddate, identities_db, filter_item)
-            fn = os.path.join(opts.destdir, filter_item.get_static_filename(ITS()))
+            fn = os.path.join(destdir, filter_item.get_static_filename(ITS()))
             createJSON(agg, fn)
 
             if (filter_name in ["company","domain"]):
-                top = ITS.get_top_data(startdate, enddate, identities_db, filter_item, opts.npeople)
-                fn = os.path.join(opts.destdir, filter_item.get_top_filename(ITS()))
+                top = ITS.get_top_data(startdate, enddate, identities_db, filter_item, npeople)
+                fn = os.path.join(destdir, filter_item.get_top_filename(ITS()))
                 createJSON(top, fn)
 
         if (filter_name == "company"):
             closed = ITS.get_filter_summary(filter_, period, startdate, enddate, identities_db, 10)
-            createJSON (closed, opts.destdir+"/"+ filter_.get_summary_filename(ITS))
+            createJSON (closed, destdir+"/"+ filter_.get_summary_filename(ITS))
 
     @staticmethod
     def get_top_people(startdate, enddate, identities_db, npeople):
@@ -307,10 +301,8 @@ class ITS(DataSource):
 
     @staticmethod
     def create_r_reports(vizr, enddate, destdir):
-        opts = read_options()
-
         # Time to Close: Other backends not yet supported
-        vizr.ReportTimeToCloseITS(opts.backend, destdir)
+        vizr.ReportTimeToCloseITS(ITS._get_backend().its_type, destdir)
         unique_ids = True
 
         # Demographics
@@ -1469,6 +1461,7 @@ def GetClosedSummaryCompanies (period, startdate, enddate, identities_db, closed
 
 class Backend(object):
 
+    its_type = ""
     closed_condition = ""
     reopened_condition = ""
     name_log_table = ""
@@ -1478,41 +1471,42 @@ class Backend(object):
     name_log_table = ""
 
     def __init__(self, its_type):
+        self.its_type = its_type
         if (its_type == 'allura'):
-            Backend.closed_condition = "new_value='CLOSED'"
+            self.closed_condition = "new_value='CLOSED'"
         if (its_type == 'bugzilla' or its_type == 'bg'):
-            Backend.closed_condition = "(new_value='RESOLVED' OR new_value='CLOSED')"
-            Backend.reopened_condition = "new_value='NEW'"
-            Backend.name_log_table = 'issues_log_bugzilla'
-            Backend.statuses = ["NEW", "ASSIGNED"]
+            self.closed_condition = "(new_value='RESOLVED' OR new_value='CLOSED')"
+            self.reopened_condition = "new_value='NEW'"
+            self.name_log_table = 'issues_log_bugzilla'
+            self.statuses = ["NEW", "ASSIGNED"]
             #Pretty specific states in Red Hat's Bugzilla
-            Backend.statuses = ["ASSIGNED", "CLOSED", "MODIFIED", "NEW", "ON_DEV", \
+            self.statuses = ["ASSIGNED", "CLOSED", "MODIFIED", "NEW", "ON_DEV", \
                     "ON_QA", "POST", "RELEASE_PENDING", "VERIFIED"]
 
         if (its_type == 'github'):
-            Backend.closed_condition = "field='closed'"
+            self.closed_condition = "field='closed'"
 
         if (its_type == 'jira'):
-            Backend.closed_condition = "new_value='CLOSED'"
-            Backend.reopened_condition = "new_value='Reopened'"
-            #Backend.new_condition = "status='Open'"
-            #Backend.reopened_condition = "status='Reopened'"
-            Backend.open_status = 'Open'
-            Backend.reopened_status = 'Reopened'
-            Backend.name_log_table = 'issues_log_jira'
+            self.closed_condition = "new_value='CLOSED'"
+            self.reopened_condition = "new_value='Reopened'"
+            #self.new_condition = "status='Open'"
+            #self.reopened_condition = "status='Reopened'"
+            self.open_status = 'Open'
+            self.reopened_status = 'Reopened'
+            self.name_log_table = 'issues_log_jira'
 
         if (its_type == 'lp'):
-            #Backend.closed_condition = "(new_value='Fix Released' or new_value='Invalid' or new_value='Expired' or new_value='Won''t Fix')"
-            Backend.closed_condition = "(new_value='Fix Committed')"
-            Backend.statuses = ["Confirmed", "Fix Committed", "New", "In Progress", "Triaged", "Incomplete", "Invalid", "Won\\'t Fix", "Fix Released", "Opinion", "Unknown", "Expired"]
-            Backend.name_log_table = 'issues_log_launchpad'
+            #self.closed_condition = "(new_value='Fix Released' or new_value='Invalid' or new_value='Expired' or new_value='Won''t Fix')"
+            self.closed_condition = "(new_value='Fix Committed')"
+            self.statuses = ["Confirmed", "Fix Committed", "New", "In Progress", "Triaged", "Incomplete", "Invalid", "Won\\'t Fix", "Fix Released", "Opinion", "Unknown", "Expired"]
+            self.name_log_table = 'issues_log_launchpad'
 
         if (its_type == 'redmine'):
-            Backend.statuses = ["New", "Verified", "Need More Info", "In Progress", "Feedback",
+            self.statuses = ["New", "Verified", "Need More Info", "In Progress", "Feedback",
                          "Need Review", "Testing", "Pending Backport", "Pending Upstream",
                          "Resolved", "Closed", "Rejected", "Won\\'t Fix", "Can\\'t reproduce",
                          "Duplicate"]
-            Backend.closed_condition = "(new_value='Resolved' OR new_value='Closed' OR new_value='Rejected'" +\
+            self.closed_condition = "(new_value='Resolved' OR new_value='Closed' OR new_value='Rejected'" +\
                                   " OR new_value='Won\\'t Fix' OR new_value='Can\\'t reproduce' OR new_value='Duplicate')"
-            Backend.reopened_condition = "new_value='Reopened'" # FIXME: fake condition
-            Backend.name_log_table = 'issues_log_redmine'
+            self.reopened_condition = "new_value='Reopened'" # FIXME: fake condition
+            self.name_log_table = 'issues_log_redmine'

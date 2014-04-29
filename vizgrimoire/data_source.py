@@ -25,7 +25,7 @@
     support for Grimoire supported data sources """ 
 
 import os
-from GrimoireUtils import read_options, createJSON
+from GrimoireUtils import createJSON
 
 class DataSource(object):
     _bots = []
@@ -65,7 +65,7 @@ class DataSource(object):
         raise NotImplementedError
 
     @staticmethod
-    def create_evolutionary_report (period, startdate, enddate, identities_db, filter_ = None):
+    def create_evolutionary_report (period, startdate, enddate, destdir, identities_db, filter_ = None):
         """Create the evolutionary data report"""
         raise NotImplementedError
 
@@ -84,7 +84,7 @@ class DataSource(object):
         raise NotImplementedError
 
     @staticmethod
-    def create_agg_report (period, startdate, enddate, identities_db, type_analysis = None):
+    def create_agg_report (period, startdate, enddate, destdir, identities_db, type_analysis = None):
         """Create the aggregated report"""
         raise NotImplementedError
 
@@ -103,7 +103,7 @@ class DataSource(object):
         raise NotImplementedError
 
     @staticmethod
-    def create_top_report (startdate, enddate, identities_db):
+    def create_top_report (startdate, enddate, destdir, identities_db):
         """Create the top data report"""
         raise NotImplementedError
 
@@ -118,7 +118,7 @@ class DataSource(object):
         raise NotImplementedError
 
     @staticmethod
-    def create_filter_report(filter_, startdate, enddate, identities_db, bots):
+    def create_filter_report(filter_, period, startdate, enddate, destdir, npeople, identities_db, bots):
         """Create all files related to all filters in all data sources"""
         raise NotImplementedError
 
@@ -154,23 +154,22 @@ class DataSource(object):
         """Get aggregated data for a person activity"""
         raise NotImplementedError
 
-    def create_people_report(self, period, startdate, enddate, identities_db):
+    def create_people_report(self, period, startdate, enddate, destdir, npeople, identities_db):
         """Create all files related to people activity (aggregated, evolutionary)"""
-        opts = read_options()
-        fpeople = os.path.join(opts.destdir,self.get_top_people_file(self.get_name()))
-        people = self.get_top_people(startdate, enddate, identities_db, opts.npeople)
+        fpeople = os.path.join(destdir,self.get_top_people_file(self.get_name()))
+        people = self.get_top_people(startdate, enddate, identities_db, npeople)
         if people is None: return
         createJSON(people, fpeople)
 
         for upeople_id in people :
             evol_data = self.get_person_evol(upeople_id, period, startdate, enddate,
                                             identities_db, type_analysis = None)
-            fperson = os.path.join(opts.destdir,self.get_person_evol_file(upeople_id))
+            fperson = os.path.join(destdir,self.get_person_evol_file(upeople_id))
             createJSON (evol_data, fperson)
 
             agg = self.get_person_agg(upeople_id, startdate, enddate,
                                      identities_db, type_analysis = None)
-            fperson = os.path.join(opts.destdir,self.get_person_agg_file(upeople_id))
+            fperson = os.path.join(destdir,self.get_person_agg_file(upeople_id))
             createJSON (agg, fperson)
 
     @staticmethod

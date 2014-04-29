@@ -31,7 +31,7 @@ from numpy import median, average
 from GrimoireSQL import GetSQLGlobal, GetSQLPeriod
 from GrimoireSQL import ExecuteQuery
 from GrimoireUtils import GetPercentageDiff, GetDates, completePeriodIds
-from GrimoireUtils import checkListArray, removeDecimals, read_options, get_subprojects
+from GrimoireUtils import checkListArray, removeDecimals, get_subprojects
 from GrimoireUtils import getPeriod, createJSON, checkFloatArray
 
 from data_source import DataSource
@@ -53,9 +53,6 @@ class SCR(DataSource):
 
         if (filter_ is not None):
             type_analysis = [filter_.get_name(), filter_.get_item()]
-
-            opts = read_options()
-            period = getPeriod(opts.granularity)
 
             data = EvolReviewsSubmitted(period, startdate, enddate, type_analysis, identities_db)
             evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
@@ -123,17 +120,13 @@ class SCR(DataSource):
             return evol
 
     @staticmethod
-    def create_evolutionary_report (period, startdate, enddate, i_db, filter_ = None):
-        opts = read_options()
+    def create_evolutionary_report (period, startdate, enddate, destdir, i_db, filter_ = None):
         data =  SCR.get_evolutionary_data (period, startdate, enddate, i_db, filter_)
         filename = SCR().get_evolutionary_filename()
-        createJSON (data, os.path.join(opts.destdir, filename))
+        createJSON (data, os.path.join(destdir, filename))
 
     @staticmethod
     def get_agg_data (period, startdate, enddate, identities_db, filter_ = None):
-        opts = read_options()
-        period = getPeriod(opts.granularity)
-
         agg = {}
 
         if (filter_ is not None):
@@ -206,11 +199,10 @@ class SCR(DataSource):
         return agg
 
     @staticmethod
-    def create_agg_report (period, startdate, enddate, i_db, filter_ = None):
-        opts = read_options()
+    def create_agg_report (period, startdate, enddate, destdir, i_db, filter_ = None):
         data = SCR.get_agg_data (period, startdate, enddate, i_db, filter_)
         filename = SCR().get_agg_filename()
-        createJSON (data, os.path.join(opts.destdir, filename))
+        createJSON (data, os.path.join(destdir, filename))
 
     @staticmethod
     def get_top_data (startdate, enddate, identities_db, filter_, npeople):
@@ -239,10 +231,9 @@ class SCR(DataSource):
         return (top_all)
 
     @staticmethod
-    def create_top_report (startdate, enddate, i_db):
-        opts = read_options()
-        data = SCR.get_top_data (startdate, enddate, i_db, None, opts.npeople)
-        createJSON (data, opts.destdir+"/"+SCR().get_top_filename())
+    def create_top_report (startdate, enddate, destdir, npeople, i_db):
+        data = SCR.get_top_data (startdate, enddate, i_db, None, npeople)
+        createJSON (data, destdir+"/"+SCR().get_top_filename())
 
     @staticmethod
     def get_filter_items(filter_, startdate, enddate, identities_db, bots):
@@ -264,11 +255,7 @@ class SCR(DataSource):
         return items
 
     @staticmethod
-    def create_filter_report(filter_, startdate, enddate, identities_db, bots):
-        opts = read_options()
-        period = getPeriod(opts.granularity)
-
-
+    def create_filter_report(filter_, period, startdate, enddate, destdir, npeople, identities_db, bots):
         items = SCR.get_filter_items(filter_, startdate, enddate, identities_db, bots)
         if (items == None): return
         items = items['name']
@@ -294,18 +281,18 @@ class SCR(DataSource):
 
             evol = SCR.get_evolutionary_data(period, startdate, enddate, 
                                                identities_db, filter_item)
-            fn = os.path.join(opts.destdir, filter_item.get_evolutionary_filename(SCR()))
+            fn = os.path.join(destdir, filter_item.get_evolutionary_filename(SCR()))
             createJSON(evol, fn)
 
             # Static
             agg = SCR.get_agg_data(period, startdate, enddate, identities_db, filter_item)
-            fn = os.path.join(opts.destdir, filter_item.get_static_filename(SCR()))
+            fn = os.path.join(destdir, filter_item.get_static_filename(SCR()))
             createJSON(agg, fn)
             if (filter_name == "repository"):
                 items_list["submitted"].append(agg["submitted"])
                 items_list["review_time_days_median"].append(agg['review_time_days_median'])
 
-        fn = os.path.join(opts.destdir, filter_.get_filename(SCR()))
+        fn = os.path.join(destdir, filter_.get_filename(SCR()))
         createJSON(items_list, fn)
 
     # Unify top format
