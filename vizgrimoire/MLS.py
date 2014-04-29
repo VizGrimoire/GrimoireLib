@@ -700,7 +700,7 @@ def AggThreads (period, startdate, enddate, identities_db, type_analysis = []):
 def GetMLSRepositories (rfield, period, startdate, enddate, identities_db, type_analysis, evolutionary):
     # Generic function that counts threads
 
-    fields = " COUNT(DISTINCT("+rfield+")) AS repositories  "
+    fields = " COUNT(DISTINCT(m."+rfield+")) AS repositories  "
     tables = " messages m " + GetMLSSQLReportFrom(identities_db, type_analysis)
     filters = GetMLSSQLReportWhere(type_analysis)
 
@@ -1038,7 +1038,7 @@ def repoTopSenders (repo, identities_db, startdate, enddate, rfield, limit):
             "  pup.upeople_id = up.id AND "+\
             "  m.first_date >= "+startdate+" AND "+\
             "  m.first_date < "+enddate+" AND "+\
-            "  "+rfield+"='"+repo+"' "+\
+            "  m."+rfield+"='"+repo+"' "+\
             "GROUP BY up.identifier "+\
             "ORDER BY sent desc "+\
             "LIMIT " + limit
