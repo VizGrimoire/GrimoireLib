@@ -417,7 +417,7 @@ class SCR(DataSource):
                 "column" : "WaitingForReviewer",
                 "name" : "Waiting for reviewer",
                 "desc" : "Number of code review processes waiting for reviewer"
-            },        
+            },
             "scr_WaitingForSubmitter" : {
                 "divid" : "scr_WaitingForSubmitter",
                 "column" : "WaitingForSubmitter",
@@ -917,6 +917,71 @@ def StaticPatchesCodeReview (period, startdate, enddate, type_analysis = []):
 def StaticPatchesSent (period, startdate, enddate, type_analysis = []):
     return (GetEvaluations (period, startdate, enddate, "sent", type_analysis, False))
 
+def get_sql_last_change_for_issues_new():
+    # last changes for reviews. Removed added change status = NEW that is "artificial"
+    q_last_change = """
+        SELECT c.issue_id as issue_id,  max(c.id) as id
+        FROM changes c, issues i
+        WHERE c.issue_id = i.id and i.status='NEW' and field<>'status'
+        GROUP BY c.issue_id
+    """
+    return q_last_change
+
+# Reviews WAITING FOR REVIEW FROM Submitter
+def GetReviewsWaiting4Submitter (period, startdate, enddate, identities_db, type_analysis, evolutionary):
+    q_last_change = get_sql_last_change_for_issues_new()
+
+    fields = "COUNT(DISTINCT(i.id)) as ReviewsWaitingForSubmitter"
+    tables = "changes c, issues i, (%s) t1" % q_last_change
+    tables += GetSQLReportFromSCR(identities_db, type_analysis)
+    filters = """
+        i.id = c.issue_id  AND t1.id = c.id
+        AND (c.field='CRVW' or c.field='Code-Review' or c.field='Verified' or c.field='VRIF')
+        AND (c.new_value=-1 or c.new_value=-2)
+    """
+    filters = filters + GetSQLReportWhereSCR(type_analysis, identities_db)
+
+    if (evolutionary):
+        q = GetSQLPeriod(period, " c.changed_on", fields, tables, filters,
+                          startdate, enddate)
+    else:
+        q = GetSQLGlobal(" c.changed_on ", fields, tables, filters,
+                          startdate, enddate)
+    return(ExecuteQuery(q))
+
+def EvolReviewsWaiting4Submitter (period, startdate, enddate, identities_db=None, type_analysis = []):
+    return (GetReviewsWaiting4Submitter(period, startdate, enddate, identities_db, type_analysis, True))
+
+def StaticReviewsWaiting4Submitter (period, startdate, enddate, identities_db=None, type_analysis = []):
+    return (GetReviewsWaiting4Submitter(period, startdate, enddate, identities_db, type_analysis, False))
+
+# Reviews WAITING FOR REVIEW FROM Reviewer
+def GetReviewsWaiting4Reviewer (period, startdate, enddate, identities_db, type_analysis, evolutionary):
+    q_last_change = get_sql_last_change_for_issues_new()
+
+    fields = "COUNT(DISTINCT(i.id)) as ReviewsWaitingForReviewer"
+    tables = "changes c, issues i, (%s) t1" % q_last_change
+    tables += GetSQLReportFromSCR(identities_db, type_analysis)
+    filters = """
+        i.id = c.issue_id  AND t1.id = c.id
+        AND (c.field='CRVW' or c.field='Code-Review' or c.field='Verified' or c.field='VRIF')
+        AND (c.new_value=1 or c.new_value=2)
+    """
+    filters = filters + GetSQLReportWhereSCR(type_analysis, identities_db)
+
+    if (evolutionary):
+        q = GetSQLPeriod(period, " c.changed_on", fields, tables, filters,
+                          startdate, enddate)
+    else:
+        q = GetSQLGlobal(" c.changed_on ", fields, tables, filters,
+                          startdate, enddate)
+    return(ExecuteQuery(q))
+
+def EvolReviewsWaiting4Reviewer (period, startdate, enddate, identities_db=None, type_analysis = []):
+    return (GetReviewsWaiting4Reviewer(period, startdate, enddate, identities_db, type_analysis, True))
+
+def StaticReviewsWaiting4Reviewer (period, startdate, enddate, identities_db=None, type_analysis = []):
+    return (GetReviewsWaiting4Reviewer(period, startdate, enddate, identities_db, type_analysis, False))
 
 #PATCHES WAITING FOR REVIEW FROM REVIEWER
 def GetWaiting4Reviewer (period, startdate, enddate, identities_db, type_analysis, evolutionary):
@@ -950,7 +1015,6 @@ def GetWaiting4Reviewer (period, startdate, enddate, identities_db, type_analysi
 
 def EvolWaiting4Reviewer (period, startdate, enddate, identities_db=None, type_analysis = []):
     return (GetWaiting4Reviewer(period, startdate, enddate, identities_db, type_analysis, True))
-
 
 def StaticWaiting4Reviewer (period, startdate, enddate, identities_db=None, type_analysis = []):
     return (GetWaiting4Reviewer(period, startdate, enddate, identities_db, type_analysis, False))
