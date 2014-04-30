@@ -242,6 +242,11 @@ class SCM(DataSource):
         vizr.ReportDemographicsBirthSCM(enddate, destdir, unique_ids)
 
     @staticmethod
+    def remove_filter_data(filter_):
+        logging.info("Removing SCM filter %s %s" % (filter_.get_name(),filter_.get_item()))
+        pass
+
+    @staticmethod
     def get_metrics_definition ():
         mdef = {
             "scm_commits" : {

@@ -181,3 +181,8 @@ class DataSource(object):
     def get_metrics_definition ():
         """Return all metrics definition available"""
         raise NotImplementedError
+
+    @staticmethod
+    def remove_filter_data():
+        """Remove from the database all information about this filter (i.e. a repository)"""
+        raise NotImplementedError
