@@ -235,7 +235,7 @@ def completePeriodIdsWeeks(ts_data, start, end):
     # Start of the week
     dayweek = start.isocalendar()[2]
     new_week = start - relativedelta(days=dayweek-1)
-    i = 1 # for ids in time series
+    i = 0 # for ids in time series
 
     while (new_week <= end):
         new_week_txt = date2Week(new_week)
