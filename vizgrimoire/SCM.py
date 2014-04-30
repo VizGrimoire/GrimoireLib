@@ -1305,15 +1305,24 @@ def last_activity (days) :
 def top_people (days, startdate, enddate, role, filters, limit) :
     # This function returns the 10 top people participating in the source code.
     # Dataset can be filtered by the affiliations, where specific companies
-    # can be ignored.
+    # can be ignored. This is done by using the argument "filters",
+    # which can be "None" (no filetering) or the list of companies to
+    # filter out.
     # In addition, the number of days allows to limit the study to the last
     # X days specified in that parameter
 
-    affiliations = ""
-    if (not filters): filters = []
-    for aff in filters:
-        affiliations += " c.name<>'"+aff+"' and "
-
+    if not filters:
+        affiliations_from = ""
+        affiliations_where = ""
+    else:
+        affiliations = ""
+        for aff in filters:
+            affiliations += " c.name<>'"+aff+"' and "
+        affiliations_from = ", upeople_companies upc, companies c "
+        affiliations_where = " and u.id = upc.upeople_id and "+\
+            " s.date >= upc.init and "+\
+            " s.date < upc.end and "+ affiliations+ " "+\
+            " upc.company_id = c.id "
  
     date_limit = ""
     if (days != 0 ) :
@@ -1324,21 +1333,18 @@ def top_people (days, startdate, enddate, role, filters, limit) :
         "count(distinct(s.id)) as commits "+\
         " FROM scmlog s, "+\
         " people_upeople pup, "+\
-        " upeople u, "+\
-        " upeople_companies upc, "+\
-        " companies c "+\
+        " upeople u "+\
+        affiliations_from +\
         " WHERE s."+ role+ "_id = pup.people_id and "+\
         " pup.upeople_id = u.id and "+\
-        " u.id = upc.upeople_id and "+\
         " s.date >= "+ startdate+ " and "+\
-        " s.date < "+ enddate+" "+ date_limit+ " and "+\
-        " s.date >= upc.init and "+\
-        " s.date < upc.end and "+ affiliations+ " "+\
-        " upc.company_id = c.id "+\
+        " s.date < "+ enddate+" "+ date_limit +\
+        affiliations_where +\
         " GROUP BY u.identifier "+\
         " ORDER BY commits desc, "+role+"s "+\
         " LIMIT "+ limit
 
+    print(q)
     data = ExecuteQuery(q)
     return (data)	
 
