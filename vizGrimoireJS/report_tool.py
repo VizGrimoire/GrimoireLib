@@ -121,7 +121,6 @@ if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO,format='%(asctime)s %(message)s')
     logging.info("Starting Report analysis")
     opts = read_options()
-    period = getPeriod(opts.granularity)
     reports = opts.reports.split(",")
 
     Report.init(opts.config_file)
@@ -136,6 +135,13 @@ if __name__ == '__main__':
     else:
         end_date = automator['r']['end_date']
 
+    if 'period' not in automator['r']:
+        period = getPeriod("months")
+    else:
+
+        period = getPeriod(automator['r']['period'])
+    logging.info("Period: " + period)
+
     # TODO: hack because VizR library needs. Fix in lib in future
     startdate = "'"+start_date+"'"
     enddate = "'"+end_date+"'"
@@ -149,8 +155,11 @@ if __name__ == '__main__':
 
     bots = []
 
+    logging.info("Creating global evolution metrics...")
     evol = create_evol_report(startdate, enddate, opts.destdir, identities_db, bots)
+    logging.info("Creating global aggregated metrics...")
     agg = create_agg_report(startdate, enddate, opts.destdir, identities_db, bots)
+    logging.info("Creating global top metrics...")
     top = create_top_report(startdate, enddate, opts.destdir, opts.npeople, identities_db, bots)
 
     create_reports_filters(period, startdate, enddate, opts.destdir, opts.npeople, identities_db, bots)
