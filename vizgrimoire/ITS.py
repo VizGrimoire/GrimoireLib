@@ -1267,9 +1267,18 @@ def GetCompanyTopClosers (company_name, startdate, enddate,
 def GetTopClosers (days, startdate, enddate,
         identities_db, filter, closed_condition, limit) :
 
-    affiliations = ""
-    for aff in filter:
-        affiliations += " com.name<>'"+ aff +"' and "
+    if not filter:
+        affiliations_from = GetTablesOwnUniqueIdsITS()
+        affiliations_where = GetFiltersOwnUniqueIdsITS ()
+    else:
+        affiliations = ""
+        for aff in filter:
+            affiliations += " com.name<>'"+ aff +"' and "
+        affiliations_from = GetTablesCompaniesITS(identities_db) + ", " + \
+            identities_db + ".companies com"
+        affiliations_where = GetFiltersCompaniesITS() + " and " + \
+            affiliations + \
+            " upc.company_id = com.id"
 
     date_limit = ""
     if (days != 0) :
@@ -1279,12 +1288,9 @@ def GetTopClosers (days, startdate, enddate,
 
     q = "SELECT up.id as id, up.identifier as closers, "+\
         "       count(distinct(c.id)) as closed "+\
-        "FROM "+GetTablesCompaniesITS(identities_db)+ ", "+\
-        "     "+identities_db+".companies com, "+\
-        "     "+identities_db+".upeople up "+\
-        "WHERE "+GetFiltersCompaniesITS() +" and "+\
-        "      "+affiliations+ " "+\
-        "      upc.company_id = com.id and "+\
+        "FROM  "+affiliations_from+\
+        ",     "+identities_db+".upeople up "+\
+        "WHERE "+affiliations_where+" and "+\
         "      c.changed_by = pup.people_id and "+\
         "      pup.upeople_id = up.id and "+\
         "      c.changed_on >= "+ startdate+ " and "+\
@@ -1327,9 +1333,20 @@ def GetDomainTopClosers (domain_name, startdate, enddate,
 
 def GetTopOpeners (days, startdate, enddate,
         identities_db, filter, closed_condition, limit) :
-    affiliations = ""
-    for aff in filter:
-        affiliations += " com.name<>'"+ aff +"' and "
+
+    if not filter:
+        affiliations_from = GetTablesOwnUniqueIdsITS('issues')
+        affiliations_where = GetFiltersOwnUniqueIdsITS ('issues')
+    else:
+        affiliations = ""
+        for aff in filter:
+            affiliations += " com.name<>'"+ aff +"' and "
+        affiliations_from = GetTablesCompaniesITS(identities_db,'issues') + \
+            ", " + identities_db + ".companies com"
+        affiliations_where = GetFiltersCompaniesITS('issues') + " and " + \
+            affiliations + \
+            " upc.company_id = com.id"
+
     date_limit = ""
     if (days != 0 ) :
         sql = "SELECT @maxdate:=max(submitted_on) from issues limit 1"
@@ -1338,12 +1355,9 @@ def GetTopOpeners (days, startdate, enddate,
 
     q = "SELECT up.id as id, up.identifier as openers, "+\
         "    count(distinct(i.id)) as opened "+\
-        "FROM "+GetTablesCompaniesITS(identities_db,'issues')+", " +\
-        "    "+identities_db+".companies com, "+\
-        "    "+identities_db+".upeople up "+\
-        "WHERE "+GetFiltersCompaniesITS('issues') +" and "+\
-        "    "+ affiliations+ " "+\
-        "    upc.company_id = com.id and "+\
+        "FROM "+affiliations_from+\
+        " ,   "+identities_db+".upeople up "+\
+        "WHERE "+affiliations_where+" and "+\
         "    pup.upeople_id = up.id and "+\
         "    i.submitted_on >= "+ startdate+ " and "+\
         "    i.submitted_on < "+ enddate+\
