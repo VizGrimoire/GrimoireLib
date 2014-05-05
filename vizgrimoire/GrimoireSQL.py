@@ -230,6 +230,8 @@ def ExecuteQuery (sql):
     rows = cursor.rowcount
     columns = cursor.description
 
+    if columns is None: return result
+
     for column in columns:
         result[column[0]] = []
     if rows > 1:
