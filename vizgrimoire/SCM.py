@@ -243,16 +243,6 @@ class SCM(DataSource):
 
     @staticmethod
     def _remove_people(people_id):
-        # Get upeople and remove it from mappings
-        q = "SELECT * from people_upeople where people_id='%s'" % (people_id)
-        res = ExecuteQuery(q)
-        if ('upeople_id') in res:
-            q = "DELETE FROM upeople_companies WHERE upeople_id='%s'" % (res['upeople_id'])
-            ExecuteQuery(q)
-            q = "DELETE FROM upeople_countries WHERE upeople_id='%s'" % (res['upeople_id'])
-            ExecuteQuery(q)
-            q = "DELETE FROM upeople_domains WHERE upeople_id='%s'" % (res['upeople_id'])
-            ExecuteQuery(q)
         # Remove from people
         q = "DELETE FROM people_upeople WHERE people_id='%s'" % (people_id)
         ExecuteQuery(q)
@@ -264,13 +254,17 @@ class SCM(DataSource):
         # Get actions and remove mappings
         q = "SELECT * from actions where commit_id='%s'" % (scmlog_id)
         res = ExecuteQuery(q)
-        for action in res['id']:
-            q = "DELETE FROM action_files WHERE action_id='%s'" % (res['id'])
-            ExecuteQuery(q)
-            q = "DELETE FROM file_copies WHERE action_id='%s'" % (res['id'])
-            ExecuteQuery(q)
-        q = "DELETE FROM actions_file_names WHERE commit_id='%s'" % (scmlog_id)
-        ExecuteQuery(q)
+        if 'id' in res:
+            if not isinstance(res['id'], list): res['id'] = [res['id']]
+            for action_id in res['id']:
+                # action_files is a view
+                # q = "DELETE FROM action_files WHERE action_id='%s'" % (action_id)
+                # ExecuteQuery(q)
+                q = "DELETE FROM file_copies WHERE action_id='%s'" % (action_id)
+                ExecuteQuery(q)
+        # actions_file_names is a VIEW
+        # q = "DELETE FROM actions_file_names WHERE commit_id='%s'" % (scmlog_id)
+        # ExecuteQuery(q)
         q = "DELETE FROM commits_lines WHERE commit_id='%s'" % (scmlog_id)
         ExecuteQuery(q)
         q = "DELETE FROM file_links WHERE commit_id='%s'" % (scmlog_id)
@@ -287,7 +281,6 @@ class SCM(DataSource):
 
     @staticmethod
     def remove_filter_data(filter_):
-        import pprint
         uri = filter_.get_item()
         logging.info("Removing SCM filter %s %s" % (filter_.get_name(),filter_.get_item()))
         q = "SELECT * from repositories WHERE uri='%s'" % (uri)
@@ -295,19 +288,14 @@ class SCM(DataSource):
         if 'id' not in repo:
             logging.error("%s not found" % (uri))
             return
-        # Remove people activity
-        q = "SELECT id from scmlog WHERE repository_id='%s' limit 10" % (repo['id'])
-        res = ExecuteQuery(q)
-        for scmlog_id in res['id']:
-            _remove_scmlog(scmlog_id)
         # Remove people
         def get_people_one_repo(field):
             return  """
                 SELECT %s FROM (SELECT COUNT(DISTINCT(repository_id)) AS total, %s
                 FROM scmlog
-                GROUP BY author_id
+                GROUP BY %s
                 HAVING total=1) t
-                """ % (field, field)
+                """ % (field, field, field)
         ## Remove committer_id that exists only in this repository
         q = """
             SELECT DISTINCT(committer_id) from scmlog
@@ -324,8 +312,13 @@ class SCM(DataSource):
         res = ExecuteQuery(q)
         for people_id in res['author_id']:
             SCM._remove_people(people_id)
+        # Remove people activity
+        q = "SELECT id from scmlog WHERE repository_id='%s'" % (repo['id'])
+        res = ExecuteQuery(q)
+        for scmlog_id in res['id']:
+            SCM._remove_scmlog(scmlog_id)
         # Remove files
-        q = "SELECT FROM files WHERE repository_id='%s'" % (repo['id'])
+        q = "SELECT id FROM files WHERE repository_id='%s'" % (repo['id'])
         res = ExecuteQuery(q)
         for file_id in res['id']:
             q = "DELETE FROM file_types WHERE file_id='%s'" % (file_id)
@@ -1434,7 +1427,6 @@ def top_people (days, startdate, enddate, role, filters, limit) :
         " ORDER BY commits desc, "+role+"s "+\
         " LIMIT "+ limit
 
-    print(q)
     data = ExecuteQuery(q)
     return (data)	
 
