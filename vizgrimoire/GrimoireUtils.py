@@ -244,14 +244,14 @@ def completePeriodIdsWeeks(ts_data, start, end):
             for key in (data_vars):
                 new_ts_data[key].append(0)
             new_ts_data['week'].pop()
-            new_ts_data['week'].append(new_week_txt)
+            new_ts_data['week'].append(int(new_week_txt))
         else:
             # Add already existing data for the time point
             index = ts_data['week'].index(int(new_week_txt))
             for key in (data_vars):
                 new_ts_data[key].append(ts_data[key][index])
             new_ts_data['week'].pop()
-            new_ts_data['week'].append(str(ts_data['week'][index]))
+            new_ts_data['week'].append(ts_data['week'][index])
 
         timestamp = calendar.timegm(new_week.timetuple())
         new_ts_data['unixtime'].append(unicode(timestamp))
