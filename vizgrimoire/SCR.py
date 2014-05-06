@@ -117,6 +117,14 @@ class SCR(DataSource):
                     data['review_time_days_avg'][i] = float(val)
                     if (val == 0): data['review_time_days_avg'][i] = 0
                 evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
+            # number of filter items evol in time
+            data = get_countries(period, startdate, enddate,identities_db)
+            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
+            data = get_companies(period, startdate, enddate,identities_db)
+            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
+            data = get_repositories(period, startdate, enddate,identities_db)
+            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
+
             return evol
 
     @staticmethod
@@ -195,6 +203,14 @@ class SCR(DataSource):
                 agg = dict(agg.items() + period_data.items())
                 period_data = GetSCRDiffAbandonedDays(period, enddate, i, identities_db)
                 agg = dict(agg.items() + period_data.items())
+
+            # number of filter items
+            data = get_countries(period, startdate, enddate,identities_db, False)
+            agg = dict(agg.items() + data.items())
+            data = get_companies(period, startdate, enddate,identities_db, False)
+            agg = dict(agg.items() + data.items())
+            data = get_repositories(period, startdate, enddate,identities_db, False)
+            agg = dict(agg.items() + data.items())
 
         return agg
 
@@ -624,6 +640,47 @@ def GetCountriesSCRName  (startdate, enddate, identities_db, limit = 0):
            "GROUP BY c.name "+\
            "ORDER BY issues DESC "+limit_sql
     return(ExecuteQuery(q))
+
+def get_countries(period, startdate, enddate, identities_db, evol = True):
+    fields = "count(distinct(upc.country_id)) as countries"
+    tables = "issues i, people_upeople pup, %s.upeople_countries upc" % (identities_db)
+    filters = "i.submitted_by = pup.people_id and pup.upeople_id = upc.upeople_id"
+    if evol:
+        q = GetSQLPeriod(period,'i.submitted_on', fields, tables, filters,
+               startdate, enddate)
+    else:
+        q = GetSQLGlobal('i.submitted_on', fields, tables, filters,
+               startdate, enddate)
+
+    countries= ExecuteQuery(q)
+    return(countries)
+
+def get_companies(period, startdate, enddate, identities_db, evol = True):
+    fields = "count(distinct(upc.company_id)) as companies"
+    tables = "issues i, people_upeople pup, %s.upeople_companies upc" % (identities_db)
+    filters = "i.submitted_by = pup.people_id and pup.upeople_id = upc.upeople_id"
+    if evol:
+       q = GetSQLPeriod(period,'i.submitted_on', fields, tables, filters,
+               startdate, enddate)
+    else:
+        q = GetSQLGlobal('i.submitted_on', fields, tables, filters, startdate, enddate)
+
+    companies = ExecuteQuery(q)
+    return(companies)
+
+def get_repositories(period, startdate, enddate, identities_db = None, evol = True):
+    fields = "count(distinct(t.id)) as repositories"
+    tables = "issues i, trackers t"
+    filters = "i.tracker_id = t.id"
+    if evol:
+        q = GetSQLPeriod(period,'i.submitted_on', fields, tables, filters,
+               startdate, enddate)
+    else:
+        q = GetSQLGlobal('i.submitted_on', fields, tables, filters, startdate, enddate)
+
+    repositories = ExecuteQuery(q)
+    return(repositories)
+
 
 def get_projects_scr_name  (startdate, enddate, identities_db, limit = 0):
     # Projects activity needs to include subprojects also
