@@ -71,3 +71,7 @@ if __name__ == '__main__':
     metrics = SCM.get_metrics()
     for metric in metrics:
         print metric.get_definition()['name']
+        agg = metric.get_aggregate()
+        if agg is not None: print(agg)
+        evol = metric.get_evolutionary()
+        if evol is not None: print(evol)

@@ -23,8 +23,12 @@
 
 """ Source Code Management core metrics """
 
-from SCM import SCM
+import logging
+
+from GrimoireUtils import getPeriod
 from metric import Metric
+from report import Report
+from SCM import SCM
 
 class Commits(Metric):
 
@@ -39,6 +43,25 @@ class Commits(Metric):
             "y_labels" : "true",
             "show_markers" : "true"
         }
+        self.startdate = "'"+Report.get_config()['r']['start_date']+"'"
+        self.enddate = "'"+Report.get_config()['r']['end_date']+"'"
+        self.i_db = Report.get_config()['generic']['db_identities']
+        if 'period' not in Report.get_config()['r']:
+            self.period = getPeriod("months")
+        else:
+            self.period = getPeriod(Report.get_config()['r']['period'])
+
+
+    def get_aggregate(self, filter_ = None):
+        from SCM import StaticNumCommits
+        Report.connect_ds(self.data_source)
+        return StaticNumCommits(self.period, self.startdate, self.enddate, self.i_db, None)
+
+    def get_evolutionary(self, filter_ = None):
+        from SCM import GetSCMEvolutionaryData
+        Report.connect_ds(self.data_source)
+        return GetSCMEvolutionaryData(self.period, self.startdate, self.enddate, self.i_db, None)
+
 
 class Committers(Metric):
 

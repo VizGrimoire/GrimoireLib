@@ -41,3 +41,9 @@ class Metric(object):
 
     def get_data_source(self):
         return self.ds
+
+    def get_aggregate(self, filter_ = None):
+        pass
+
+    def get_evolutionary(self, filter_ = None):
+        pass
