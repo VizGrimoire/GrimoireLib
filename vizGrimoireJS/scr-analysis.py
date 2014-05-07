@@ -35,8 +35,10 @@ import sys
 
 import GrimoireUtils, GrimoireSQL
 from GrimoireUtils import dataFrame2Dict, createJSON, completePeriodIds
-from GrimoireUtils import valRtoPython, read_options, getPeriod, checkFloatArray
+from GrimoireUtils import valRtoPython, getPeriod, checkFloatArray
 import SCR
+
+from utils import read_options
 
 def aggData(period, startdate, enddate, idb, destdir):
     agg = SCR.StaticReviewsSubmitted(period, startdate, enddate)

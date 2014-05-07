@@ -28,10 +28,11 @@
 import logging
 import sys
 import GrimoireUtils, GrimoireSQL
-from GrimoireUtils import dataFrame2Dict, createJSON, completePeriodIds, read_options, getPeriod
+from GrimoireUtils import dataFrame2Dict, createJSON, completePeriodIds, getPeriod
 from optparse import OptionParser
 from Downloads import *
 
+from utils import read_options
 
 if __name__ == '__main__':
 

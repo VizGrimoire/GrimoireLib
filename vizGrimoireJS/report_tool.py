@@ -24,8 +24,11 @@
 
 import logging, sys, time
 
-from GrimoireUtils import read_options, getPeriod, read_main_conf
+from GrimoireUtils import getPeriod, read_main_conf
+
 from report import Report
+
+from utils import read_options
 
 def get_evol_report(startdate, enddate, identities_db, bots):
     all_ds = {}
