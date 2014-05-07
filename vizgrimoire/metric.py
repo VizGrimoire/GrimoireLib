@@ -25,8 +25,19 @@
 
 class Metric(object):
 
-    def __init__(self, id, name = None, desc = None, data_source = None):
-        self.id = id
-        self.name = name
-        self.desc = desc
-        self.data_source = data_source
+    def __init__(self):
+        self.id = None
+        self.name = None
+        self.desc = None
+        self.data_source = None
+
+    def get_definition(self):
+        def_ = {
+               "id":self.id,
+               "name":self.name,
+               "desc":self.desc
+        }
+        return def_
+
+    def get_data_source(self):
+        return self.ds

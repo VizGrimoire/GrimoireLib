@@ -29,6 +29,8 @@ from optparse import OptionParser
 
 from commit_metric import Commit
 from metric import Metric
+from SCM import SCM
+from report import Report
 
 def get_options():
     parser = OptionParser(usage='Usage: %prog [options]',
@@ -54,4 +56,12 @@ if __name__ == '__main__':
     logging.info("Grimoire Metrics Tool")
     opts = get_options()
 
-    commit = Commit('')
+    Report.init(opts.automator_file)
+
+    metrics = SCM.get_metrics_definition()
+    for name in metrics:
+        print name
+
+    metrics = SCM.get_metrics()
+    for metric in metrics:
+        print metric

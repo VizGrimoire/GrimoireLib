@@ -23,13 +23,14 @@
 
 """ Metric offers the API supported by all metrics """
 
-import SCM
+from SCM import SCM
 from metric import Metric
 
 class Commit(Metric):
 
-    def __init__(self, id, name = None, desc = None):
+    def __init__(self):
         self.id = "scm_commits"
         self.name = "Commits"
         self.desc = ""
         self.data_source = SCM
+        self.data_source.add_metric(self)

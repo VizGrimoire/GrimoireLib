@@ -42,6 +42,7 @@ class Report(object):
         Report._automator = read_main_conf(automator_file)
         Report._init_filters()
         Report._init_data_sources()
+        Report._init_metrics()
 
     @staticmethod
     def _init_filters():
@@ -62,6 +63,12 @@ class Report(object):
     def _init_data_sources():
         Report._all_data_sources = [SCM.SCM, ITS.ITS, MLS.MLS, SCR.SCR, 
                                     Mediawiki.Mediawiki, IRC.IRC, Downloads.Downloads]
+    
+    @staticmethod
+    def _init_metrics():
+        """Register all available metrics"""
+        from commit_metric import Commit
+        Commit()
 
     @staticmethod
     def get_config():
