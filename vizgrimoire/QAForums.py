@@ -24,12 +24,15 @@
 #     Luis Cañas-Díaz <lcanas@bitergia.com>
 
 import logging
+
 import os
 
-from GrimoireSQL import GetSQLGlobal, GetSQLPeriod, GetSQLReportFrom
-from GrimoireSQL import GetSQLReportWhere, ExecuteQuery, BuildQuery
+from GrimoireSQL import GetSQLGlobal, GetSQLPeriod, ExecuteQuery, BuildQuery
+
 from GrimoireUtils import GetPercentageDiff, GetDates, getPeriod, createJSON, completePeriodIds
+
 from data_source import DataSource
+
 from filter import Filter
 
 
@@ -355,3 +358,27 @@ class QAForums(DataSource):
     @staticmethod
     def get_metrics_definition ():
         pass
+
+    @staticmethod
+    def GetSQLReportFrom(identities_db, type_analysis):
+        # generic function to generate "from" clauses
+        # type_analysis contains two values: type of analysis (company, country...)
+        # and the value itself
+       
+        #TODO: to be implemented.
+        print "WARNING: QAForums.GetSQLReportFrom to be implemented"
+        tables = ""
+        return tables
+
+
+    @staticmethod
+    def GetSQLReportWhere(type_analysis, role):
+        # generic function to generate "from" clauses
+        # type_analysis contains two values: type of analysis (company, country...)
+        # and the value itself
+
+        #TODO: to be implemented
+        print "WARNING: QAForums.GetSQLReportWhere to be implemented"
+        where = ""
+        return where
+
