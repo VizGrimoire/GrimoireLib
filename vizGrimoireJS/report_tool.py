@@ -123,7 +123,7 @@ if __name__ == '__main__':
     opts = read_options()
     reports = opts.reports.split(",")
 
-    Report.init(opts.config_file)
+    Report.init(opts.config_file, None)
 
     automator = read_main_conf(opts.config_file)
     if 'start_date' not in automator['r']:

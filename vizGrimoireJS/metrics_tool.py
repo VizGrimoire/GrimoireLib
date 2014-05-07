@@ -41,13 +41,19 @@ def get_options():
                   dest="automator_file",
                   help="Automator config file")
 
+    parser.add_option("-m", "--metrics",
+                  action="store",
+                  dest="metrics_path",
+                  help="Path to the metrics modules to be loaded")
+
+
     (opts, args) = parser.parse_args()
 
     if len(args) != 0:
         parser.error("Wrong number of arguments")
 
-    if not opts.automator_file:
-        parser.error("automator file param is needed.")
+    if not opts.automator_file or not opts.metrics_path:
+        parser.error("automator file and metrics path param is needed.")
 
     return opts
 
@@ -56,7 +62,7 @@ if __name__ == '__main__':
     logging.info("Grimoire Metrics Tool")
     opts = get_options()
 
-    Report.init(opts.automator_file)
+    Report.init(opts.automator_file, opts.metrics_path)
 
     metrics = SCM.get_metrics_definition()
     for name in metrics:
@@ -64,4 +70,4 @@ if __name__ == '__main__':
 
     metrics = SCM.get_metrics()
     for metric in metrics:
-        print metric
+        print metric.get_definition()['name']
