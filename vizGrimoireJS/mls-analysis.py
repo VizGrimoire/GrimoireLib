@@ -38,12 +38,14 @@ import datetime
 
 from threads import Threads
 
+from utils import read_options
+
 isoweek = importr("ISOweek")
 vizr = importr("vizgrimoire")
 
 import GrimoireUtils, GrimoireSQL
 from GrimoireUtils import dataFrame2Dict, createJSON, completePeriodIds
-from GrimoireUtils import valRtoPython, read_options, getPeriod
+from GrimoireUtils import valRtoPython, getPeriod
 import MLS
 
 def aggData(period, startdate, enddate, identities_db, destdir):

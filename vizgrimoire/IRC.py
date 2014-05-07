@@ -24,8 +24,7 @@
 
 import logging, os
 
-from GrimoireSQL import GetSQLGlobal, GetSQLPeriod, GetSQLReportFrom
-from GrimoireSQL import GetSQLReportWhere, ExecuteQuery, BuildQuery
+from GrimoireSQL import GetSQLGlobal, GetSQLPeriod, ExecuteQuery, BuildQuery
 from GrimoireUtils import GetPercentageDiff, GetDates, getPeriod, createJSON, completePeriodIds
 from data_source import DataSource
 from filter import Filter
@@ -341,9 +340,9 @@ def StaticNumRepositoriesIRC (period, startdate, enddate, identities_db=None, ty
     return(ExecuteQuery(q))
 
 def GetSentIRC (period, startdate, enddate, identities_db, type_analysis, evolutionary):    
-    fields = " count(distinct(message)) as sent "
-    tables = " irclog " + GetSQLReportFrom(identities_db, type_analysis)
-    filters = GetSQLReportWhere(type_analysis, "author")
+    fields = " count(distinct(message)) as sent " 
+    tables = " irclog " + GetIRCSQLReportFrom(identities_db, type_analysis)
+    filters = GetIRCSQLReportWhere(type_analysis)
     filters += " and type='COMMENT' "
     q = BuildQuery(period, startdate, enddate, " date ", fields, tables, filters, evolutionary)    
     return(ExecuteQuery(q))
@@ -355,8 +354,8 @@ def EvolSentIRC (period, startdate, enddate, identities_db, type_analysis):
 
 def GetSendersIRC (period, startdate, enddate, identities_db, type_analysis, evolutionary):    
     fields = " count(distinct(nick)) as senders "
-    tables = " irclog " + GetSQLReportFrom(identities_db, type_analysis)
-    filters = GetSQLReportWhere(type_analysis, "author")
+    tables = " irclog " + GetIRCSQLReportFrom(identities_db, type_analysis)
+    filters = GetIRCSQLReportWhere(type_analysis)
     filters += " and type='COMMENT' "
     q = BuildQuery(period, startdate, enddate, " date ", fields, tables, filters, evolutionary)    
     return(ExecuteQuery(q))
@@ -368,8 +367,8 @@ def EvolSendersIRC (period, startdate, enddate, identities_db, type_analysis):
 
 def GetRepositoriesIRC (period, startdate, enddate, identities_db, type_analysis, evolutionary):
     fields = " COUNT(DISTINCT(channel_id)) AS repositories "
-    tables = " irclog " + GetSQLReportFrom(identities_db, type_analysis)
-    filters = GetSQLReportWhere(type_analysis, "author")
+    tables = " irclog " + GetIRCSQLReportFrom(identities_db, type_analysis)
+    filters = GetIRCSQLReportWhere(type_analysis)
     q = BuildQuery(period, startdate, enddate, " date ", fields, tables, filters, evolutionary)
     return(ExecuteQuery(q))
 

@@ -30,9 +30,11 @@ import sys
 
 import GrimoireUtils, GrimoireSQL
 from GrimoireUtils import createJSON, completePeriodIds
-from GrimoireUtils import read_options, getPeriod
+from GrimoireUtils import getPeriod
 from SCM import GetPeopleListSCM
 import People
+
+from utils import read_options
 
 
 if __name__ == '__main__':

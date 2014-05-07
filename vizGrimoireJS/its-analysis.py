@@ -40,9 +40,10 @@ vizr = importr("vizgrimoire")
 
 import GrimoireUtils, GrimoireSQL
 from GrimoireUtils import dataFrame2Dict, createJSON, completePeriodIds
-from GrimoireUtils import valRtoPython, read_options, getPeriod
+from GrimoireUtils import valRtoPython, getPeriod
 import ITS
 from ITS import Backend
+from utils import read_options
 
 def aggData(period, startdate, enddate, identities_db, destdir, closed_condition):
     data = ITS.AggITSInfo(period, startdate, enddate, identities_db, [], closed_condition)

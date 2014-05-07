@@ -30,9 +30,10 @@ from report import Report
 from filter import Filter
 import logging
 
-from GrimoireUtils import read_options, getPeriod, read_main_conf
+from GrimoireUtils import getPeriod, read_main_conf
 from GrimoireUtils import compare_json_data, completePeriodIds
 from GrimoireUtils import createJSON, compareJSON
+from utils import read_options
 
 class DataSourceTest(unittest.TestCase):
     @staticmethod
