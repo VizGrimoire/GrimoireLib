@@ -1437,7 +1437,8 @@ def EvolTimeToReviewPendingSCR(period, startdate, enddate, identities_db = None,
         current = str(year)+"-"+str(month)+"-"+str(last_day)
         return (current)
 
-    def get_sql(month, updated=False):
+    # SQL for all, for updated  or for waiting for reviewer reviews
+    def get_sql(month, updated=False, reviewers = False):
         current = get_date_from_month(month)
         # List of pending reviews before a date: time from new time and from last update
         fields  = "TIMESTAMPDIFF(SECOND, submitted_on, '"+current+"')/(24*3600) AS newtime,"
@@ -1445,11 +1446,20 @@ def EvolTimeToReviewPendingSCR(period, startdate, enddate, identities_db = None,
             fields = "TIMESTAMPDIFF(SECOND, mod_date, '"+current+"')/(24*3600) AS updatetime,"
         fields += " YEAR(submitted_on)*12+MONTH(submitted_on) as month"
         tables = "issues i, people, issues_ext_gerrit ie "
+        if reviewers:
+            q_last_change = get_sql_last_change_for_issues_new()
+            tables += ", changes c, (%s) t1" % q_last_change
         tables = tables + GetSQLReportFromSCR(identities_db, type_analysis)
         filters = " people.id = i.submitted_by "
         filters += GetSQLReportWhereSCR(type_analysis)
         filters += " AND status<>'MERGED' AND status<>'ABANDONED' "
         filters += " AND ie.issue_id  = i.id "
+        if reviewers:
+            filters += """
+                i.id = c.issue_id  AND t1.id = c.id
+                AND (c.field='CRVW' or c.field='Code-Review' or c.field='Verified' or c.field='VRIF')
+                AND (c.new_value=1 or c.new_value=2)
+            """
 
         from Wikimedia import GetIssuesFiltered
         if (GetIssuesFiltered() != ""): filters += " AND " + GetIssuesFiltered()
@@ -1488,16 +1498,24 @@ def EvolTimeToReviewPendingSCR(period, startdate, enddate, identities_db = None,
                                "review_time_pending_update_days_acc_median":[]}
 
     for i in range(0, months+1):
-        pending_period = ExecuteQuery(get_sql(start_month+i))
         acc_pending_time_median['month'].append(start_month+i)
 
-        values = get_values_median(pending_period['newtime'])
+        reviews = ExecuteQuery(get_sql(start_month+i))
+        values = get_values_median(reviews['newtime'])
         acc_pending_time_median['review_time_pending_days_acc_median'].append(values)
 
-        pending_period = ExecuteQuery(get_sql(start_month+i, True))
-        values = get_values_median(pending_period['updatetime'])
+        reviews = ExecuteQuery(get_sql(start_month+i, True))
+        values = get_values_median(reviews['updatetime'])
         acc_pending_time_median['review_time_pending_update_days_acc_median'].append(values)
 
+        # Now just for reviews waiting for Reviewer
+        reviews = ExecuteQuery(get_sql(start_month+i, False, True))
+        values = get_values_median(reviews['newtime'])
+        acc_pending_time_median['review_time_pending_ReviewsWaitingForReviewer_days_acc_median'].append(values)
+
+        reviews = ExecuteQuery(get_sql(start_month+i, True, True))
+        values = get_values_median(reviews['updatetime'])
+        acc_pending_time_median['review_time_pending_update_ReviewsWaitingForReviewer_days_acc_median'].append(values)
     return acc_pending_time_median
 
 ##############
