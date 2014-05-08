@@ -77,6 +77,11 @@ def aggData(period, startdate, enddate, idb, destdir, bots):
     agg = dict(agg.items() + data.items())
     data = SCR.StaticWaiting4Submitter(period, startdate, enddate)
     agg = dict(agg.items() + data.items())
+    # Waiting reviews
+    data = SCR.StaticReviewsWaiting4Submitter(period, startdate, enddate)
+    agg = dict(agg.items() + data.items())
+    data = SCR.StaticReviewsWaiting4Reviewer(period, startdate, enddate)
+    agg = dict(agg.items() + data.items())
     #Reviewers info
     data = SCR.StaticReviewers(period, startdate, enddate)
     agg = dict(agg.items() + data.items())
@@ -145,6 +150,8 @@ def tsData(period, startdate, enddate, idb, destdir, granularity, conf):
     evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
     data = SCR.EvolWaiting4Submitter(period, startdate, enddate)
     evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
+    data = SCR.EvolReviewsWaiting4Reviewer(period, startdate, enddate)
+    evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
     #Reviewers info
     data = SCR.EvolReviewers(period, startdate, enddate)
     evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
@@ -201,7 +208,8 @@ def reposData(period, startdate, enddate, idb, destdir, conf):
     repos = repos["name"]
     # For repos aggregated data. Include metrics to sort in javascript.
     repos_list = {"name":[],"review_time_days_median":[],"review_time_pending_days_median":[],
-                  "submitted":[],"new":[],"review_time_pending_ReviewsWaitingForReviewer_days_median":[],
+                  "submitted":[],"new":[],"ReviewsWaitingForReviewer":[],
+                  "review_time_pending_ReviewsWaitingForReviewer_days_median":[],
                   "review_time_pending_update_ReviewsWaitingForReviewer_days_median":[]}
 
     # missing information from the rest of type of reviews, patches and
@@ -234,6 +242,8 @@ def reposData(period, startdate, enddate, idb, destdir, conf):
         evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
         data = SCR.EvolTimeToReviewPendingSCR (period, startok, enddate, idb, type_analysis)
         evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
+        data = SCR.EvolReviewsWaiting4Reviewer (period, startok, enddate, idb, type_analysis)
+        evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
         createJSON(evol, destdir+ "/"+repo_file+"-scr-rep-evolutionary.json")
 
         # Static
@@ -260,6 +270,9 @@ def reposData(period, startdate, enddate, idb, destdir, conf):
         agg = dict(agg.items() + data.items())
         repos_list["review_time_days_median"].append(data['review_time_days_median'])
         data = SCR.StaticTimeToReviewPendingSCR(startok, enddate, idb, type_analysis, bots)
+        agg = dict(agg.items() + data.items())
+        data = SCR.StaticReviewsWaiting4Reviewer(period, startok, enddate, idb,  type_analysis)
+        repos_list["ReviewsWaitingForReviewer"].append(data['ReviewsWaitingForReviewer'])
         agg = dict(agg.items() + data.items())
         repos_list["review_time_pending_days_median"].append(data['review_time_pending_days_median'])
         repos_list["review_time_pending_update_days_median"].append(data['review_time_pending_update_days_median'])
