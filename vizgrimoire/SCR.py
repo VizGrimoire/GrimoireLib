@@ -1456,7 +1456,7 @@ def EvolTimeToReviewPendingSCR(period, startdate, enddate, identities_db = None,
         filters += " AND ie.issue_id  = i.id "
         if reviewers:
             filters += """
-                i.id = c.issue_id  AND t1.id = c.id
+                AND i.id = c.issue_id  AND t1.id = c.id
                 AND (c.field='CRVW' or c.field='Code-Review' or c.field='Verified' or c.field='VRIF')
                 AND (c.new_value=1 or c.new_value=2)
             """
@@ -1495,7 +1495,9 @@ def EvolTimeToReviewPendingSCR(period, startdate, enddate, identities_db = None,
     months = end_month - start_month
     acc_pending_time_median = {"month":[],
                                "review_time_pending_days_acc_median":[],
-                               "review_time_pending_update_days_acc_median":[]}
+                               "review_time_pending_update_days_acc_median":[],
+                               "review_time_pending_ReviewsWaitingForReviewer_days_acc_median":[],
+                               "review_time_pending_update_ReviewsWaitingForReviewer_days_acc_median":[]}
 
     for i in range(0, months+1):
         acc_pending_time_median['month'].append(start_month+i)
