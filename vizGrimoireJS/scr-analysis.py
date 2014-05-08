@@ -208,6 +208,7 @@ def reposData(period, startdate, enddate, idb, destdir, conf):
     repos = repos["name"]
     # For repos aggregated data. Include metrics to sort in javascript.
     repos_list = {"name":[],"review_time_days_median":[],"review_time_pending_days_median":[],
+                  "review_time_pending_update_days_median":[],
                   "submitted":[],"new":[],"ReviewsWaitingForReviewer":[],
                   "review_time_pending_ReviewsWaitingForReviewer_days_median":[],
                   "review_time_pending_update_ReviewsWaitingForReviewer_days_median":[]}
@@ -271,13 +272,13 @@ def reposData(period, startdate, enddate, idb, destdir, conf):
         repos_list["review_time_days_median"].append(data['review_time_days_median'])
         data = SCR.StaticTimeToReviewPendingSCR(startok, enddate, idb, type_analysis, bots)
         agg = dict(agg.items() + data.items())
-        data = SCR.StaticReviewsWaiting4Reviewer(period, startok, enddate, idb,  type_analysis)
-        repos_list["ReviewsWaitingForReviewer"].append(data['ReviewsWaitingForReviewer'])
-        agg = dict(agg.items() + data.items())
         repos_list["review_time_pending_days_median"].append(data['review_time_pending_days_median'])
         repos_list["review_time_pending_update_days_median"].append(data['review_time_pending_update_days_median'])
         repos_list["review_time_pending_ReviewsWaitingForReviewer_days_median"].append(data['review_time_pending_ReviewsWaitingForReviewer_days_median'])
         repos_list["review_time_pending_update_ReviewsWaitingForReviewer_days_median"].append(data['review_time_pending_update_ReviewsWaitingForReviewer_days_median'])
+        data = SCR.StaticReviewsWaiting4Reviewer(period, startok, enddate, idb,  type_analysis)
+        repos_list["ReviewsWaitingForReviewer"].append(data['ReviewsWaitingForReviewer'])
+        agg = dict(agg.items() + data.items())
         createJSON(agg, destdir + "/"+repo_file + "-scr-rep-static.json")
 
     createJSON(repos_list, destdir+"/scr-repos.json")
