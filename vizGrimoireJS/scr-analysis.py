@@ -200,7 +200,9 @@ def reposData(period, startdate, enddate, idb, destdir, conf):
     repos  = SCR.GetReposSCRName(startdate, enddate)
     repos = repos["name"]
     # For repos aggregated data. Include metrics to sort in javascript.
-    repos_list = {"name":[],"review_time_days_median":[],"review_time_pending_days_median":[],"submitted":[],"new":[],"review_time_pending_update_days_median":[]}
+    repos_list = {"name":[],"review_time_days_median":[],"review_time_pending_days_median":[],
+                  "submitted":[],"new":[],"review_time_pending_ReviewsWaitingForReviewer_days_median":[],
+                  "review_time_pending_update_ReviewsWaitingForReviewer_days_median":[]}
 
     # missing information from the rest of type of reviews, patches and
     # number of patches waiting for reviewer and submitter 
@@ -261,6 +263,8 @@ def reposData(period, startdate, enddate, idb, destdir, conf):
         agg = dict(agg.items() + data.items())
         repos_list["review_time_pending_days_median"].append(data['review_time_pending_days_median'])
         repos_list["review_time_pending_update_days_median"].append(data['review_time_pending_update_days_median'])
+        repos_list["review_time_pending_ReviewsWaitingForReviewer_days_median"].append(data['review_time_pending_ReviewsWaitingForReviewer_days_median'])
+        repos_list["review_time_pending_update_ReviewsWaitingForReviewer_days_median"].append(data['review_time_pending_update_ReviewsWaitingForReviewer_days_median'])
         createJSON(agg, destdir + "/"+repo_file + "-scr-rep-static.json")
 
     createJSON(repos_list, destdir+"/scr-repos.json")

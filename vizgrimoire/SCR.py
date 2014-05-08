@@ -1292,7 +1292,8 @@ def GetPeopleStaticSCR (developer_id, startdate, enddate):
 ################
 
 # Time to review accumulated for pending submissions using submit date or update date
-def GetTimeToReviewPendingQuerySCR (startdate, enddate, identities_db = None, type_analysis = [], bots = [], updated = False):
+def GetTimeToReviewPendingQuerySCR (startdate, enddate, identities_db = None,
+                                    type_analysis = [], bots = [], updated = False, reviewers = False):
     filter_bots = ''
     for bot in bots:
         filter_bots = filter_bots + " people.name<>'"+bot+"' AND "
@@ -1300,13 +1301,21 @@ def GetTimeToReviewPendingQuerySCR (startdate, enddate, identities_db = None, ty
     fields = "TIMESTAMPDIFF(SECOND, submitted_on, NOW())/(24*3600) AS revtime, submitted_on "
     if (updated):
         fields = "TIMESTAMPDIFF(SECOND, mod_date, NOW())/(24*3600) AS revtime, submitted_on "
+    if reviewers:
+            q_last_change = get_sql_last_change_for_issues_new()
+            tables += ", changes ch, (%s) t1" % q_last_change
     tables = "issues i, people, issues_ext_gerrit ie "
     tables = tables + GetSQLReportFromSCR(identities_db, type_analysis)
     filters = filter_bots + " people.id = i.submitted_by "
     filters += GetSQLReportWhereSCR(type_analysis)
     filters += " AND status<>'MERGED' AND status<>'ABANDONED' "
     filters += " AND ie.issue_id  = i.id "
-
+    if reviewers:
+            filters += """
+                AND i.id = ch.issue_id  AND t1.id = ch.id
+                AND (ch.field='CRVW' or ch.field='Code-Review' or ch.field='Verified' or ch.field='VRIF')
+                AND (ch.new_value=1 or ch.new_value=2)
+            """
     from Wikimedia import GetIssuesFiltered
     if (GetIssuesFiltered() != ""): filters += " AND " + GetIssuesFiltered()
 
@@ -1377,6 +1386,9 @@ def StaticTimeToReviewSCR (startdate, enddate, identities_db = None, type_analys
     return {"review_time_days_median":ttr_median, "review_time_days_avg":ttr_avg}
 
 def StaticTimeToReviewPendingSCR (startdate, enddate, identities_db = None, type_analysis = [], bots = []):
+    # Show review and update time for all and just for reviews pending for reviewers
+    reviewers_pending = True
+    # Review time
     data = ExecuteQuery(GetTimeToReviewPendingQuerySCR (startdate, enddate, identities_db, type_analysis, bots))
     data = data['revtime']
     if (isinstance(data, list) == False): data = [data]
@@ -1386,8 +1398,21 @@ def StaticTimeToReviewPendingSCR (startdate, enddate, identities_db = None, type
     else:
         ttr_median = median(removeDecimals(data))
         ttr_avg = average(removeDecimals(data))
+
+    data = ExecuteQuery(GetTimeToReviewPendingQuerySCR (startdate, enddate,identities_db,
+                                                        type_analysis, bots, False, reviewers_pending))
+    data = data['revtime']
+    if (isinstance(data, list) == False): data = [data]
+    if (len(data) == 0):
+        ttr_reviewers_median = float("nan")
+        ttr_reviewers_avg = float("nan")
+    else:
+        ttr_reviewers_median = median(removeDecimals(data))
+        ttr_reviewers_avg = average(removeDecimals(data))
+
     # Update time
-    data = ExecuteQuery(GetTimeToReviewPendingQuerySCR (startdate, enddate, identities_db, type_analysis, bots, True))
+    data = ExecuteQuery(GetTimeToReviewPendingQuerySCR (startdate, enddate,identities_db,
+                                                        type_analysis, bots, True))
     data = data['revtime']
     if (isinstance(data, list) == False): data = [data]
     if (len(data) == 0):
@@ -1396,10 +1421,27 @@ def StaticTimeToReviewPendingSCR (startdate, enddate, identities_db = None, type
     else:
         ttr_median_update = median(removeDecimals(data))
         ttr_avg_update = average(removeDecimals(data))
-    time_to = {"review_time_pending_days_median":ttr_median, 
+
+    data = ExecuteQuery(GetTimeToReviewPendingQuerySCR (startdate, enddate, identities_db,
+                                                        type_analysis, bots, True, reviewers_pending))
+    data = data['revtime']
+    if (isinstance(data, list) == False): data = [data]
+    if (len(data) == 0):
+        ttr_reviewers_median_update = float("nan")
+        ttr_reviewers_avg_update = float("nan")
+    else:
+        ttr_reviewers_median_update = median(removeDecimals(data))
+        ttr_reviewers_avg_update = average(removeDecimals(data))
+
+    time_to = {"review_time_pending_days_median":ttr_median,
                "review_time_pending_days_avg":ttr_avg,
+               "review_time_pending_ReviewsWaitingForReviewer_days_median":ttr_reviewers_median,
+               "review_time_pending_ReviewsWaitingForReviewer_days_avg":ttr_reviewers_avg,
                "review_time_pending_update_days_median":ttr_median_update,
-               "review_time_pending_update_days_avg":ttr_avg_update}
+               "review_time_pending_update_days_avg":ttr_avg_update,
+               "review_time_pending_update_ReviewsWaitingForReviewer_days_median":ttr_reviewers_median_update,
+               "review_time_pending_update_ReviewsWaitingForReviewer_days_avg":ttr_reviewers_avg_update
+               }
     return time_to
 
 
@@ -1448,7 +1490,7 @@ def EvolTimeToReviewPendingSCR(period, startdate, enddate, identities_db = None,
         tables = "issues i, people, issues_ext_gerrit ie "
         if reviewers:
             q_last_change = get_sql_last_change_for_issues_new()
-            tables += ", changes c, (%s) t1" % q_last_change
+            tables += ", changes ch, (%s) t1" % q_last_change
         tables = tables + GetSQLReportFromSCR(identities_db, type_analysis)
         filters = " people.id = i.submitted_by "
         filters += GetSQLReportWhereSCR(type_analysis)
@@ -1456,9 +1498,9 @@ def EvolTimeToReviewPendingSCR(period, startdate, enddate, identities_db = None,
         filters += " AND ie.issue_id  = i.id "
         if reviewers:
             filters += """
-                AND i.id = c.issue_id  AND t1.id = c.id
-                AND (c.field='CRVW' or c.field='Code-Review' or c.field='Verified' or c.field='VRIF')
-                AND (c.new_value=1 or c.new_value=2)
+                AND i.id = ch.issue_id  AND t1.id = ch.id
+                AND (ch.field='CRVW' or ch.field='Code-Review' or ch.field='Verified' or ch.field='VRIF')
+                AND (ch.new_value=1 or ch.new_value=2)
             """
 
         from Wikimedia import GetIssuesFiltered
