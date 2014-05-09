@@ -65,6 +65,7 @@ def get_top_report(startdate, enddate, identities_db, bots):
 def create_top_report(startdate, enddate, identities_db, bots):
     for ds in Report.get_data_sources():
         Report.connect_ds(ds)
+        ds.set_bots(bots)
         ds.create_top_report (startdate, enddate, identities_db)
 
 def create_reports_filters(startdate, enddate, identities_db, bots):
@@ -147,7 +148,8 @@ if __name__ == '__main__':
     if (opts.filter):
         set_filter(opts.filter)
 
-    bots = []
+    # bots = []
+    bots = ["gerrit-wm", "wikibugs","wikibugs_"]
 
     evol = create_evol_report(startdate, enddate, identities_db, bots)
     agg = create_agg_report(startdate, enddate, identities_db, bots)
