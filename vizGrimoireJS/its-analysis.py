@@ -44,6 +44,8 @@ from GrimoireUtils import valRtoPython, read_options, getPeriod, medianAndAvgByP
 import ITS
 from ITS import Backend
 
+import Wikimedia
+
 def aggData(period, startdate, enddate, identities_db, destdir, closed_condition):
     data = ITS.AggITSInfo(period, startdate, enddate, identities_db, [], closed_condition)
     agg = data
@@ -225,27 +227,36 @@ def topData(period, startdate, enddate, identities_db, destdir, bots, closed_con
     top_openers_data['openers.last month']=ITS.GetTopOpeners(31, startdate, enddate,identities_db, bots, closed_condition, npeople)
 
 
-    # Closed condition for MediaWiki
-    top_close_condition_mediawiki = "(status = 'RESOLVED' OR status = 'CLOSED' OR status = 'VERIFIED' OR priority = 'Lowest')"
-    nissues = "40"
-
-    issues_details = ITS.GetIssuesDetails()
-
-    top_issues_data = {}
-
-    tops = ITS.GetTopIssuesWithoutAction(startdate, enddate, top_close_condition_mediawiki, nissues)
-    top_issues_data['issues.no action']= completeTops(tops, issues_details)
-
-    tops = ITS.GetTopIssuesWithoutComment(startdate, enddate, top_close_condition_mediawiki, nissues)
-    top_issues_data['issues.no comment']= completeTops(tops, issues_details)
-
-    tops = ITS.GetTopIssuesWithoutResolution(startdate, enddate, top_close_condition_mediawiki, nissues)
-    top_issues_data['issues.no resolution']= completeTops(tops, issues_details)
+    top_issues_data = wikimedia_top_issues(startdate, enddate, top_close_condition_mediawiki, nissues)
 
     all_top = dict(top_closers_data.items() + top_openers_data.items() + top_issues_data.items())
     createJSON (all_top, destdir+"/its-top.json", False)
 
     return all_top
+
+def wikimedia_top_issues(startdate, enddate, top_close_condition_mediawiki, nissues):
+
+    # Closed condition for MediaWiki
+    top_close_condition_mediawiki = """
+        (status = 'RESOLVED' OR status = 'CLOSED' OR status = 'VERIFIED'
+         OR priority = 'Lowest')
+    """
+    nissues = "40"
+
+    issues_details = Wikimedia.GetIssuesDetails()
+
+    top_issues_data = {}
+
+    tops = Wikimedia.GetTopIssuesWithoutAction(startdate, enddate, top_close_condition_mediawiki, nissues)
+    top_issues_data['issues.no action']= completeTops(tops, issues_details)
+
+    tops = Wikimedia.GetTopIssuesWithoutComment(startdate, enddate, top_close_condition_mediawiki, nissues)
+    top_issues_data['issues.no comment']= completeTops(tops, issues_details)
+
+    tops = Wikimedia.GetTopIssuesWithoutResolution(startdate, enddate, top_close_condition_mediawiki, nissues)
+    top_issues_data['issues.no resolution']= completeTops(tops, issues_details)
+
+    return top_issues_data
 
 def microStudies(vizr, destdir):
     # Studies implemented in R
@@ -315,17 +326,17 @@ def ticketsTimeToResponseByField(period, startdate, enddate, closed_condition, f
         field_condition = condition % field_value
 
         fa_alias = 'tfa_%s' % field_value
-        data = ITS.GetTimeToFirstAction(period, startdate, enddate, field_condition, fa_alias)
+        data = Wikimedia.GetTimeToFirstAction(period, startdate, enddate, field_condition, fa_alias)
         time_to_fa = getMedianAndAvg(period, fa_alias, data['date'], data[fa_alias])
         time_to_fa = completePeriodIds(time_to_fa, period, startdate, enddate)
 
         fc_alias = 'tfc_%s' % field_value
-        data = ITS.GetTimeToFirstComment(period, startdate, enddate, field_condition, fc_alias)
+        data = Wikimedia.GetTimeToFirstComment(period, startdate, enddate, field_condition, fc_alias)
         time_to_fc = getMedianAndAvg(period, fc_alias, data['date'], data[fc_alias])
         time_to_fc = completePeriodIds(time_to_fc, period, startdate, enddate)
 
         tclosed_alias = 'ttc_%s' % field_value
-        data = ITS.GetTimeClosed(period, startdate, enddate, closed_condition, field_condition, tclosed_alias)
+        data = Wikimedia.GetTimeClosed(period, startdate, enddate, closed_condition, field_condition, tclosed_alias)
         time_closed = getMedianAndAvg(period, tclosed_alias, data['date'], data[tclosed_alias])
         time_closed = completePeriodIds(time_closed, period, startdate, enddate)
 
@@ -388,14 +399,14 @@ def getTicketsTimeOpened(period, dates, closed_condition, result_type, alias, fi
         enddate = "'" + str(year) + "-" + str(month) + "-1'"
 
         if result_type == 'action':
-            open_issues = ITS.GetIssuesWithoutFirstActionAt(period, startdate, enddate, closed_condition,
-                                                            field_condition, alias)[alias]
+            open_issues = Wikimedia.GetIssuesWithoutFirstActionAt(period, startdate, enddate, closed_condition,
+                                                                  field_condition, alias)[alias]
         elif result_type == 'comment':
-            open_issues = ITS.GetIssuesWithoutFirstCommentAt(period, startdate, enddate, closed_condition,
-                                                             field_condition, alias)[alias]
+            open_issues = Wikimedia.GetIssuesWithoutFirstCommentAt(period, startdate, enddate, closed_condition,
+                                                                   field_condition, alias)[alias]
         else:
-            open_issues = ITS.GetIssuesOpenedAt(period, startdate, enddate, closed_condition,
-                                                field_condition, alias)[alias]
+            open_issues = Wikimedia.GetIssuesOpenedAt(period, startdate, enddate, closed_condition,
+                                                      field_condition, alias)[alias]
 
         m = get_median(open_issues)
         avg = get_avg(open_issues)

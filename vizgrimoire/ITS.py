@@ -17,7 +17,7 @@
 ## This file is a part of the vizGrimoire R package
 ##  (an R library for the MetricsGrimoire and vizGrimoire systems)
 ##
-## ITS.R
+## ITS.py
 ##
 ## Queries for ITS data analysis
 ##
@@ -30,8 +30,8 @@
 import logging, os, re
 
 from GrimoireSQL import GetSQLGlobal, GetSQLPeriod
-from GrimoireSQL import ExecuteQuery, ExecuteViewQuery, BuildQuery
-from GrimoireUtils import GetPercentageDiff, GetDates, completePeriodIds, read_options, getPeriod
+from GrimoireSQL import ExecuteQuery, BuildQuery
+from GrimoireUtils import GetPercentageDiff, GetDates, completePeriodIds, getPeriod
 from GrimoireUtils import createJSON, get_subprojects
 
 from data_source import DataSource
@@ -39,6 +39,7 @@ from filter import Filter
 import report
 
 class ITS(DataSource):
+
 
     @staticmethod
     def get_db_name():
@@ -115,11 +116,10 @@ class ITS(DataSource):
         return evol
 
     @staticmethod
-    def create_evolutionary_report (period, startdate, enddate, i_db, filter_ = None):
-        opts = read_options()
+    def create_evolutionary_report (period, startdate, enddate, destdir, i_db, filter_ = None):
         data =  ITS.get_evolutionary_data (period, startdate, enddate, i_db, filter_)
         filename = ITS().get_evolutionary_filename()
-        createJSON (data, os.path.join(opts.destdir, filename))
+        createJSON (data, os.path.join(destdir, filename))
 
     @staticmethod
     def get_agg_data (period, startdate, enddate, identities_db, filter_ = None):
@@ -165,11 +165,10 @@ class ITS(DataSource):
         return agg
 
     @staticmethod
-    def create_agg_report (period, startdate, enddate, i_db, filter_ = None):
-        opts = read_options()
+    def create_agg_report (period, startdate, enddate, destdir, i_db, filter_ = None):
         data = ITS.get_agg_data (period, startdate, enddate, i_db, filter_)
         filename = ITS().get_agg_filename()
-        createJSON (data, os.path.join(opts.destdir, filename))
+        createJSON (data, os.path.join(destdir, filename))
 
     @staticmethod
     def get_top_data (startdate, enddate, identities_db, filter_, npeople):
@@ -204,10 +203,9 @@ class ITS(DataSource):
         return top
 
     @staticmethod
-    def create_top_report (startdate, enddate, i_db):
-        opts = read_options()
-        data = ITS.get_top_data (startdate, enddate, i_db, None, opts.npeople)
-        createJSON (data, opts.destdir+"/"+ITS().get_top_filename())
+    def create_top_report (startdate, enddate, destdir, npeople, i_db):
+        data = ITS.get_top_data (startdate, enddate, i_db, None, npeople)
+        createJSON (data, destdir+"/"+ITS().get_top_filename())
 
     @staticmethod
     def get_filter_items(filter_, startdate, enddate, identities_db, bots):
@@ -239,10 +237,7 @@ class ITS(DataSource):
         return summary
 
     @staticmethod
-    def create_filter_report(filter_, startdate, enddate, identities_db, bots):
-        opts = read_options()
-        period = getPeriod(opts.granularity)
-
+    def create_filter_report(filter_, period, startdate, enddate, destdir, npeople, identities_db, bots):
         items = ITS.get_filter_items(filter_, startdate, enddate, identities_db, bots)
         if (items == None): return
         items = items['name']
@@ -252,7 +247,7 @@ class ITS(DataSource):
         if not isinstance(items, (list)):
             items = [items]
 
-        fn = os.path.join(opts.destdir, filter_.get_filename(ITS()))
+        fn = os.path.join(destdir, filter_.get_filename(ITS()))
         createJSON(items, fn)
 
         for item in items :
@@ -261,21 +256,21 @@ class ITS(DataSource):
             filter_item = Filter(filter_name, item)
 
             evol_data = ITS.get_evolutionary_data(period, startdate, enddate, identities_db, filter_item)
-            fn = os.path.join(opts.destdir, filter_item.get_evolutionary_filename(ITS()))
+            fn = os.path.join(destdir, filter_item.get_evolutionary_filename(ITS()))
             createJSON(evol_data, fn)
 
             agg = ITS.get_agg_data(period, startdate, enddate, identities_db, filter_item)
-            fn = os.path.join(opts.destdir, filter_item.get_static_filename(ITS()))
+            fn = os.path.join(destdir, filter_item.get_static_filename(ITS()))
             createJSON(agg, fn)
 
             if (filter_name in ["company","domain"]):
-                top = ITS.get_top_data(startdate, enddate, identities_db, filter_item, opts.npeople)
-                fn = os.path.join(opts.destdir, filter_item.get_top_filename(ITS()))
+                top = ITS.get_top_data(startdate, enddate, identities_db, filter_item, npeople)
+                fn = os.path.join(destdir, filter_item.get_top_filename(ITS()))
                 createJSON(top, fn)
 
         if (filter_name == "company"):
             closed = ITS.get_filter_summary(filter_, period, startdate, enddate, identities_db, 10)
-            createJSON (closed, opts.destdir+"/"+ filter_.get_summary_filename(ITS))
+            createJSON (closed, destdir+"/"+ filter_.get_summary_filename(ITS))
 
     @staticmethod
     def get_top_people(startdate, enddate, identities_db, npeople):
@@ -307,10 +302,8 @@ class ITS(DataSource):
 
     @staticmethod
     def create_r_reports(vizr, enddate, destdir):
-        opts = read_options()
-
         # Time to Close: Other backends not yet supported
-        vizr.ReportTimeToCloseITS(opts.backend, destdir)
+        vizr.ReportTimeToCloseITS(ITS._get_backend().its_type, destdir)
         unique_ids = True
 
         # Demographics
@@ -319,6 +312,181 @@ class ITS(DataSource):
 
         # Markov
         vizr.ReportMarkovChain(destdir)
+
+    @staticmethod
+    def _remove_people(people_id):
+        # Remove from people
+        q = "DELETE FROM people_upeople WHERE people_id='%s'" % (people_id)
+        ExecuteQuery(q)
+        q = "DELETE FROM people WHERE id='%s'" % (people_id)
+        ExecuteQuery(q)
+
+    @staticmethod
+    def _remove_issue(issue_id):
+        # Backend name
+        its_type = ITS._get_backend().its_type
+        db_ext = its_type
+        if its_type == "lp": db_ext = "launchpad"
+        elif its_type == "bg": db_ext = "bugzilla"
+        # attachments
+        q = "DELETE FROM attachments WHERE issue_id='%s'" % (issue_id)
+        ExecuteQuery(q)
+        # changes
+        q = "DELETE FROM changes WHERE issue_id='%s'" % (issue_id)
+        ExecuteQuery(q)
+        # comments
+        q = "DELETE FROM comments WHERE issue_id='%s'" % (issue_id)
+        ExecuteQuery(q)
+        # related_to
+        q = "DELETE FROM related_to WHERE issue_id='%s'" % (issue_id)
+        ExecuteQuery(q)
+        # issues_ext_bugzilla
+        q = "DELETE FROM issues_ext_%s WHERE issue_id='%s'" % (db_ext, issue_id)
+        ExecuteQuery(q)
+        # issues_log_bugzilla
+        q = "DELETE FROM issues_log_%s WHERE issue_id='%s'" % (db_ext, issue_id)
+        ExecuteQuery(q)
+        # issues_watchers
+        q = "DELETE FROM issues_watchers WHERE issue_id='%s'" % (issue_id)
+        ExecuteQuery(q)
+        # issues
+        q = "DELETE FROM issues WHERE id='%s'" % (issue_id)
+        ExecuteQuery(q)
+
+    @staticmethod
+    def remove_filter_data(filter_):
+        uri = filter_.get_item()
+        logging.info("Removing ITS filter %s %s" % (filter_.get_name(),filter_.get_item()))
+        q = "SELECT * from trackers WHERE url='%s'" % (uri)
+        repo = ExecuteQuery(q)
+        if 'id' not in repo:
+            logging.error("%s not found" % (uri))
+            return
+
+        def get_people_one_repo(field):
+            return  """
+                SELECT %s FROM (SELECT COUNT(DISTINCT(tracker_id)) AS total, %s
+                FROM issues
+                GROUP BY %s
+                HAVING total=1) t
+                """ % (field, field, field)
+
+
+        logging.info("Removing people")
+        ## Remove submitted_by that exists only in this repository
+        q = """
+            SELECT DISTINCT(submitted_by) from issues
+            WHERE tracker_id='%s' AND submitted_by in (%s)
+        """  % (repo['id'],get_people_one_repo("submitted_by"))
+        res = ExecuteQuery(q)
+        for people_id in res['submitted_by']:
+            ITS._remove_people(people_id)
+        ## Remove assigned_to that exists only in this repository
+        q = """
+            SELECT DISTINCT(assigned_to) from issues
+            WHERE tracker_id='%s' AND assigned_to in (%s)
+        """  % (repo['id'],get_people_one_repo("assigned_to"))
+        res = ExecuteQuery(q)
+        for people_id in res['assigned_to']:
+            ITS._remove_people(people_id)
+
+        # Remove people activity
+        logging.info("Removing issues")
+        q = "SELECT id from issues WHERE tracker_id='%s'" % (repo['id'])
+        res = ExecuteQuery(q)
+        for issue_id in res['id']:
+            ITS._remove_issue(issue_id)
+        # Remove filter
+        q = "DELETE from trackers WHERE id='%s'" % (repo['id'])
+        ExecuteQuery(q)
+
+    @staticmethod
+    def get_metrics_definition ():
+        mdef = {
+           "its_opened" : {
+                "divid" : "its_opened",
+                "column" : "opened",
+                "name" : "Opened tickets",
+                "desc" : "Number of opened tickets",
+                "envision" : {
+                    "y_labels" : "true",
+                    "show_markers" : "true"
+                }
+            },
+            "its_openers" : {
+                "divid" : "its_openers",
+                "column" : "openers",
+                "name" : "Ticket submitters",
+                "desc" : "Number of persons submitting new tickets",
+                "action" : "opened",
+                "envision" : {
+                    "gtype" : "whiskers"
+                }
+            },
+            "its_closed" : {
+                "divid" : "its_closed",
+                "column" : "closed",
+                "name" : "Closed tickets",
+                "desc" : "Number of closed tickets"
+            },
+            "its_closers" : {
+                "divid" : "its_closers",
+                "column" : "closers",
+                "name" : "Ticket closers",
+                "desc" : "Number of persons closing tickets",
+                "action" : "closed",
+                "envision" : {
+                    "gtype" : "whiskers"
+                }
+            },
+            "its_changed" : {
+                "divid" : "its_changed",
+                "column" : "changed",
+                "name" : "Changed tickets",
+                "desc" : "Number of changes to the state of tickets"
+            },
+            "its_changers" : {
+                "divid" : "its_changers",
+                "column" : "changers",
+                "name" : "Ticket state changers",
+                "desc" : "Number of persons changing the state of tickets",
+                "action" : "changed",
+                "envision" : {
+                    "gtype" : "whiskers"
+                }
+            },
+            "its_companies" : {
+                "divid" : "its_companies",
+                "column" : "companies",
+                "name" : "Organziations",
+                "desc" : "Number of organizations (companies, etc.) with persons active in the ticketing system"
+            }, 
+            "its_countries" : {
+                "divid" : "its_countries",
+                "column" : "countries",
+                "name" : "Countries",
+                "desc" : "Number of countries with persons active in the ticketing system"
+            },
+            "its_domains" : {
+                "divid" : "its_domains",
+                "column" : "domains",
+                "name" : "Domains",
+                "desc" : "Number of distinct domains with persons active in the ticketing system"
+            },
+            "its_repositories" : {
+                "divid" : "its_repositories",
+                "column" : "repositories",
+                "name" : "Trackers",
+                "desc" : "Number of active trackers"
+            },
+            "its_people" : {
+                "divid" : "its_people",
+                "column" : "people",
+                "name" : "Active persons",
+                "desc" : "Number of persons active in the ticketing system"
+            }
+        }
+        return mdef
 
 ##############
 # Specific FROM and WHERE clauses per type of report
@@ -1187,9 +1355,18 @@ def GetCompanyTopClosers (company_name, startdate, enddate,
 def GetTopClosers (days, startdate, enddate,
         identities_db, filter, closed_condition, limit) :
 
-    affiliations = ""
-    for aff in filter:
-        affiliations += " com.name<>'"+ aff +"' and "
+    if not filter:
+        affiliations_from = GetTablesOwnUniqueIdsITS()
+        affiliations_where = GetFiltersOwnUniqueIdsITS ()
+    else:
+        affiliations = ""
+        for aff in filter:
+            affiliations += " com.name<>'"+ aff +"' and "
+        affiliations_from = GetTablesCompaniesITS(identities_db) + ", " + \
+            identities_db + ".companies com"
+        affiliations_where = GetFiltersCompaniesITS() + " and " + \
+            affiliations + \
+            " upc.company_id = com.id"
 
     date_limit = ""
     if (days != 0) :
@@ -1199,12 +1376,9 @@ def GetTopClosers (days, startdate, enddate,
 
     q = "SELECT up.id as id, up.identifier as closers, "+\
         "       count(distinct(c.id)) as closed "+\
-        "FROM "+GetTablesCompaniesITS(identities_db)+ ", "+\
-        "     "+identities_db+".companies com, "+\
-        "     "+identities_db+".upeople up "+\
-        "WHERE "+GetFiltersCompaniesITS() +" and "+\
-        "      "+affiliations+ " "+\
-        "      upc.company_id = com.id and "+\
+        "FROM  "+affiliations_from+\
+        ",     "+identities_db+".upeople up "+\
+        "WHERE "+affiliations_where+" and "+\
         "      c.changed_by = pup.people_id and "+\
         "      pup.upeople_id = up.id and "+\
         "      c.changed_on >= "+ startdate+ " and "+\
@@ -1247,9 +1421,20 @@ def GetDomainTopClosers (domain_name, startdate, enddate,
 
 def GetTopOpeners (days, startdate, enddate,
         identities_db, filter, closed_condition, limit) :
-    affiliations = ""
-    for aff in filter:
-        affiliations += " com.name<>'"+ aff +"' and "
+
+    if not filter:
+        affiliations_from = GetTablesOwnUniqueIdsITS('issues')
+        affiliations_where = GetFiltersOwnUniqueIdsITS ('issues')
+    else:
+        affiliations = ""
+        for aff in filter:
+            affiliations += " com.name<>'"+ aff +"' and "
+        affiliations_from = GetTablesCompaniesITS(identities_db,'issues') + \
+            ", " + identities_db + ".companies com"
+        affiliations_where = GetFiltersCompaniesITS('issues') + " and " + \
+            affiliations + \
+            " upc.company_id = com.id"
+
     date_limit = ""
     if (days != 0 ) :
         sql = "SELECT @maxdate:=max(submitted_on) from issues limit 1"
@@ -1258,12 +1443,9 @@ def GetTopOpeners (days, startdate, enddate,
 
     q = "SELECT up.id as id, up.identifier as openers, "+\
         "    count(distinct(i.id)) as opened "+\
-        "FROM "+GetTablesCompaniesITS(identities_db,'issues')+", " +\
-        "    "+identities_db+".companies com, "+\
-        "    "+identities_db+".upeople up "+\
-        "WHERE "+GetFiltersCompaniesITS('issues') +" and "+\
-        "    "+ affiliations+ " "+\
-        "    upc.company_id = com.id and "+\
+        "FROM "+affiliations_from+\
+        " ,   "+identities_db+".upeople up "+\
+        "WHERE "+affiliations_where+" and "+\
         "    pup.upeople_id = up.id and "+\
         "    i.submitted_on >= "+ startdate+ " and "+\
         "    i.submitted_on < "+ enddate+\
@@ -1273,75 +1455,6 @@ def GetTopOpeners (days, startdate, enddate,
         "    LIMIT " + limit
     data = ExecuteQuery(q)
     return (data)
-
-
-def GetTopIssuesWithoutAction(startdate, enddate, closed_condition, limit):
-    CreateViewsITS()
-
-    q = "SELECT issue_id, TIMESTAMPDIFF(SECOND, date, NOW())/(24*3600) AS time " +\
-        "FROM ( " +\
-        "  SELECT issue AS issue_id, submitted_on AS date " +\
-        "  FROM issues " +\
-        "  WHERE id NOT IN ( " +\
-        "    SELECT issue_id " +\
-        "    FROM first_action_per_issue " +\
-        "  ) " +\
-        "  AND NOT ( " + closed_condition + ") " +\
-        "  AND submitted_on >= " + startdate + " AND submitted_on < " + enddate +\
-        ") no_actions " +\
-        "GROUP BY issue_id " +\
-        "ORDER BY time DESC " +\
-        "LIMIT " + limit
-    data = ExecuteQuery(q)
-    return (data)
-
-
-def GetTopIssuesWithoutComment(startdate, enddate, closed_condition, limit):
-    CreateViewsITS()
-
-    q = "SELECT issue_id, TIMESTAMPDIFF(SECOND, date, NOW())/(24*3600) AS time " +\
-        "FROM ( " +\
-        "  SELECT issue AS issue_id, submitted_on AS date " +\
-        "  FROM issues " +\
-        "  WHERE id NOT IN ( " +\
-        "    SELECT issue_id " +\
-        "    FROM last_comment_per_issue " +\
-        "  ) " +\
-        "  AND NOT ( " + closed_condition + ") " +\
-        "  AND submitted_on >= " + startdate + " AND submitted_on < " + enddate +\
-        ") no_comments " +\
-        "GROUP BY issue_id " +\
-        "ORDER BY time DESC " +\
-        "LIMIT " + limit
-    data = ExecuteQuery(q)
-    return (data)
-
-
-def GetTopIssuesWithoutResolution(startdate, enddate, closed_condition, limit):
-    q = "SELECT issue AS issue_id, TIMESTAMPDIFF(SECOND, submitted_on, NOW())/(24*3600) AS time " +\
-        "FROM issues " +\
-        "WHERE NOT ( " + closed_condition + ") " +\
-        "AND submitted_on >= " + startdate + " AND submitted_on < " + enddate +\
-        "GROUP BY issue_id " +\
-        "ORDER BY time DESC " +\
-        "LIMIT " + limit
-    data = ExecuteQuery(q)
-    return (data)
-
-
-def GetIssuesDetails():
-    q = "SELECT i.issue AS issue_id, i.summary AS summary, t.url AS tracker_url " +\
-        "FROM issues i, trackers t " +\
-        "WHERE i.tracker_id = t.id "
-    data = ExecuteQuery(q)
-
-    details = {}
-    i = 0
-    for issue_id in data['issue_id']:
-        details[issue_id] = (data['summary'][i], data['tracker_url'][i])
-        i += 1
-    return details
-
 
 #################
 # People information, to be refactored
@@ -1389,302 +1502,6 @@ def GetPeopleStaticITS (developer_id, startdate, enddate, closed_condition) :
     q = GetPeopleQueryITS(developer_id, None, startdate, enddate, False, closed_condition)
 
     data = ExecuteQuery(q)
-    return (data)
-
-class Backend(object):
-
-    closed_condition = ""
-    reopened_condition = ""
-    name_log_table = ""
-    statuses = ""
-    open_status = ""
-    reopened_status = ""
-    name_log_table = ""
-
-    def __init__(self, its_type):
-        if (its_type == 'allura'):
-            Backend.closed_condition = "new_value='CLOSED'"
-        if (its_type == 'bugzilla' or its_type == 'bg'):
-            Backend.closed_condition = "(new_value='RESOLVED' OR new_value='CLOSED')"
-            Backend.reopened_condition = "new_value='NEW'"
-            Backend.name_log_table = 'issues_log_bugzilla'
-            Backend.statuses = ["NEW", "ASSIGNED"]
-            #Pretty specific states in Red Hat's Bugzilla
-            Backend.statuses = ["ASSIGNED", "CLOSED", "MODIFIED", "NEW", "ON_DEV", \
-                    "ON_QA", "POST", "RELEASE_PENDING", "VERIFIED"]
-            Backend.priority = ["Unprioritized", "Low", "Normal", "High", "Highest", "Immediate"]
-            Backend.severity = ["trivial", "minor", "normal", "major", "blocker", "critical", "enhancement"]
-
-        if (its_type == 'github'):
-            Backend.closed_condition = "field='closed'"
-
-        if (its_type == 'jira'):
-            Backend.closed_condition = "new_value='CLOSED'"
-            Backend.reopened_condition = "new_value='Reopened'"
-            #Backend.new_condition = "status='Open'"
-            #Backend.reopened_condition = "status='Reopened'"
-            Backend.open_status = 'Open'
-            Backend.reopened_status = 'Reopened'
-            Backend.name_log_table = 'issues_log_jira'
-
-        if (its_type == 'lp'):
-            #Backend.closed_condition = "(new_value='Fix Released' or new_value='Invalid' or new_value='Expired' or new_value='Won''t Fix')"
-            Backend.closed_condition = "(new_value='Fix Committed')"
-            Backend.statuses = ["Confirmed", "Fix Committed", "New", "In Progress", "Triaged", "Incomplete", "Invalid", "Won\\'t Fix", "Fix Released", "Opinion", "Unknown", "Expired"]
-            Backend.name_log_table = 'issues_log_launchpad'
-
-        if (its_type == 'redmine'):
-            Backend.statuses = ["New", "Verified", "Need More Info", "In Progress", "Feedback",
-                         "Need Review", "Testing", "Pending Backport", "Pending Upstream",
-                         "Resolved", "Closed", "Rejected", "Won\\'t Fix", "Can\\'t reproduce",
-                         "Duplicate"]
-            Backend.closed_condition = "(new_value='Resolved' OR new_value='Closed' OR new_value='Rejected'" +\
-                                  " OR new_value='Won\\'t Fix' OR new_value='Can\\'t reproduce' OR new_value='Duplicate')"
-            Backend.reopened_condition = "new_value='Reopened'" # FIXME: fake condition
-            Backend.name_log_table = 'issues_log_redmine'
-
-
-#################
-# Views
-#################
-
-# Actions : changes or comments that were made by others than the reporter.
-
-def GetViewFirstChangeAndCommentQueryITS():
-    """Returns the first change and comment of each issue done by others
-    than the reporter"""
-
-    q = "CREATE OR REPLACE VIEW first_change_and_comment_issues AS " +\
-        "SELECT c.issue_id issue_id, MIN(c.changed_on) date " +\
-        "FROM changes c, issues i " +\
-        "WHERE changed_by <> submitted_by AND i.id = c.issue_id " +\
-        "GROUP BY c.issue_id " +\
-        "UNION " + \
-        "SELECT c.issue_id issue_id, MIN(c.submitted_on) date " +\
-        "FROM comments c, issues i " +\
-        "WHERE c.submitted_by <> i.submitted_by AND c.issue_id = i.id " +\
-        "GROUP BY c.issue_id"
-    return q
-
-
-def GetViewFirstActionPerIssueQueryITS():
-    """Returns the first action of each issue.
-       Actions means changes or comments that were made by others than
-       the reporter."""
-
-    q = "CREATE OR REPLACE VIEW first_action_per_issue AS " +\
-        "SELECT issue_id, MIN(date) date " +\
-        "FROM first_change_and_comment_issues " +\
-        "GROUP BY issue_id"
-    return q
-
-
-def GetViewFirstCommentPerIssueQueryITS():
-    """Returns those issues without changes, only comments made
-       but others than the reporter."""
-
-    q = "CREATE OR REPLACE VIEW first_comment_per_issue AS " +\
-        "SELECT c.issue_id issue_id, MIN(c.submitted_on) date " +\
-        "FROM comments c, issues i " +\
-        "WHERE c.submitted_by <> i.submitted_by " +\
-        "AND c.issue_id = i.id " +\
-        "GROUP BY c.issue_id"
-    return q
-
-
-def GetViewLastCommentPerIssueQueryITS():
-    """Returns those issues without changes, only comments made
-       but others than the reporter."""
-
-    q = "CREATE OR REPLACE VIEW last_comment_per_issue AS " +\
-        "SELECT c.issue_id issue_id, MAX(c.submitted_on) date " +\
-        "FROM comments c, issues i " +\
-        "WHERE c.submitted_by <> i.submitted_by " +\
-        "AND c.issue_id = i.id " +\
-        "GROUP BY c.issue_id"
-    return q
-
-
-
-def GetViewNoActionIssuesQueryITS():
-    """Returns those issues without actions.
-       Actions means changes or comments that were made by others than
-       the reporter."""
-
-    q = "CREATE OR REPLACE VIEW no_action_issues AS " +\
-        "SELECT id issue_id " +\
-        "FROM issues " +\
-        "WHERE id NOT IN ( " +\
-        "SELECT DISTINCT(c.issue_id) " +\
-        "FROM issues i, changes c " +\
-        "WHERE i.id = c.issue_id AND c.changed_by <> i.submitted_by)"
-    return q
-
-
-def CreateViewsITS():
-    #FIXME: views should be only created once
-    q = GetViewFirstChangeAndCommentQueryITS()
-    ExecuteViewQuery(q)
-
-    q = GetViewFirstActionPerIssueQueryITS()
-    ExecuteViewQuery(q)
-
-    q = GetViewFirstCommentPerIssueQueryITS()
-    ExecuteViewQuery(q)
-
-    q = GetViewLastCommentPerIssueQueryITS()
-    ExecuteViewQuery(q)
-
-    q = GetViewNoActionIssuesQueryITS()
-    ExecuteViewQuery(q)
-
-#########################
-# Time to first response
-#########################
-
-def GetTimeToFirstAction (period, startdate, enddate, condition, alias=None) :
-    q = """SELECT submitted_on date, TIMESTAMPDIFF(SECOND, submitted_on, fa.date)/(24*3600) AS %(alias)s
-           FROM first_action_per_issue fa, issues i
-           WHERE i.id = fa.issue_id
-           AND submitted_on >= %(startdate)s AND submitted_on < %(enddate)s """
-
-    if condition:
-        q += condition
-
-    q += """ ORDER BY date """
-
-    params = {'alias' : alias or 'time_to_action',
-              'startdate' : startdate,
-              'enddate' : enddate}
-    query = q % params
-
-    CreateViewsITS()
-
-    data = ExecuteQuery(query)
-    return (data)
-
-def GetTimeToFirstComment (period, startdate, enddate, condition, alias=None) :
-    q = """SELECT submitted_on date, TIMESTAMPDIFF(SECOND, submitted_on, fc.date)/(24*3600) AS %(alias)s
-           FROM first_comment_per_issue fc, issues i
-           WHERE i.id = fc.issue_id
-           AND submitted_on >= %(startdate)s AND submitted_on < %(enddate)s """
-
-    if condition:
-        q += condition
-
-    q += """ ORDER BY date """
-
-    params = {'alias' : alias or 'time_to_comment',
-              'startdate' : startdate,
-              'enddate' : enddate}
-    query = q % params
-
-    CreateViewsITS()
-
-    data = ExecuteQuery(query)
-    return (data)
-
-
-def GetTimeClosed (period, startdate, enddate, closed_condition, ext_condition=None, alias=None):
-    q = """SELECT submitted_on date, TIMESTAMPDIFF(SECOND, submitted_on, ch.changed_on)/(24*3600) AS %(alias)s
-           FROM issues i, changes ch
-           WHERE i.id = ch.issue_id
-           AND submitted_on >= %(startdate)s AND submitted_on < %(enddate)s
-           AND """
-
-    q += closed_condition
-
-    if ext_condition:
-        q += ext_condition
-
-    q += """ ORDER BY date """
-
-    params = {'alias' : alias or 'time_opened',
-              'startdate' : startdate,
-              'enddate' : enddate}
-    query = q % params
-
-    CreateViewsITS()
-
-    data = ExecuteQuery(query)
-    return (data)
-
-def GetIssuesOpenedAtQuery (startdate, enddate, closed_condition, ext_condition=None):
-    q = """SELECT issue_id
-           FROM issues_log_bugzilla log,
-             (SELECT MAX(id) id
-              FROM issues_log_bugzilla
-              WHERE date >= %(startdate)s AND date < %(enddate)s
-              GROUP BY issue_id) g
-           WHERE log.id = g.id  AND NOT """
-    q += closed_condition
-
-    if ext_condition:
-        q += ext_condition
-
-    q += """ ORDER BY issue_id """
-
-    params = {'startdate' : startdate,
-              'enddate' : enddate}
-    query = q % params
-    return query
-
-def GetIssuesWithoutFirstActionAt (period, startdate, enddate, closed_condition, ext_condition=None, alias=None):
-    q = """SELECT i.id issue_id, TIMESTAMPDIFF(SECOND, submitted_on, %(enddate)s)/(24*3600) AS %(alias)s
-           FROM issues i, ("""
-    q += GetIssuesOpenedAtQuery(startdate, enddate, closed_condition, ext_condition)
-    q += """ ) log
-            WHERE i.id = log.issue_id AND i.id NOT IN
-            (SELECT issue_id
-             FROM first_action_per_issue
-             WHERE date >= %(startdate)s AND date < %(enddate)s)"""
-
-    params = {'alias' : alias or 'time_opened',
-              'startdate' : startdate,
-              'enddate' : enddate}
-    query = q % params
-
-    CreateViewsITS()
-
-    data = ExecuteQuery(query)
-    return (data)
-
-
-def GetIssuesWithoutFirstCommentAt (period, startdate, enddate, closed_condition, ext_condition=None, alias=None):
-    q = """SELECT i.id issue_id, TIMESTAMPDIFF(SECOND, submitted_on, %(enddate)s)/(24*3600) AS %(alias)s
-           FROM issues i, ("""
-    q += GetIssuesOpenedAtQuery(startdate, enddate, closed_condition, ext_condition)
-    q += """ ) log
-            WHERE i.id = log.issue_id AND i.id NOT IN
-            (SELECT issue_id
-             FROM first_comment_per_issue
-             WHERE date >= %(startdate)s AND date < %(enddate)s)"""
-
-    params = {'alias' : alias or 'time_opened',
-              'startdate' : startdate,
-              'enddate' : enddate}
-    query = q % params
-
-    CreateViewsITS()
-
-    data = ExecuteQuery(query)
-    return (data)
-
-
-def GetIssuesOpenedAt (period, startdate, enddate, closed_condition, ext_condition=None, alias=None):
-    q = """SELECT i.id issue_id, TIMESTAMPDIFF(SECOND, submitted_on, %(enddate)s)/(24*3600) AS %(alias)s
-           FROM issues i, ("""
-    q += GetIssuesOpenedAtQuery(startdate, enddate, closed_condition, ext_condition)
-    q += """ ) log
-            WHERE i.id = log.issue_id"""
-
-    params = {'alias' : alias or 'time_opened',
-              'enddate' : enddate}
-    query = q % params
-
-    CreateViewsITS()
-
-    data = ExecuteQuery(query)
     return (data)
 
 #################
@@ -1744,3 +1561,54 @@ def GetClosedSummaryCompanies (period, startdate, enddate, identities_db, closed
     return(first_companies)
 
 
+class Backend(object):
+
+    its_type = ""
+    closed_condition = ""
+    reopened_condition = ""
+    name_log_table = ""
+    statuses = ""
+    open_status = ""
+    reopened_status = ""
+    name_log_table = ""
+
+    def __init__(self, its_type):
+        self.its_type = its_type
+        if (its_type == 'allura'):
+            self.closed_condition = "new_value='CLOSED'"
+        if (its_type == 'bugzilla' or its_type == 'bg'):
+            self.closed_condition = "(new_value='RESOLVED' OR new_value='CLOSED')"
+            self.reopened_condition = "new_value='NEW'"
+            self.name_log_table = 'issues_log_bugzilla'
+            self.statuses = ["NEW", "ASSIGNED"]
+            #Pretty specific states in Red Hat's Bugzilla
+            self.statuses = ["ASSIGNED", "CLOSED", "MODIFIED", "NEW", "ON_DEV", \
+                    "ON_QA", "POST", "RELEASE_PENDING", "VERIFIED"]
+
+        if (its_type == 'github'):
+            self.closed_condition = "field='closed'"
+
+        if (its_type == 'jira'):
+            self.closed_condition = "new_value='CLOSED'"
+            self.reopened_condition = "new_value='Reopened'"
+            #self.new_condition = "status='Open'"
+            #self.reopened_condition = "status='Reopened'"
+            self.open_status = 'Open'
+            self.reopened_status = 'Reopened'
+            self.name_log_table = 'issues_log_jira'
+
+        if (its_type == 'lp'):
+            #self.closed_condition = "(new_value='Fix Released' or new_value='Invalid' or new_value='Expired' or new_value='Won''t Fix')"
+            self.closed_condition = "(new_value='Fix Committed')"
+            self.statuses = ["Confirmed", "Fix Committed", "New", "In Progress", "Triaged", "Incomplete", "Invalid", "Won\\'t Fix", "Fix Released", "Opinion", "Unknown", "Expired"]
+            self.name_log_table = 'issues_log_launchpad'
+
+        if (its_type == 'redmine'):
+            self.statuses = ["New", "Verified", "Need More Info", "In Progress", "Feedback",
+                         "Need Review", "Testing", "Pending Backport", "Pending Upstream",
+                         "Resolved", "Closed", "Rejected", "Won\\'t Fix", "Can\\'t reproduce",
+                         "Duplicate"]
+            self.closed_condition = "(new_value='Resolved' OR new_value='Closed' OR new_value='Rejected'" +\
+                                  " OR new_value='Won\\'t Fix' OR new_value='Can\\'t reproduce' OR new_value='Duplicate')"
+            self.reopened_condition = "new_value='Reopened'" # FIXME: fake condition
+            self.name_log_table = 'issues_log_redmine'
