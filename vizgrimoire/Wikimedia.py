@@ -24,7 +24,7 @@
 ## Authors:
 ##   Alvaro del Castillo <acs@bitergia.com>
 
-from GrimoireSQL import ExecuteQuery
+from GrimoireSQL import ExecuteQuery,ExecuteViewQuery
 
 # _filter_submitter_id as a static global var to avoid SQL re-execute
 def _init_filter_submitter_id():
@@ -43,10 +43,6 @@ def GetChangesFiltered():
     if ('_filter_submitter_id' not in globals()): _init_filter_submitter_id()
     filters = " changed_by <> %s" % (globals()['_filter_submitter_id'])
     return filters
-
-# SQL utils
-def ExecuteViewQuery(sql):
-    cursor.execute(sql)
 
 ########################################
 # Quarter analysis: Companies and People

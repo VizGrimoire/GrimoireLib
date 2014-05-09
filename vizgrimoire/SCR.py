@@ -1301,11 +1301,11 @@ def GetTimeToReviewPendingQuerySCR (startdate, enddate, identities_db = None,
     fields = "TIMESTAMPDIFF(SECOND, submitted_on, NOW())/(24*3600) AS revtime, submitted_on "
     if (updated):
         fields = "TIMESTAMPDIFF(SECOND, mod_date, NOW())/(24*3600) AS revtime, submitted_on "
+    tables = "issues i, people, issues_ext_gerrit ie "
     if reviewers:
             q_last_change = get_sql_last_change_for_issues_new()
             tables += ", changes ch, (%s) t1" % q_last_change
-    tables = "issues i, people, issues_ext_gerrit ie "
-    tables = tables + GetSQLReportFromSCR(identities_db, type_analysis)
+    tables += GetSQLReportFromSCR(identities_db, type_analysis)
     filters = filter_bots + " people.id = i.submitted_by "
     filters += GetSQLReportWhereSCR(type_analysis)
     filters += " AND status<>'MERGED' AND status<>'ABANDONED' "
