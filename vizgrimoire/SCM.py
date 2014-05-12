@@ -1702,6 +1702,20 @@ def company_top_authors (company_name, startdate, enddate, limit) :
         "order by count(distinct(s.id)) desc "+\
         "limit " + limit
 
+    q = """
+        SELECT id, authors, commits FROM (
+        SELECT u.id AS id, u.identifier  AS authors, count(distinct(s.id)) AS commits
+        FROM people p,  scmlog s,  actions a, people_upeople pup, upeople u,
+             upeople_companies upc,  companies c
+        WHERE  s.id = a.commit_id AND p.id = s.author_id AND s.author_id = pup.people_id  AND
+          pup.upeople_id = upc.upeople_id AND pup.upeople_id = u.id AND  s.date >= upc.init AND
+          s.date < upc.end AND upc.company_id = c.id AND
+          s.date >=%s AND s.date < %s AND c.name =%s) t
+        GROUP BY id
+        ORDER BY COUNT(commits) DESC
+        LIMIT %s
+    """ % (startdate, enddate, company_name, limit)
+
     data = ExecuteQuery(q)
     return (data)
 
