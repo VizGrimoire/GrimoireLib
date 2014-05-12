@@ -184,6 +184,11 @@ class SCM(DataSource):
         fn = os.path.join(destdir, filter_.get_filename(SCM()))
         createJSON(items, fn)
 
+        if filter_name in ("domain", "company", "repository"):
+            items_list = {'name' : [], 'commits_365' : [], 'authors_365' : []}
+        else:
+            items_list = items
+
         for item in items :
             item_name = "'"+ item+ "'"
             logging.info (item_name)
@@ -197,6 +202,11 @@ class SCM(DataSource):
             fn = os.path.join(destdir, filter_item.get_static_filename(SCM()))
             createJSON(agg, fn)
 
+            if filter_name in ("domain", "company", "repository"):
+                items_list['name'].append(item.replace('/', '_'))
+                items_list['commits_365'].append(agg['commits_365'])
+                items_list['authors_365'].append(agg['authors_365'])
+
             if (filter_name == "company"):
                 top_authors = SCM.get_top_data(startdate, enddate, identities_db, filter_item, npeople)
                 fn = os.path.join(destdir, filter_item.get_top_filename(SCM()))
@@ -206,6 +216,9 @@ class SCM(DataSource):
                 for i in [2006,2009,2012]:
                     data = company_top_authors_year(item_name, i, npeople)
                     createJSON(data, destdir+"/"+item+"-"+SCM.get_name()+"-top-authors_"+str(i)+".json")
+
+        fn = os.path.join(destdir, filter_.get_filename(SCM()))
+        createJSON(items_list, fn)
 
         if (filter_name == "company"):
             summary =  SCM.get_filter_summary(filter_, period, startdate, enddate, identities_db, 10)
@@ -468,14 +481,22 @@ def GetSCMStaticData (period, startdate, enddate, i_db, type_analysis):
     # avg_committer_period = StaticAvgCommitterPeriod(period, startdate, enddate, i_db, type_analysis)
     avg_files_author = StaticAvgFilesAuthor(period, startdate, enddate, i_db, type_analysis)
 
+    # Data from the last 365 days
+    fromdate = GetDates(enddate, 365)[1]
+    commits_365 = StaticNumCommits(period, fromdate, enddate, i_db, type_analysis)
+    authors_365 = StaticNumAuthors(period, fromdate, enddate, i_db, type_analysis)
+
     # 2- Merging information
     agg = dict(commits.items() + repositories.items() + committers.items())
     agg = dict(agg.items() + authors.items() + files.items() + actions.items())
     agg = dict(agg.items() + lines.items() + branches.items())
     agg = dict(agg.items() + avg_commits_period.items() + avg_files_period.items())
     agg = dict(agg.items() + avg_commits_author.items() + avg_files_author.items())
+    agg['commits_365'] = commits_365['commits']
+    agg['authors_365'] = authors_365['authors']
 
     return (agg)
+
 ##########
 # Specific FROM and WHERE clauses per type of report
 ##########
