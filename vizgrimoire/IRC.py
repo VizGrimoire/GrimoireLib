@@ -250,7 +250,7 @@ def GetIRCSQLReportFrom (identities_db, type_analysis):
 
     From = ""
 
-    if (len(type_analysis) != 2): return From
+    if (type_analysis is None or len(type_analysis) != 2): return From
 
     analysis = type_analysis[0]
 
@@ -270,7 +270,7 @@ def GetIRCSQLReportWhere (type_analysis):
 
     where = ""
 
-    if (len(type_analysis) != 2): return where
+    if (type_analysis is None or len(type_analysis) != 2): return where
 
     analysis = type_analysis[0]
     value = type_analysis[1]
