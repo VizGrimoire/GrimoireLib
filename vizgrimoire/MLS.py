@@ -201,6 +201,11 @@ class MLS(DataSource):
         fn = os.path.join(destdir, filter_.get_filename(MLS()))
         createJSON(items_files, fn)
 
+        if filter_name in ("domain", "company", "repository"):
+            items_list = {'name' : [], 'sent_365' : [], 'senders_365' : []}
+        else:
+            items_list = items
+
         for item in items :
             item_name = "'"+ item+ "'"
             logging.info (item_name)
@@ -215,8 +220,15 @@ class MLS(DataSource):
             fn = os.path.join(destdir, filter_item.get_static_filename(MLS()))
             createJSON(agg, fn)
 
+            if filter_name in ("domain", "company", "repository"):
+                items_list['sent_365'].append(agg['sent_365'])
+                items_list['senders_365'].append(agg['senders_365'])
+
             top_senders = MLS.get_top_data(startdate, enddate, identities_db, filter_item, npeople)
             createJSON(top_senders, destdir+"/"+filter_item.get_top_filename(MLS()))
+
+        fn = os.path.join(destdir, filter_.get_filename(MLS()))
+        createJSON(items_list, fn)
 
         if (filter_name == "company"):
             sent = MLS.get_filter_summary(filter_, period, startdate, enddate, identities_db, 10)
@@ -543,6 +555,13 @@ def GetMLSInfo (period, startdate, enddate, identities_db, rfield, type_analysis
         sent_response = AggMLSResponses(period, startdate, enddate, identities_db, type_analysis)
         senders_response = AggMLSSendersResponse(period, startdate, enddate, identities_db, type_analysis)
         senders_init = AggMLSSendersInit(period, startdate, enddate, identities_db, type_analysis)
+
+        # Data from the last 365 days
+        fromdate = GetDates(enddate, 365)[1]
+        sent_365 = AggEmailsSent(period, fromdate, enddate, identities_db, type_analysis)
+        senders_365 = AggMLSSenders(period, fromdate, enddate, identities_db, type_analysis)
+        sent['sent_365'] = sent_365['sent']
+        senders['senders_365'] = senders_365['senders']
 
     data = dict(sent.items() + senders.items()+ repositories.items())
     data = dict(data.items() + threads.items()+ sent_response.items())
