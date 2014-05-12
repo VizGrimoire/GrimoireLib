@@ -158,12 +158,13 @@ if __name__ == '__main__':
 
     bots = []
 
-    logging.info("Creating global evolution metrics...")
-    evol = create_evol_report(startdate, enddate, opts.destdir, identities_db, bots)
-    logging.info("Creating global aggregated metrics...")
-    agg = create_agg_report(startdate, enddate, opts.destdir, identities_db, bots)
-    logging.info("Creating global top metrics...")
-    top = create_top_report(startdate, enddate, opts.destdir, opts.npeople, identities_db, bots)
+    if not opts.filter:
+        logging.info("Creating global evolution metrics...")
+        evol = create_evol_report(startdate, enddate, opts.destdir, identities_db, bots)
+        logging.info("Creating global aggregated metrics...")
+        agg = create_agg_report(startdate, enddate, opts.destdir, identities_db, bots)
+        logging.info("Creating global top metrics...")
+        top = create_top_report(startdate, enddate, opts.destdir, opts.npeople, identities_db, bots)
 
     create_reports_filters(period, startdate, enddate, opts.destdir, opts.npeople, identities_db, bots)
     if (automator['r']['reports'].find('people')>-1):
