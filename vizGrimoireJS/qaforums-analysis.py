@@ -38,10 +38,11 @@ import sys
 
 import GrimoireUtils, GrimoireSQL
 from GrimoireUtils import dataFrame2Dict, createJSON, completePeriodIds
-from GrimoireUtils import valRtoPython, read_options, getPeriod
+from GrimoireUtils import valRtoPython, getPeriod
 import IRC
 from QAForums import QAForums
 
+from utils import read_options
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO,format='%(asctime)s %(message)s')
@@ -59,7 +60,7 @@ if __name__ == '__main__':
 
     QAForums.create_agg_report(period, startdate, enddate, opts.identities_db, None)
     QAForums.create_evolutionary_report(period, startdate, enddate, opts.identities_db, None)
-    QAForums.create_top_report(startdate, enddate, opts.identities_db)
+    QAForums.create_top_report(startdate, enddate, opts.destdir, opts.npeople, opts.identities_db)
     # if ('people' in reports):
     #     peopleData (period, startdate, enddate, opts.identities_db, opts.destdir, top)
 
