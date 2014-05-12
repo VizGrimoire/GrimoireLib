@@ -268,6 +268,7 @@ class ITS(DataSource):
             createJSON(agg, fn)
 
             if filter_name in ("domain", "company", "repository"):
+                items_list['name'].append(item.replace('/', '_'))
                 items_list['closed_365'].append(agg['closed_365'])
                 items_list['closers_365'].append(agg['closers_365'])
 

@@ -221,6 +221,7 @@ class MLS(DataSource):
             createJSON(agg, fn)
 
             if filter_name in ("domain", "company", "repository"):
+                items_list['name'].append(item.replace('/', '_').replace("<","__").replace(">","___"))
                 items_list['sent_365'].append(agg['sent_365'])
                 items_list['senders_365'].append(agg['senders_365'])
 
