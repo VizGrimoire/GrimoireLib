@@ -67,7 +67,7 @@ class QAForums(DataSource):
         elif (table_name == "answers"):
             return "user_identifier"
         elif (table_name == "comments"):
-            return "user_id"
+            return "user_identifier"
         # FIXME add exceptions here
 
     @staticmethod
@@ -93,11 +93,11 @@ class QAForums(DataSource):
         tables = " " + str(type_post)
         fields = " COUNT(DISTINCT(id)) as sent"
         if ( type_post == "questions"):
-            filters = GetSQLReportWhere(type_analysis, "author_identifier")
+            filters = QAForums.GetSQLReportWhere(type_analysis, "author_identifier")
         elif ( type_post == "answers"):
-            filters = GetSQLReportWhere(type_analysis, "user_identifier")
+            filters = QAForums.GetSQLReportWhere(type_analysis, "user_identifier")
         else:
-            filters = GetSQLReportWhere(type_analysis, "user_id")
+            filters = QAForums.GetSQLReportWhere(type_analysis, "user_identifier")
         #end if
         q = BuildQuery(period, startdate, enddate, date_field, fields, tables, filters, evolutionary)
         return(ExecuteQuery(q))
@@ -110,9 +110,11 @@ class QAForums(DataSource):
         author_field = QAForums.__get_author_field(table_name)
         
         fields = " count(distinct(%s)) as senders " % (author_field)
-        tables = " " + table_name + " " + GetSQLReportFrom(identities_db, type_analysis)
-        filters = GetSQLReportWhere(type_analysis, author_field)
+        tables = " " + table_name + " " + QAForums.GetSQLReportFrom(identities_db, type_analysis)
+        filters = QAForums.GetSQLReportWhere(type_analysis, author_field)
         q = BuildQuery(period, startdate, enddate, date_field, fields, tables, filters, evolutionary)
+        print "Get Senders query"
+        print q
         return(ExecuteQuery(q))
 
     @staticmethod
@@ -127,6 +129,8 @@ class QAForums(DataSource):
         tables = " FROM %s " % (table_name)
         filters = "WHERE %s >= %s AND %s < %s " % (date_field, startdate, date_field, enddate)
         q = fields + tables + filters
+        print "Static Num Sent query"
+        print q
         return(ExecuteQuery(q))
 
     @staticmethod
@@ -140,6 +144,8 @@ class QAForums(DataSource):
         tables = " FROM %s " % (table_name)
         filters = "WHERE %s >= %s AND %s < %s " % (date_field, startdate, date_field, enddate)
         q = fields + tables + filters
+        print "Static Num Senders query"
+        print q
         return(ExecuteQuery(q))
 
     @staticmethod
@@ -163,6 +169,8 @@ class QAForums(DataSource):
           (author_field, date_field, startdate, date_field, enddate)          
         tail = " GROUP BY senders ORDER BY sent DESC, senders LIMIT %s" % (limit)
         q = select + fromtable + filters + date_limit + tail
+        print "Get top senders query"
+        print q
         return(ExecuteQuery(q))
 
     @staticmethod
