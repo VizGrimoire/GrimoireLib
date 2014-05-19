@@ -24,7 +24,7 @@
 
 import logging, sys, time
 
-from GrimoireUtils import getPeriod, read_main_conf
+from GrimoireUtils import getPeriod, read_main_conf, createJSON
 
 from report import Report
 
@@ -97,6 +97,30 @@ def create_reports_r(enddate, destdir):
         logging.info("Creating R reports for " + ds.get_name())
         ds.create_r_reports(vizr, enddate, destdir)
 
+def create_people_identifiers(startdate, enddate, destdir):
+    logging.info("Generating people identifiers")
+
+    from SCM import GetPeopleListSCM
+    import People
+
+    for ds in Report.get_data_sources():
+        if ds.get_name() == "scm":
+            scm = ds
+            break
+    Report.connect_ds(scm)
+
+    people_data = {}
+    people = GetPeopleListSCM(startdate, enddate)
+    people = people['pid']
+    limit = 100
+    if (len(people)<limit): limit = len(people);
+    people = people[0:limit]
+
+    for upeople_id in people:
+        people_data[upeople_id] = People.GetPersonIdentifiers(upeople_id)
+
+    createJSON(people_data, destdir+"/people.json")
+
 def set_data_source(ds_name):
     ds_ok = False
     dss_active = Report.get_data_sources()
@@ -141,7 +165,6 @@ if __name__ == '__main__':
     if 'period' not in automator['r']:
         period = getPeriod("months")
     else:
-
         period = getPeriod(automator['r']['period'])
     logging.info("Period: " + period)
 
@@ -170,5 +193,6 @@ if __name__ == '__main__':
     if (automator['r']['reports'].find('people')>-1):
         create_report_people(startdate, enddate, opts.destdir, opts.npeople, identities_db, bots)
     create_reports_r(end_date, opts.destdir)
+    create_people_identifiers(startdate, enddate, opts.destdir)
 
     logging.info("Report data source analysis OK")
