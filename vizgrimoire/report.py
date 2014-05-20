@@ -83,7 +83,9 @@ class Report(object):
             metrics_classes = [c for c in mod.__dict__.values() 
                                if inspect.isclass(c) and issubclass(c, Metric)]
             for metric_class in metrics_classes:
-                metric_class()
+                metric = metric_class()
+                ds = metric.get_data_source()
+                if ds != None: ds.add_metric(metric)
 
     @staticmethod
     def get_config():

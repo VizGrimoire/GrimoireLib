@@ -40,7 +40,7 @@ class Metric(object):
         return def_
 
     def get_data_source(self):
-        return self.ds
+        return self.data_source
 
     def get_aggregate(self, filter_ = None):
         pass

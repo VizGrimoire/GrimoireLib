@@ -37,7 +37,6 @@ class Commits(Metric):
         self.name = "Commits"
         self.desc = "Number of commits (changes to source code), aggregating all branches"
         self.data_source = SCM
-        self.data_source.add_metric(self)
         # extra
         self.envision = {
             "y_labels" : "true",
@@ -70,7 +69,6 @@ class Committers(Metric):
         self.name = "Committers"
         self.desc = "Number of persons committing (merging changes to source code)"
         self.data_source = SCM
-        self.data_source.add_metric(self)
         # extra
         self.action =  "commits"
         self.envision = {"gtype" : "whiskers"}
@@ -82,7 +80,6 @@ class Authors(Metric):
         self.name = "Authors"
         self.desc = "Number of persons authoring commits (changes to source code)"
         self.data_source = SCM
-        self.data_source.add_metric(self)
         # extra
         self.action = "commits"
         self.envision = {"gtype" : "whiskers"}
@@ -94,7 +91,6 @@ class Branches(Metric):
         self.name = "Branches"
         self.desc = "Number of active branches"
         self.data_source = SCM
-        self.data_source.add_metric(self)
 
 class Files(Metric):
 
@@ -112,7 +108,6 @@ class AddedLines(Metric):
         self.name = "Added lines"
         self.desc = "Addition of lines added in all commits"
         self.data_source = SCM
-        self.data_source.add_metric(self)
 
 class RemovedLines(Metric):
 
@@ -121,7 +116,6 @@ class RemovedLines(Metric):
         self.name = "Removed Lines"
         self.desc = "Addition of lines removed in all commits"
         self.data_source = SCM
-        self.data_source.add_metric(self)
 
 class Repositories(Metric):
 
@@ -130,7 +124,6 @@ class Repositories(Metric):
         self.name = "Repositories"
         self.desc = "Evolution of the number of source code repositories"
         self.data_source = SCM
-        self.data_source.add_metric(self)
         self.envision = {"gtype" : "whiskers"}
 
 class Companies(Metric):
@@ -140,7 +133,6 @@ class Companies(Metric):
         self.name = "Affiliations"
         self.desc = "Number of affiliations (companies, etc.) with persons active in changing code"
         self.data_source = SCM
-        self.data_source.add_metric(self)
 
 class Countries(Metric):
 
@@ -149,7 +141,6 @@ class Countries(Metric):
         self.name = "Countries"
         self.desc = "Number of countries with persons active in changing code"
         self.data_source = SCM
-        self.data_source.add_metric(self)
 
 class Domains(Metric):
 
@@ -158,7 +149,6 @@ class Domains(Metric):
         self.name = "Domains"
         self.desc = "Number of distinct domains with persons active in changing code"
         self.data_source = SCM
-        self.data_source.add_metric(self)
 
 class People(Metric):
 
@@ -167,4 +157,3 @@ class People(Metric):
         self.name = "People"
         self.desc = "Number of people active in changing code (authors, committers)"
         self.data_source = SCM
-        self.data_source.add_metric(self)
