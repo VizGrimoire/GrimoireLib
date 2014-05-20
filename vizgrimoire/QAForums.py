@@ -38,9 +38,9 @@ from filter import Filter
 
 class QAForums(DataSource):
 
-    # @staticmethod
-    # def get_db_name():
-    #     return "db_qaforums"
+    @staticmethod
+    def get_db_name():
+        return "db_qaforums"
 
     @staticmethod
     def get_name():
@@ -90,15 +90,20 @@ class QAForums(DataSource):
 
         date_field = QAForums.__get_date_field(type_post)
         date_field = " " + date_field + " "
-        tables = " " + str(type_post)
-        fields = " COUNT(DISTINCT(id)) as sent"
+
         if ( type_post == "questions"):
-            filters = QAForums.GetSQLReportWhere(type_analysis, "author_identifier")
+            fields = " count(distinct(q.id)) as sent "
+            tables = " questions q " + QAForums.GetSQLReportFrom(identities_db, type_analysis)
+            filters = QAForums.GetSQLReportWhere(type_analysis, "questions")
         elif ( type_post == "answers"):
-            filters = QAForums.GetSQLReportWhere(type_analysis, "user_identifier")
+            fields = " count(distinct(a.id)) as sent "
+            tables = " answers a " + QAForums.GetSQLReportFrom(identities_db, type_analysis)
+            filters = QAForums.GetSQLReportWhere(type_analysis, "answers")
         else:
-            filters = QAForums.GetSQLReportWhere(type_analysis, "user_identifier")
-        #end if
+            fields = " count(distinct(c.id)) as sent "
+            tables = " comments c " + QAForums.GetSQLReportFrom(identities_db, type_analysis)
+            filters = QAForums.GetSQLReportWhere(type_analysis, "comments")
+
         q = BuildQuery(period, startdate, enddate, date_field, fields, tables, filters, evolutionary)
         return(ExecuteQuery(q))
 
@@ -109,9 +114,21 @@ class QAForums(DataSource):
         date_field = QAForums.__get_date_field(table_name)
         author_field = QAForums.__get_author_field(table_name)
         
-        fields = " count(distinct(%s)) as senders " % (author_field)
-        tables = " " + table_name + " " + QAForums.GetSQLReportFrom(identities_db, type_analysis)
-        filters = QAForums.GetSQLReportWhere(type_analysis, author_field)
+
+        if ( type_post == "questions"):
+            fields = " count(distinct(q.%s)) as senders " % (author_field)
+            tables = " questions q " + QAForums.GetSQLReportFrom(identities_db, type_analysis)
+            filters = QAForums.GetSQLReportWhere(type_analysis, "questions")
+        elif ( type_post == "answers"):
+            fields = " count(distinct(a.%s)) as senders " % (author_field)
+            tables = " answers a " + QAForums.GetSQLReportFrom(identities_db, type_analysis)
+            filters = QAForums.GetSQLReportWhere(type_analysis, "answers")
+        else:
+            fields = " count(distinct(c.%s)) as senders " % (author_field)
+            tables = " comments c " + QAForums.GetSQLReportFrom(identities_db, type_analysis)
+            filters = QAForums.GetSQLReportWhere(type_analysis, "comments")
+
+
         q = BuildQuery(period, startdate, enddate, date_field, fields, tables, filters, evolutionary)
         return(ExecuteQuery(q))
 
@@ -120,12 +137,21 @@ class QAForums(DataSource):
                         type_post = "questions"):
         table_name = type_post #type_post matches the name of the table
         date_field = QAForums.__get_date_field(table_name)
-        
-        fields = "SELECT count(id) as sent, \
-        DATE_FORMAT (min(" + date_field + "), '%Y-%m-%d') as first_date, \
-        DATE_FORMAT (max(" + date_field + "), '%Y-%m-%d') as last_date "
-        tables = " FROM %s " % (table_name)
-        filters = "WHERE %s >= %s AND %s < %s " % (date_field, startdate, date_field, enddate)
+        prefix_table = table_name[0]        
+
+
+        fields = "SELECT count(distinct("+prefix_table+".id)) as sent, \
+        DATE_FORMAT (min(" + prefix_table + "." + date_field + "), '%Y-%m-%d') as first_date, \
+        DATE_FORMAT (max(" + prefix_table + "." + date_field + "), '%Y-%m-%d') as last_date "
+
+        tables = " FROM %s %s " % (table_name, prefix_table)
+        tables = tables + QAForums.GetSQLReportFrom(identities_db, type_analysis)
+
+        filters = "WHERE %s.%s >= %s AND %s.%s < %s " % (prefix_table, date_field, startdate, prefix_table, date_field, enddate)
+        extra_filters = QAForums.GetSQLReportWhere(type_analysis, type_post)
+        if extra_filters <> "":
+            filters = filters + " and " + extra_filters
+
         q = fields + tables + filters
         return(ExecuteQuery(q))
 
@@ -135,10 +161,11 @@ class QAForums(DataSource):
         table_name = type_post #type_post matches the name of the table
         date_field = QAForums.__get_date_field(table_name)
         author_field = QAForums.__get_author_field(table_name)
-        
-        fields = "SELECT count(distinct(%s)) as senders" % (author_field)
-        tables = " FROM %s " % (table_name)
-        filters = "WHERE %s >= %s AND %s < %s " % (date_field, startdate, date_field, enddate)
+        prefix_table = table_name[0]        
+
+        fields = "SELECT count(distinct(%s.%s)) as senders" % (prefix_table, author_field)
+        tables = " FROM %s %s " % (table_name, prefix_table)
+        filters = "WHERE %s.%s >= %s AND %s.%s < %s " % (prefix_table, date_field, startdate, prefix_table, date_field, enddate)
         q = fields + tables + filters
         return(ExecuteQuery(q))
 
@@ -192,13 +219,20 @@ class QAForums(DataSource):
 
     @staticmethod
     def get_evolutionary_data (period, startdate, enddate, identities_db, filter_ = None):
+
+        if filter_ is not None:
+            type_analysis = [filter_.get_name(), "'"+filter_.get_item()+"'"]
+        else:
+            type_analysis = None
+
+
         # get number ofquestions, answers and comments over time
-        asent = QAForums.evol_asent(period, startdate, enddate, identities_db, None)
-        qsent = QAForums.evol_qsent(period, startdate, enddate, identities_db, None)        
-        csent = QAForums.evol_csent(period, startdate, enddate, identities_db, None)
-        asenders = QAForums.evol_asenders(period, startdate, enddate, identities_db, None)
-        qsenders = QAForums.evol_qsenders(period, startdate, enddate, identities_db, None)        
-        csenders = QAForums.evol_csenders(period, startdate, enddate, identities_db, None)        
+        asent = QAForums.evol_asent(period, startdate, enddate, identities_db, type_analysis)
+        qsent = QAForums.evol_qsent(period, startdate, enddate, identities_db, type_analysis)
+        csent = QAForums.evol_csent(period, startdate, enddate, identities_db, type_analysis)
+        asenders = QAForums.evol_asenders(period, startdate, enddate, identities_db, type_analysis)
+        qsenders = QAForums.evol_qsenders(period, startdate, enddate, identities_db, type_analysis)
+        csenders = QAForums.evol_csenders(period, startdate, enddate, identities_db, type_analysis)
 
         # we rename the keys of the dicts
         asent['asent'] = asent.pop('sent')
@@ -298,6 +332,13 @@ class QAForums(DataSource):
 
     @staticmethod
     def get_agg_data(period, startdate, enddate, identities_db, filter_=None):
+
+        if filter_ is not None:
+            type_analysis = [filter_.get_name(), "'"+filter_.get_item()+"'"]
+        else:
+            type_analysis = None
+
+
         agg_data = {}
 
         type_messages = ['questions','comments','answers']
@@ -310,7 +351,7 @@ class QAForums(DataSource):
                 period_data = QAForums.get_diff_senders_days(period, enddate, identities_db, i, tm)
                 agg_data = dict(agg_data.items() + period_data.items())
                 # end for
-        static_data = QAForums.get_static_data(period, startdate, enddate, identities_db, None)
+        static_data = QAForums.get_static_data(period, startdate, enddate, identities_db, type_analysis)
         agg_data = dict(agg_data.items() + static_data.items())
 
         return agg_data
@@ -360,25 +401,114 @@ class QAForums(DataSource):
         pass
 
     @staticmethod
+    def tags_name(startdate, enddate):
+        # Returns list of tags
+        query = "select tag as name from tags"
+        query = """select t.tag as name, 
+                          count(distinct(qt.question_identifier)) as total 
+                   from tags t, 
+                        questionstags qt,
+                        questions q 
+                   where t.id=qt.tag_id and
+                         qt.question_identifier = q.question_identifier and
+                         q.added_at >= %s and
+                         q.added_at < %s
+                   group by t.tag 
+                   having total > 20
+                   order by total desc;""" % (startdate, enddate)
+        data = ExecuteQuery(query)
+        return data
+
+    @staticmethod
+    def get_filter_items(filter_, period, startdate, enddate, identities_db, bots):
+        items = None
+        filter_name = filter_.get_name()
+        
+        if (filter_name == "tag"):
+            items = QAForums.tags_name(startdate, enddate)
+        else:
+            logging.error(filter_name + "not supported")
+        
+        return items
+       
+    @staticmethod
+    def get_top_people(startdate, enddate, identities_db, npeople):
+        return []
+
+    @staticmethod
+    def create_r_reports(vizr, enddate, destdir):
+        return []
+
+    @staticmethod
+    def create_filter_report(filter_, period, startdate, enddate, destdir, npeople, identities_db, bots):
+        items =  QAForums.get_filter_items(filter_, period, startdate, enddate, identities_db, bots)
+        if items == None:
+            return
+        items = items['name']
+  
+        filter_name = filter_.get_name()
+
+        if not isinstance(items, list):
+            items = [items]
+
+        fn = os.path.join(destdir, filter_.get_filename(QAForums()))
+        createJSON(items, fn)
+        print items
+        for item in items:
+            logging.info(item)
+            filter_item = Filter(filter_.get_name(), item)
+
+            evol_data = QAForums.get_evolutionary_data(period, startdate, enddate, identities_db, filter_item)
+            fn = os.path.join(destdir, filter_item.get_evolutionary_filename(QAForums()))
+            createJSON(completePeriodIds(evol_data, period, startdate, enddate), fn)
+
+            agg = QAForums.get_agg_data(period, startdate, enddate, identities_db, filter_item)
+            fn = os.path.join(destdir, filter_item.get_static_filename(QAForums()))
+            createJSON(agg, fn)
+
+    @staticmethod
     def GetSQLReportFrom(identities_db, type_analysis):
         # generic function to generate "from" clauses
         # type_analysis contains two values: type of analysis (company, country...)
         # and the value itself
        
-        #TODO: to be implemented.
-        print "WARNING: QAForums.GetSQLReportFrom to be implemented"
         tables = ""
+        report = ""
+        value = ""
+
+        if type_analysis is not None and len(type_analysis) == 2:
+            report = type_analysis[0]
+            value = type_analysis[1]
+
+        if report == "tag":
+            tables = ", tags t, questionstags qt "
+        
+        #rest of reports to be implemented
+
         return tables
 
 
     @staticmethod
-    def GetSQLReportWhere(type_analysis, role):
-        # generic function to generate "from" clauses
+    def GetSQLReportWhere(type_analysis, table):
+        # generic function to generate "where" clauses
         # type_analysis contains two values: type of analysis (company, country...)
         # and the value itself
 
-        #TODO: to be implemented
-        print "WARNING: QAForums.GetSQLReportWhere to be implemented"
+        shorttable = str(table[0])
+
         where = ""
+        report = ""
+        value = ""
+
+        if type_analysis is not None and len(type_analysis) == 2: 
+            report = type_analysis[0]
+            value = type_analysis[1]
+
+        if report == "tag":
+            where = shorttable + ".question_identifier = qt.question_identifier and " +\
+                    " qt.tag_id = t.id and t.tag = " + value
+
         return where
+
+
 
