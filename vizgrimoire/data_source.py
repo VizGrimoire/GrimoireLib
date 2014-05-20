@@ -29,6 +29,7 @@ from GrimoireUtils import createJSON
 
 class DataSource(object):
     _bots = []
+    _metrics = []
 
     @staticmethod
     def get_name():
@@ -181,6 +182,16 @@ class DataSource(object):
     def get_metrics_definition ():
         """Return all metrics definition available"""
         raise NotImplementedError
+
+    @staticmethod
+    def get_metrics():
+        """Return all metrics objects available"""
+        return DataSource._metrics
+
+    @staticmethod
+    def add_metric(metric):
+        """Add new metric to the data source"""
+        DataSource._metrics.append(metric)
 
     @staticmethod
     def remove_filter_data():
