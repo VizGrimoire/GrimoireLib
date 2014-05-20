@@ -27,8 +27,7 @@
 
 import logging, os
 
-from GrimoireSQL import GetSQLGlobal, GetSQLPeriod, GetSQLReportFrom 
-from GrimoireSQL import GetSQLReportWhere, ExecuteQuery, BuildQuery
+from GrimoireSQL import GetSQLGlobal, GetSQLPeriod, ExecuteQuery, BuildQuery
 from GrimoireUtils import GetPercentageDiff, GetDates, completePeriodIds, createJSON
 
 from data_source import DataSource
@@ -42,6 +41,33 @@ class Releases(DataSource):
 
     @staticmethod
     def get_name(): return "releases"
+
+    #
+    # Metrics: modules, releases and authors
+    #
+
+    @staticmethod
+    def get_modules():
+        q = "SELECT COUNT(*) AS modules FROM projects"
+        return(ExecuteQuery(q))
+
+    @staticmethod
+    def get_releases():
+        q = """
+            SELECT COUNT(DISTINCT(r.id)) AS releases 
+            FROM releases r, projects p 
+            WHERE r.project_id = p.id
+            """
+        return(ExecuteQuery(q))
+
+    @staticmethod
+    def get_authors():
+        q = """
+            SELECT COUNT(DISTINCT(u.id)) AS authors 
+            FROM users u, releases r, projects p 
+            WHERE r.author_id = u.id AND r.project_id = p.id
+        """
+        return(ExecuteQuery(q))
 
     @staticmethod
     def get_evolutionary_data (period, startdate, enddate, i_db, type_analysis = None):
@@ -72,8 +98,13 @@ class Releases(DataSource):
                 agg = dict(agg.items() + data.items())
                 data = Releases.get_authors_days(period, enddate, identities_db, i)
                 agg = dict(agg.items() + data.items())
-            data = {}
+            data = Releases.get_authors()
             agg = dict(agg.items() + data.items())
+            data = Releases.get_modules()
+            agg = dict(agg.items() + data.items())
+            data = Releases.get_releases()
+            agg = dict(agg.items() + data.items())
+
         else:
             logging.warn("Releases does not support filters yet.")
         return agg
