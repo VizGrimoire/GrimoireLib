@@ -47,32 +47,57 @@ class Releases(DataSource):
     #
 
     @staticmethod
-    def get_modules():
-        q = "SELECT COUNT(*) AS modules FROM projects"
+    def get_modules(period, startdate, enddate, evol = False):
+        fields = "COUNT(*) AS modules"
+        tables = "projects p"
+        filters = ""
+        if evol:
+            q = GetSQLPeriod(period,'p.created_on', fields, tables, filters,
+                             startdate, enddate)
+        else:
+            q = GetSQLGlobal('p.created_on', fields, tables, filters,
+                             startdate, enddate)
         return(ExecuteQuery(q))
 
     @staticmethod
-    def get_releases():
-        q = """
-            SELECT COUNT(DISTINCT(r.id)) AS releases 
-            FROM releases r, projects p 
-            WHERE r.project_id = p.id
-            """
+    def get_releases(period, startdate, enddate, evol = False):
+        fields = "COUNT(DISTINCT(r.id)) AS releases"
+        tables = "releases r, projects p"
+        filters = "r.project_id = p.id"
+        if evol:
+            q = GetSQLPeriod(period,'r.created_on', fields, tables, filters,
+                             startdate, enddate)
+        else:
+            q = GetSQLGlobal('r.created_on', fields, tables, filters,
+                             startdate, enddate)
         return(ExecuteQuery(q))
 
     @staticmethod
-    def get_authors():
-        q = """
-            SELECT COUNT(DISTINCT(u.id)) AS authors 
-            FROM users u, releases r, projects p 
-            WHERE r.author_id = u.id AND r.project_id = p.id
-        """
+    def get_authors(period, startdate, enddate, evol = False):
+        fields = "COUNT(DISTINCT(u.id)) AS authors"
+        tables = "users u, releases r, projects p"
+        filters = "r.author_id = u.id AND r.project_id = p.id"
+        if evol:
+            q = GetSQLPeriod(period,'r.created_on', fields, tables, filters,
+                             startdate, enddate)
+        else:
+            q = GetSQLGlobal('r.created_on', fields, tables, filters,
+                             startdate, enddate)
         return(ExecuteQuery(q))
 
     @staticmethod
     def get_evolutionary_data (period, startdate, enddate, i_db, type_analysis = None):
-        return {}
+        evol = {}
 
+        data = Releases.get_authors(period, startdate, enddate, True)
+        evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
+        data = Releases.get_modules(period, startdate, enddate, True)
+        evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
+        data = Releases.get_releases(period, startdate, enddate, True)
+        evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
+
+        return evol
+ 
     @staticmethod
     def create_evolutionary_report (period, startdate, enddate, destdir, i_db, type_analysis = None):
         data =  Releases.get_evolutionary_data (period, startdate, enddate, i_db, type_analysis)
@@ -98,11 +123,11 @@ class Releases(DataSource):
                 agg = dict(agg.items() + data.items())
                 data = Releases.get_authors_days(period, enddate, identities_db, i)
                 agg = dict(agg.items() + data.items())
-            data = Releases.get_authors()
+            data = Releases.get_authors(period, startdate, enddate)
             agg = dict(agg.items() + data.items())
-            data = Releases.get_modules()
+            data = Releases.get_modules(period, startdate, enddate)
             agg = dict(agg.items() + data.items())
-            data = Releases.get_releases()
+            data = Releases.get_releases(period, startdate, enddate)
             agg = dict(agg.items() + data.items())
 
         else:
