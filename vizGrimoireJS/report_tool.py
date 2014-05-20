@@ -103,10 +103,13 @@ def create_people_identifiers(startdate, enddate, destdir):
     from SCM import GetPeopleListSCM
     import People
 
+    scm = None
     for ds in Report.get_data_sources():
         if ds.get_name() == "scm":
             scm = ds
             break
+    if scm == None: return
+
     Report.connect_ds(scm)
 
     people_data = {}
