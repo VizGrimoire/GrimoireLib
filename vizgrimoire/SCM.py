@@ -113,6 +113,7 @@ class SCM(DataSource):
             agg = dict(agg.items() + data.items())
 
             data = SCM.get_trends (period, enddate, identities_db, filter_= None)
+            agg = dict(agg.items() + data.items())
 
             # Last Activity: to be removed
             for i in [7,14,30,60,90,180,365,730]:
