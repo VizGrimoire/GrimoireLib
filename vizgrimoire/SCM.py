@@ -74,6 +74,24 @@ class SCM(DataSource):
         createJSON (data, os.path.join(destdir, filename))
 
     @staticmethod
+    def get_trends (period, enddate, identities_db, filter_= None):
+        trends = {}
+        type_analysis = None
+        if filter_ is not None: type_analysis = filter_.get_type_analysis()
+        # Tendencies
+        for i in [7,30,365]:
+            data = GetDiffCommitsDays(period, enddate, identities_db, i, type_analysis)
+            trends = dict(trends.items() + data.items())
+            data = GetDiffAuthorsDays(period, enddate, identities_db, i, type_analysis)
+            trends = dict(trends.items() + data.items())
+            data = GetDiffFilesDays(period, enddate, identities_db, i, type_analysis)
+            trends = dict(trends.items() + data.items())
+            data = GetDiffLinesDays(period, enddate, identities_db, i, type_analysis)
+            trends = dict(trends.items() + data.items())
+        return trends
+
+
+    @staticmethod
     def get_agg_data (period, startdate, enddate, identities_db, filter_= None):
 
 
@@ -94,16 +112,7 @@ class SCM(DataSource):
             data = GetCodeCommunityStructure(period, startdate, enddate, identities_db)
             agg = dict(agg.items() + data.items())
 
-            # Tendencies    
-            for i in [7,30,365]:
-                data = GetDiffCommitsDays(period, enddate, identities_db, i)
-                agg = dict(agg.items() + data.items())
-                data = GetDiffAuthorsDays(period, enddate, identities_db, i)
-                agg = dict(agg.items() + data.items())
-                data = GetDiffFilesDays(period, enddate, identities_db, i)
-                agg = dict(agg.items() + data.items())
-                data = GetDiffLinesDays(period, enddate, identities_db, i)
-                agg = dict(agg.items() + data.items())
+            data = SCM.get_trends (period, enddate, identities_db, filter_= None)
 
             # Last Activity: to be removed
             for i in [7,14,30,60,90,180,365,730]:
@@ -199,6 +208,10 @@ class SCM(DataSource):
             createJSON(evol_data, fn)
 
             agg = SCM.get_agg_data(period, startdate, enddate, identities_db, filter_item)
+            # Add tendencies for project filter
+            if filter_name in ("project"):
+                data = SCM.get_trends (period, enddate, identities_db, filter_item)
+                agg = dict(agg.items() + data.items())
             fn = os.path.join(destdir, filter_item.get_static_filename(SCM()))
             createJSON(agg, fn)
 
@@ -698,12 +711,12 @@ def StaticNumAuthors (period, startdate, enddate, identities_db, type_analysis):
     return (GetAuthors(period, startdate, enddate, identities_db, type_analysis, False))
 
 
-def GetDiffAuthorsDays (period, date, identities_db, days):
+def GetDiffAuthorsDays (period, date, identities_db, days, type_analysis = None):
     # This function provides the percentage in activity between two periods:
     chardates = GetDates(date, days)
-    last = StaticNumAuthors(period, chardates[1], chardates[0], identities_db, None)
+    last = StaticNumAuthors(period, chardates[1], chardates[0], identities_db, type_analysis)
     last = int(last['authors'])
-    prev = StaticNumAuthors(period, chardates[2], chardates[1], identities_db, None)
+    prev = StaticNumAuthors(period, chardates[2], chardates[1], identities_db, type_analysis)
     prev = int(prev['authors'])
 
     data = {}
@@ -780,12 +793,12 @@ def StaticNumFiles (period, startdate, enddate, identities_db, type_analysis):
     return (GetFiles(period, startdate, enddate, identities_db, type_analysis, False))
 
 
-def GetDiffFilesDays (period, date, identities_db, days):
+def GetDiffFilesDays (period, date, identities_db, days, type_analysis = None):
     # This function provides the percentage in activity between two periods:
     chardates = GetDates(date, days)
-    last = StaticNumFiles(period, chardates[1], chardates[0], identities_db, None)
+    last = StaticNumFiles(period, chardates[1], chardates[0], identities_db, type_analysis)
     last = int(last['files'])
-    prev = StaticNumFiles(period, chardates[2], chardates[1], identities_db, None)
+    prev = StaticNumFiles(period, chardates[2], chardates[1], identities_db, type_analysis)
     prev = int(prev['files'])
 
     data = {}
@@ -835,13 +848,13 @@ def StaticNumLines2 (period, startdate, enddate, identities_db, type_analysis):
     # returns the aggregate number of lines in the specified timeperiod (enddate - startdate)
     return (GetLines(period, startdate, enddate, identities_db, type_analysis, False))
 
-def GetDiffLinesDays (period, date, identities_db, days):
+def GetDiffLinesDays (period, date, identities_db, days, type_analysis = None):
     # This function provides the percentage in activity between two periods:
     chardates = GetDates(date, days)
-    last = StaticNumLines(period, chardates[1], chardates[0], identities_db, None)
+    last = StaticNumLines(period, chardates[1], chardates[0], identities_db, type_analysis)
     last_added = int(last['added_lines'])
     last_removed = int(last['removed_lines'])
-    prev = StaticNumLines(period, chardates[2], chardates[1], identities_db, None)
+    prev = StaticNumLines(period, chardates[2], chardates[1], identities_db, type_analysis)
     prev_added = int(prev['added_lines'])
     prev_removed = int(prev['removed_lines'])
 
@@ -938,13 +951,13 @@ def StaticNumCommits (period, startdate, enddate, identities_db, type_analysis) 
     return(ExecuteQuery(q))
 
 
-def GetDiffCommitsDays (period, date, identities_db, days):
+def GetDiffCommitsDays (period, date, identities_db, days, type_analysis = None):
     # This function provides the percentage in activity between two periods:
 
     chardates = GetDates(date, days)
-    last = StaticNumCommits(period, chardates[1], chardates[0], identities_db, None)
+    last = StaticNumCommits(period, chardates[1], chardates[0], identities_db, type_analysis)
     last = int(last['commits'])
-    prev = StaticNumCommits(period, chardates[2], chardates[1], identities_db, None)
+    prev = StaticNumCommits(period, chardates[2], chardates[1], identities_db, type_analysis)
     prev = int(prev['commits'])
 
     data = {}
