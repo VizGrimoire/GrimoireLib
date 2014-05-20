@@ -34,7 +34,7 @@ import math
 import rpy2.rinterface as rinterface
 from rpy2.robjects.vectors import StrVector
 import os,sys
-
+from numpy import average, median
 
 def valRtoPython(val):
     if val is rinterface.NA_Character: val = None
