@@ -142,7 +142,20 @@ class Releases(DataSource):
 
     @staticmethod
     def get_top_authors (days_period, startdate, enddate, identities_db, bots, npeople):
-        return {}
+
+        # Unique identities not supported yet
+        fields = "COUNT(r.id) as releases, username"
+        tables = "users u, releases r, projects p"
+        filters = "r.author_id = u.id AND r.project_id = p.id"
+        if (days_period > 0):
+            tables += ", (SELECT MAX(r.created_on) as last_date from releases r) t"
+            filters += " AND DATEDIFF (last_date, r.created_on) < %s" % (days_period)
+        filters += " GROUP by username"
+        filters += " ORDER BY releases DESC, r.name"
+        filters += " LIMIT %s" % (npeople)
+
+        q = "SELECT %s FROM %s WHERE %s" % (fields, tables, filters)
+        return(ExecuteQuery(q))
 
     @staticmethod
     def get_top_data (startdate, enddate, identities_db, filter_, npeople):
@@ -150,8 +163,8 @@ class Releases(DataSource):
 
         top_authors = {}
         top_authors['authors.'] = Releases.get_top_authors(0, startdate, enddate, identities_db, bots, npeople)
-        top_authors['authors.last year']= Releases.get_top_authors(365, startdate, enddate, identities_db, bots, npeople)
         top_authors['authors.last month']= Releases.get_top_authors(31, startdate, enddate, identities_db, bots, npeople)
+        top_authors['authors.last year']= Releases.get_top_authors(365, startdate, enddate, identities_db, bots, npeople)
 
         return(top_authors)
 
