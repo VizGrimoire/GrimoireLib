@@ -227,14 +227,14 @@ def topData(period, startdate, enddate, identities_db, destdir, bots, closed_con
     top_openers_data['openers.last month']=ITS.GetTopOpeners(31, startdate, enddate,identities_db, bots, closed_condition, npeople)
 
 
-    top_issues_data = wikimedia_top_issues(startdate, enddate, top_close_condition_mediawiki, nissues)
+    top_issues_data = wikimedia_top_issues(startdate, enddate)
 
     all_top = dict(top_closers_data.items() + top_openers_data.items() + top_issues_data.items())
     createJSON (all_top, destdir+"/its-top.json", False)
 
     return all_top
 
-def wikimedia_top_issues(startdate, enddate, top_close_condition_mediawiki, nissues):
+def wikimedia_top_issues(startdate, enddate):
 
     # Closed condition for MediaWiki
     top_close_condition_mediawiki = """
