@@ -87,7 +87,6 @@ class Report(object):
                 metric = metric_class()
                 ds = metric.get_data_source()
                 if ds != None: ds.add_metric(metric)
->>>>>>> 6ee095261a88c3ac8f0f01adffcc552048cbc5d3
 
     @staticmethod
     def get_config():
