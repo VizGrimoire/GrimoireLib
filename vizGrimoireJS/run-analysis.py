@@ -69,8 +69,9 @@ def read_main_conf(config_file):
 
     sec = parser.sections()
     # we'll read "generic" for db information and "r" for start_date
+    # and bicho for backend
     for s in sec:
-        if not((s == "generic") or (s == "r")):
+        if not((s == "generic") or (s == "r") or (s == "bicho")):
             continue
         options[s] = {}
         opti = parser.options(s)
@@ -78,20 +79,13 @@ def read_main_conf(config_file):
             options[s][o] = parser.get(s, o)
     return options
 
-
-def check_configuration():
-    if 'db_bicho' in options['generic']:
-        try:
-            'bicho_backend' in options['generic'] == True
-        except:
-            print "Configuration error: Configuration section for [generic] with 'backend_bicho'\
- variable expected"
-            sys.exit(-1)
-
 def get_vars():
     v = {}
     v = options['generic']
     v.update(options['r'])
+    # bicho backend
+    if 'bicho' in options:
+        v.update(options['bicho'])
     # Fixed locations
     v['r_libs'] = '../../r-lib'
     v['python_libs'] = '../vizgrimoire:../vizgrimoire/analysis'
@@ -119,7 +113,7 @@ def get_analysis_cmd(v, script, db):
     cmd += "-i %s -s %s -e %s -o %s -g %s " % \
         (v['db_identities'], v['start_date'], v['end_date'], v['json_dir'], v['period'])
     if script == "its-analysis.R" or script == "its-analysis.py":
-        cmd += "-t %s " % (v['bicho_backend'])
+        cmd += "-t %s " % (v['backend'])
     if v.has_key('people_number'):
         cmd += "--npeople %s " %  (v['people_number'])
     else:
@@ -128,6 +122,7 @@ def get_analysis_cmd(v, script, db):
         cmd += " < %s >> %s 2>&1" % (script, v['log_file'])
     else:
         cmd += " >> %s 2>&1" % (v['log_file'])
+
 
     if (get_options().debug): print(cmd)
     return (cmd)
@@ -151,9 +146,17 @@ def execute_people_script(env):
     os.system(cmd)
     print("People analysis finished")
 
+def execute_people_experimental_script(env):
+    # this proc doesn't use the get_analysis_cmd function
+    print("Starting People EXPERIMENTAL analysis ..")
+    cmd = "PYTHONPATH=%s ./%s -f %s 2>&1 %s" % (env['python_libs'], 'people-analysis-experimental.py', opt.config_file, env['log_file'])
+    print(cmd)
+    #use subprocess or popen instead of os which is very old fashion
+    os.system(cmd)
+    print("People EXPERIMENTAL analysis finished")
 
 def execute_its_script(env):
-    if not 'db_bicho' in env:
+    if not 'db_bicho' in env or not 'bicho' in options:
         print("ITS analysis disabled")
         return
     print("Starting ITS analysis  ..")
@@ -198,22 +201,46 @@ def execute_mediawiki_script(env):
     os.system(cmd)
     print("MediaWiki analysis finished")
 
+def execute_downloads_script(env):
+    # Execute downloads analysis
+    if not 'db_downloads' in env:
+        print("downloads analysis disabled")
+        return
+    print("Starting Downloads analysis")
+    cmd = get_analysis_cmd(env, "downloads-analysis.py", env["db_downloads"])
+    os.system(cmd)
+    print("Downloads analysis finished")
+
+def execute_qaforums_script(env):
+    # Execute Question&Answer script
+    if not 'db_qaforums' in env:
+        print("q&a analysis disabled")
+        return
+    print("Starting Q&A analysis")
+    cmd = get_analysis_cmd(env, "qaforums-analysis.py", env["db_qaforums"])
+    os.system(cmd)
+    print("Q&A analysis finished")
+
 tasks_section = {
     'scm':execute_scm_script,
     'people':execute_people_script,
+    'people_experimental':execute_people_experimental_script,
     'its':execute_its_script,
     'mls':execute_mls_script,
     'scr':execute_scr_script,
     'mediawiki':execute_mediawiki_script,
+    'downloads':execute_downloads_script,
     'irc': execute_irc_script,
+    'qaforums': execute_qaforums_script
 }
-tasks_order = ['scm','people','its','mls','scr','mediawiki','irc']
+
+tasks_order = ['scm','people','its','mls','scr','mediawiki','downloads','irc', 'qaforums']
+#tasks_order = ['scm','people','its','mls','scr','mediawiki','irc','people_experimental']
 
 
 if __name__ == '__main__':
     opt = get_options()
     read_main_conf(opt.config_file)
-    check_configuration()
     env = get_vars()
 
     if opt.section is not None:

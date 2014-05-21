@@ -40,7 +40,7 @@ vizr = importr("vizgrimoire")
 
 import GrimoireUtils, GrimoireSQL
 from GrimoireUtils import dataFrame2Dict, createJSON, completePeriodIds, completeTops
-from GrimoireUtils import valRtoPython, read_options, getPeriod, medianAndAvgByPeriod, get_median, get_avg
+from GrimoireUtils import valRtoPython, getPeriod, medianAndAvgByPeriod, get_median, get_avg
 import ITS
 from ITS import Backend
 
@@ -106,8 +106,8 @@ def tsData(period, startdate, enddate, identities_db, destdir, granularity,
         data = ITS.EvolIssuesDomains(period, startdate, enddate, identities_db)
         evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
 
-    evol = dict(evol.items() +
-                ticketsStates(period, startdate, enddate, identities_db, backend).items())
+    data = ticketsStates(period, startdate, enddate, identities_db, backend)
+    evol = dict(evol.items() + data.items())
 
     evol = dict(evol.items() +
                 ticketsTimeToResponse(period, startdate, enddate, identities_db, backend).items())
@@ -226,15 +226,14 @@ def topData(period, startdate, enddate, identities_db, destdir, bots, closed_con
     top_openers_data['openers.last year']=ITS.GetTopOpeners(365, startdate, enddate,identities_db, bots, closed_condition, npeople)
     top_openers_data['openers.last month']=ITS.GetTopOpeners(31, startdate, enddate,identities_db, bots, closed_condition, npeople)
 
-
-    top_issues_data = wikimedia_top_issues(startdate, enddate)
+    top_issues_data = wikimedia_top_issues(startdate, enddate, top_close_condition_mediawiki, nissues)
 
     all_top = dict(top_closers_data.items() + top_openers_data.items() + top_issues_data.items())
     createJSON (all_top, destdir+"/its-top.json", False)
 
     return all_top
 
-def wikimedia_top_issues(startdate, enddate):
+def wikimedia_top_issues(startdate, enddate, top_close_condition_mediawiki, nissues):
 
     # Closed condition for MediaWiki
     top_close_condition_mediawiki = """

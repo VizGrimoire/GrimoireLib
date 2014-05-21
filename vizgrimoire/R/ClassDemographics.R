@@ -18,6 +18,7 @@
 ##
 ## Authors:
 ##   Jesus M. Gonzalez-Barahona <jgb@bitergia.com>
+##   Luis Cañas-Díaz <lcanas@bitergia.com>
 ##
 ##
 ## Demographics class
@@ -70,6 +71,19 @@ query.mls <- "SELECT people.email_address as id,
                     AND messages_people.type_of_recipient = \"From\"
               GROUP BY people.email_address"
 
+query.mls.unique <- "
+SELECT pup.upeople_id as id,
+       people.name as name,
+       people.email_address as email,
+       MIN(first_date) as firstdatestr,
+       MAX(first_date) as lastdatestr
+FROM messages, messages_people, people, people_upeople pup
+WHERE messages.message_ID = messages_people.message_id AND
+       people.email_address = messages_people.email_address AND
+       people.email_address = pup.people_id
+GROUP BY pup.upeople_id"
+
+
 ## Query to get first and last date for all people in an ITS (Bicho)
 ##  database (changes table)
 ##
@@ -82,6 +96,19 @@ query.its <- "SELECT changes.changed_by as id,
               FROM changes, people
               WHERE changes.changed_by = people.id
               GROUP BY changes.changed_by"
+
+query.its.unique <- "
+SELECT pup.upeople_id as id,
+       people.name as name,
+       people.email as email,
+       COUNT(changes.id) as actions,
+       MIN(changes.changed_on) as firstdatestr,
+       MAX(changes.changed_on) as lastdatestr
+FROM changes, people, people_upeople pup
+WHERE changes.changed_by = people.id
+      AND people.id = pup.people_id     
+GROUP BY pup.upeople_id"
+
 
 ## Build an SQL query to get people active since months ago.
 ##
@@ -147,10 +174,18 @@ setMethod(f="initialize",
                   }
               } else if (type == 'mls') {
                   cat("~~~ MLS query\n")
-                  sql <- query.mls
+                  if (unique) {
+                      sql <- query.mls.unique
+                  } else {
+                      sql <- query.mls
+                  }
               } else if (type == 'its') {
                   cat("~~~ ITS query\n")
-                  sql <- query.its
+                  if (unique) {
+                      sql <- query.its.unique
+                  } else {
+                      sql <- query.its
+                  }
               }
               q <- new("Query", sql = sql)
               ## Attr activity is a dataframe with a row per person,
