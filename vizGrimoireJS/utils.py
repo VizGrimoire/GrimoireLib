@@ -91,6 +91,10 @@ def read_options():
                       action="store",
                       dest="filter",
                       help="filter to be generated")
+    parser.add_option("-t", "--backend",
+                      action="store",
+                      dest="backend",
+                      help="bicho backend")
 
 
     (opts, args) = parser.parse_args()
