@@ -1338,11 +1338,13 @@ def GetPeopleQuerySCRSubmissions (developer_id, period, startdate, enddate, evol
 
 
 def GetPeopleEvolSCR (developer_id, period, startdate, enddate):
-    q = GetPeopleQuerySCRSubmissions(developer_id, period, startdate, enddate, True)
+    # q = GetPeopleQuerySCRSubmissions(developer_id, period, startdate, enddate, True)
+    q = GetPeopleQuerySCR(developer_id, period, startdate, enddate, True)
     return(ExecuteQuery(q))
 
 def GetPeopleStaticSCR (developer_id, startdate, enddate):
-    q = GetPeopleQuerySCRSubmissions(developer_id, None, startdate, enddate, False)
+    # q = GetPeopleQuerySCRSubmissions(developer_id, None, startdate, enddate, False)
+    q = GetPeopleQuerySCR(developer_id, None, startdate, enddate, False)
     return(ExecuteQuery(q))
 
 ################

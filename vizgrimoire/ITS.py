@@ -17,7 +17,7 @@
 ## This file is a part of the vizGrimoire R package
 ##  (an R library for the MetricsGrimoire and vizGrimoire systems)
 ##
-## ITS.py
+## ITS.R
 ##
 ## Queries for ITS data analysis
 ##
@@ -39,7 +39,6 @@ from filter import Filter
 import report
 
 class ITS(DataSource):
-
 
     @staticmethod
     def get_db_name():
@@ -250,6 +249,11 @@ class ITS(DataSource):
         fn = os.path.join(destdir, filter_.get_filename(ITS()))
         createJSON(items, fn)
 
+        if filter_name in ("domain", "company", "repository"):
+            items_list = {'name' : [], 'closed_365' : [], 'closers_365' : []}
+        else:
+            items_list = items
+
         for item in items :
             item_name = "'"+ item+ "'"
             logging.info (item_name)
@@ -263,10 +267,18 @@ class ITS(DataSource):
             fn = os.path.join(destdir, filter_item.get_static_filename(ITS()))
             createJSON(agg, fn)
 
+            if filter_name in ("domain", "company", "repository"):
+                items_list['name'].append(item.replace('/', '_'))
+                items_list['closed_365'].append(agg['closed_365'])
+                items_list['closers_365'].append(agg['closers_365'])
+
             if (filter_name in ["company","domain"]):
                 top = ITS.get_top_data(startdate, enddate, identities_db, filter_item, npeople)
                 fn = os.path.join(destdir, filter_item.get_top_filename(ITS()))
                 createJSON(top, fn)
+
+        fn = os.path.join(destdir, filter_.get_filename(ITS()))
+        createJSON(items_list, fn)
 
         if (filter_name == "company"):
             closed = ITS.get_filter_summary(filter_, period, startdate, enddate, identities_db, 10)
@@ -646,6 +658,13 @@ def GetITSInfo (period, startdate, enddate, identities_db, type_analysis, closed
         repos = AggIssuesRepositories(period, startdate, enddate, identities_db, type_analysis)
         init_date = GetInitDate(startdate, enddate, identities_db, type_analysis)
         end_date = GetEndDate(startdate, enddate, identities_db, type_analysis)
+
+        # Data from the last 365 days
+        fromdate = GetDates(enddate, 365)[1]
+        closed_365 = AggIssuesClosed(period, fromdate, enddate, identities_db, type_analysis, closed_condition)
+        closers_365 = AggIssuesClosers(period, fromdate, enddate, identities_db, type_analysis, closed_condition)
+        closed['closed_365'] = closed_365['closed']
+        closers['closers_365'] = closers_365['closers']
 
     data = dict(closed.items() + closers.items()+ changed.items())
     data = dict(data.items() + changers.items() + open.items())
@@ -1584,8 +1603,6 @@ class Backend(object):
             #Pretty specific states in Red Hat's Bugzilla
             self.statuses = ["ASSIGNED", "CLOSED", "MODIFIED", "NEW", "ON_DEV", \
                     "ON_QA", "POST", "RELEASE_PENDING", "VERIFIED"]
-            Backend.priority = ["Unprioritized", "Low", "Normal", "High", "Highest", "Immediate"]
-            Backend.severity = ["trivial", "minor", "normal", "major", "blocker", "critical", "enhancement"]
 
         if (its_type == 'github'):
             self.closed_condition = "field='closed'"

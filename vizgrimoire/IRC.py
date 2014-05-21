@@ -24,9 +24,8 @@
 
 import logging, os
 
-from GrimoireSQL import GetSQLGlobal, GetSQLPeriod, GetSQLReportFrom
-from GrimoireSQL import GetSQLReportWhere, ExecuteQuery, BuildQuery
-from GrimoireUtils import GetPercentageDiff, GetDates, read_options, getPeriod, createJSON, completePeriodIds
+from GrimoireSQL import GetSQLGlobal, GetSQLPeriod, ExecuteQuery, BuildQuery
+from GrimoireUtils import GetPercentageDiff, GetDates, getPeriod, createJSON, completePeriodIds
 from data_source import DataSource
 from filter import Filter
 
@@ -44,8 +43,6 @@ class IRC(DataSource):
     def get_evolutionary_data (period, startdate, enddate, identities_db, filter_ = None):
         evol = {}
         if filter_ is not None:
-            opts = read_options()
-            period = getPeriod(opts.granularity)
             type_analysis = [filter_.get_name(), filter_.get_item()]
 
             if (filter_ == "repository"):
@@ -59,11 +56,10 @@ class IRC(DataSource):
         return evol
 
     @staticmethod
-    def create_evolutionary_report (period, startdate, enddate, identities_db, filter_ = None):
-        opts = read_options()
+    def create_evolutionary_report (period, startdate, enddate, destdir, identities_db, filter_ = None):
         data =  IRC.get_evolutionary_data (period, startdate, enddate, identities_db, filter_)
         filename = IRC().get_evolutionary_filename()
-        createJSON (data, os.path.join(opts.destdir, filename))
+        createJSON (data, os.path.join(destdir, filename))
 
     @staticmethod
     def get_agg_data (period, startdate, enddate, identities_db, filter_ = None):
@@ -90,11 +86,10 @@ class IRC(DataSource):
         return agg_data
 
     @staticmethod
-    def create_agg_report (period, startdate, enddate, i_db, filter_ = None):
-        opts = read_options()
+    def create_agg_report (period, startdate, enddate, destdir, i_db, filter_ = None):
         data = IRC.get_agg_data (period, startdate, enddate, i_db, filter_)
         filename = IRC().get_agg_filename()
-        createJSON (data, os.path.join(opts.destdir, filename))
+        createJSON (data, os.path.join(destdir, filename))
 
     @staticmethod
     def get_top_data (startdate, enddate, identities_db, filter_, npeople):
@@ -111,10 +106,9 @@ class IRC(DataSource):
         return(top_senders)
 
     @staticmethod
-    def create_top_report (startdate, enddate, i_db):
-        opts = read_options()
-        data = IRC.get_top_data (startdate, enddate, i_db, None, opts.npeople)
-        top_file = opts.destdir+"/"+IRC().get_top_filename()
+    def create_top_report (startdate, enddate, destdir, npeople, i_db):
+        data = IRC.get_top_data (startdate, enddate, i_db, None, npeople)
+        top_file = destdir+"/"+IRC().get_top_filename()
         createJSON (data, top_file)
 
     @staticmethod
@@ -129,18 +123,14 @@ class IRC(DataSource):
         return items
 
     @staticmethod
-    def create_filter_report(filter_, startdate, enddate, identities_db, bots):
-        opts = read_options()
-        period = getPeriod(opts.granularity)
-
-
+    def create_filter_report(filter_, period, startdate, enddate, destdir, npeople, identities_db, bots):
         items = IRC.get_filter_items(filter_, startdate, enddate, identities_db, bots)
         if (items == None): return
 
         if not isinstance(items, (list)):
             items = [items]
 
-        fn = os.path.join(opts.destdir, filter_.get_filename(IRC()))
+        fn = os.path.join(destdir, filter_.get_filename(IRC()))
         createJSON(items, fn)
 
         for item in items :
@@ -149,11 +139,11 @@ class IRC(DataSource):
             filter_item = Filter(filter_.get_name(), item)
 
             evol_data = IRC.get_evolutionary_data(period, startdate, enddate, identities_db, filter_item)
-            fn = os.path.join(opts.destdir, filter_item.get_evolutionary_filename(IRC()))
+            fn = os.path.join(destdir, filter_item.get_evolutionary_filename(IRC()))
             createJSON(completePeriodIds(evol_data, period, startdate, enddate), fn)
 
             agg = IRC.get_agg_data(period, startdate, enddate, identities_db, filter_item)
-            fn = os.path.join(opts.destdir, filter_item.get_static_filename(IRC()))
+            fn = os.path.join(destdir, filter_item.get_static_filename(IRC()))
             createJSON(agg, fn)
 
     @staticmethod
@@ -180,6 +170,10 @@ class IRC(DataSource):
 
     @staticmethod
     def create_r_reports(vizr, enddate, destdir):
+        pass
+
+    @staticmethod
+    def get_metrics_definition ():
         pass
 
 # SQL Metaqueries
@@ -256,7 +250,7 @@ def GetIRCSQLReportFrom (identities_db, type_analysis):
 
     From = ""
 
-    if (len(type_analysis) != 2): return From
+    if (type_analysis is None or len(type_analysis) != 2): return From
 
     analysis = type_analysis[0]
 
@@ -276,7 +270,7 @@ def GetIRCSQLReportWhere (type_analysis):
 
     where = ""
 
-    if (len(type_analysis) != 2): return where
+    if (type_analysis is None or len(type_analysis) != 2): return where
 
     analysis = type_analysis[0]
     value = type_analysis[1]
@@ -346,9 +340,9 @@ def StaticNumRepositoriesIRC (period, startdate, enddate, identities_db=None, ty
     return(ExecuteQuery(q))
 
 def GetSentIRC (period, startdate, enddate, identities_db, type_analysis, evolutionary):    
-    fields = " count(distinct(message)) as sent "
-    tables = " irclog " + GetSQLReportFrom(identities_db, type_analysis)
-    filters = GetSQLReportWhere(type_analysis, "author")
+    fields = " count(distinct(message)) as sent " 
+    tables = " irclog " + GetIRCSQLReportFrom(identities_db, type_analysis)
+    filters = GetIRCSQLReportWhere(type_analysis)
     filters += " and type='COMMENT' "
     q = BuildQuery(period, startdate, enddate, " date ", fields, tables, filters, evolutionary)    
     return(ExecuteQuery(q))
@@ -360,8 +354,8 @@ def EvolSentIRC (period, startdate, enddate, identities_db, type_analysis):
 
 def GetSendersIRC (period, startdate, enddate, identities_db, type_analysis, evolutionary):    
     fields = " count(distinct(nick)) as senders "
-    tables = " irclog " + GetSQLReportFrom(identities_db, type_analysis)
-    filters = GetSQLReportWhere(type_analysis, "author")
+    tables = " irclog " + GetIRCSQLReportFrom(identities_db, type_analysis)
+    filters = GetIRCSQLReportWhere(type_analysis)
     filters += " and type='COMMENT' "
     q = BuildQuery(period, startdate, enddate, " date ", fields, tables, filters, evolutionary)    
     return(ExecuteQuery(q))
@@ -373,8 +367,8 @@ def EvolSendersIRC (period, startdate, enddate, identities_db, type_analysis):
 
 def GetRepositoriesIRC (period, startdate, enddate, identities_db, type_analysis, evolutionary):
     fields = " COUNT(DISTINCT(channel_id)) AS repositories "
-    tables = " irclog " + GetSQLReportFrom(identities_db, type_analysis)
-    filters = GetSQLReportWhere(type_analysis, "author")
+    tables = " irclog " + GetIRCSQLReportFrom(identities_db, type_analysis)
+    filters = GetIRCSQLReportWhere(type_analysis)
     q = BuildQuery(period, startdate, enddate, " date ", fields, tables, filters, evolutionary)
     return(ExecuteQuery(q))
 

@@ -31,91 +31,10 @@ from dateutil import parser
 import logging
 import json
 import math
-from optparse import OptionParser
 import rpy2.rinterface as rinterface
 from rpy2.robjects.vectors import StrVector
 import os,sys
 from numpy import average, median
-
-def read_options():
-    parser = OptionParser(usage="usage: %prog [options]",
-                          version="%prog 0.1")
-    parser.add_option("-d", "--database",
-                      action="store",
-                      dest="dbname",
-                      help="Database where information is stored")
-    parser.add_option("-u","--dbuser",
-                      action="store",
-                      dest="dbuser",
-                      default="root",
-                      help="Database user")
-    parser.add_option("-p","--dbpassword",
-                      action="store",
-                      dest="dbpassword",
-                      default="",
-                      help="Database password")
-    parser.add_option("-g", "--granularity",
-                      action="store",
-                      dest="granularity",
-                      default="months",
-                      help="year,months,weeks granularity")
-    parser.add_option("-o", "--destination",
-                      action="store",
-                      dest="destdir",
-                      default="data/json",
-                      help="Destination directory for JSON files")
-    parser.add_option("-r", "--reports",
-                      action="store",
-                      dest="reports",
-                      default="",
-                      help="Reports to be generated (repositories, companies, countries, people)")
-    parser.add_option("-s", "--start",
-                      action="store",
-                      dest="startdate",
-                      default="1900-01-01",
-                      help="Start date for the report")
-    parser.add_option("-e", "--end",
-                      action="store",
-                      dest="enddate",
-                      default="2100-01-01",
-                      help="End date for the report")
-    parser.add_option("-i", "--identities",
-                      action="store",
-                      dest="identities_db",
-                      help="Database with unique identities and affiliations")
-    parser.add_option("-t", "--type",
-                      action="store",
-                      dest="backend",
-                      default="bugzilla",
-                      help="Type of backend: bugzilla, allura, jira, github")
-    parser.add_option("--npeople",
-                      action="store",
-                      dest="npeople",
-                      default="10",
-                      help="Limit for people analysis")
-    parser.add_option("-c", "--config-file",
-                      action="store",
-                      dest="config_file",
-                      help="Automator config file path")
-    parser.add_option("--data-source",
-                      action="store",
-                      dest="data_source",
-                      help="data source to be generated")
-    parser.add_option("--filter",
-                      action="store",
-                      dest="filter",
-                      help="filter to be generated")
-
-
-    (opts, args) = parser.parse_args()
-
-    if len(args) != 0:
-        parser.error("Wrong number of arguments")
-
-    if opts.config_file is None :
-        if not(opts.dbname and opts.dbuser and opts.identities_db):
-            parser.error("--database --db-user and --identities are needed")
-    return opts
 
 def valRtoPython(val):
     if val is rinterface.NA_Character: val = None
@@ -236,7 +155,7 @@ def completePeriodIdsWeeks(ts_data, start, end):
     # Start of the week
     dayweek = start.isocalendar()[2]
     new_week = start - relativedelta(days=dayweek-1)
-    i = 1 # for ids in time series
+    i = 0 # for ids in time series
 
     while (new_week <= end):
         new_week_txt = date2Week(new_week)
@@ -245,14 +164,14 @@ def completePeriodIdsWeeks(ts_data, start, end):
             for key in (data_vars):
                 new_ts_data[key].append(0)
             new_ts_data['week'].pop()
-            new_ts_data['week'].append(new_week_txt)
+            new_ts_data['week'].append(int(new_week_txt))
         else:
             # Add already existing data for the time point
             index = ts_data['week'].index(int(new_week_txt))
             for key in (data_vars):
                 new_ts_data[key].append(ts_data[key][index])
             new_ts_data['week'].pop()
-            new_ts_data['week'].append(str(ts_data['week'][index]))
+            new_ts_data['week'].append(ts_data['week'][index])
 
         timestamp = calendar.timegm(new_week.timetuple())
         new_ts_data['unixtime'].append(unicode(timestamp))

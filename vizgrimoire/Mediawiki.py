@@ -28,7 +28,7 @@ import logging, os
 
 from GrimoireSQL import GetSQLGlobal, GetSQLPeriod, GetSQLReportFrom 
 from GrimoireSQL import GetSQLReportWhere, ExecuteQuery, BuildQuery
-from GrimoireUtils import GetPercentageDiff, GetDates, completePeriodIds, read_options, createJSON
+from GrimoireUtils import GetPercentageDiff, GetDates, completePeriodIds, createJSON
 
 from data_source import DataSource
 
@@ -47,11 +47,10 @@ class Mediawiki(DataSource):
         return GetEvolDataMediaWiki (period, startdate, enddate, i_db, type_analysis)
 
     @staticmethod
-    def create_evolutionary_report (period, startdate, enddate, i_db, type_analysis = None):
-        opts = read_options()
+    def create_evolutionary_report (period, startdate, enddate, destdir, i_db, type_analysis = None):
         data =  Mediawiki.get_evolutionary_data (period, startdate, enddate, i_db, type_analysis)
         filename = Mediawiki().get_evolutionary_filename()
-        createJSON (data, os.path.join(opts.destdir, filename))
+        createJSON (data, os.path.join(destdir, filename))
 
     @staticmethod
     def get_agg_data (period, startdate, enddate, identities_db, filter_ = None):
@@ -73,11 +72,10 @@ class Mediawiki(DataSource):
         return agg
 
     @staticmethod
-    def create_agg_report (period, startdate, enddate, i_db, type_analysis = None):
-        opts = read_options()
+    def create_agg_report (period, startdate, enddate, destdir, i_db, type_analysis = None):
         data = Mediawiki.get_agg_data (period, startdate, enddate, i_db, type_analysis)
         filename = Mediawiki().get_agg_filename()
-        createJSON (data, os.path.join(opts.destdir, filename))
+        createJSON (data, os.path.join(destdir, filename))
 
     @staticmethod
     def get_top_data (startdate, enddate, identities_db, filter_, npeople):
@@ -91,10 +89,9 @@ class Mediawiki(DataSource):
         return(top_authors)
 
     @staticmethod
-    def create_top_report (startdate, enddate, i_db):
-        opts = read_options()
-        data = Mediawiki.get_top_data (startdate, enddate, i_db, None, opts.npeople)
-        top_file = opts.destdir+"/"+Mediawiki().get_top_filename()
+    def create_top_report (startdate, enddate, destdir, npeople, i_db):
+        data = Mediawiki.get_top_data (startdate, enddate, i_db, None, npeople)
+        top_file = destdir+"/"+Mediawiki().get_top_filename()
         createJSON (data, top_file)
 
     @staticmethod
@@ -106,10 +103,7 @@ class Mediawiki(DataSource):
         return items
 
     @staticmethod
-    def create_filter_report(filter_, startdate, enddate, identities_db, bots):
-        # opts = read_options()
-        # period = getPeriod(opts.granularity)
-
+    def create_filter_report(filter_, period, startdate, enddate, destdir, npeople, identities_db, bots):
         items = Mediawiki.get_filter_items(filter_, startdate, enddate, identities_db, bots)
         if (items == None): return
 
@@ -137,6 +131,10 @@ class Mediawiki(DataSource):
 
     @staticmethod
     def create_r_reports(vizr, enddate, destdir):
+        pass
+
+    @staticmethod
+    def get_metrics_definition ():
         pass
 
 # SQL Metaqueries

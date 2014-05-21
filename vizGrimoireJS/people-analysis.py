@@ -29,10 +29,11 @@ from ConfigParser import SafeConfigParser
 
 import GrimoireUtils, GrimoireSQL
 from GrimoireUtils import createJSON, completePeriodIds
-from GrimoireUtils import read_options, getPeriod
+from GrimoireUtils import getPeriod
 from SCM import GetPeopleListSCM
 import SCM, ITS, MLS, SCR, Mediawiki, IRC
 import People
+from utils import read_options
 
 def read_main_conf(config_file):
     options = {}

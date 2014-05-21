@@ -24,8 +24,11 @@
 
 import logging, sys, time
 
-from GrimoireUtils import read_options, getPeriod, read_main_conf
+from GrimoireUtils import getPeriod, read_main_conf, createJSON
+
 from report import Report
+
+from utils import read_options
 
 def get_evol_report(startdate, enddate, identities_db, bots):
     all_ds = {}
@@ -35,10 +38,10 @@ def get_evol_report(startdate, enddate, identities_db, bots):
         all_ds[ds.get_name()] = ds.get_evolutionary_data (period, startdate, enddate, identities_db)
     return all_ds
 
-def create_evol_report(startdate, enddate, identities_db, bots):
+def create_evol_report(startdate, enddate, destdir, identities_db, bots):
     for ds in Report.get_data_sources():
         Report.connect_ds(ds)
-        ds.create_evolutionary_report (period, startdate, enddate, identities_db)
+        ds.create_evolutionary_report (period, startdate, enddate, destdir, identities_db)
 
 def get_agg_report(startdate, enddate, identities_db, bots):
     all_ds = {}
@@ -48,10 +51,10 @@ def get_agg_report(startdate, enddate, identities_db, bots):
         all_ds[ds.get_name()] = ds.get_agg_data (period, startdate, enddate, identities_db)
     return all_ds
 
-def create_agg_report(startdate, enddate, identities_db, bots):
+def create_agg_report(startdate, enddate, destdir, identities_db, bots):
     for ds in Report.get_data_sources():
         Report.connect_ds(ds)
-        ds.create_agg_report (period, startdate, enddate, identities_db)
+        ds.create_agg_report (period, startdate, enddate, destdir, identities_db)
 
 def get_top_report(startdate, enddate, identities_db, bots):
     all_ds_top = {}
@@ -62,25 +65,24 @@ def get_top_report(startdate, enddate, identities_db, bots):
         all_ds_top[ds.get_name()] = top 
     return all_ds_top
 
-def create_top_report(startdate, enddate, identities_db, bots):
+def create_top_report(startdate, enddate, destdir, npeople, identities_db, bots):
     for ds in Report.get_data_sources():
         Report.connect_ds(ds)
-        ds.set_bots(bots)
-        ds.create_top_report (startdate, enddate, identities_db)
+        ds.create_top_report (startdate, enddate, destdir, npeople, identities_db)
 
-def create_reports_filters(startdate, enddate, identities_db, bots):
+def create_reports_filters(period, startdate, enddate, destdir, npeople, identities_db, bots):
     for ds in Report.get_data_sources():
         Report.connect_ds(ds)
         logging.info("Creating filter reports for " + ds.get_name())
         for filter_ in Report.get_filters():
             logging.info("-> " + filter_.get_name())
-            ds.create_filter_report(filter_, startdate, enddate, identities_db, bots)
+            ds.create_filter_report(filter_, period, startdate, enddate, destdir, npeople, identities_db, bots)
 
-def create_report_people(startdate, enddate, identities_db, bots):
+def create_report_people(startdate, enddate, destdir, npeople, identities_db, bots):
     for ds in Report.get_data_sources():
         Report.connect_ds(ds)
         logging.info("Creating people for " + ds.get_name())
-        ds().create_people_report(period, startdate, enddate, identities_db)
+        ds().create_people_report(period, startdate, enddate, destdir, npeople, identities_db)
 
 def create_reports_r(enddate, destdir):
     from rpy2.robjects.packages import importr
@@ -94,6 +96,33 @@ def create_reports_r(enddate, destdir):
         vizr.SetDBChannel (database=db, user=opts.dbuser, password=opts.dbpassword)
         logging.info("Creating R reports for " + ds.get_name())
         ds.create_r_reports(vizr, enddate, destdir)
+
+def create_people_identifiers(startdate, enddate, destdir):
+    logging.info("Generating people identifiers")
+
+    from SCM import GetPeopleListSCM
+    import People
+
+    scm = None
+    for ds in Report.get_data_sources():
+        if ds.get_name() == "scm":
+            scm = ds
+            break
+    if scm == None: return
+
+    Report.connect_ds(scm)
+
+    people_data = {}
+    people = GetPeopleListSCM(startdate, enddate)
+    people = people['pid']
+    limit = 100
+    if (len(people)<limit): limit = len(people);
+    people = people[0:limit]
+
+    for upeople_id in people:
+        people_data[upeople_id] = People.GetPersonIdentifiers(upeople_id)
+
+    createJSON(people_data, destdir+"/people.json")
 
 def set_data_source(ds_name):
     ds_ok = False
@@ -119,13 +148,12 @@ def set_filter(filter_name):
 
 if __name__ == '__main__':
 
-    Report.init()
-
     logging.basicConfig(level=logging.INFO,format='%(asctime)s %(message)s')
     logging.info("Starting Report analysis")
     opts = read_options()
-    period = getPeriod(opts.granularity)
     reports = opts.reports.split(",")
+
+    Report.init(opts.config_file, None)
 
     automator = read_main_conf(opts.config_file)
     if 'start_date' not in automator['r']:
@@ -136,6 +164,12 @@ if __name__ == '__main__':
         end_date = time.strftime('%Y-%m-%d')
     else:
         end_date = automator['r']['end_date']
+
+    if 'period' not in automator['r']:
+        period = getPeriod("months")
+    else:
+        period = getPeriod(automator['r']['period'])
+    logging.info("Period: " + period)
 
     # TODO: hack because VizR library needs. Fix in lib in future
     startdate = "'"+start_date+"'"
@@ -148,16 +182,20 @@ if __name__ == '__main__':
     if (opts.filter):
         set_filter(opts.filter)
 
-    # bots = []
-    bots = ["gerrit-wm", "wikibugs","wikibugs_"]
+    bots = []
 
-    evol = create_evol_report(startdate, enddate, identities_db, bots)
-    agg = create_agg_report(startdate, enddate, identities_db, bots)
-    top = create_top_report(startdate, enddate, identities_db, bots)
+    if not opts.filter:
+        logging.info("Creating global evolution metrics...")
+        evol = create_evol_report(startdate, enddate, opts.destdir, identities_db, bots)
+        logging.info("Creating global aggregated metrics...")
+        agg = create_agg_report(startdate, enddate, opts.destdir, identities_db, bots)
+        logging.info("Creating global top metrics...")
+        top = create_top_report(startdate, enddate, opts.destdir, opts.npeople, identities_db, bots)
 
-    create_reports_filters(startdate, enddate, identities_db, bots)
+    create_reports_filters(period, startdate, enddate, opts.destdir, opts.npeople, identities_db, bots)
     if (automator['r']['reports'].find('people')>-1):
-        create_report_people(startdate, enddate, identities_db, bots)
+        create_report_people(startdate, enddate, opts.destdir, opts.npeople, identities_db, bots)
     create_reports_r(end_date, opts.destdir)
+    create_people_identifiers(startdate, enddate, opts.destdir)
 
     logging.info("Report data source analysis OK")

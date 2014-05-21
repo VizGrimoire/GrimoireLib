@@ -30,8 +30,9 @@ import sys
 
 import GrimoireUtils, GrimoireSQL
 from GrimoireUtils import dataFrame2Dict, createJSON, completePeriodIds
-from GrimoireUtils import valRtoPython, read_options, getPeriod
+from GrimoireUtils import valRtoPython, getPeriod
 import Mediawiki
+from utils import read_options
 
 def aggData(period, startdate, enddate, identities_db, destdir):
     # Tendencies

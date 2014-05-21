@@ -33,7 +33,7 @@ from GrimoireSQL import GetSQLGlobal, GetSQLPeriod
 # TODO integrate: from GrimoireSQL import  GetSQLReportFrom 
 from GrimoireSQL import GetSQLReportWhere, ExecuteQuery, BuildQuery
 from GrimoireUtils import GetPercentageDiff, GetDates, completePeriodIds
-from GrimoireUtils import createJSON, read_options, getPeriod, get_subprojects
+from GrimoireUtils import createJSON, getPeriod, get_subprojects
 from data_source import DataSource
 from filter import Filter
 
@@ -49,10 +49,7 @@ class SCM(DataSource):
 
     @staticmethod
     def get_evolutionary_data (period, startdate, enddate, identities_db, filter_ = None):
-
         if filter_ is not None:
-            opts = read_options()
-            period = getPeriod(opts.granularity)
             type_analysis = [filter_.get_name(), "'"+filter_.get_item()+"'"]
             evol_data = GetSCMEvolutionaryData(period, startdate, enddate, 
                                                identities_db, type_analysis)
@@ -71,11 +68,28 @@ class SCM(DataSource):
         return evol_data
 
     @staticmethod
-    def create_evolutionary_report (period, startdate, enddate, i_db, filter_ = None):
-        opts = read_options()
+    def create_evolutionary_report (period, startdate, enddate, destdir, i_db, filter_ = None):
         data =  SCM.get_evolutionary_data (period, startdate, enddate, i_db, filter_)
         filename = SCM().get_evolutionary_filename()
-        createJSON (data, os.path.join(opts.destdir, filename))
+        createJSON (data, os.path.join(destdir, filename))
+
+    @staticmethod
+    def get_trends (period, enddate, identities_db, filter_= None):
+        trends = {}
+        type_analysis = None
+        if filter_ is not None: type_analysis = filter_.get_type_analysis()
+        # Tendencies
+        for i in [7,30,365]:
+            data = GetDiffCommitsDays(period, enddate, identities_db, i, type_analysis)
+            trends = dict(trends.items() + data.items())
+            data = GetDiffAuthorsDays(period, enddate, identities_db, i, type_analysis)
+            trends = dict(trends.items() + data.items())
+            data = GetDiffFilesDays(period, enddate, identities_db, i, type_analysis)
+            trends = dict(trends.items() + data.items())
+            data = GetDiffLinesDays(period, enddate, identities_db, i, type_analysis)
+            trends = dict(trends.items() + data.items())
+        return trends
+
 
     @staticmethod
     def get_agg_data (period, startdate, enddate, identities_db, filter_= None):
@@ -98,16 +112,8 @@ class SCM(DataSource):
             data = GetCodeCommunityStructure(period, startdate, enddate, identities_db)
             agg = dict(agg.items() + data.items())
 
-            # Tendencies    
-            for i in [7,30,365]:
-                data = GetDiffCommitsDays(period, enddate, identities_db, i)
-                agg = dict(agg.items() + data.items())
-                data = GetDiffAuthorsDays(period, enddate, identities_db, i)
-                agg = dict(agg.items() + data.items())
-                data = GetDiffFilesDays(period, enddate, identities_db, i)
-                agg = dict(agg.items() + data.items())
-                data = GetDiffLinesDays(period, enddate, identities_db, i)
-                agg = dict(agg.items() + data.items())
+            data = SCM.get_trends (period, enddate, identities_db, filter_= None)
+            agg = dict(agg.items() + data.items())
 
             # Last Activity: to be removed
             for i in [7,14,30,60,90,180,365,730]:
@@ -122,11 +128,10 @@ class SCM(DataSource):
         return agg
 
     @staticmethod
-    def create_agg_report (period, startdate, enddate, i_db, filter_= None):
-        opts = read_options()
+    def create_agg_report (period, startdate, enddate, destdir, i_db, filter_= None):
         data = SCM.get_agg_data (period, startdate, enddate, i_db, filter_)
         filename = SCM().get_agg_filename()
-        createJSON (data, os.path.join(opts.destdir, filename))
+        createJSON (data, os.path.join(destdir, filename))
 
     @staticmethod
     def get_top_data (startdate, enddate, i_db, filter_, npeople):
@@ -143,10 +148,9 @@ class SCM(DataSource):
         return top
 
     @staticmethod
-    def create_top_report (startdate, enddate, i_db):
-        opts = read_options()
-        data = SCM.get_top_data (startdate, enddate, i_db, None, opts.npeople)
-        createJSON (data, opts.destdir+"/"+SCM().get_top_filename())
+    def create_top_report (startdate, enddate, destdir, npeople, i_db):
+        data = SCM.get_top_data (startdate, enddate, i_db, None, npeople)
+        createJSON (data, destdir+"/"+SCM().get_top_filename())
 
     @staticmethod
     def get_filter_items(filter_, startdate, enddate, identities_db, bots):
@@ -177,10 +181,7 @@ class SCM(DataSource):
         return summary
 
     @staticmethod
-    def create_filter_report(filter_, startdate, enddate, identities_db, bots):
-        opts = read_options()
-        period = getPeriod(opts.granularity)
-
+    def create_filter_report(filter_, period, startdate, enddate, destdir, npeople, identities_db, bots):
         items = SCM.get_filter_items(filter_, startdate, enddate, identities_db, bots)
         if (items == None): return
         items = items['name']
@@ -190,8 +191,13 @@ class SCM(DataSource):
         if not isinstance(items, (list)):
             items = [items]
 
-        fn = os.path.join(opts.destdir, filter_.get_filename(SCM()))
+        fn = os.path.join(destdir, filter_.get_filename(SCM()))
         createJSON(items, fn)
+
+        if filter_name in ("domain", "company", "repository"):
+            items_list = {'name' : [], 'commits_365' : [], 'authors_365' : []}
+        else:
+            items_list = items
 
         for item in items :
             item_name = "'"+ item+ "'"
@@ -199,26 +205,38 @@ class SCM(DataSource):
             filter_item = Filter(filter_name, item)
 
             evol_data = SCM.get_evolutionary_data(period, startdate, enddate, identities_db, filter_item)
-            fn = os.path.join(opts.destdir, filter_item.get_evolutionary_filename(SCM()))
+            fn = os.path.join(destdir, filter_item.get_evolutionary_filename(SCM()))
             createJSON(evol_data, fn)
 
             agg = SCM.get_agg_data(period, startdate, enddate, identities_db, filter_item)
-            fn = os.path.join(opts.destdir, filter_item.get_static_filename(SCM()))
+            # Add tendencies for project filter
+            if filter_name in ("project"):
+                data = SCM.get_trends (period, enddate, identities_db, filter_item)
+                agg = dict(agg.items() + data.items())
+            fn = os.path.join(destdir, filter_item.get_static_filename(SCM()))
             createJSON(agg, fn)
 
+            if filter_name in ("domain", "company", "repository"):
+                items_list['name'].append(item.replace('/', '_'))
+                items_list['commits_365'].append(agg['commits_365'])
+                items_list['authors_365'].append(agg['authors_365'])
+
             if (filter_name == "company"):
-                top_authors = SCM.get_top_data(startdate, enddate, identities_db, filter_item, opts.npeople)
-                fn = os.path.join(opts.destdir, filter_item.get_top_filename(SCM()))
+                top_authors = SCM.get_top_data(startdate, enddate, identities_db, filter_item, npeople)
+                fn = os.path.join(destdir, filter_item.get_top_filename(SCM()))
                 createJSON(top_authors, fn)
 
                 # Old code not used. To be removed.
                 for i in [2006,2009,2012]:
-                    data = company_top_authors_year(item_name, i, opts.npeople)
-                    createJSON(data, opts.destdir+"/"+item+"-"+SCM.get_name()+"-top-authors_"+str(i)+".json")
+                    data = company_top_authors_year(item_name, i, npeople)
+                    createJSON(data, destdir+"/"+item+"-"+SCM.get_name()+"-top-authors_"+str(i)+".json")
+
+        fn = os.path.join(destdir, filter_.get_filename(SCM()))
+        createJSON(items_list, fn)
 
         if (filter_name == "company"):
             summary =  SCM.get_filter_summary(filter_, period, startdate, enddate, identities_db, 10)
-            createJSON (summary, opts.destdir+"/"+ filter_.get_summary_filename(SCM))
+            createJSON (summary, destdir+"/"+ filter_.get_summary_filename(SCM))
 
     @staticmethod
     def get_top_people(startdate, enddate, identities_db, npeople):
@@ -250,6 +268,186 @@ class SCM(DataSource):
         vizr.ReportDemographicsAgingSCM(enddate, destdir, unique_ids)
         vizr.ReportDemographicsBirthSCM(enddate, destdir, unique_ids)
 
+    @staticmethod
+    def _remove_people(people_id):
+        # Remove from people
+        q = "DELETE FROM people_upeople WHERE people_id='%s'" % (people_id)
+        ExecuteQuery(q)
+        q = "DELETE FROM people WHERE id='%s'" % (people_id)
+        ExecuteQuery(q)
+
+    @staticmethod
+    def _remove_scmlog(scmlog_id):
+        # Get actions and remove mappings
+        q = "SELECT * from actions where commit_id='%s'" % (scmlog_id)
+        res = ExecuteQuery(q)
+        if 'id' in res:
+            if not isinstance(res['id'], list): res['id'] = [res['id']]
+            for action_id in res['id']:
+                # action_files is a view
+                # q = "DELETE FROM action_files WHERE action_id='%s'" % (action_id)
+                # ExecuteQuery(q)
+                q = "DELETE FROM file_copies WHERE action_id='%s'" % (action_id)
+                ExecuteQuery(q)
+        # actions_file_names is a VIEW
+        # q = "DELETE FROM actions_file_names WHERE commit_id='%s'" % (scmlog_id)
+        # ExecuteQuery(q)
+        q = "DELETE FROM commits_lines WHERE commit_id='%s'" % (scmlog_id)
+        ExecuteQuery(q)
+        q = "DELETE FROM file_links WHERE commit_id='%s'" % (scmlog_id)
+        ExecuteQuery(q)
+        q = "SELECT tag_id from tag_revisions WHERE commit_id='%s'" % (scmlog_id)
+        res = ExecuteQuery(q)
+        for tag_id in res['tag_id']:
+            q = "DELETE FROM tags WHERE id='%s'" % (tag_id)
+            ExecuteQuery(q)
+            q = "DELETE FROM tag_revisions WHERE tag_id='%s'" % (tag_id)
+            ExecuteQuery(q)
+        q = "DELETE FROM scmlog WHERE id='%s'" % (scmlog_id)
+        ExecuteQuery(q)
+
+    @staticmethod
+    def remove_filter_data(filter_):
+        uri = filter_.get_item()
+        logging.info("Removing SCM filter %s %s" % (filter_.get_name(),filter_.get_item()))
+        q = "SELECT * from repositories WHERE uri='%s'" % (uri)
+        repo = ExecuteQuery(q)
+        if 'id' not in repo:
+            logging.error("%s not found" % (uri))
+            return
+        # Remove people
+        def get_people_one_repo(field):
+            return  """
+                SELECT %s FROM (SELECT COUNT(DISTINCT(repository_id)) AS total, %s
+                FROM scmlog
+                GROUP BY %s
+                HAVING total=1) t
+                """ % (field, field, field)
+        ## Remove committer_id that exists only in this repository
+        q = """
+            SELECT DISTINCT(committer_id) from scmlog
+            WHERE repository_id='%s' AND committer_id in (%s)
+        """  % (repo['id'],get_people_one_repo("committer_id"))
+        res = ExecuteQuery(q)
+        for people_id in res['committer_id']:
+            SCM._remove_people(people_id)
+        ## Remove author_id that exists only in this repository
+        q = """
+            SELECT DISTINCT(author_id) from scmlog
+            WHERE repository_id='%s' AND author_id in (%s)
+        """  % (repo['id'],get_people_one_repo("author_id"))
+        res = ExecuteQuery(q)
+        for people_id in res['author_id']:
+            SCM._remove_people(people_id)
+        # Remove people activity
+        q = "SELECT id from scmlog WHERE repository_id='%s'" % (repo['id'])
+        res = ExecuteQuery(q)
+        for scmlog_id in res['id']:
+            SCM._remove_scmlog(scmlog_id)
+        # Remove files
+        q = "SELECT id FROM files WHERE repository_id='%s'" % (repo['id'])
+        res = ExecuteQuery(q)
+        for file_id in res['id']:
+            q = "DELETE FROM file_types WHERE file_id='%s'" % (file_id)
+            ExecuteQuery(q)
+            q = "DELETE FROM files WHERE id='%s'" % (file_id)
+            ExecuteQuery(q)
+        # Remove filter
+        q = "DELETE from repositories WHERE id='%s'" % (repo['id'])
+        ExecuteQuery(q)
+
+    @staticmethod
+    def get_metrics_definition ():
+        mdef = {
+            "scm_commits" : {
+                "divid" : "scm_commits",
+                "column" : "commits",
+                "name" : "Commits",
+                "desc" : "Number of commits (changes to source code), aggregating all branches",
+                "envision" : {
+                    "y_labels" : "true",
+                    "show_markers" : "true"
+                }
+            },
+            "scm_committers" : {
+                "divid" : "scm_committers",
+                "column" : "committers",
+                "name" : "Committers",
+                "desc" : "Number of persons committing (merging changes to source code)",
+                "action" : "commits",
+                "envision" : {
+                    "gtype" : "whiskers"
+                }
+            },
+            "scm_authors" : {
+                "divid" : "scm_authors",
+                "column" : "authors",
+                "name" : "Authors",
+                "desc" : "Number of persons authoring commits (changes to source code)",
+                "action" : "commits",
+                "envision" : {
+                    "gtype" : "whiskers"
+                }
+            },
+            "scm_branches" : {
+                "divid" : "scm_branches",
+                "column" : "branches",
+                "name" : "Branches",
+                "desc" : "Number of active branches"
+            },
+            "scm_files" : {
+                "divid" : "scm_files",
+                "column" : "files",
+                "name" : "Files",
+                "desc" : "Number of files modified by at least one commit"
+            },
+            "scm_added_lines" : {
+                "divid" : "scm_added_lines",
+                "column" : "added_lines",
+                "name" : "Lines added",
+                "desc" : "Addition of lines added in all commits"
+            },
+            "scm_removed_lines" : {
+                "divid" : "scm_removed_lines",
+                "column" : "removed_lines",
+                "name" : "Lines removed",
+                "desc" : "Addition of lines removed in all commits"
+            },
+            "scm_repositories" : {
+                "divid" : "scm_repositories",
+                "column" : "repositories",
+                "name" : "Repositories",
+                "desc" : "Evolution of the number of source code repositories",
+                "envision" : {
+                    "gtype" : "whiskers"
+                }
+            },
+            "scm_companies" : {
+                "divid" : "scm_companies",
+                "column" : "companies",
+                "name" : "Organizations",
+                "desc" : "Number of organizations (companies, etc.) with persons active in changing code"
+            },
+            "scm_countries" : {
+                "divid" : "scm_countries",
+                "column" : "countries",
+                "name" : "Countries",
+                "desc" : "Number of countries with persons active in changing code"
+            },
+            "scm_domains" : {
+                "divid" : "scm_domains",
+                "column" : "domains",
+                "name" : "Domains",
+                "desc" : "Number of distinct domains with persons active in changing code"
+            },
+            "scm_people" : {
+                "divid" : "scm_people",
+                "column" : "people",
+                "name" : "Persons",
+                "desc" : "Number of persons active in changing code (authors, committers)"
+            }
+        }
+        return mdef
 
 ##########
 # Meta-functions to automatically call metrics functions and merge them
@@ -297,14 +495,22 @@ def GetSCMStaticData (period, startdate, enddate, i_db, type_analysis):
     # avg_committer_period = StaticAvgCommitterPeriod(period, startdate, enddate, i_db, type_analysis)
     avg_files_author = StaticAvgFilesAuthor(period, startdate, enddate, i_db, type_analysis)
 
+    # Data from the last 365 days
+    fromdate = GetDates(enddate, 365)[1]
+    commits_365 = StaticNumCommits(period, fromdate, enddate, i_db, type_analysis)
+    authors_365 = StaticNumAuthors(period, fromdate, enddate, i_db, type_analysis)
+
     # 2- Merging information
     agg = dict(commits.items() + repositories.items() + committers.items())
     agg = dict(agg.items() + authors.items() + files.items() + actions.items())
     agg = dict(agg.items() + lines.items() + branches.items())
     agg = dict(agg.items() + avg_commits_period.items() + avg_files_period.items())
     agg = dict(agg.items() + avg_commits_author.items() + avg_files_author.items())
+    agg['commits_365'] = commits_365['commits']
+    agg['authors_365'] = authors_365['authors']
 
     return (agg)
+
 ##########
 # Specific FROM and WHERE clauses per type of report
 ##########
@@ -506,12 +712,12 @@ def StaticNumAuthors (period, startdate, enddate, identities_db, type_analysis):
     return (GetAuthors(period, startdate, enddate, identities_db, type_analysis, False))
 
 
-def GetDiffAuthorsDays (period, date, identities_db, days):
+def GetDiffAuthorsDays (period, date, identities_db, days, type_analysis = None):
     # This function provides the percentage in activity between two periods:
     chardates = GetDates(date, days)
-    last = StaticNumAuthors(period, chardates[1], chardates[0], identities_db, None)
+    last = StaticNumAuthors(period, chardates[1], chardates[0], identities_db, type_analysis)
     last = int(last['authors'])
-    prev = StaticNumAuthors(period, chardates[2], chardates[1], identities_db, None)
+    prev = StaticNumAuthors(period, chardates[2], chardates[1], identities_db, type_analysis)
     prev = int(prev['authors'])
 
     data = {}
@@ -588,12 +794,12 @@ def StaticNumFiles (period, startdate, enddate, identities_db, type_analysis):
     return (GetFiles(period, startdate, enddate, identities_db, type_analysis, False))
 
 
-def GetDiffFilesDays (period, date, identities_db, days):
+def GetDiffFilesDays (period, date, identities_db, days, type_analysis = None):
     # This function provides the percentage in activity between two periods:
     chardates = GetDates(date, days)
-    last = StaticNumFiles(period, chardates[1], chardates[0], identities_db, None)
+    last = StaticNumFiles(period, chardates[1], chardates[0], identities_db, type_analysis)
     last = int(last['files'])
-    prev = StaticNumFiles(period, chardates[2], chardates[1], identities_db, None)
+    prev = StaticNumFiles(period, chardates[2], chardates[1], identities_db, type_analysis)
     prev = int(prev['files'])
 
     data = {}
@@ -643,13 +849,13 @@ def StaticNumLines2 (period, startdate, enddate, identities_db, type_analysis):
     # returns the aggregate number of lines in the specified timeperiod (enddate - startdate)
     return (GetLines(period, startdate, enddate, identities_db, type_analysis, False))
 
-def GetDiffLinesDays (period, date, identities_db, days):
+def GetDiffLinesDays (period, date, identities_db, days, type_analysis = None):
     # This function provides the percentage in activity between two periods:
     chardates = GetDates(date, days)
-    last = StaticNumLines(period, chardates[1], chardates[0], identities_db, None)
+    last = StaticNumLines(period, chardates[1], chardates[0], identities_db, type_analysis)
     last_added = int(last['added_lines'])
     last_removed = int(last['removed_lines'])
-    prev = StaticNumLines(period, chardates[2], chardates[1], identities_db, None)
+    prev = StaticNumLines(period, chardates[2], chardates[1], identities_db, type_analysis)
     prev_added = int(prev['added_lines'])
     prev_removed = int(prev['removed_lines'])
 
@@ -746,13 +952,13 @@ def StaticNumCommits (period, startdate, enddate, identities_db, type_analysis) 
     return(ExecuteQuery(q))
 
 
-def GetDiffCommitsDays (period, date, identities_db, days):
+def GetDiffCommitsDays (period, date, identities_db, days, type_analysis = None):
     # This function provides the percentage in activity between two periods:
 
     chardates = GetDates(date, days)
-    last = StaticNumCommits(period, chardates[1], chardates[0], identities_db, None)
+    last = StaticNumCommits(period, chardates[1], chardates[0], identities_db, type_analysis)
     last = int(last['commits'])
-    prev = StaticNumCommits(period, chardates[2], chardates[1], identities_db, None)
+    prev = StaticNumCommits(period, chardates[2], chardates[1], identities_db, type_analysis)
     prev = int(prev['commits'])
 
     data = {}
@@ -1217,15 +1423,24 @@ def last_activity (days) :
 def top_people (days, startdate, enddate, role, filters, limit) :
     # This function returns the 10 top people participating in the source code.
     # Dataset can be filtered by the affiliations, where specific companies
-    # can be ignored.
+    # can be ignored. This is done by using the argument "filters",
+    # which can be "None" (no filetering) or the list of companies to
+    # filter out.
     # In addition, the number of days allows to limit the study to the last
     # X days specified in that parameter
 
-    affiliations = ""
-    if (not filters): filters = []
-    for aff in filters:
-        affiliations += " c.name<>'"+aff+"' and "
-
+    if not filters:
+        affiliations_from = ""
+        affiliations_where = ""
+    else:
+        affiliations = ""
+        for aff in filters:
+            affiliations += " c.name<>'"+aff+"' and "
+        affiliations_from = ", upeople_companies upc, companies c "
+        affiliations_where = " and u.id = upc.upeople_id and "+\
+            " s.date >= upc.init and "+\
+            " s.date < upc.end and "+ affiliations+ " "+\
+            " upc.company_id = c.id "
  
     date_limit = ""
     if (days != 0 ) :
@@ -1236,17 +1451,13 @@ def top_people (days, startdate, enddate, role, filters, limit) :
         "count(distinct(s.id)) as commits "+\
         " FROM scmlog s, "+\
         " people_upeople pup, "+\
-        " upeople u, "+\
-        " upeople_companies upc, "+\
-        " companies c "+\
+        " upeople u "+\
+        affiliations_from +\
         " WHERE s."+ role+ "_id = pup.people_id and "+\
         " pup.upeople_id = u.id and "+\
-        " u.id = upc.upeople_id and "+\
         " s.date >= "+ startdate+ " and "+\
-        " s.date < "+ enddate+" "+ date_limit+ " and "+\
-        " s.date >= upc.init and "+\
-        " s.date < upc.end and "+ affiliations+ " "+\
-        " upc.company_id = c.id "+\
+        " s.date < "+ enddate+" "+ date_limit +\
+        affiliations_where +\
         " GROUP BY u.identifier "+\
         " ORDER BY commits desc, "+role+"s "+\
         " LIMIT "+ limit
@@ -1502,7 +1713,7 @@ def evol_info_data_countries (startdate, enddate) :
 def company_top_authors (company_name, startdate, enddate, limit) :
     # Returns top ten authors per company
 
-    q = "select u.id as id, u.identifier  as authors, "+\
+    q1 = "select u.id as id, u.identifier  as authors, "+\
         "       count(distinct(s.id)) as commits "+\
         " from people p, "+\
         "      scmlog s, "+\
@@ -1525,6 +1736,20 @@ def company_top_authors (company_name, startdate, enddate, limit) :
         "group by u.id "+\
         "order by count(distinct(s.id)) desc "+\
         "limit " + limit
+
+    q = """
+        SELECT id, authors, count(logid) AS commits FROM (
+        SELECT DISTINCT u.id AS id, u.identifier AS authors, s.id as logid
+        FROM people p,  scmlog s,  actions a, people_upeople pup, upeople u,
+             upeople_companies upc,  companies c
+        WHERE  s.id = a.commit_id AND p.id = s.author_id AND s.author_id = pup.people_id  AND
+          pup.upeople_id = upc.upeople_id AND pup.upeople_id = u.id AND  s.date >= upc.init AND
+          s.date < upc.end AND upc.company_id = c.id AND
+          s.date >=%s AND s.date < %s AND c.name =%s) t
+        GROUP BY id
+        ORDER BY commits DESC
+        LIMIT %s
+    """ % (startdate, enddate, company_name, limit)
 
     data = ExecuteQuery(q)
     return (data)
