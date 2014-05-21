@@ -80,33 +80,4 @@ class Commits(MetricDomain):
         #to be implemented
         pass
 
-#################
-
-#Example of use
-
-from query_builder import SCMQuery
-
-user = "root"
-password = ""
-database = "dic_cvsanaly_openstack_2259"
-identities_db = "dic_cvsanaly_openstack_2259"
-
-openstack_db = SCMQuery(identities_db, user, password, database)
-redhat_filters = Filter("week", "'2010-01-01'", "'2014-01-01'", ["company", "'Red Hat'"])
-
-commits_redhat = Commits(openstack_db, redhat_filters)
-print commits_redhat.commits_ts()
-print commits_redhat.commits_agg()
-
-rackspace_filters = Filter("month", "'2010-01-01'", "'2014-01-01'", ["company", "'Rackspace'"])
-commits_rackspace = Commits(openstack_db, rackspace_filters)
-print commits_rackspace.commits_ts()
-print commits_rackspace.commits_agg()
-
-# Changing filters
-redhat_filters.period = "month"
-commits_redhat.filters = redhat_filters
-print commits_redhat.commits_ts()
-print commits_redhat.commits_agg()
-
 

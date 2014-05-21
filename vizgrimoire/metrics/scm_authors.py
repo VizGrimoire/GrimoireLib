@@ -96,33 +96,5 @@ class Author(MetricDomain):
         #to be implemented
         pass
 
-#################
-
-#Example of use
-
-from query_builder import SCMQuery
-
-user = "root"
-password = ""
-database = "dic_cvsanaly_openstack_2259"
-identities_db = "dic_cvsanaly_openstack_2259"
-
-openstack_db = SCMQuery(identities_db, user, password, database)
-redhat_filters = Filter("week", "'2010-01-01'", "'2014-01-01'", ["company", "'Red Hat'"])
-
-authors_redhat = Author(openstack_db, redhat_filters)
-print authors_redhat.authors_ts()
-print authors_redhat.authors_agg()
-
-rackspace_filters = Filter("month", "'2010-01-01'", "'2014-01-01'", ["company", "'Rackspace'"])
-authors_rackspace = Author(openstack_db, rackspace_filters)
-print authors_rackspace.authors_ts()
-print authors_rackspace.authors_agg()
-
-# Changing filters
-redhat_filters.period = "month"
-authors_redhat.filters = redhat_filters
-print authors_redhat.authors_ts()
-print authors_redhat.authors_agg()
 
 
