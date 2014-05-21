@@ -33,7 +33,7 @@ from SCM import SCM
 class Commits(Metric):
 
     def __init__(self):
-        self.id = "commits"
+        self.id = "scm_commits"
         self.name = "Commits"
         self.desc = "Number of commits (changes to source code), aggregating all branches"
         self.data_source = SCM

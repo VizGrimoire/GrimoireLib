@@ -25,11 +25,13 @@
 
 class Metric(object):
 
-    def __init__(self):
+    def __init__(self, dbcon = None, filter_ = None):
+        """db connection and filter to be used"""
         self.id = None
         self.name = None
         self.desc = None
         self.data_source = None
+
 
     def get_definition(self):
         def_ = {
