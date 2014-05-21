@@ -354,6 +354,33 @@ class SCMQuery (Query):
             .group_by("month", "year").order_by("year", "month")
 
 
+    def group_by_person (self, kind):
+        """Group by person
+
+        Parameters
+        ----------
+
+        kind: {authors|committers}
+           kind of person to group by
+
+        Returns
+g        -------
+
+        SCMQuery object, with a new "select" column (for the kind
+        of person) and a "group by" clause for grouping the results.
+
+        """
+
+        if kind == "authors":
+            return self \
+                .add_columns (label("author", SCMLog.author_id)) \
+                .group_by("author").order_by("author")
+        elif kind == "committers":
+            return self \
+                .add_columns (label("committer", SCMLog.committer_id)) \
+                .group_by("committer").order_by("committer")
+
+
     def group_by_repo (self, names = False):
         """Group by repository
 
@@ -445,6 +472,17 @@ if __name__ == "__main__":
         .filter_period(end=datetime(2014,1,1))
     print res.scalar()
 
+    # Number of commits, grouped by authors
+    res = session.query().select_nscmlog(["commits",]) \
+        .group_by_person("authors")
+    for row in res.limit(10).all():
+        print row.author, row.nocommits
+    # res = session.query().select_nscmlog(["commits",]) \
+    #     .select_listpersons("authors") \
+    #     .group_by_person("authors")
+    # for row in res.limit(10).all():
+    #     print row.author, row.nocommits, row.name
+
     # Time series of commits
     res = session.query().select_nscmlog(["commits",]) \
         .group_by_period() \
@@ -486,3 +524,4 @@ if __name__ == "__main__":
     # Filter some paths
     res = resAuth.filter_paths(("examples",))
     print res.all()
+
