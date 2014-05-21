@@ -17,26 +17,23 @@
 ## This file is a part of the vizGrimoire R package
 ##  (an R library for the MetricsGrimoire and vizGrimoire systems)
 ##
-## SCR.R
 ##
 ## Queries for source code review data analysis
 ##
-## "*Changes" functions use changes table for more precisse results
 ##
 ## Authors:
 ##   Daniel Izquierdo <dizquierdo@bitergia.com>
 ##   Alvaro del Castillo San Felix <acs@bitergia.com>
 
+import logging, os, sys
+from numpy import median, average
 import time
 from datetime import datetime, timedelta
-import logging
-from numpy import median, average
-import sys
 
 from GrimoireSQL import GetSQLGlobal, GetSQLPeriod
 from GrimoireSQL import ExecuteQuery
 from GrimoireUtils import GetPercentageDiff, GetDates, completePeriodIds
-from GrimoireUtils import checkListArray, removeDecimals, read_options, get_subprojects
+from GrimoireUtils import checkListArray, removeDecimals, get_subprojects
 from GrimoireUtils import getPeriod, createJSON, checkFloatArray, medianAndAvgByPeriod
 
 from data_source import DataSource
@@ -58,9 +55,6 @@ class SCR(DataSource):
 
         if (filter_ is not None):
             type_analysis = [filter_.get_name(), filter_.get_item()]
-
-            opts = read_options()
-            period = getPeriod(opts.granularity)
 
             data = EvolReviewsSubmitted(period, startdate, enddate, type_analysis, identities_db)
             evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
@@ -125,20 +119,24 @@ class SCR(DataSource):
                     data['review_time_days_avg'][i] = float(val)
                     if (val == 0): data['review_time_days_avg'][i] = 0
                 evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
+            # number of filter items evol in time
+            data = get_countries(period, startdate, enddate,identities_db)
+            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
+            data = get_companies(period, startdate, enddate,identities_db)
+            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
+            data = get_repositories(period, startdate, enddate,identities_db)
+            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
+
             return evol
 
     @staticmethod
-    def create_evolutionary_report (period, startdate, enddate, i_db, filter_ = None):
-        opts = read_options()
+    def create_evolutionary_report (period, startdate, enddate, destdir, i_db, filter_ = None):
         data =  SCR.get_evolutionary_data (period, startdate, enddate, i_db, filter_)
         filename = SCR().get_evolutionary_filename()
-        createJSON (data, os.path.join(opts.destdir, filename))
+        createJSON (data, os.path.join(destdir, filename))
 
     @staticmethod
     def get_agg_data (period, startdate, enddate, identities_db, filter_ = None):
-        opts = read_options()
-        period = getPeriod(opts.granularity)
-
         agg = {}
 
         if (filter_ is not None):
@@ -208,14 +206,21 @@ class SCR(DataSource):
                 period_data = GetSCRDiffAbandonedDays(period, enddate, i, identities_db)
                 agg = dict(agg.items() + period_data.items())
 
+            # number of filter items
+            data = get_countries(period, startdate, enddate,identities_db, False)
+            agg = dict(agg.items() + data.items())
+            data = get_companies(period, startdate, enddate,identities_db, False)
+            agg = dict(agg.items() + data.items())
+            data = get_repositories(period, startdate, enddate,identities_db, False)
+            agg = dict(agg.items() + data.items())
+
         return agg
 
     @staticmethod
-    def create_agg_report (period, startdate, enddate, i_db, filter_ = None):
-        opts = read_options()
+    def create_agg_report (period, startdate, enddate, destdir, i_db, filter_ = None):
         data = SCR.get_agg_data (period, startdate, enddate, i_db, filter_)
         filename = SCR().get_agg_filename()
-        createJSON (data, os.path.join(opts.destdir, filename))
+        createJSON (data, os.path.join(destdir, filename))
 
     @staticmethod
     def get_top_data (startdate, enddate, identities_db, filter_, npeople):
@@ -244,10 +249,9 @@ class SCR(DataSource):
         return (top_all)
 
     @staticmethod
-    def create_top_report (startdate, enddate, i_db):
-        opts = read_options()
-        data = SCR.get_top_data (startdate, enddate, i_db, None, opts.npeople)
-        createJSON (data, opts.destdir+"/"+SCR().get_top_filename())
+    def create_top_report (startdate, enddate, destdir, npeople, i_db):
+        data = SCR.get_top_data (startdate, enddate, i_db, None, npeople)
+        createJSON (data, destdir+"/"+SCR().get_top_filename())
 
     @staticmethod
     def get_filter_items(filter_, startdate, enddate, identities_db, bots):
@@ -269,11 +273,7 @@ class SCR(DataSource):
         return items
 
     @staticmethod
-    def create_filter_report(filter_, startdate, enddate, identities_db, bots):
-        opts = read_options()
-        period = getPeriod(opts.granularity)
-
-
+    def create_filter_report(filter_, period, startdate, enddate, destdir, npeople, identities_db, bots):
         items = SCR.get_filter_items(filter_, startdate, enddate, identities_db, bots)
         if (items == None): return
         items = items['name']
@@ -299,18 +299,18 @@ class SCR(DataSource):
 
             evol = SCR.get_evolutionary_data(period, startdate, enddate, 
                                                identities_db, filter_item)
-            fn = os.path.join(opts.destdir, filter_item.get_evolutionary_filename(SCR()))
+            fn = os.path.join(destdir, filter_item.get_evolutionary_filename(SCR()))
             createJSON(evol, fn)
 
             # Static
             agg = SCR.get_agg_data(period, startdate, enddate, identities_db, filter_item)
-            fn = os.path.join(opts.destdir, filter_item.get_static_filename(SCR()))
+            fn = os.path.join(destdir, filter_item.get_static_filename(SCR()))
             createJSON(agg, fn)
             if (filter_name == "repository"):
                 items_list["submitted"].append(agg["submitted"])
                 items_list["review_time_days_median"].append(agg['review_time_days_median'])
 
-        fn = os.path.join(opts.destdir, filter_.get_filename(SCR()))
+        fn = os.path.join(destdir, filter_.get_filename(SCR()))
         createJSON(items_list, fn)
 
     # Unify top format
@@ -496,7 +496,6 @@ def GetSQLRepositoriesFromSCR ():
     #tables necessaries for repositories
     return (" , trackers t")
 
-
 def GetSQLRepositoriesWhereSCR (repository):
     #fields necessaries to match info among tables
     return (" and t.url ='"+ repository+ "' and t.id = i.tracker_id")
@@ -522,6 +521,7 @@ def GetSQLCompaniesFromSCR (identities_db):
     return (" , people_upeople pup,"+\
             identities_db+".upeople_companies upc,"+\
             identities_db+".companies c")
+
 
 def GetSQLCompaniesWhereSCR (company):
     #fields necessaries to match info among tables
@@ -562,7 +562,6 @@ def GetSQLReportFromSCR (identities_db, type_analysis):
     if (len(type_analysis) != 2): return From
 
     analysis = type_analysis[0]
-    value = type_analysis[1]
 
     if (analysis):
         if analysis == 'repository': From = GetSQLRepositoriesFromSCR()
@@ -656,6 +655,47 @@ def GetCountriesSCRName  (startdate, enddate, identities_db, limit = 0):
            "ORDER BY issues DESC "+limit_sql
     return(ExecuteQuery(q))
 
+def get_countries(period, startdate, enddate, identities_db, evol = True):
+    fields = "count(distinct(upc.country_id)) as countries"
+    tables = "issues i, people_upeople pup, %s.upeople_countries upc" % (identities_db)
+    filters = "i.submitted_by = pup.people_id and pup.upeople_id = upc.upeople_id"
+    if evol:
+        q = GetSQLPeriod(period,'i.submitted_on', fields, tables, filters,
+               startdate, enddate)
+    else:
+        q = GetSQLGlobal('i.submitted_on', fields, tables, filters,
+               startdate, enddate)
+
+    countries= ExecuteQuery(q)
+    return(countries)
+
+def get_companies(period, startdate, enddate, identities_db, evol = True):
+    fields = "count(distinct(upc.company_id)) as companies"
+    tables = "issues i, people_upeople pup, %s.upeople_companies upc" % (identities_db)
+    filters = "i.submitted_by = pup.people_id and pup.upeople_id = upc.upeople_id"
+    if evol:
+       q = GetSQLPeriod(period,'i.submitted_on', fields, tables, filters,
+               startdate, enddate)
+    else:
+        q = GetSQLGlobal('i.submitted_on', fields, tables, filters, startdate, enddate)
+
+    companies = ExecuteQuery(q)
+    return(companies)
+
+def get_repositories(period, startdate, enddate, identities_db = None, evol = True):
+    fields = "count(distinct(t.id)) as repositories"
+    tables = "issues i, trackers t"
+    filters = "i.tracker_id = t.id"
+    if evol:
+        q = GetSQLPeriod(period,'i.submitted_on', fields, tables, filters,
+               startdate, enddate)
+    else:
+        q = GetSQLGlobal('i.submitted_on', fields, tables, filters, startdate, enddate)
+
+    repositories = ExecuteQuery(q)
+    return(repositories)
+
+
 def get_projects_scr_name  (startdate, enddate, identities_db, limit = 0):
     # Projects activity needs to include subprojects also
     logging.info ("Getting projects list for SCR")
@@ -708,7 +748,7 @@ def GetReviews (period, startdate, enddate, type_, type_analysis, evolutionary, 
     #Adding dates filters (and evolutionary or static analysis)
     if (evolutionary):
         q = GetSQLPeriod(period, "i.submitted_on", fields, tables, filters,
-                      startdate, enddate)
+                         startdate, enddate)
     else:
         q = GetSQLGlobal(" i.submitted_on ", fields, tables, filters, startdate, enddate)
 
@@ -777,6 +817,7 @@ def EvolReviewsAbandoned(period, startdate, enddate, type_analysis = [], identit
 def EvolReviewsAbandonedChanges(period, startdate, enddate, type_analysis = [], identities_db=None):
     return (GetReviewsChanges(period, startdate, enddate, "abandoned", type_analysis, True, identities_db))
 
+
 def EvolReviewsPending(period, startdate, enddate, type_analysis = [], identities_db=None):
     data = EvolReviewsSubmitted(period, startdate, enddate, type_analysis, identities_db)
     data = completePeriodIds(data, period, startdate, enddate)
@@ -807,7 +848,8 @@ def EvolReviewsPendingChanges(period, startdate, enddate, type_analysis = [], id
     for i in range(0,len(evol['merged_changes'])):
         pending_val = evol["submitted"][i] - evol["merged_changes"][i] - evol["abandoned_changes"][i]
         pending["pending"].append(pending_val)
-    pending["month"] = evol["month"]
+
+    pending[period] = evol[period]
     pending = completePeriodIds(pending, period, startdate, enddate)
     return pending
 
@@ -1028,6 +1070,7 @@ def GetWaiting4Reviewer (period, startdate, enddate, identities_db, type_analysi
 def EvolWaiting4Reviewer (period, startdate, enddate, identities_db=None, type_analysis = []):
     return (GetWaiting4Reviewer(period, startdate, enddate, identities_db, type_analysis, True))
 
+
 def StaticWaiting4Reviewer (period, startdate, enddate, identities_db=None, type_analysis = []):
     return (GetWaiting4Reviewer(period, startdate, enddate, identities_db, type_analysis, False))
 
@@ -1244,9 +1287,24 @@ def GetPeopleListSCR (startdate, enddate, bots):
     q = GetSQLGlobal('submitted_on', fields, tables, filters, startdate, enddate)
     return(ExecuteQuery(q))
 
-
 def GetPeopleQuerySCRChanges (developer_id, period, startdate, enddate, evol):
     fields = "COUNT(c.id) AS changes"
+    tables = GetTablesOwnUniqueIdsSCR()
+    filters = GetFiltersOwnUniqueIdsSCR()+ " AND pup.upeople_id = "+ str(developer_id)
+
+    if (evol):
+        q = GetSQLPeriod(period,'changed_on', fields, tables, filters,
+                startdate, enddate)
+    else:
+        fields = fields + \
+                ",DATE_FORMAT (min(changed_on),'%Y-%m-%d') as first_date, "+\
+                "  DATE_FORMAT (max(changed_on),'%Y-%m-%d') as last_date"
+        q = GetSQLGlobal('changed_on', fields, tables, filters,
+                startdate, enddate)
+    return (q)
+
+def GetPeopleQuerySCR (developer_id, period, startdate, enddate, evol):
+    fields = "COUNT(c.id) AS closed"
     tables = GetTablesOwnUniqueIdsSCR()
     filters = GetFiltersOwnUniqueIdsSCR()+ " AND pup.upeople_id = "+ str(developer_id)
 
@@ -1336,7 +1394,7 @@ def GetTimeToReviewQuerySCR (startdate, enddate, identities_db = None, type_anal
     tables = tables + GetSQLReportFromSCR(identities_db, type_analysis)
     filters = filter_bots + " i.id = changes.issue_id "
     filters += " AND people.id = changes.changed_by "
-    filters += GetSQLReportWhereSCR(type_analysis)
+    filters += GetSQLReportWhereSCR(type_analysis, identities_db)
     filters += " AND field='status' AND new_value='MERGED' "
     # remove autoreviews
     filters += " AND i.submitted_by<>changes.changed_by "
