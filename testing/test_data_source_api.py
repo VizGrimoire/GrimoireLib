@@ -26,14 +26,16 @@
 # import data_source
 
 import json, os, unittest
-from report import Report
-from filter import Filter
 import logging
+from optparse import OptionParser
 
+
+from filter import Filter
 from GrimoireUtils import getPeriod, read_main_conf
 from GrimoireUtils import compare_json_data, completePeriodIds
 from GrimoireUtils import createJSON, compareJSON
-from utils import read_options
+from report import Report
+
 
 class DataSourceTest(unittest.TestCase):
     @staticmethod
@@ -382,6 +384,48 @@ class DataSourceTest(unittest.TestCase):
         # R black box generated reports. Can not test
         pass
 
+
+def read_options():
+    parser = OptionParser(usage="usage: %prog [options]",
+                          version="%prog 0.1")
+    parser.add_option("-s", "--start",
+                      action="store",
+                      dest="startdate",
+                      default="1900-01-01",
+                      help="Start date for the report")
+    parser.add_option("-e", "--end",
+                      action="store",
+                      dest="enddate",
+                      default="2100-01-01",
+                      help="End date for the report")
+    parser.add_option("-c", "--config-file",
+                      action="store",
+                      dest="config_file",
+                      help="Automator config file")
+    parser.add_option("--npeople",
+                      action="store",
+                      dest="npeople",
+                      default="10",
+                      help="Limit for people analysis")
+    parser.add_option("-g", "--granularity",
+                      action="store",
+                      dest="granularity",
+                      default="months",
+                      help="year,months,weeks granularity")
+    parser.add_option("-o", "--destination",
+                      action="store",
+                      dest="destdir",
+                      default="data/json",
+                      help="Destination directory for JSON files")
+
+    (opts, args) = parser.parse_args()
+
+    if len(args) != 0:
+        parser.error("Wrong number of arguments")
+
+    if opts.config_file is None :
+        parser.error("Automator config file is needed.")
+    return opts
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.WARN,format='%(asctime)s %(message)s')

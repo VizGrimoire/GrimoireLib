@@ -121,3 +121,8 @@ class Filter(object):
         else:
             logging.warning("No filename for filter summary %s " % (ds.get_name()))
         return name
+
+    def get_type_analysis(self):
+        """Old format for filtering"""
+        type_analysis = [self.get_name(), "'"+self.get_item()+"'"]
+        return type_analysis

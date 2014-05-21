@@ -28,8 +28,9 @@
 from GrimoireSQL import SetDBChannel
 from GrimoireUtils import read_main_conf
 import logging
-import SCM, ITS, MLS, SCR, Mediawiki, IRC, Downloads, QAForums
+import SCM, ITS, MLS, SCR, Mediawiki, IRC, Downloads, QAForums, Releases
 from filter import Filter
+from metric import Metric
 
 class Report(object):
 
@@ -38,10 +39,12 @@ class Report(object):
     _automator = None
 
     @staticmethod
-    def init(automator_file):
+    def init(automator_file, metrics_path = None):
         Report._automator = read_main_conf(automator_file)
         Report._init_filters()
         Report._init_data_sources()
+        if metrics_path is not None:
+            Report._init_metrics(metrics_path)
 
     @staticmethod
     def _init_filters():
@@ -62,7 +65,29 @@ class Report(object):
     def _init_data_sources():
         Report._all_data_sources = [SCM.SCM, ITS.ITS, MLS.MLS, SCR.SCR, 
                                     Mediawiki.Mediawiki, IRC.IRC, Downloads.Downloads,
-                                    QAForums.QAForums]
+                                    QAForums.QAForums, Releases.Releases]
+
+    @staticmethod
+    def _init_metrics(metrics_path):
+        """Register all available metrics"""
+        logging.info("Loading metrics modules from %s" % (metrics_path))
+        from os import listdir
+        from os.path import isfile, join
+        import imp, inspect
+        metrics_mod = [ f for f in listdir(metrics_path) 
+                       if isfile(join(metrics_path,f)) and f.endswith("_metrics.py")]
+
+        for metric_mod in metrics_mod:
+            mod_name = metric_mod.split(".py")[0]
+            mod = __import__(mod_name)
+            # Support for having more than one metric per module
+            metrics_classes = [c for c in mod.__dict__.values() 
+                               if inspect.isclass(c) and issubclass(c, Metric)]
+            for metric_class in metrics_classes:
+                metric = metric_class()
+                ds = metric.get_data_source()
+                if ds != None: ds.add_metric(metric)
+>>>>>>> 6ee095261a88c3ac8f0f01adffcc552048cbc5d3
 
     @staticmethod
     def get_config():
