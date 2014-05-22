@@ -45,6 +45,7 @@ import GrimoireUtils, GrimoireSQL
 from GrimoireUtils import dataFrame2Dict, createJSON, completePeriodIds
 from GrimoireUtils import valRtoPython, getPeriod, checkFloatArray
 import SCR
+from utils import read_options
 
 def aggData(period, startdate, enddate, idb, destdir, bots):
     # Wikimedia data ok after '2013-04-30' for changes based metrics
@@ -275,7 +276,6 @@ def reposData(period, startdate, enddate, idb, destdir, conf):
         data = SCR.StaticReviewsWaiting4Reviewer(period, startok, enddate, idb,  type_analysis)
         repos_list["ReviewsWaitingForReviewer"].append(data['ReviewsWaitingForReviewer'])
         agg = dict(agg.items() + data.items())
-        repos_list["review_time_days_median"].append(data['review_time_days_median'])
         createJSON(agg, destdir + "/"+repo_file + "-scr-rep-static.json")
 
     createJSON(repos_list, destdir+"/scr-repos.json")
