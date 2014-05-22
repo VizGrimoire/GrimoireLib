@@ -68,10 +68,10 @@ if __name__ == '__main__':
     for name in metrics:
         print name
 
-    metrics = SCM.get_metrics()
-    for metric in metrics:
-        print metric.get_definition()['name']
-        agg = metric.get_aggregate()
+    metrics_set = SCM.get_metrics_set()
+    for metrics in metrics_set:
+        print metrics.get_definition()['name']
+        agg = metrics.get_agg()
         if agg is not None: print(agg)
-        evol = metric.get_evolutionary()
+        evol = metrics.get_ts()
         if evol is not None: print(evol)

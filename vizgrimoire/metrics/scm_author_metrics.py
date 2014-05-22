@@ -36,17 +36,16 @@ from metrics_filter import MetricFilters
 
 from query_builder import SCMQuery
 
+from SCM import SCM
+
 
 class Authors(Metrics):
     """ Authors metric class for source code management systems """
 
-    def __init__(self, dbcon, filters):
-        self.db = dbcon
-        self.filters = filters
-        self.id = "authors"
-        self.name = "Authors"
-        self.desc = "People authoring commits (changes to source code)"
-        self.data_source = "SCM"
+    id = "authors"
+    name = "Authors"
+    desc = "People authoring commits (changes to source code)"
+    data_source = SCM
 
     def __get_authors__ (self, evolutionary):
         # This function contains basic parts of the query to count authors
@@ -62,12 +61,12 @@ class Authors(Metrics):
         if (self.filters.type_analysis is None or len (self.filters.type_analysis) != 2):
             #Specific case for the basic option where people_upeople table is needed
             #and not taken into account in the initial part of the query
-            tables += ",  "+self.filters.identities_db+".people_upeople pup"
+            tables += ",  "+self.db.identities_db+".people_upeople pup"
             filters += " and s.author_id = pup.people_id"
 
         elif (self.filters.type_analysis[0] == "repository" or self.filters.type_analysis[0] == "project"):
             #Adding people_upeople table
-            tables += ",  "+self.filters.identities_db+".people_upeople pup"
+            tables += ",  "+self.db.identities_db+".people_upeople pup"
             filters += " and s.author_id = pup.people_id "
 
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate, 
@@ -92,12 +91,12 @@ class Authors(Metrics):
         #to be implemented
         pass
 
-#example of use
-
-filters = MetricFilters("week", "'2010-01-01'", "'2014-01-01'", ["company", "'Red Hat'"])
-dbcon = SCMQuery("dic_cvsanaly_openstack_2259", "root", "", "dic_cvsanaly_openstack_2259")
-redhat = Authors(dbcon, filters)
-print redhat.get_ts()
-print redhat.get_agg()
-print redhat.get_data_source()
+# example of use
+if __name__ == '__main__':
+    filters = MetricFilters("week", "'2010-01-01'", "'2014-01-01'", ["company", "'Red Hat'"])
+    dbcon = SCMQuery("root", "", "dic_cvsanaly_openstack_2259", "dic_cvsanaly_openstack_2259")
+    redhat = Authors(dbcon, filters)
+    print redhat.get_ts()
+    print redhat.get_agg()
+    print redhat.get_data_source()
 

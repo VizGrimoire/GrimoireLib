@@ -20,14 +20,15 @@
 ## Authors:
 ##   Daniel Izquierdo-Cortazar <dizquierdo@bitergia.com>
 
+import logging
 import MySQLdb
-
 import re
+import sys
 
 class DSQuery(object):
     """ Generic methods to control access to db """
 
-    def __init__(self, identities_db, user, password, database, host="127.0.0.1", port=3306, group=None):
+    def __init__(self, user, password, database, identities_db = None, host="127.0.0.1", port=3306, group=None):
         self.identities_db = identities_db
         self.user = user
         self.password = password
@@ -248,4 +249,3 @@ class SCMQuery(DSQuery):
         elif analysis == 'project': where = self.GetSQLProjectWhere(value, role, self.identities_db)
 
         return (where)
-

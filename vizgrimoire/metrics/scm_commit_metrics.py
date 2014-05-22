@@ -28,25 +28,23 @@ import MySQLdb
 
 import re, sys
 
-from metrics import Metrics
-
 from GrimoireUtils import completePeriodIds
+
+from metrics import Metrics
 
 from metrics_filter import MetricFilters
 
 from query_builder import SCMQuery
 
+from SCM import SCM
+
 class Commits(Metrics):
     """ Commits metric class for source code management systems """
 
-    def __init__(self, dbcon, filters):
-        self.db = dbcon
-        self.filters = filters
-        self.id = "commits"
-        self.name = "Commits"
-        self.desc = "Changes to the source code"
-        self.data_source = "SCM"
-        self.sql = ""
+    id = "commits"
+    name = "Commits"
+    desc = "Changes to the source code"
+    data_source = SCM
 
     def __get_commits__ (self, evolutionary):
         # This function contains basic parts of the query to count commits.
@@ -64,7 +62,6 @@ class Commits(Metrics):
                                    self.filters.enddate, " s.date ", fields, 
                                    tables, filters, evolutionary)
         return query
-        
 
     def get_data_source(self):
         return self.data_source
@@ -82,11 +79,14 @@ class Commits(Metrics):
         pass
 
 # Examples of use
-
-filters = MetricFilters("week", "'2010-01-01'", "'2014-01-01'", ["company", "'Red Hat'"])
-dbcon = SCMQuery("dic_cvsanaly_openstack_2259", "root", "", "dic_cvsanaly_openstack_2259")
-redhat = Commits(dbcon, filters)
-print redhat.get_ts()
-print redhat.get_agg()
-print redhat.get_data_source()
+if __name__ == '__main__':
+    filters = MetricFilters("week", "'2010-01-01'", "'2014-01-01'", ["company", "'Red Hat'"])
+    # dbcon = SCMQuery("dic_cvsanaly_openstack_2259", "root", "", "dic_cvsanaly_openstack_2259")
+    dbcon = SCMQuery("root", "", "cp_cvsanaly_SingleProject", "cp_cvsanaly_SingleProject",)
+    redhat = Commits(dbcon, filters)
+    all = Commits(dbcon)
+    # print redhat.get_ts()
+    print redhat.get_agg()
+    print all.get_agg()
+    print redhat.get_data_source()
 

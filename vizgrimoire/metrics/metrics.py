@@ -22,16 +22,27 @@
 ##   Daniel Izquierdo-Cortazar <dizquierdo@bitergia.com>
 
 
+from metrics_filter import MetricFilters
+
 class Metrics(object):
+
+    default_period = "month"
+    default_start = "'2010-01-01'"
+    default_end = "'2014-01-01'"
+    id = None
+    name = None
+    desc = None
+    data_source = None
 
     def __init__(self, dbcon = None, filters = None):
         """db connection and filter to be used"""
-        self.id = None
-        self.name = None
-        self.desc = None
-        self.data_source = None
         self.db = dbcon
         self.filters = filters
+        if filters == None:
+            self.filters = MetricFilters(Metrics.default_period, 
+                                         Metrics.default_start, Metrics.default_end, 
+                                         None)
+
 
     def get_definition(self):
         def_ = {
@@ -43,7 +54,7 @@ class Metrics(object):
 
     def get_data_source(self):
         """ Returns the family of the instance """
-        return self.data_source
+        return Metrics.data_source
 
     def get_sql(self):
         """ Returns specific sql for the provided filters """
