@@ -24,12 +24,14 @@
 
 class MetricDomain(object):
 
-    def __init__(self, dbcon = None, filter_ = None):
+    def __init__(self, dbcon = None, filters = None):
         """db connection and filter to be used"""
         self.id = None
         self.name = None
         self.desc = None
         self.data_source = None
+        self.db = dbcon
+        self.filters = filters
 
     def get_definition(self):
         def_ = {
@@ -42,6 +44,10 @@ class MetricDomain(object):
     def get_data_source(self):
         """ Returns the family of the instance """
         return self.data_source
+
+    def get_sql(self):
+        """ Returns specific sql for the provided filters """
+        raise NotImplementedError
 
     def get_agg(self):
         """ Returns an aggregated value """

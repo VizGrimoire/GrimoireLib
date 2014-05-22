@@ -30,15 +30,10 @@ import re, sys
 
 from metric import MetricDomain
 
+from GrimoireUtils import completePeriodIds
 
-class Filter(object):
+from metrics_filter import MetricsFilter
 
-    """ Specific filters for each analysis """
-    def __init__(self, period, startdate, enddate, type_analysis):
-        self.period = period
-        self.startdate = startdate
-        self.enddate = enddate
-        self.type_analysis = type_analysis
 
 class Author(MetricDomain):
     """ Authors metric class for source code management systems """
@@ -85,7 +80,8 @@ class Author(MetricDomain):
 
     def get_ts (self):
         # returns the evolution of authors through the time
-        return (self.__get_authors__(True))
+        data = self.__get_authors__(True)
+        return completePeriodIds(data, self.filters.period, self.filters.startdate, self.filters.enddate)
 
 
     def get_agg (self):

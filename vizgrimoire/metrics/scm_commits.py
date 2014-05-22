@@ -30,26 +30,21 @@ import re, sys
 
 from metric import MetricDomain
 
+from GrimoireUtils import completePeriodIds
 
-class Filter(object):
-
-    """ Specific filters for each analysis """
-    def __init__(self, period, startdate, enddate, type_analysis):
-        self.period = period
-        self.startdate = startdate
-        self.enddate = enddate
-        self.type_analysis = type_analysis
+from metrics_filter import MetricsFilter
 
 class Commits(MetricDomain):
     """ Commits metric class for source code management systems """
 
-    def __init__(self, db, filters):
+    def __init__(self, dbcon, filters):
         self.db = db
         self.filters = filters
         self.id = "commits"
         self.name = "Commits"
         self.desc = "Changes to the source code"
         self.data_source = "SCM"
+
 
     def __get_commits__ (self, evolutionary):
         # This function contains basic parts of the query to count commits.
@@ -72,7 +67,8 @@ class Commits(MetricDomain):
 
     def get_ts (self):
         # Returns the evolution of commits through the time
-        return self.__get_commits__(True)
+        data = self.__get_commits__(True)
+        return completePeriodIds(data, self.filters.period, self.filters.startdate, self.filters.enddate)
     
     def get_agg(self):
         return self.__get_commits__(False)        
@@ -80,5 +76,7 @@ class Commits(MetricDomain):
     def get_list(self):
         #to be implemented
         pass
+
+
 
 
