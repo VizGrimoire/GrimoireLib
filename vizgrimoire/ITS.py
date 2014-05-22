@@ -960,6 +960,38 @@ def GetEndDate (startdate, enddate, identities_db, type_analysis):
     #End date of submitted issues
     return(GetDate(startdate, enddate, identities_db, type_analysis, "max"))
 
+##----------------------
+## Auxiliary functions querying the database
+##----------------------
+
+def get_timespan():
+    """Get timespan found in the ITS database.
+    
+    Returns
+    -------
+    startdate : datetime.datetime
+        Time of first activity in tickets
+    enddate : datetime.datetime
+        Time of last activity in tickets
+
+    Notes
+    -----
+
+    Looks for entries both in issues and changes tables.
+
+    """
+
+    q = """SELECT
+          DATE(MIN(DATE)) as startdate,
+          DATE(MAX(date)) as enddate
+      FROM
+          (SELECT submitted_on AS date FROM issues
+           UNION ALL
+           SELECT changed_on AS date FROM changes) AS dates"""
+    data = ExecuteQuery(q)
+    # Returns [first time, last_time]
+    return (data['startdate'], data['enddate'])
+
 ###############
 # Others
 ###############
