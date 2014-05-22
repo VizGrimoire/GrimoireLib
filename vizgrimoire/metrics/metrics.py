@@ -22,7 +22,7 @@
 ##   Daniel Izquierdo-Cortazar <dizquierdo@bitergia.com>
 
 
-class MetricDomain(object):
+class Metrics(object):
 
     def __init__(self, dbcon = None, filters = None):
         """db connection and filter to be used"""

@@ -28,7 +28,7 @@ import MySQLdb
 
 import re, sys
 
-from metric import MetricDomain
+from metrics import Metrics
 
 from GrimoireUtils import completePeriodIds
 
@@ -37,7 +37,7 @@ from metrics_filter import MetricFilters
 from query_builder import SCMQuery
 
 
-class Author(MetricDomain):
+class Authors(Metrics):
     """ Authors metric class for source code management systems """
 
     def __init__(self, dbcon, filters):
@@ -96,7 +96,7 @@ class Author(MetricDomain):
 
 filters = MetricFilters("week", "'2010-01-01'", "'2014-01-01'", ["company", "'Red Hat'"])
 dbcon = SCMQuery("dic_cvsanaly_openstack_2259", "root", "", "dic_cvsanaly_openstack_2259")
-redhat = Author(dbcon, filters)
+redhat = Authors(dbcon, filters)
 print redhat.get_ts()
 print redhat.get_agg()
 print redhat.get_data_source()

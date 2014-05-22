@@ -28,7 +28,7 @@ import MySQLdb
 
 import re, sys
 
-from metric import MetricDomain
+from metrics import Metrics
 
 from GrimoireUtils import completePeriodIds
 
@@ -36,7 +36,7 @@ from metrics_filter import MetricFilters
 
 from query_builder import SCMQuery
 
-class Commits(MetricDomain):
+class Commits(Metrics):
     """ Commits metric class for source code management systems """
 
     def __init__(self, dbcon, filters):
