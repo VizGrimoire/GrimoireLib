@@ -31,7 +31,6 @@ class MetricDomain(object):
         self.desc = None
         self.data_source = None
 
-
     def get_definition(self):
         def_ = {
                "id":self.id,
@@ -41,11 +40,18 @@ class MetricDomain(object):
         return def_
 
     def get_data_source(self):
+        """ Returns the family of the instance """
         return self.data_source
 
-    def get_aggr(self):
-        pass
+    def get_agg(self):
+        """ Returns an aggregated value """
+        raise NotImplementedError
 
     def get_ts(self):
-        pass
+        """ Returns a time serie of values """
+        raise NotImplementedError
+
+    def get_list(self):
+        """ Returns a list of items """
+        raise NotImplementedError
 

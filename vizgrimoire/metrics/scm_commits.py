@@ -67,16 +67,17 @@ class Commits(MetricDomain):
 
         return self.db.ExecuteQuery(q)
 
+    def get_data_source(self):
+        return self.data_source
 
-    def commits_ts (self):
+    def get_ts (self):
         # Returns the evolution of commits through the time
-
         return self.__get_commits__(True)
     
-    def commits_agg(self):
+    def get_agg(self):
         return self.__get_commits__(False)        
 
-    def list_commits(self):
+    def get_list(self):
         #to be implemented
         pass
 

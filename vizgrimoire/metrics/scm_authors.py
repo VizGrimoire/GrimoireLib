@@ -83,16 +83,16 @@ class Author(MetricDomain):
         return(self.db.ExecuteQuery(q))
 
 
-    def authors_ts (self):
+    def get_ts (self):
         # returns the evolution of authors through the time
         return (self.__get_authors__(True))
 
 
-    def authors_agg (self):
+    def get_agg (self):
         # returns the aggregated number of authors in the specified timeperiod (enddate - startdate)
         return (self.__get_authors__(False))
 
-    def top_authors(self):
+    def get_list(self):
         #to be implemented
         pass
 
