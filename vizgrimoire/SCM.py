@@ -637,6 +637,32 @@ def GetSQLReportWhere (type_analysis, role, identities_db = None):
 
     return (where)
 
+##----------------------
+## Auxiliary functions querying the database
+##----------------------
+
+def get_timespan():
+    """Get timespan found in the SCM database.
+    
+    Returns
+    -------
+    startdate : datetime.datetime
+        Time of first commit
+    enddate : datetime.datetime
+        Time of last commit
+
+    Notes
+    -----
+
+    Just looks for first and last date in scmlog.
+
+    """
+
+    q = """SELECT DATE(MIN(date)) as startdate,
+                  DATE(MAX(date)) as enddate FROM scmlog"""
+    data = ExecuteQuery(q)
+    return (data['startdate'], data['enddate'])
+
 #########
 #Functions to obtain info per type of basic piece of data
 #########
@@ -649,7 +675,6 @@ def GetSQLReportWhere (type_analysis, role, identities_db = None):
 #    type_analysis: tuple with two values: typeof and value
 #                   typeof = 'companies', 'countries', 'repositories' or ''
 #                   value = any value that corresponds with the type of analysis
-
 
 def GetCommits (period, startdate, enddate, identities_db, type_analysis, evolutionary):
     # This function contains basic parts of the query to count commits.
