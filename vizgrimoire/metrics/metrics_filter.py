@@ -22,7 +22,7 @@
 ##   Daniel Izquierdo-Cortazar <dizquierdo@bitergia.com>
 
 
-class MetricsFilter(object):
+class MetricFilters(object):
 
     """ Specific filters for each analysis """
     def __init__(self, period, startdate, enddate, type_analysis):

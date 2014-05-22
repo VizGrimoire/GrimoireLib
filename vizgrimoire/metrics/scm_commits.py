@@ -32,35 +32,39 @@ from metric import MetricDomain
 
 from GrimoireUtils import completePeriodIds
 
-from metrics_filter import MetricsFilter
+from metrics_filter import MetricFilters
+
+from query_builder import SCMQuery
 
 class Commits(MetricDomain):
     """ Commits metric class for source code management systems """
 
     def __init__(self, dbcon, filters):
-        self.db = db
+        self.db = dbcon
         self.filters = filters
         self.id = "commits"
         self.name = "Commits"
         self.desc = "Changes to the source code"
         self.data_source = "SCM"
-
+        self.sql = ""
 
     def __get_commits__ (self, evolutionary):
         # This function contains basic parts of the query to count commits.
         # That query is built and results returned.
-        period = self.filters.period
-        startdate = self.filters.startdate
-        enddate = self.filters.enddate
-        type_analysis = self.filters.type_analysis
+        query = self.__get_sql__(evolutionary)
+        return self.db.ExecuteQuery(query)
 
+
+    def __get_sql__(self, evolutionary):
         fields = " count(distinct(s.id)) as commits "
-        tables = " scmlog s, actions a " + self.db.GetSQLReportFrom(type_analysis)
-        filters = self.db.GetSQLReportWhere(type_analysis, "author") + " and s.id=a.commit_id "
+        tables = " scmlog s, actions a " + self.db.GetSQLReportFrom(self.filters.type_analysis)
+        filters = self.db.GetSQLReportWhere(self.filters.type_analysis, "author") + " and s.id=a.commit_id "
 
-        q = self.db.BuildQuery(period, startdate, enddate, " s.date ", fields, tables, filters, evolutionary)
-
-        return self.db.ExecuteQuery(q)
+        query = self.db.BuildQuery(self.filters.period, self.filters.startdate, 
+                                   self.filters.enddate, " s.date ", fields, 
+                                   tables, filters, evolutionary)
+        return query
+        
 
     def get_data_source(self):
         return self.data_source
@@ -77,6 +81,12 @@ class Commits(MetricDomain):
         #to be implemented
         pass
 
+# Examples of use
 
-
+filters = MetricFilters("week", "'2010-01-01'", "'2014-01-01'", ["company", "'Red Hat'"])
+dbcon = SCMQuery("dic_cvsanaly_openstack_2259", "root", "", "dic_cvsanaly_openstack_2259")
+redhat = Commits(dbcon, filters)
+print redhat.get_ts()
+print redhat.get_agg()
+print redhat.get_data_source()
 

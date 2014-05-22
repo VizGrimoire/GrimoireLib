@@ -32,14 +32,16 @@ from metric import MetricDomain
 
 from GrimoireUtils import completePeriodIds
 
-from metrics_filter import MetricsFilter
+from metrics_filter import MetricFilters
+
+from query_builder import SCMQuery
 
 
 class Author(MetricDomain):
     """ Authors metric class for source code management systems """
 
-    def __init__(self, db, filters):
-        self.db = db
+    def __init__(self, dbcon, filters):
+        self.db = dbcon
         self.filters = filters
         self.id = "authors"
         self.name = "Authors"
@@ -49,30 +51,28 @@ class Author(MetricDomain):
     def __get_authors__ (self, evolutionary):
         # This function contains basic parts of the query to count authors
         # That query is later built and executed
-        period = self.filters.period
-        startdate = self.filters.startdate
-        enddate = self.filters.enddate
-        type_analysis = self.filters.type_analysis
 
         fields = " count(distinct(pup.upeople_id)) AS authors "
         tables = " scmlog s "
-        filters = self.db.GetSQLReportWhere(type_analysis, "author")
+        filters = self.db.GetSQLReportWhere(self.filters.type_analysis, "author")
 
         #specific parts of the query depending on the report needed
-        tables += self.db.GetSQLReportFrom(type_analysis)
+        tables += self.db.GetSQLReportFrom(self.filters.type_analysis)
 
-        if (type_analysis is None or len (type_analysis) != 2) :
+        if (self.filters.type_analysis is None or len (self.filters.type_analysis) != 2):
             #Specific case for the basic option where people_upeople table is needed
             #and not taken into account in the initial part of the query
-            tables += ",  "+identities_db+".people_upeople pup"
+            tables += ",  "+self.filters.identities_db+".people_upeople pup"
             filters += " and s.author_id = pup.people_id"
 
-        elif (type_analysis[0] == "repository" or type_analysis[0] == "project"):
+        elif (self.filters.type_analysis[0] == "repository" or self.filters.type_analysis[0] == "project"):
             #Adding people_upeople table
-            tables += ",  "+identities_db+".people_upeople pup"
+            tables += ",  "+self.filters.identities_db+".people_upeople pup"
             filters += " and s.author_id = pup.people_id "
 
-        q = self.db.BuildQuery(period, startdate, enddate, " s.date ", fields, tables, filters, evolutionary)
+        q = self.db.BuildQuery(self.filters.period, self.filters.startdate, 
+                               self.filters.enddate, " s.date ", fields, 
+                               tables, filters, evolutionary)
         print q
 
         return(self.db.ExecuteQuery(q))
@@ -92,5 +92,12 @@ class Author(MetricDomain):
         #to be implemented
         pass
 
+#example of use
 
+filters = MetricFilters("week", "'2010-01-01'", "'2014-01-01'", ["company", "'Red Hat'"])
+dbcon = SCMQuery("dic_cvsanaly_openstack_2259", "root", "", "dic_cvsanaly_openstack_2259")
+redhat = Author(dbcon, filters)
+print redhat.get_ts()
+print redhat.get_agg()
+print redhat.get_data_source()
 
