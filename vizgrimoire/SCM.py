@@ -357,6 +357,11 @@ class SCM(DataSource):
         ExecuteQuery(q)
 
     @staticmethod
+    def get_query_builder():
+        from query_builder import SCMQuery
+        return SCMQuery
+
+    @staticmethod
     def get_metrics_definition ():
         mdef = {
             "scm_commits" : {

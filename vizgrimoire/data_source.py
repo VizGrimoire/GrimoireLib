@@ -29,7 +29,7 @@ from GrimoireUtils import createJSON
 
 class DataSource(object):
     _bots = []
-    _metrics = []
+    _metrics_set = []
 
     @staticmethod
     def get_name():
@@ -184,16 +184,21 @@ class DataSource(object):
         raise NotImplementedError
 
     @staticmethod
-    def get_metrics():
+    def get_metrics_set():
         """Return all metrics objects available"""
-        return DataSource._metrics
+        return DataSource._metrics_set
 
     @staticmethod
-    def add_metric(metric):
-        """Add new metric to the data source"""
-        DataSource._metrics.append(metric)
+    def add_metrics(metrics):
+        """Add new metrics to the data source"""
+        DataSource._metrics_set.append(metrics)
 
     @staticmethod
     def remove_filter_data():
         """Remove from the database all information about this filter (i.e. a repository)"""
+        raise NotImplementedError
+
+    @staticmethod
+    def get_query_builder():
+        """Class used to build queries to get metrics"""
         raise NotImplementedError
