@@ -31,8 +31,10 @@ db_prefix = 'mysql://jgb:XXX@localhost/'
 # Set UTF-8, and avoid the DBAPI Unicode support, to use SQLAlchemy's,
 # which is said to be more efficient
 db_suffix = '?charset=utf8&use_unicode=0'
-database = db_prefix + "cp_cvsanaly_GrimoireLibTests" + db_suffix
-database_id = db_prefix + "cp_cvsanaly_GrimoireLibTests" + db_suffix
+database = db_prefix + "vizgrimoire_cvsanaly" + db_suffix
+database_id = db_prefix + "vizgrimoire_cvsanaly" + db_suffix
+#database = db_prefix + "cp_cvsanaly_GrimoireLibTests" + db_suffix
+#database_id = db_prefix + "cp_cvsanaly_GrimoireLibTests" + db_suffix
 
 class TestBuildSession (unittest.TestCase):
 
@@ -43,7 +45,7 @@ class TestBuildSession (unittest.TestCase):
     def test_get_session (self):
 
         session = buildSession(database=self.database,
-                               database_id = self.database_id,
+                               id_database = self.database_id,
                                echo=False)
 
 class TestSCMQuery (unittest.TestCase):
