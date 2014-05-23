@@ -36,7 +36,7 @@ class Email(object):
         self.subject = None # Email subject
         self.body = None # Email body
         self.date = None # Email sending date
-        self.domain = None # Domain of the archive
+        self.url = None # Domain of the archive
         self._buildEmail() # Constructor
                
     def _buildEmail(self):
@@ -68,6 +68,7 @@ class Email(object):
         self.date = results["first_date"]
         self.initiator_name = results["initiator_name"]
         self.initiator_id = results["initiator_id"]
+        self.url = results["url"]
 
 
 class Threads(object):
