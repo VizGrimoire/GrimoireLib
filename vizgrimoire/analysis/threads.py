@@ -36,6 +36,7 @@ class Email(object):
         self.subject = None # Email subject
         self.body = None # Email body
         self.date = None # Email sending date
+        self.domain = None # Domain of the archive
         self._buildEmail() # Constructor
                
     def _buildEmail(self):
@@ -48,7 +49,8 @@ class Email(object):
                        m.message_body,
                        m.first_date,
                        u.identifier as initiator_name,
-                       u.id as initiator_id
+                       u.id as initiator_id,
+                       m.mailing_list_url as url
                 from messages m,
                      messages_people mp,
                      people_upeople pup,

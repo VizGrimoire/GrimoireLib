@@ -223,6 +223,7 @@ def getLongestThreads(startdate, enddate, identities_db):
     l_threads['date'] = []
     l_threads['initiator_name'] = []
     l_threads['initiator_id'] = []
+    l_threads['url'] = []
     for email in longest_threads:
         l_threads['message_id'].append(email.message_id)
         l_threads['length'].append(main_topics.lenThread(email.message_id))
@@ -230,6 +231,7 @@ def getLongestThreads(startdate, enddate, identities_db):
         l_threads['date'].append(email.date.strftime("%Y-%m-%d"))
         l_threads['initiator_name'].append(email.initiator_name)
         l_threads['initiator_id'].append(email.initiator_id)
+        l_threads['url'].append(email.url)
 
     return l_threads
 
