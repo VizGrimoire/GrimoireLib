@@ -126,6 +126,35 @@ class UPeople(Base):
 class SCMQuery (Query):
     """Class for dealing with SCM queries"""
 
+    def __init__ (self, entities, session):
+        """Create an SCMQuery.
+
+        Parameters
+        ----------
+
+        entities:
+        session:
+
+        Attributes
+        ----------
+
+        self.start: datetime.datetime
+           Start of the period to consider for commits. Default: None
+           (start from the first commit)
+        self.end: datetime.datetime
+           End of the period to consider for commits. Default: None
+           (end in the last commit)
+
+        """
+
+        self.start = None
+        self.end = None
+        # Keep an accounting of which tables have been joined, to avoid
+        # undesired repeated joins
+        self.joined = []
+        Query.__init__(self, entities, session)
+
+
     def select_nscmlog(self, variables):
         """Select a variable which is a field in Scmlog.
 
@@ -138,6 +167,8 @@ class SCMQuery (Query):
         elif len (variables) == 0:
             raise Exception ("select_nscmlog: No variables")
         fields = []
+        if SCMLog not in self.joined:
+            self.joined.append(SCMLog)
         for variable in variables:
             if variable == "commits":
                 name = "nocommits"
@@ -158,6 +189,8 @@ class SCMQuery (Query):
     def select_listcommits(self):
         """Select a list of commits"""
         
+        if SCMLog not in self.joined:
+            self.joined.append(SCMLog)
         return self \
             .add_columns (label("id", func.distinct(SCMLog.id)),
                           label("date", SCMLog.date))
@@ -177,7 +210,7 @@ class SCMQuery (Query):
                 .join (PeopleUPeople, UPeople.id == PeopleUPeople.upeople_id)
         if kind == "authors":
             return query.join (SCMLog,
-                               PeopleUPeople.people_id == SCMLog.author_id)
+                                   PeopleUPeople.people_id == SCMLog.author_id)
         elif kind == "committers":
             return query.join (SCMLog,
                                PeopleUPeople.people_id == SCMLog.committer_id)
@@ -208,13 +241,62 @@ class SCMQuery (Query):
         elif kind == "committers":
             return query.join (SCMLog, People.id == SCMLog.committer_id)    
         elif kind == "all":
-            return query.join (SCMLog,
-                               People.id == SCMLog.author_id or
-                               People.id == SCMLog.committer_id)
+            return query.join (SCMLog, People.id == SCMLog.author_id or
+                                 People.id == SCMLog.committer_id)
         else:
             raise Exception ("select_listpersons: Unknown kind %s." \
                              % kind)
 
+    def add_personsdata(self, kind):
+        """Adds columns with persons data to select clause.
+
+        Adds people.name, people.email to the select clause of query.
+        Does not join new tables.
+
+        Parameters
+        ----------
+
+        kind: {"authors", "committers"}
+           Kind of person to select
+
+        Returns
+        -------
+
+        SCMObject: Result query, with two new fields: name, email        
+
+        """
+
+        query = self.add_columns (label("name", People.name),
+                                  label('email', People.email))
+        if kind == "authors":
+            person = SCMLog.author_id
+        elif kind == "committers":
+            person = SCMLog.committer_id
+        else:
+            raise Exception ("select_listpersons: Unknown kind %s." \
+                             % kind)
+        query = query.filter (People.id == person)
+        return query
+
+
+    def add_commitsperiod(self):
+        """Add to select the period of the selected commits.
+
+        Adds min(scmlog.date) and max(scmlog.date) for selected commits.
+        
+        Returns
+        -------
+
+        SCMObject: Result query, with two new fields: firstdate, lastdate
+
+        """
+
+        query = self.add_columns (label('firstdate',
+                                        func.min(SCMLog.date)),
+                                  label('lastdate',
+                                        func.max(SCMLog.date)))
+        return query
+    
     def select_nbranches(self):
         """Select number of branches in repo.
 
@@ -320,6 +402,9 @@ class SCMQuery (Query):
         elif kind == "all":
             return query.filter (or_(SCMLog.author_id.in_(list),
                                      SCMLog.committer_id.in_(list)))
+        else:
+            raise Exception ("filter_persons: Unknown kind %s." \
+                             % kind)
 
 
     def filter_paths (self, list):
@@ -329,14 +414,17 @@ class SCMQuery (Query):
         Returns a SCMQuery object.
         """
 
+        print self
         conditions = []
         for path in list:
             condition = FileLinks.file_path.like(path + '%')
             conditions.append(condition)
         query = self
+        print "Query: " + str(query)
         if Actions not in self.joined:
             self.joined.append (Actions)
-            query = query.join(Actions)
+            query = query.join(Actions,
+                               SCMLog.id == Actions.commit_id)
         if FileLinks not in self.joined:
             self.joined.append (FileLinks)
             query = query.join(FileLinks, Actions.file_id == FileLinks.file_id)
@@ -364,21 +452,25 @@ class SCMQuery (Query):
            kind of person to group by
 
         Returns
-g        -------
+        -------
 
-        SCMQuery object, with a new "select" column (for the kind
-        of person) and a "group by" clause for grouping the results.
+        SCMQuery object, with a new field (authors or committers)
+        and a "group by" clause for grouping the results.
 
         """
 
         if kind == "authors":
-            return self \
-                .add_columns (label("author", SCMLog.author_id)) \
-                .group_by("author").order_by("author")
+            id = SCMLog.author_id
+            field = "author"
         elif kind == "committers":
-            return self \
-                .add_columns (label("committer", SCMLog.committer_id)) \
-                .group_by("committer").order_by("committer")
+            id = SCMLog.committer_id
+            field = "comitter"
+        else:
+            raise Exception ("group_by_person: Unknown kind %s." \
+                             % kind)
+        return self \
+            .add_columns (label(field, id)) \
+            .group_by(field)
 
 
     def group_by_repo (self, names = False):
@@ -435,21 +527,6 @@ g        -------
 
         return self.__repr__()
 
-    def __init__ (self, entities, session):
-        """Initialize the object
-        
-        self.start and self.end will be used in case there are temporal
-        limits for the query (useful to produce TimeSeries objects,
-        which needs those.
-        """
-
-        self.start = None
-        self.end = None
-        # Keep an accounting of which tables have been joined, to avoid
-        # undesired repeated joins
-        self.joined = []
-        Query.__init__(self, entities, session)
-
 
 if __name__ == "__main__":
 
@@ -477,11 +554,21 @@ if __name__ == "__main__":
         .group_by_person("authors")
     for row in res.limit(10).all():
         print row.author, row.nocommits
-    # res = session.query().select_nscmlog(["commits",]) \
-    #     .select_listpersons("authors") \
-    #     .group_by_person("authors")
-    # for row in res.limit(10).all():
-    #     print row.author, row.nocommits, row.name
+    # Number of commits, grouped by authors, including data per author
+    res = session.query().select_nscmlog(["commits",]) \
+        .add_personsdata("authors") \
+        .group_by_person("authors")
+    for row in res.limit(10).all():
+        print row.author, row.nocommits, row.name, row.email
+    # Number of commits, grouped by authors, including data
+    # and period of activity per author
+    res = session.query().select_nscmlog(["commits",]) \
+        .add_personsdata("authors") \
+        .add_commitsperiod() \
+        .group_by_person("authors")
+    for row in res.order_by("nocommits desc").limit(10).all():
+        print row.author, row.nocommits, row.name, row.email, \
+            row.firstdate, row.lastdate
 
     # Time series of commits
     res = session.query().select_nscmlog(["commits",]) \
@@ -508,6 +595,7 @@ if __name__ == "__main__":
         .select_listpersons("authors") \
         .filter_period(start=datetime(2013,12,1),
                        end=datetime(2014,2,1))
+    print resAuth
     for row in resAuth.limit(10).all():
         print row.id, row.name
     # Filter master branch
@@ -525,3 +613,15 @@ if __name__ == "__main__":
     res = resAuth.filter_paths(("examples",))
     print res.all()
 
+
+    # Number of commits, grouped by authors, including data
+    # and period of activity per author, for a certain period
+    res = session.query().select_nscmlog(["commits",]) \
+        .add_personsdata("authors") \
+        .add_commitsperiod() \
+        .filter_period(start=datetime(2013,12,1),
+                       end=datetime(2014,2,1)) \
+        .group_by_person("authors")
+    for row in res.order_by("nocommits desc").limit(10).all():
+        print row.author, row.nocommits, row.name, row.email, \
+            row.firstdate, row.lastdate
