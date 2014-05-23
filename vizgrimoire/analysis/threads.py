@@ -60,7 +60,12 @@ class Email(object):
                       mp.type_of_recipient = 'From' and
                       mp.email_address = pup.people_id and
                       pup.upeople_id = u.id 
+                limit 1
                 """  % (self.i_db, self.message_id)
+        # WARNING: There may appear in some cases repeated emails.
+        # This may be because the same email was sent to different
+        # mailing lists. Forcing the query to 1 row, allows to 
+        # avoid this issue till we understand why this behaviour
         results = ExecuteQuery(query)
 
         self.subject = results["subject"]
