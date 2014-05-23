@@ -247,7 +247,7 @@ class SCMQuery (Query):
             raise Exception ("select_listpersons: Unknown kind %s." \
                              % kind)
 
-    def add_personsdata(self, kind):
+    def select_personsdata(self, kind):
         """Adds columns with persons data to select clause.
 
         Adds people.name, people.email to the select clause of query.
@@ -279,7 +279,7 @@ class SCMQuery (Query):
         return query
 
 
-    def add_commitsperiod(self):
+    def select_commitsperiod(self):
         """Add to select the period of the selected commits.
 
         Adds min(scmlog.date) and max(scmlog.date) for selected commits.
@@ -556,15 +556,15 @@ if __name__ == "__main__":
         print row.author, row.nocommits
     # Number of commits, grouped by authors, including data per author
     res = session.query().select_nscmlog(["commits",]) \
-        .add_personsdata("authors") \
+        .select_personsdata("authors") \
         .group_by_person("authors")
     for row in res.limit(10).all():
         print row.author, row.nocommits, row.name, row.email
     # Number of commits, grouped by authors, including data
     # and period of activity per author
     res = session.query().select_nscmlog(["commits",]) \
-        .add_personsdata("authors") \
-        .add_commitsperiod() \
+        .select_personsdata("authors") \
+        .select_commitsperiod() \
         .group_by_person("authors")
     for row in res.order_by("nocommits desc").limit(10).all():
         print row.author, row.nocommits, row.name, row.email, \
@@ -617,8 +617,8 @@ if __name__ == "__main__":
     # Number of commits, grouped by authors, including data
     # and period of activity per author, for a certain period
     res = session.query().select_nscmlog(["commits",]) \
-        .add_personsdata("authors") \
-        .add_commitsperiod() \
+        .select_personsdata("authors") \
+        .select_commitsperiod() \
         .filter_period(start=datetime(2013,12,1),
                        end=datetime(2014,2,1)) \
         .group_by_person("authors")
