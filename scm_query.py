@@ -452,13 +452,11 @@ class SCMQuery (Query):
         Returns a SCMQuery object.
         """
 
-        print self
         conditions = []
         for path in list:
             condition = FileLinks.file_path.like(path + '%')
             conditions.append(condition)
         query = self
-        print "Query: " + str(query)
         if Actions not in self.joined:
             self.joined.append (Actions)
             query = query.join(Actions,
@@ -559,12 +557,19 @@ class SCMQuery (Query):
 
 if __name__ == "__main__":
 
+    def print_banner (banner):
+        """Print a simple banner for a kind of result"""
+
+        print
+        print "===================================="
+        print banner
+        print
 
     session = buildSession(
         database='mysql://jgb:XXX@localhost/vizgrimoire_cvsanaly',
         echo=False)
 
-    # Number of commits
+    print_banner ("Number of commits")
     res = session.query().select_nscmlog(["commits",]) \
         .filter_period(start=datetime(2012,9,1),
                        end=datetime(2014,1,1))
@@ -578,20 +583,23 @@ if __name__ == "__main__":
         .filter_period(end=datetime(2014,1,1))
     print res.scalar()
 
-    # Number of commits, grouped by authors
+    print_banner("Number of commits, grouped by authors")
     res = session.query().select_nscmlog(["commits",]) \
         .select_personsdata("authors") \
         .group_by_person()
     for row in res.limit(10).all():
         print row.person_id, row.nocommits
-    # Number of commits, grouped by authors, including data per author
+
+    print_banner("Number of commits, grouped by authors, \n" +
+                 "including data per author")
     res = session.query().select_nscmlog(["commits",]) \
         .select_personsdata("authors") \
         .group_by_person()
     for row in res.limit(10).all():
         print row.nocommits, row.person_id, row.name, row.email
-    # Number of commits, grouped by authors, including data
-    # and period of activity per author
+
+    print_banner("Number of commits, grouped by authors, including data\n" +
+                 "and period of activity per author")
     res = session.query().select_nscmlog(["commits",]) \
         .select_personsdata("authors") \
         .select_commitsperiod() \
@@ -599,8 +607,9 @@ if __name__ == "__main__":
     for row in res.order_by("nocommits desc").limit(10).all():
         print row.nocommits, row.person_id, row.name, row.email, \
             row.firstdate, row.lastdate
-    # Number of commits, grouped by authors, including data
-    # and period of activity per author, for a certain period
+
+    print_banner("Number of commits, grouped by authors, including data\n" +
+                 "and period of activity per author, for a certain period")
     res = session.query().select_nscmlog(["commits",]) \
         .select_personsdata("authors") \
         .select_commitsperiod() \
@@ -611,53 +620,8 @@ if __name__ == "__main__":
         print row.person_id, row.nocommits, row.name, row.email, \
             row.firstdate, row.lastdate
 
-    # Time series of commits
-    res = session.query().select_nscmlog(["commits",]) \
-        .group_by_period() \
-        .filter_period(end=datetime(2014,1,1))
-    ts = res.timeseries ()
-    print (ts)
-
-    # List of commits
-    res = session.query() \
-        .select_listcommits() \
-        .filter_period(start=datetime(2012,9,1),
-                       end=datetime(2014,1,1))
-    for row in res.limit(10).all():
-        print row.id, row.date
-
-    # Number of authors
-    res = session.query().select_nscmlog(["authors",]) \
-        .filter_period(start=datetime(2012,9,1),
-                       end=datetime(2014,1,1))
-    print res.scalar()
-    # List of authors
-    resAuth = session.query() \
-        .select_listpersons("authors") \
-        .filter_period(start=datetime(2013,12,1),
-                       end=datetime(2014,2,1))
-    print resAuth
-    for row in resAuth.limit(10).all():
-        print row.id, row.name
-    # Filter master branch
-    res = res.filter_branches(("master",))
-    print res.all()
-    # List of branches
-    res = session.query().select_listbranches()
-    print res.all()
-    res = session.query().select_listbranches() \
-        .join(SCMLog) \
-        .filter_period(start=datetime(2013,12,1),
-                       end=datetime(2014,2,1))
-    print res.all()
-    # Filter some paths
-    res = resAuth.filter_paths(("examples",))
-    print res.all()
-
-
-
-    # Number of commits, grouped by authors, including data
-    # and period of activity per author (uid version)
+    print_banner("Number of commits, grouped by authors, including data\n" +
+                 "and period of activity per author (uid version)")
     res = session.query().select_nscmlog(["commits",]) \
         .select_personsdata_uid("authors") \
         .select_commitsperiod() \
@@ -666,3 +630,62 @@ if __name__ == "__main__":
     for row in res.order_by("nocommits desc").limit(10).all():
         print row.nocommits, row.person_id, row.name, \
             row.firstdate, row.lastdate
+
+    print_banner("Data and period of activity per author, for a certain period")
+    res = session.query() \
+        .select_personsdata("authors") \
+        .select_commitsperiod() \
+        .filter_period(start=datetime(2013,12,1),
+                       end=datetime(2014,2,1)) \
+        .group_by_person()
+    for row in res.order_by("firstdate").limit(10).all():
+        print row.person_id, row.name, row.email, \
+            row.firstdate, row.lastdate
+
+    print_banner("Time series of commits")
+    res = session.query().select_nscmlog(["commits",]) \
+        .group_by_period() \
+        .filter_period(end=datetime(2014,1,1))
+    ts = res.timeseries ()
+    print (ts)
+
+    print_banner("List of commits")
+    res = session.query() \
+        .select_listcommits() \
+        .filter_period(start=datetime(2012,9,1),
+                       end=datetime(2014,1,1))
+    for row in res.limit(10).all():
+        print row.id, row.date
+
+    print_banner("Number of authors")
+    res = session.query().select_nscmlog(["authors",]) \
+        .filter_period(start=datetime(2012,9,1),
+                       end=datetime(2014,1,1))
+    print res.scalar()
+    
+    print_banner("List of authors")
+    resAuth = session.query() \
+        .select_listpersons("authors") \
+        .filter_period(start=datetime(2013,12,1),
+                       end=datetime(2014,2,1))
+    for row in resAuth.limit(10).all():
+        print row.id, row.name
+    
+    print_banner("Filter master branch")
+    res = res.filter_branches(("master",))
+    print res.all()
+
+    print_banner("List of branches")
+    res = session.query().select_listbranches()
+    print res.all()
+    res = session.query().select_listbranches() \
+        .join(SCMLog) \
+        .filter_period(start=datetime(2013,12,1),
+                       end=datetime(2014,2,1))
+    print res.all()
+
+    print_banner("Filter some paths")
+    res = resAuth.filter_paths(("examples",))
+    print res.all()
+
+
