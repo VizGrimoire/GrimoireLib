@@ -83,7 +83,7 @@ class Period:
 
     def __repr__ (self):
 
-        repr = "Period, from %s to %s" % (self.start, self.end)
+        repr = u"Period, from %s to %s" % (self.start, self.end)
         return repr
 
 class ActivityList:
@@ -138,9 +138,9 @@ class ActivityList:
 
     def __repr__ (self):
 
-        repr = "ActivityList:\n"
+        repr = u"ActivityList:\n"
         for item in self.list:
-            repr = repr + str(item) + "\n"
+            repr = repr + unicode(item) + u"\n"
         return repr
 
 if __name__ == "__main__":

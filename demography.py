@@ -25,6 +25,7 @@
 ##
 
 from scm_query import buildSession, SCMQuery
+from scm import PeriodCondition
 
 class ActivityPersons:
     """High level interface to variables related to demography studies.
@@ -79,3 +80,9 @@ if __name__ == "__main__":
         var = "listauthors")
     print data.activity()
 
+    period = PeriodCondition (start = datetime(2014,1,1), end = None)
+
+    data = ActivityPersons (
+        database = 'mysql://jgb:XXX@localhost/vizgrimoire_cvsanaly',
+        var = "listauthors", conditions = (period,))
+    print data.activity()
