@@ -100,13 +100,16 @@ class ActivityList:
         ----------
 
         list: list of tuples
-           List of activity tuples. Each activity tuple includes
-           information about an actor, and a Period.
+           List of activity tuples. Each tuple includes
+           information about an actor, with the
+           following fields: person_id (integer), name (string),
+           firstdate (datetime), lastdate (datetime).
+
         """
 
         self.list = []
         for entry in list:
-            actor = {"id": entry.id,
+            actor = {"id": entry.person_id,
                      "name": entry.name}
             period = Period(start = entry.firstdate,
                             end = entry.lastdate)
@@ -146,7 +149,7 @@ if __name__ == "__main__":
     print period
     print period.json(pretty=True)
 
-    rowlabels = ["id", "name", "firstdate", "lastdate"]
+    rowlabels = ["person_id", "name", "firstdate", "lastdate"]
     list = ActivityList((KeyedTuple([12, "Fulano Largo",
                                      datetime(2011,12,1),
                                      datetime(2012,11,1)],

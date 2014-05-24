@@ -32,6 +32,7 @@ from sqlalchemy.schema import ForeignKeyConstraint
 from sqlalchemy.sql import label
 from datetime import datetime
 from timeseries import TimeSeries
+from activity import ActivityList
 
 Base = declarative_base(cls=DeferredReflection)
 
@@ -539,7 +540,17 @@ class SCMQuery (Query):
         return TimeSeries (period = "months",
                            start = self.start, end = self.end,
                            data = data)
-                        
+
+    def activity (self):
+        """Return an ActivityList object.
+
+        The query has to produce rows with the following fields:
+        id (string),  name (string), start (datetime), end (datetime)
+
+        """
+
+        list = self.all()
+        return ActivityList(list)
 
     def __repr__ (self):
 
@@ -646,6 +657,9 @@ if __name__ == "__main__":
     for row in res.order_by("firstdate").limit(10).all():
         print row.person_id, row.name, row.email, \
             row.firstdate, row.lastdate
+
+    print_banner("Activity list (authors, for a certain period)")
+    print res.activity()
 
     print_banner("Time series of commits")
     res = session.query().select_nscmlog(["commits",]) \
