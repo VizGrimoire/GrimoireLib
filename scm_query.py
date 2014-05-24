@@ -44,9 +44,14 @@ def buildSession(database, id_database = None, echo = False):
         
     Instantiatates an engine and a session to work with it
     """
-    
+
+    # To set Unicode interaction with MySQL
+    # http://docs.sqlalchemy.org/en/rel_0_9/dialects/mysql.html#unicode
+    trailer = "?charset=utf8&use_unicode=0"
     if id_database is None:
         id_database = database
+    database = database + trailer
+    id_database = id_database + trailer
     engine = create_engine(database, encoding='utf8', echo=echo)
     id_engine = create_engine(id_database, encoding='utf8', echo=echo)
     Base.prepare(engine)
