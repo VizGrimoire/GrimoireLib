@@ -173,6 +173,11 @@ class IRC(DataSource):
         pass
 
     @staticmethod
+    def get_query_builder():
+        from query_builder import IRCQuery
+        return IRCQuery
+
+    @staticmethod
     def get_metrics_definition ():
         pass
 
@@ -339,7 +344,7 @@ def StaticNumRepositoriesIRC (period, startdate, enddate, identities_db=None, ty
     q = fields + tables + filters
     return(ExecuteQuery(q))
 
-def GetSentIRC (period, startdate, enddate, identities_db, type_analysis, evolutionary):    
+def GetSentIRC (period, startdate, enddate, identities_db, type_analysis, evolutionary):
     fields = " count(distinct(message)) as sent " 
     tables = " irclog " + GetIRCSQLReportFrom(identities_db, type_analysis)
     filters = GetIRCSQLReportWhere(type_analysis)

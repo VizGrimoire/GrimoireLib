@@ -627,3 +627,99 @@ class SCRQuery(DSQuery):
         q = self.BuildQuery (period, startdate, enddate, "changed_on", fields, tables, filters, evolutionary)
 
         return q
+
+class IRCQuery(DSQuery):
+
+    def GetSQLRepositoriesFrom (self):
+        # tables necessary for repositories
+        return (", channels c")
+
+    def GetSQLRepositoriesWhere (self, repository):
+        # filters necessaries for repositories
+        return (" i.channel_id = c.id and c.name="+repository+" ")
+
+    def GetSQLCompaniesFrom (self, i_db):
+        # tables necessary to companies analysis
+        return(" , people_upeople pup, "+\
+                       i_db+"companies c, "+\
+                       i_db+".upeople_companies upc")
+
+    def GetSQLCompaniesWhere (self, name):
+        # filters necessary to companies analysis
+        return(" i.nick = pup.people_id and "+\
+               "pup.upeople_id = upc.upeople_id and "+\
+               "upc.company_id = c.id and "+\
+               "i.submitted_on >= upc.init and "+\
+               "i.submitted_on < upc.end and "+\
+               "c.name = "+name)
+
+    def GetSQLCountriesFrom (self, i_db):
+        # tables necessary to countries analysis
+        return(" , people_upeople pup, "+\
+               i_db+".countries c, "+\
+               i_db+".upeople_countries upc")
+
+    def GetSQLCountriesWhere (self, name):
+        # filters necessary to countries analysis
+        return(" i.nick = pup.people_id and "+\
+               "pup.upeople_id = upc.upeople_id and "+\
+               "upc.country_id = c.id and "+\
+               "c.name = "+name)
+
+    def GetSQLDomainsFrom (self, i_db):
+        # tables necessary to domains analysis
+        return(" , people_upeople pup, "+\
+               i_db+".domains d, "+\
+               i_db+".upeople_domains upd")
+
+    def GetSQLDomainsWhere (self, name):
+        # filters necessary to domains analysis
+        return(" i.nick = pup.people_id and "+\
+               "pup.upeople_id = upd.upeople_id and "+\
+               "upd.domain_id = d.id and "+\
+               "d.name = "+name)
+
+    def GetTablesOwnUniqueIds (self) :
+        tables = 'irclog, people_upeople pup'
+        return (tables)
+
+    def GetFiltersOwnUniqueIds (self) :
+        filters = 'pup.people_id = irclog.nick'
+        return (filters) 
+
+    def GetSQLReportFrom (self, identities_db, type_analysis):
+        #generic function to generate 'from' clauses
+        #"type" is a list of two values: type of analysis and value of 
+        #such analysis
+
+        From = ""
+
+        if (type_analysis is None or len(type_analysis) != 2): return From
+
+        analysis = type_analysis[0]
+
+        if analysis == 'repository': From = self.GetSQLRepositoriesFrom()
+        elif analysis == 'company': From = self.GetSQLCompaniesFrom(identities_db)
+        elif analysis == 'country': From = self.GetSQLCountriesFrom(identities_db)
+        elif analysis == 'domain': From = self.GetSQLDomainsFrom(identities_db)
+
+        return (From)
+
+    def GetSQLReportWhere (self, type_analysis):
+        #generic function to generate 'where' clauses
+        #"type" is a list of two values: type of analysis and value of 
+        #such analysis
+
+        where = ""
+
+        if (type_analysis is None or len(type_analysis) != 2): return where
+
+        analysis = type_analysis[0]
+        value = type_analysis[1]
+
+        if analysis == 'repository': where = self.GetSQLRepositoriesWhere(value)
+        elif analysis == 'company': where = self.GetSQLCompaniesWhere(value)
+        elif analysis == 'country': where = self.GetSQLCountriesWhere(value)
+        elif analysis == 'domain': where = self.GetSQLDomainsWhere(value)
+
+        return (where)

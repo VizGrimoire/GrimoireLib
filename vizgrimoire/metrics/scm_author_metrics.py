@@ -72,8 +72,6 @@ class Authors(Metrics):
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate, 
                                self.filters.enddate, " s.date ", fields, 
                                tables, filters, evolutionary)
-        print q
-
         return(self.db.ExecuteQuery(q))
 
 
