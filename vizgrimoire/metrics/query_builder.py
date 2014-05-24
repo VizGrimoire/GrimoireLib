@@ -364,3 +364,136 @@ class ITSQuery(DSQuery):
         elif analysis == 'project': where = GetSQLProjectsWhere(value, identities_db)
 
         return (where)
+
+class MLSQuery(DSQuery):
+    """ Specific query builders for mailing lists data source """
+    def GetSQLRepositoriesFrom (self):
+        # tables necessary for repositories
+        #return (" messages m ") 
+        return (" ")
+
+    def GetSQLRepositoriesWhere (self, repository):
+        # fields necessary to match info among tables
+        return (" m.mailing_list_url = "+repository+" ")
+
+    def GetSQLCompaniesFrom (self, i_db):
+        # fields necessary for the companies analysis
+        return(" , messages_people mp, "+\
+                       "people_upeople pup, "+\
+                       i_db+".companies c, "+\
+                       i_db+".upeople_companies upc")
+
+    def GetSQLCompaniesWhere (self, name):
+        # filters for the companies analysis
+        return(" m.message_ID = mp.message_id and "+\
+                   "mp.email_address = pup.people_id and "+\
+                   "mp.type_of_recipient=\'From\' and "+\
+                   "pup.upeople_id = upc.upeople_id and "+\
+                   "upc.company_id = c.id and "+\
+                   "m.first_date >= upc.init and "+\
+                   "m.first_date < upc.end and "+\
+                   "c.name = "+name)
+
+    def GetSQLCountriesFrom (self, i_db):
+        # fields necessary for the countries analysis
+        return(" , messages_people mp, "+\
+                   "people_upeople pup, "+\
+                   i_db+".countries c, "+\
+                   i_db+".upeople_countries upc ")
+
+    def GetSQLCountriesWhere (self, name):
+        # filters necessary for the countries analysis
+
+        return(" m.message_ID = mp.message_id and "+\
+                   "mp.email_address = pup.people_id and "+\
+                   "mp.type_of_recipient=\'From\' and "+\
+                   "pup.upeople_id = upc.upeople_id and "+\
+                   "upc.country_id = c.id and "+\
+                   "c.name="+name)
+
+    def GetSQLDomainsFrom (self, i_db) :
+        return (" , messages_people mp, "+\
+                   "people_upeople pup, "+\
+                  i_db+".domains d, "+\
+                  i_db+".upeople_domains upd")
+
+    def GetSQLDomainsWhere (self, name) :
+        return (" m.message_ID = mp.message_id and "+\
+                    "mp.email_address = pup.people_id and "+\
+                    "mp.type_of_recipient=\'From\' and "+\
+                    "pup.upeople_id = upd.upeople_id AND "+\
+                    "upd.domain_id = d.id AND "+\
+                    "m.first_date >= upd.init AND "+\
+                    "m.first_date < upd.end and "+\
+                    "d.name="+ name)
+
+    def GetSQLProjectsFrom(self):
+        return (" , mailing_lists ml")
+
+    def GetSQLProjectsWhere(self, project, identities_db):
+        # include all repositories for a project and its subprojects
+        p = project.replace("'", "") # FIXME: why is "'" needed in the name?
+
+        repos = """and ml.mailing_list_url IN (
+               SELECT repository_name
+               FROM   %s.projects p, %s.project_repositories pr
+               WHERE  p.project_id = pr.project_id AND p.project_id IN (%s)
+                   AND pr.data_source='mls'
+        )""" % (identities_db, identities_db, get_subprojects(p, identities_db))
+
+        return (repos  + " and ml.mailing_list_url = m.mailing_list_url")
+
+    # Using senders only here!
+    def GetFiltersOwnUniqueIds  (self) :
+        return ('m.message_ID = mp.message_id AND '+\
+                ' mp.email_address = pup.people_id AND '+\
+                ' mp.type_of_recipient=\'From\'')
+
+    ##########
+    #Generic functions to obtain FROM and WHERE clauses per type of report
+    ##########
+
+    def GetSQLReportFrom (self, identities_db, type_analysis):
+        #generic function to generate 'from' clauses
+        #"type" is a list of two values: type of analysis and value of 
+        #such analysis
+
+        From = ""
+
+        if (type_analysis is None or len(type_analysis) != 2): return From
+
+        analysis = type_analysis[0]
+
+        if analysis == 'repository': From = GetSQLRepositoriesFrom()
+        elif analysis == 'company': From = GetSQLCompaniesFrom(identities_db)
+        elif analysis == 'country': From = GetSQLCountriesFrom(identities_db)
+        elif analysis == 'domain': From = GetSQLDomainsFrom(identities_db)
+        elif analysis == 'project': From = GetSQLProjectsFrom()
+
+        return (From)
+
+
+    def GetSQLReportWhere (self, type_analysis, identities_db=None):
+        #generic function to generate 'where' clauses
+        #"type" is a list of two values: type of analysis and value of 
+        #such analysis
+
+        where = ""
+
+        if (type_analysis is None or len(type_analysis) != 2): return where
+
+        analysis = type_analysis[0]
+        value = type_analysis[1]
+
+        if analysis == 'repository': where = GetSQLRepositoriesWhere(value)
+        elif analysis == 'company': where = GetSQLCompaniesWhere(value)
+        elif analysis == 'country': where = GetSQLCountriesWhere(value)
+        elif analysis == 'domain': where = GetSQLDomainsWhere(value)
+        elif analysis == 'project':
+            if (identities_db is None):
+                logging.error("project filter not supported without identities_db")
+                sys.exit(0)
+            else:
+                where = GetSQLProjectsWhere(value, identities_db)
+
+        return (where)

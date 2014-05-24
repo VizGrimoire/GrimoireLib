@@ -64,14 +64,14 @@ if __name__ == '__main__':
 
     Report.init(opts.automator_file, opts.metrics_path)
 
-    metrics = SCM.get_metrics_definition()
-    for name in metrics:
-        print name
+    # metrics = SCM.get_metrics_definition()
+    # for name in metrics:
+    #     print name
 
     metrics_set = SCM.get_metrics_set()
     for metrics in metrics_set:
         print metrics.get_definition()['name']
         agg = metrics.get_agg()
         if agg is not None: print(agg)
-        evol = metrics.get_ts()
-        if evol is not None: print(evol)
+        # evol = metrics.get_ts()
+        # if evol is not None: print(evol)

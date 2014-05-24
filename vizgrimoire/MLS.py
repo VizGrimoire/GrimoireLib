@@ -66,7 +66,7 @@ class MLS(DataSource):
         else:
             data = EvolMLSInfo(period, startdate, enddate, identities_db, rfield, None)
             evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
-    
+
             data  = EvolMLSCompanies(period, startdate, enddate, identities_db)
             evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
 
@@ -269,6 +269,11 @@ class MLS(DataSource):
         ## Monthly quantiles of time to attention (hours)
         ## JSON files generated from VizR
         vizr.ReportTimeToAttendMLS(destdir)
+
+    @staticmethod
+    def get_query_builder():
+        from query_builder import MLSQuery
+        return MLSQuery
 
     @staticmethod
     def get_metrics_definition ():
