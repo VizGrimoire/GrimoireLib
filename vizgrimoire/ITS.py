@@ -413,6 +413,11 @@ class ITS(DataSource):
         ExecuteQuery(q)
 
     @staticmethod
+    def get_query_builder():
+        from query_builder import ITSQuery
+        return ITSQuery
+
+    @staticmethod
     def get_metrics_definition ():
         mdef = {
            "its_opened" : {
