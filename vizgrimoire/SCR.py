@@ -355,6 +355,11 @@ class SCR(DataSource):
         pass
 
     @staticmethod
+    def get_query_builder():
+        from query_builder import SCRQuery
+        return SCRQuery
+
+    @staticmethod
     def get_metrics_definition ():
         mdef =  {
             "scr_merged" : {
