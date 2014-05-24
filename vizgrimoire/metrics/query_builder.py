@@ -19,6 +19,7 @@
 ##
 ## Authors:
 ##   Daniel Izquierdo-Cortazar <dizquierdo@bitergia.com>
+##   Alvaro del Castillo <acs@bitergia.com>
 
 import logging
 import MySQLdb
@@ -136,7 +137,6 @@ class DSQuery(object):
                 result[columns[i][0]] = value[i]
         return result
 
-
 class SCMQuery(DSQuery):
     """ Specific query builders for source code management system data source """
 
@@ -247,5 +247,120 @@ class SCMQuery(DSQuery):
         elif analysis == 'country': where = self.GetSQLCountriesWhere(value, role)
         elif analysis == 'domain': where = self.GetSQLDomainsWhere(value, role)
         elif analysis == 'project': where = self.GetSQLProjectWhere(value, role, self.identities_db)
+
+        return (where)
+
+class ITSQuery(DSQuery):
+    """ Specific query builders for issue tracking system data source """
+    def GetSQLRepositoriesFrom (self):
+        # tables necessary for repositories 
+        return (", trackers t")
+
+    def GetSQLRepositoriesWhere (self, repository):
+        # fields necessary to match info among tables
+        return (" i.tracker_id = t.id and t.url = "+repository+" ")
+
+    def GetSQLProjectsFrom (self):
+        # tables necessary for repositories
+        return (", trackers t")
+
+    def GetSQLProjectsWhere (self, project, identities_db):
+        # include all repositories for a project and its subprojects
+        # Remove '' from project name
+        if (project[0] == "'" and project[-1] == "'"):
+            project = project[1:-1]
+
+        repos = """ t.url IN (
+               SELECT repository_name
+               FROM   %s.projects p, %s.project_repositories pr
+               WHERE  p.project_id = pr.project_id AND p.project_id IN (%s)
+                   AND pr.data_source='its'
+        )""" % (identities_db, identities_db, get_subprojects(project, identities_db))
+
+        return (repos   + " and t.id = i.tracker_id")
+
+    def GetSQLCompaniesFrom (self, i_db):
+        # fields necessary for the companies analysis
+
+        return(" , people_upeople pup, "+\
+               i_db+".companies c, "+\
+               i_db+".upeople_companies upc")
+
+    def GetSQLCompaniesWhere (self, name):
+        # filters for the companies analysis
+        return(" i.submitted_by = pup.people_id and "+\
+               "pup.upeople_id = upc.upeople_id and "+\
+               "upc.company_id = c.id and "+\
+               "i.submitted_on >= upc.init and "+\
+               "i.submitted_on < upc.end and "+\
+               "c.name = "+name)
+
+    def GetSQLCountriesFrom (self, i_db):
+        # fields necessary for the countries analysis
+
+        return(" , people_upeople pup, "+\
+               i_db+".countries c, "+\
+               i_db+".upeople_countries upc")
+
+    def GetSQLCountriesWhere (self, name):
+        # filters for the countries analysis
+        return(" i.submitted_by = pup.people_id and "+\
+               "pup.upeople_id = upc.upeople_id and "+\
+               "upc.country_id = c.id and "+\
+               "c.name = "+name)
+
+
+    def GetSQLDomainsFrom (self, i_db):
+        # fields necessary for the domains analysis
+
+        return(" , people_upeople pup, "+\
+               i_db+".domains d, "+\
+               i_db+".upeople_domains upd")
+
+
+    def GetSQLDomainsWhere (self, name):
+        # filters for the domains analysis
+        return(" i.submitted_by = pup.people_id and "+\
+               "pup.upeople_id = upd.upeople_id and "+\
+               "upd.domain_id = d.id and "+\
+               "d.name = "+name)
+
+    def GetSQLReportFrom (self, identities_db, type_analysis):
+        #generic function to generate 'from' clauses
+        #"type" is a list of two values: type of analysis and value of 
+        #such analysis
+
+        From = ""
+
+        if (type_analysis is None or len(type_analysis) != 2): return From
+
+        analysis = type_analysis[0]
+        value = type_analysis[1]
+
+        if analysis == 'repository': From = GetSQLRepositoriesFrom()
+        elif analysis == 'company': From = GetSQLCompaniesFrom(identities_db)
+        elif analysis == 'country': From = GetSQLCountriesFrom(identities_db)
+        elif analysis == 'domain': From = GetSQLDomainsFrom(identities_db)
+        elif analysis == 'project': From = GetSQLProjectsFrom()
+
+        return (From)
+
+    def GetSQLReportWhere (self, type_analysis, identities_db = None):
+        #generic function to generate 'where' clauses
+
+        #"type" is a list of two values: type of analysis and value of 
+        #such analysis
+        where = ""
+
+        if (type_analysis is None or len(type_analysis) != 2): return where
+
+        analysis = type_analysis[0]
+        value = type_analysis[1]
+
+        if analysis == 'repository': where = GetSQLRepositoriesWhere(value)
+        elif analysis == 'company': where = GetSQLCompaniesWhere(value)
+        elif analysis == 'country': where = GetSQLCountriesWhere(value)
+        elif analysis == 'domain': where = GetSQLDomainsWhere(value)
+        elif analysis == 'project': where = GetSQLProjectsWhere(value, identities_db)
 
         return (where)
