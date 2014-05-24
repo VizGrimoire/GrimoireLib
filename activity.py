@@ -25,12 +25,15 @@
 
 from datetime import datetime
 from json import dumps
+from sqlalchemy.util import KeyedTuple
 
 def json_serial(obj):
     """JSON serializer for objects not serializable by default json code"""
 
     if isinstance(obj, datetime):
         serial = obj.isoformat()
+    if isinstance(obj, Period):
+        serial = obj.json()
     return serial
 
 class Period:
@@ -39,7 +42,7 @@ class Period:
     """
 
     def __init__ (self, start, end):
-        """Intialize a TimeSeries object
+        """Intialize a Period object
 
         Parameters
         ----------
@@ -83,8 +86,74 @@ class Period:
         repr = "Period, from %s to %s" % (self.start, self.end)
         return repr
 
+class ActivityList:
+    """Abstract data type for activity lists.
+
+    List of agents, with activity information (start and end dates)
+    for each of them.
+    """
+
+    def __init__ (self, list):
+        """Intialize an ActivityList object
+
+        Parameters
+        ----------
+
+        list: list of tuples
+           List of activity tuples. Each activity tuple includes
+           information about an actor, and a Period.
+        """
+
+        self.list = []
+        for entry in list:
+            actor = {"id": entry.id,
+                     "name": entry.name}
+            period = Period(start = entry.firstdate,
+                            end = entry.lastdate)
+            self.list.append([actor, period])
+
+    def json (self, pretty=False):
+
+        separators=(',', ': ')
+        encoding="utf-8"
+        if pretty:
+            sort_keys=True
+            indent=4
+        else:
+            sort_keys=False
+            indent=None
+        return dumps(self.list, sort_keys=sort_keys,
+                     indent=indent, separators=separators,
+                     default=json_serial, encoding=encoding)
+
+    def __eq__(self, other):
+        return (isinstance(other, self.__class__)
+            and self.__dict__ == other.__dict__)
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def __repr__ (self):
+
+        repr = "ActivityList:\n"
+        for item in self.list:
+            repr = repr + str(item) + "\n"
+        return repr
+
 if __name__ == "__main__":
 
     period = Period(datetime(2011,12,1), datetime(2012,11,1))
     print period
     print period.json(pretty=True)
+
+    rowlabels = ["id", "name", "firstdate", "lastdate"]
+    list = ActivityList((KeyedTuple([12, "Fulano Largo",
+                                     datetime(2011,12,1),
+                                     datetime(2012,11,1)],
+                                    labels = rowlabels),
+                         KeyedTuple([3, "Mengana Corta",
+                                     datetime(2010,2,3),
+                                     datetime(2013,2,3)],
+                                    labels = rowlabels)))
+    print list
+    print list.json(pretty=True)
