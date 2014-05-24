@@ -21,7 +21,7 @@
 ## Authors:
 ##   Alvaro del Castillo <acs@bitergia.com>
 
-""" Opened metric for the issue tracking system """
+""" Openers metric for the issue tracking system """
 
 import logging
 import MySQLdb
@@ -36,30 +36,42 @@ from query_builder import ITSQuery
 
 from ITS import ITS
 
-class Opened(Metrics):
-    """ Tickets Opened metric class for issue tracking systems """
+class Openers(Metrics):
+    """ Tickets Openers metric class for issue tracking systems """
 
-    id = "opened"
-    name = "Opened tickets"
-    desc = "Number of opened tickets"
-    envision =  {"y_labels" : "true", "show_markers" : "true"}
+    id = "openers"
+    name = "Ticket submitters"
+    desc = "Number of persons submitting new tickets"
+    action = "opened"
+    envision =  {"gtype" : "whiskers"}
     data_source = ITS
 
-    def __get_opened__ (self, evolutionary):
-        # This function contains basic parts of the query to count opened tickets.
+    def __get_openers__ (self, evolutionary):
+        # This function contains basic parts of the query to count openers tickets.
         # That query is built and results returned.
         query = self.__get_sql__(evolutionary)
         return self.db.ExecuteQuery(query)
 
 
     def __get_sql__(self, evolutionary):
-
-        fields = " count(distinct(i.id)) as opened "
-        tables = " issues i "+ self.db.GetSQLReportFrom(self.db.identities_db, self.filters.type_analysis)
+        """ This function returns the evolution or agg number of people opening issues """
+        fields = " count(distinct(pup.upeople_id)) as openers "
+        tables = " issues i " + self.db.GetSQLReportFrom(self.db.identities_db, self.filters.type_analysis)
         filters = self.db.GetSQLReportWhere(self.filters.type_analysis, self.db.identities_db)
+
+        if (self.filters.type_analysis is None or len (self.filters.type_analysis) != 2) :
+            #Specific case for the basic option where people_upeople table is needed
+            #and not taken into account in the initial part of the query
+            tables += ", people_upeople pup"
+            filters += " and i.submitted_by = pup.people_id"
+        elif (self.filters.type_analysis[0] == "repository" or self.filters.type_analysis[0] == "project"):
+            #Adding people_upeople table
+            tables += ", people_upeople pup"
+            filters += " and i.submitted_by = pup.people_id "
+
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
-                               self.filters.enddate, " submitted_on ", fields,
-                               tables, filters, evolutionary)
+                               self.filters.enddate, " submitted_on ",
+                               fields, tables, filters, evolutionary)
         return q
 
     def get_data_source(self):
@@ -67,11 +79,11 @@ class Opened(Metrics):
 
     def get_ts (self):
         # Returns the evolution of commits through the time
-        data = self.__get_opened__(True)
+        data = self.__get_openers__(True)
         return completePeriodIds(data, self.filters.period, self.filters.startdate, self.filters.enddate)
 
     def get_agg(self):
-        return self.__get_opened__(False)
+        return self.__get_openers__(False)
 
     def get_list(self):
         #to be implemented
@@ -81,8 +93,8 @@ class Opened(Metrics):
 if __name__ == '__main__':
     filters = MetricFilters("week", "'2010-01-01'", "'2014-01-01'", ["company", "'Red Hat'"])
     dbcon = ITSQuery("root", "", "cp_bicho_SingleProject", "cp_bicho_SingleProject",)
-    redhat = Opened(dbcon, filters)
-    all = Opened(dbcon)
+    redhat = Openers(dbcon, filters)
+    all = Openers(dbcon)
     # print redhat.get_ts()
     print redhat.get_agg()
     print all.get_agg()
