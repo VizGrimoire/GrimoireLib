@@ -24,17 +24,13 @@
 ##
 
 from datetime import datetime
-from json import dumps
 from sqlalchemy.util import KeyedTuple
+from jsonpickle import encode
+import jsonpickle
 
-def json_serial(obj):
-    """JSON serializer for objects not serializable by default json code"""
-
-    if isinstance(obj, datetime):
-        serial = obj.isoformat()
-    if isinstance(obj, Period):
-        serial = obj.json()
-    return serial
+class DatetimeHandler(jsonpickle.handlers.BaseHandler):
+    def flatten(self, obj, data):
+        return obj.isoformat()
 
 class Period:
     """Abstract data type for activity periods.
@@ -56,23 +52,6 @@ class Period:
 
         self.start = start
         self.end = end
-
-    def json (self, pretty=False):
-
-        data = {"start": self.start,
-                "end": self.end
-                }
-        separators=(',', ': ')
-        encoding="utf-8"
-        if pretty:
-            sort_keys=True
-            indent=4
-        else:
-            sort_keys=False
-            indent=None
-        return dumps(data, sort_keys=sort_keys,
-                     indent=indent, separators=separators,
-                     default=json_serial, encoding=encoding)
 
     def __eq__(self, other):
         return (isinstance(other, self.__class__)
@@ -115,20 +94,6 @@ class ActivityList:
                             end = entry.lastdate)
             self.list.append([actor, period])
 
-    def json (self, pretty=False):
-
-        separators=(',', ': ')
-        encoding="utf-8"
-        if pretty:
-            sort_keys=True
-            indent=4
-        else:
-            sort_keys=False
-            indent=None
-        return dumps(self.list, sort_keys=sort_keys,
-                     indent=indent, separators=separators,
-                     default=json_serial, encoding=encoding)
-
     def __eq__(self, other):
         return (isinstance(other, self.__class__)
             and self.__dict__ == other.__dict__)
@@ -152,9 +117,12 @@ if __name__ == "__main__":
     # http://stackoverflow.com/questions/492483/setting-the-correct-encoding-when-piping-stdout-in-python
     sys.stdout = codecs.getwriter('utf8')(sys.stdout)
 
+    # Register datetime flattener for jsonpickle
+    jsonpickle.handlers.registry.register(datetime, DatetimeHandler)
+
     period = Period(datetime(2011,12,1), datetime(2012,11,1))
     print period
-    print period.json(pretty=True)
+    print encode(period, unpicklable=False)
 
     rowlabels = ["person_id", "name", "firstdate", "lastdate"]
     list = ActivityList((KeyedTuple([12, "Fulano Larguiño",
@@ -166,4 +134,4 @@ if __name__ == "__main__":
                                      datetime(2013,2,3)],
                                     labels = rowlabels)))
     print list
-    print list.json(pretty=True)
+    print encode(list, unpicklable=False)
