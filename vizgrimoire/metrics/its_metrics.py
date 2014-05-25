@@ -55,12 +55,33 @@ class Opened(Metrics):
                                tables, filters, evolutionary)
         return q
 
-# Examples of use
-if __name__ == '__main__':
-    filters = MetricFilters("week", "'2010-01-01'", "'2014-01-01'", ["company", "'Red Hat'"])
-    dbcon = ITSQuery("root", "", "cp_bicho_SingleProject", "cp_bicho_SingleProject",)
-    redhat = Opened(dbcon, filters)
-    all = Opened(dbcon)
-    # print redhat.get_ts()
-    print redhat.get_agg()
-    print all.get_agg()
+class Openers(Metrics):
+    """ Tickets Openers metric class for issue tracking systems """
+
+    id = "openers"
+    name = "Ticket submitters"
+    desc = "Number of persons submitting new tickets"
+    action = "opened"
+    envision =  {"gtype" : "whiskers"}
+    data_source = ITS
+
+    def __get_sql__(self, evolutionary):
+        """ This function returns the evolution or agg number of people opening issues """
+        fields = " count(distinct(pup.upeople_id)) as openers "
+        tables = " issues i " + self.db.GetSQLReportFrom(self.db.identities_db, self.filters.type_analysis)
+        filters = self.db.GetSQLReportWhere(self.filters.type_analysis, self.db.identities_db)
+
+        if (self.filters.type_analysis is None or len (self.filters.type_analysis) != 2) :
+            #Specific case for the basic option where people_upeople table is needed
+            #and not taken into account in the initial part of the query
+            tables += ", people_upeople pup"
+            filters += " and i.submitted_by = pup.people_id"
+        elif (self.filters.type_analysis[0] == "repository" or self.filters.type_analysis[0] == "project"):
+            #Adding people_upeople table
+            tables += ", people_upeople pup"
+            filters += " and i.submitted_by = pup.people_id "
+
+        q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
+                               self.filters.enddate, " submitted_on ",
+                               fields, tables, filters, evolutionary)
+        return q
