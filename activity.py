@@ -145,6 +145,13 @@ class ActivityList:
 
 if __name__ == "__main__":
 
+    import sys
+    import codecs
+    # Trick to make the script work when using pipes
+    # (pipes confuse the interpreter, which sets codec to None)
+    # http://stackoverflow.com/questions/492483/setting-the-correct-encoding-when-piping-stdout-in-python
+    sys.stdout = codecs.getwriter('utf8')(sys.stdout)
+
     period = Period(datetime(2011,12,1), datetime(2012,11,1))
     print period
     print period.json(pretty=True)

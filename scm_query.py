@@ -653,7 +653,6 @@ if __name__ == "__main__":
         .select_personsdata_uid("authors") \
         .select_commitsperiod() \
         .group_by_person()
-    print res
     for row in res.order_by("nocommits desc").limit(10).all():
         print row.nocommits, row.person_id, row.name, \
             row.firstdate, row.lastdate
