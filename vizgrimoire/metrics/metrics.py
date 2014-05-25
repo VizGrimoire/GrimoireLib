@@ -56,19 +56,25 @@ class Metrics(object):
         """ Returns the family of the instance """
         return Metrics.data_source
 
-    def get_sql(self):
+    def __get_sql__(self):
         """ Returns specific sql for the provided filters """
         raise NotImplementedError
 
+    def get_data_source(self):
+        return self.data_source
+
+    def get_ts (self):
+        """ Returns a time serie of values """
+        query = self.__get_sql__(True)
+        ts = self.db.ExecuteQuery(query)
+        return completePeriodIds(ts, self.filters.period, 
+                                 self.filters.startdate, self.filters.enddate)
+
     def get_agg(self):
         """ Returns an aggregated value """
-        raise NotImplementedError
-
-    def get_ts(self):
-        """ Returns a time serie of values """
-        raise NotImplementedError
+        query = self.__get_sql__(False)
+        return self.db.ExecuteQuery(query)
 
     def get_list(self):
         """ Returns a list of items """
         raise NotImplementedError
-

@@ -46,13 +46,6 @@ class Openers(Metrics):
     envision =  {"gtype" : "whiskers"}
     data_source = ITS
 
-    def __get_openers__ (self, evolutionary):
-        # This function contains basic parts of the query to count openers tickets.
-        # That query is built and results returned.
-        query = self.__get_sql__(evolutionary)
-        return self.db.ExecuteQuery(query)
-
-
     def __get_sql__(self, evolutionary):
         """ This function returns the evolution or agg number of people opening issues """
         fields = " count(distinct(pup.upeople_id)) as openers "
@@ -73,21 +66,6 @@ class Openers(Metrics):
                                self.filters.enddate, " submitted_on ",
                                fields, tables, filters, evolutionary)
         return q
-
-    def get_data_source(self):
-        return self.data_source
-
-    def get_ts (self):
-        # Returns the evolution of commits through the time
-        data = self.__get_openers__(True)
-        return completePeriodIds(data, self.filters.period, self.filters.startdate, self.filters.enddate)
-
-    def get_agg(self):
-        return self.__get_openers__(False)
-
-    def get_list(self):
-        #to be implemented
-        pass
 
 # Examples of use
 if __name__ == '__main__':
