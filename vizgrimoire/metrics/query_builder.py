@@ -26,6 +26,8 @@ import MySQLdb
 import re
 import sys
 
+from GrimoireUtils import get_subprojects
+
 class DSQuery(object):
     """ Generic methods to control access to db """
 
@@ -267,8 +269,9 @@ class ITSQuery(DSQuery):
     def GetSQLProjectsWhere (self, project, identities_db):
         # include all repositories for a project and its subprojects
         # Remove '' from project name
-        if (project[0] == "'" and project[-1] == "'"):
-            project = project[1:-1]
+        if len(project) > 1 :
+            if (project[0] == "'" and project[-1] == "'"):
+                project = project[1:-1]
 
         repos = """ t.url IN (
                SELECT repository_name
@@ -364,6 +367,21 @@ class ITSQuery(DSQuery):
         elif analysis == 'project': where = self.GetSQLProjectsWhere(value, identities_db)
 
         return (where)
+
+    def GetSQLIssuesStudies (self, period, startdate, enddate, identities_db, type_analysis, evolutionary, study):
+        # Generic function that counts evolution/agg number of specific studies with similar
+        # database schema such as domains, companies and countries
+        fields = ' count(distinct(name)) as ' + study
+        tables = " issues i " + self.GetSQLReportFrom(identities_db, type_analysis)
+        filters = self.GetSQLReportWhere(type_analysis, identities_db)
+
+        #Filtering last part of the query, not used in this case
+        #filters = gsub("and\n( )+(d|c|cou|com).name =.*$", "", filters)
+
+        q = self.BuildQuery(period, startdate, enddate, " i.submitted_on ", fields, tables, filters, evolutionary)
+        q = re.sub(r'and (d|c|cou|com).name.*=', "", q)
+
+        return (q)
 
 class MLSQuery(DSQuery):
     """ Specific query builders for mailing lists data source """

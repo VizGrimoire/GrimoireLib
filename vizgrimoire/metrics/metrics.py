@@ -22,6 +22,7 @@
 ##   Daniel Izquierdo-Cortazar <dizquierdo@bitergia.com>
 
 
+from GrimoireUtils import completePeriodIds
 from metrics_filter import MetricFilters
 
 class Metrics(object):
@@ -56,7 +57,7 @@ class Metrics(object):
         """ Returns the family of the instance """
         return Metrics.data_source
 
-    def __get_sql__(self):
+    def __get_sql__(self, evolutionary):
         """ Returns specific sql for the provided filters """
         raise NotImplementedError
 

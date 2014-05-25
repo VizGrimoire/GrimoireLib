@@ -27,7 +27,6 @@
 import logging
 from optparse import OptionParser
 
-from commit_metric import Commit
 from metric import Metric
 from SCM import SCM
 from report import Report
@@ -73,5 +72,5 @@ if __name__ == '__main__':
         print metrics.get_definition()['name']
         agg = metrics.get_agg()
         if agg is not None: print(agg)
-        # evol = metrics.get_ts()
+        evol = metrics.get_ts()
         # if evol is not None: print(evol)
