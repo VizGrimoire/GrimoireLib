@@ -53,8 +53,12 @@ def buildSession(database, id_database = None, echo = False):
         id_database = database
     database = database + trailer
     id_database = id_database + trailer
-    engine = create_engine(database, encoding='utf8', echo=echo)
-    id_engine = create_engine(id_database, encoding='utf8', echo=echo)
+    engine = create_engine(database,
+                           convert_unicode=True, encoding='utf8',
+                           echo=echo)
+    id_engine = create_engine(id_database,
+                              convert_unicode=True, encoding='utf8',
+                              echo=echo)
     Base.prepare(engine)
     Base.prepare(id_engine)
     bindings = {Actions: engine,
