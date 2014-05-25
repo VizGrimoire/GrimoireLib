@@ -83,7 +83,7 @@ class Period:
 
     def __repr__ (self):
 
-        repr = u"Period, from %s to %s" % (self.start, self.end)
+        repr = "Period, from %s to %s" % (self.start, self.end)
         return repr
 
 class ActivityList:
@@ -138,9 +138,9 @@ class ActivityList:
 
     def __repr__ (self):
 
-        repr = u"ActivityList:\n"
+        repr = "ActivityList:\n"
         for item in self.list:
-            repr = repr + unicode(item) + u"\n"
+            repr = repr + str(item) + "\n"
         return repr
 
 if __name__ == "__main__":
@@ -150,7 +150,7 @@ if __name__ == "__main__":
     print period.json(pretty=True)
 
     rowlabels = ["person_id", "name", "firstdate", "lastdate"]
-    list = ActivityList((KeyedTuple([12, "Fulano Largo",
+    list = ActivityList((KeyedTuple([12, "Fulano Larguiño",
                                      datetime(2011,12,1),
                                      datetime(2012,11,1)],
                                     labels = rowlabels),
