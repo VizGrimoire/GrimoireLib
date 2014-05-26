@@ -129,3 +129,29 @@ class Committers(Metrics):
         return q
 
 
+class Files(Metrics):
+    """ Files metric class for source code management system """
+
+    id = "files"
+    name = "Files"
+    desc = "Number of files 'touched' (added, modified, removed, ) by at least one commit"
+    data_source = SCM
+
+    def __get_sql__(self, evolutionary):
+        # This function contains basic parts of the query to count files
+        fields = " count(distinct(a.file_id)) as files "
+        tables = " scmlog s, actions a "
+        filters = " a.commit_id = s.id "
+
+        #specific parts of the query depending on the report needed
+        tables += self.db.GetSQLReportFrom(self.filters.type_analysis)
+        #TODO: left "author" as generic option coming from parameters (this should be specified by command line)
+        filters += self.db.GetSQLReportWhere(self.filters.type_analysis, "author")
+
+        q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
+                               self.filters.enddate, " s.date ", fields,
+                               tables, filters, evolutionary)       
+ 
+        return q
+
+
