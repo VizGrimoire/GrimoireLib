@@ -94,5 +94,38 @@ class Authors(Metrics):
         return q
 
 
+class Committers(Metrics):
+    """ Committers metric class for source code management system """
+
+    id = "committers"
+    name = "Committers"
+    desc = "Number of developers committing (merging changes to source code)"
+    data_source = SCM
+
+    def __get_sql__(self, evolutionary):
+        # This function contains basic parts of the query to count committers
+        fields = 'count(distinct(pup.upeople_id)) AS committers '
+        tables = "scmlog s "
+        filters = self.db.GetSQLReportWhere(self.filters.type_analysis, "committer")
+
+        #specific parts of the query depending on the report needed
+        tables += self.db.GetSQLReportFrom(self.filters.type_analysis)
+
+        if (self.filters.type_analysis is None or len (self.filters.type_analysis) != 2) :
+            #Specific case for the basic option where people_upeople table is needed
+            #and not taken into account in the initial part of the query
+            tables += " ,  "+self.db.identities_db+".people_upeople pup "
+            filters += " and s.committer_id = pup.people_id"
+
+        elif (self.filters.type_analysis[0] == "repository" or self.filters.type_analysis[0] == "project"):
+            #Adding people_upeople table
+            tables += ",  "+self.db.identities_db+".people_upeople pup"
+            filters += " and s.committer_id = pup.people_id "
+
+        q = self.db.BuildQuery(self.filters.period, self.filters.startdate, 
+                               self.filters.enddate, " s.date ", fields, 
+                               tables, filters, evolutionary)
+
+        return q
 
 
