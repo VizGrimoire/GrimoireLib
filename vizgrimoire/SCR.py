@@ -41,6 +41,7 @@ from filter import Filter
 
 
 class SCR(DataSource):
+    _metrics_set = []
 
     @staticmethod
     def get_db_name():

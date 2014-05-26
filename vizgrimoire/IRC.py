@@ -31,6 +31,7 @@ from filter import Filter
 
 
 class IRC(DataSource):
+    _metrics_set = []
 
     @staticmethod
     def get_db_name():

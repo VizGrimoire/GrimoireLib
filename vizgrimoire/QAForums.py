@@ -37,6 +37,7 @@ from filter import Filter
 
 
 class QAForums(DataSource):
+    _metrics_set = []
 
     @staticmethod
     def get_db_name():

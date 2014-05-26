@@ -184,14 +184,13 @@ class DataSource(object):
         raise NotImplementedError
 
     @staticmethod
-    def get_metrics_set():
+    def get_metrics_set(ds):
         """Return all metrics objects available"""
-        return DataSource._metrics_set
+        return ds._metrics_set
 
     @staticmethod
-    def add_metrics(metrics):
-        """Add new metrics to the data source"""
-        DataSource._metrics_set.append(metrics)
+    def add_metrics(metrics, ds):
+        ds._metrics_set.append(metrics)
 
     @staticmethod
     def remove_filter_data():

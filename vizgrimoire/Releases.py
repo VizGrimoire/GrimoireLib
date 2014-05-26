@@ -34,6 +34,7 @@ from data_source import DataSource
 
 
 class Releases(DataSource):
+    _metrics_set = []
 
     @staticmethod
     def get_db_name():

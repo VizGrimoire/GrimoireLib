@@ -37,6 +37,7 @@ from data_source import DataSource
 
 
 class Downloads(DataSource):
+    _metrics_set = []
 
     @staticmethod
     def get_db_name():

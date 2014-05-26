@@ -34,6 +34,7 @@ from data_source import DataSource
 
 
 class Mediawiki(DataSource):
+    _metrics_set = []
 
     @staticmethod
     def get_db_name():

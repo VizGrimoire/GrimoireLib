@@ -38,6 +38,7 @@ from data_source import DataSource
 from filter import Filter
 
 class SCM(DataSource):
+    _metrics_set = []
 
     @staticmethod
     def get_db_name():

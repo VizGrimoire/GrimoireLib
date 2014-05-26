@@ -95,7 +95,7 @@ class Report(object):
                 builder = ds.get_query_builder()
                 db = Report._automator['generic'][ds.get_db_name()]
                 metrics = metrics_class(builder(dbuser, dbpass, db, db_identities))
-                ds.add_metrics(metrics)
+                ds.add_metrics(metrics, ds)
 
     @staticmethod
     def get_config():

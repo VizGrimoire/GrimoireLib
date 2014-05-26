@@ -41,6 +41,7 @@ from filter import Filter
 
 
 class MLS(DataSource):
+    _metrics_set = []
 
     @staticmethod
     def get_repo_field():

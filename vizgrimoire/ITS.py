@@ -17,9 +17,9 @@
 ## This file is a part of the vizGrimoire R package
 ##  (an R library for the MetricsGrimoire and vizGrimoire systems)
 ##
-## ITS.R
+## ITS.py
 ##
-## Queries for ITS data analysis
+## Metrics for Issues Tracking System data source
 ##
 ## Authors:
 ##   Jesus M. Gonzalez-Barahona <jgb@bitergia.com>
@@ -39,6 +39,7 @@ from filter import Filter
 import report
 
 class ITS(DataSource):
+    _metrics_set = []
 
     @staticmethod
     def get_db_name():
