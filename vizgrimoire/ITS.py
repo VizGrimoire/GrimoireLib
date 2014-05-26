@@ -49,6 +49,22 @@ class ITS(DataSource):
     def get_name(): return "its"
 
     @staticmethod
+    def get_date_init(startdate, enddate, identities_db, type_analysis):
+        """Get the date of the first activity in the data source"""
+        return GetInitDate (startdate, enddate, identities_db, type_analysis)
+
+    @staticmethod
+    def get_date_end(startdate, enddate, identities_db, type_analysis):
+        """Get the date of the last activity in the data source"""
+        return GetEndDate (startdate, enddate, identities_db, type_analysis)
+
+    @staticmethod
+    def get_url():
+        """Get the URL from which the data source was gathered"""
+        return TrackerURL()
+        pass
+
+    @staticmethod
     def _get_backend():
         automator = report.Report.get_config()
         its_backend = automator['bicho']['backend']
@@ -120,7 +136,7 @@ class ITS(DataSource):
 
         else:
             agg = AggITSInfo(period, startdate, enddate, identities_db, None, closed_condition)
-            data = TrackerURL()
+            data = ITS.get_url()
             agg = dict(agg.items() +  data.items())
 
             # Tendencies
@@ -619,7 +635,6 @@ def GetITSInfo (period, startdate, enddate, identities_db, type_analysis, closed
     filter_ = MetricFilters(period, startdate, enddate, type_analysis)
     all_metrics = ITS.get_metrics_set(ITS)
 
-
     for item in all_metrics:
         if item.id not in metrics_on and item.id not in metrics_on_agg: continue
         item.filters = filter_
@@ -631,22 +646,20 @@ def GetITSInfo (period, startdate, enddate, identities_db, type_analysis, closed
         data = dict(data.items() + mvalue.items())
 
     if not evolutionary:
-        init_date = GetInitDate(startdate, enddate, identities_db, type_analysis)
-        end_date = GetEndDate(startdate, enddate, identities_db, type_analysis)
+        init_date = ITS.get_date_init(startdate, enddate, identities_db, type_analysis)
+        end_date = ITS.get_date_end(startdate, enddate, identities_db, type_analysis)
+        data = dict(data.items() + init_date.items() + end_date.items())
 
         # Data from the last 365 days
         fromdate = GetDates(enddate, 365)[1]
         filter_365 = MetricFilters(period, fromdate, enddate, type_analysis)
-        closed = ITS.get_metrics('closed', ITS)
-        closers = ITS.get_metrics('closers', ITS)
-        closed.filters = filter_365
-        closers.filters = filter_365
-        closed_365 = closed.get_agg()
-        closers_365 = closers.get_agg()
+        metrics_365 = ['closed','closers']
         last_365 = {}
-        last_365['closed_365'] = closed_365['closed']
-        last_365['closers_365'] = closers_365['closers']
-        data = dict(data.items() + init_date.items() + end_date.items())
+        for item_365 in all_metrics:
+            if item_365.id not in metrics_365: continue
+            item_365.filters = filter_365
+            data_365 = item_365.get_agg()
+            last_365[item_365.id+'_365'] = data_365[item_365.id]
         data = dict(data.items() + last_365.items())
 
     return(data)
