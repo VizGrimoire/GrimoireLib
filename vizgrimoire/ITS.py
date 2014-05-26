@@ -638,9 +638,13 @@ def GetITSInfo (period, startdate, enddate, identities_db, type_analysis, closed
     # aggregated functions
 
     data = {}
+    from metrics_filter import MetricFilters
+    filter_ = MetricFilters(period, startdate, enddate, type_analysis)
+    closed_metrics = ITS.get_metrics("closed", ITS)
+    closed_metrics.filters = filter_
 
     if (evolutionary):
-        closed = EvolIssuesClosed(period, startdate, enddate, identities_db, type_analysis, closed_condition)
+        closed = closed_metrics.get_ts()
         closed = completePeriodIds(closed, period, startdate, enddate)
         closers = EvolIssuesClosers(period, startdate, enddate, identities_db, type_analysis, closed_condition)
         closers = completePeriodIds(closers, period, startdate, enddate)
@@ -655,10 +659,6 @@ def GetITSInfo (period, startdate, enddate, identities_db, type_analysis, closed
         repos = EvolIssuesRepositories(period, startdate, enddate, identities_db, type_analysis)
         repos = completePeriodIds(repos, period, startdate, enddate)
     else :
-        closed_old = AggIssuesClosed(period, startdate, enddate, identities_db, type_analysis, closed_condition)
-        closed_metrics = ITS.get_metrics("closed", ITS)
-        from metrics_filter import MetricFilters
-        closed_metrics.filters = MetricFilters(period, startdate, enddate, type_analysis)
         closed = closed_metrics.get_agg()
         closers = AggIssuesClosers(period, startdate, enddate, identities_db, type_analysis, closed_condition)
         changed = AggIssuesChanged(period, startdate, enddate, identities_db, type_analysis)
