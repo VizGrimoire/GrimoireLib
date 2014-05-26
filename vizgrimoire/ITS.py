@@ -98,18 +98,6 @@ class ITS(DataSource):
             data = EvolITSInfo(period, startdate, enddate, identities_db, None, closed_condition)
             evol = completePeriodIds(data, period, startdate, enddate)
 
-            data = EvolIssuesCompanies(period, startdate, enddate, identities_db)
-            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
-
-            data = EvolIssuesCountries(period, startdate, enddate, identities_db)
-            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
-
-            data = EvolIssuesRepositories(period, startdate, enddate, identities_db)
-            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
-
-            data = EvolIssuesDomains(period, startdate, enddate, identities_db)
-            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
-
             data = ITS.get_tickets_states(period, startdate, enddate, identities_db, ITS._get_backend())
             evol = dict(evol.items() + data.items())
 
@@ -132,8 +120,6 @@ class ITS(DataSource):
 
         else:
             agg = AggITSInfo(period, startdate, enddate, identities_db, None, closed_condition)
-            data = AggAllParticipants(startdate, enddate)
-            agg = dict(agg.items() +  data.items())
             data = TrackerURL()
             agg = dict(agg.items() +  data.items())
 
@@ -628,15 +614,17 @@ def GetITSInfo (period, startdate, enddate, identities_db, type_analysis, closed
 
     data = {}
     metrics_on = ['closed','closers','changed','changers',"opened",'openers','trackers','domains','countries','companies']
+    metrics_on_agg = ['allhistory_participants']
     from metrics_filter import MetricFilters
     filter_ = MetricFilters(period, startdate, enddate, type_analysis)
     all_metrics = ITS.get_metrics_set(ITS)
 
 
     for item in all_metrics:
-        if item.id not in metrics_on: continue
+        if item.id not in metrics_on and item.id not in metrics_on_agg: continue
         item.filters = filter_
         if (evolutionary):
+            if item.id not in metrics_on: continue
             mvalue = item.get_ts()
         else:
             mvalue = item.get_agg()
