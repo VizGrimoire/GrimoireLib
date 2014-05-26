@@ -91,7 +91,8 @@ class Report(object):
                                if inspect.isclass(c) and issubclass(c, Metrics)]
             for metrics_class in metrics_classes:
                 ds = metrics_class.data_source
-                if  ds is None: continue
+                if ds is None: continue
+                if ds.get_db_name() not in Report._automator['generic']: continue
                 builder = ds.get_query_builder()
                 db = Report._automator['generic'][ds.get_db_name()]
                 metrics = metrics_class(builder(dbuser, dbpass, db, db_identities))
