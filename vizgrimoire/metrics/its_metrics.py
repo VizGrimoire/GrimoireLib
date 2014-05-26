@@ -298,7 +298,8 @@ class AllParticipants(Metrics):
         return q
 
     def get_ts (self):
-        pass
+        """ It is an aggregate only metric """
+        return {}
 
     def get_agg(self):
         if self.filters.type_analysis is None:
