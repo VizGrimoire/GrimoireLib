@@ -215,9 +215,9 @@ class Changers(Metrics):
 
         return q
 
-class Repositories(Metrics):
+class Trackers(Metrics):
     """ Trackers metric class for issue tracking systems """
-    id = "repositories"
+    id = "trackers"
     name = "Trackers"
     desc = "Number of active trackers"
     data_source = ITS
