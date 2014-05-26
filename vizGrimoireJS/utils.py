@@ -91,6 +91,10 @@ def read_options():
                       action="store",
                       dest="filter",
                       help="filter to be generated")
+    parser.add_option("-m", "--metrics",
+                  action="store",
+                  dest="metrics_path",
+                  help="Path to the metrics modules to be loaded")
 
 
     (opts, args) = parser.parse_args()
@@ -98,8 +102,10 @@ def read_options():
     if len(args) != 0:
         parser.error("Wrong number of arguments")
 
-    if opts.config_file is None :
+    if opts.config_file is None:
         if not(opts.dbname and opts.dbuser and opts.identities_db):
             parser.error("--database --db-user and --identities are needed")
+    if opts.metrics_path is None:
+        parser.error("--metrics path is needed.")
     return opts
 
