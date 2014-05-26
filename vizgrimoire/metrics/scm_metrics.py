@@ -300,5 +300,39 @@ class CommitsPeriod(Metrics):
 
     def get_ts(self):
         # WARNING: This function should provide same information as Commits.get_ts(), do not use this.
-        raise NotImplementedError
+        return {}
+
+
+class FilesPeriod(Metrics):
+    """ Files per period class for source code management system  """
+
+    #id = "avg_files_" + self.filters.period
+    #name = "Average Files per " + self.filters.period
+    #desc = "Average number of files per " + self.filters.period
+    data_source = SCM
+
+    def __get_sql__(self, evolutionary):
+        # Basic parts of the query needed when calculating commits per period
+
+        #TODO: the following three lines should be initialize in a __init__ method.
+        self.id = "avg_files_" + self.filters.period
+        self.name = "Average Files per " + self.filters.period
+        self.desc = "Average number of files per " + self.filters.period
+
+        fields = " count(distinct(a.file_id))/timestampdiff("+self.filters.period+",min(s.date),max(s.date)) as avg_files_"+self.filters.period
+        tables = " scmlog s, actions a "
+        filters = " s.id = a.commit_id "
+
+        tables += self.db.GetSQLReportFrom(self.filters.type_analysis)
+        filters += self.db.GetSQLReportWhere(self.filters.type_analysis, "author")
+
+        q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
+                               self.filters.enddate, " s.date ", fields,
+                               tables, filters, evolutionary)
+        return q
+
+    def get_ts(self):
+        # WARNING: This function should provide same information as Files.get_ts(), do not use this.
+        return {}
+
 
