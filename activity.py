@@ -108,6 +108,25 @@ class ActivityList:
             repr = repr + str(item) + "\n"
         return repr
 
+    def __getstate__(self):
+        """Return the state to be used for pickling.
+
+        Needed by jsonpickle, which will use this to produce
+        the JSON string.
+
+        """
+
+        return self.list
+
+    def __setstate__(self, state):
+        """Set the state from pckling.
+
+        Not really used, just needed by jsonpickle.
+
+        """
+
+        self.list = state
+
 if __name__ == "__main__":
 
     import sys
@@ -119,6 +138,11 @@ if __name__ == "__main__":
 
     # Register datetime flattener for jsonpickle
     jsonpickle.handlers.registry.register(datetime, DatetimeHandler)
+    jsonpickle.set_preferred_backend('json')
+    jsonpickle.set_encoder_options('json', sort_keys=True, indent=4,
+                                   separators=(',', ': '),
+                                   ensure_ascii=False,
+                                   encoding="utf8")
 
     period = Period(datetime(2011,12,1), datetime(2012,11,1))
     print period
@@ -134,4 +158,4 @@ if __name__ == "__main__":
                                      datetime(2013,2,3)],
                                     labels = rowlabels)))
     print list
-    print encode(list, unpicklable=False)
+    print jsonpickle.encode(list, unpicklable=False)
