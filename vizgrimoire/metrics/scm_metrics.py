@@ -223,3 +223,28 @@ class Lines(Metrics):
         return (data) 
 
 
+class Branches(Metrics):
+    """ Branches metric class for source code management system """
+
+    id = "branches"
+    name = "Branches"
+    desc = "Number of active branches"
+    data_source = SCM
+    
+    def __get_sql__(self, evolutionary):
+        # Basic parts of the query needed when calculating branches
+        fields = "count(distinct(a.branch_id)) as branches "
+        tables = " scmlog s, actions a "
+        filters = " a.commit_id = s.id "
+
+        # specific parts of the query depending on the report needed
+        tables += self.db.GetSQLReportFrom(self.filters.type_analysis)
+        #TODO: left "author" as generic option coming from parameters (this should be specified by command line)
+        filters += self.db.GetSQLReportWhere(self.filters.type_analysis, "author")
+
+        q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
+                               self.filters.enddate, " s.date ", fields,
+                               tables, filters, evolutionary)
+        return q
+
+
