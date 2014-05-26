@@ -346,7 +346,10 @@ def compare_json_data(data1, data2, orig_file = "", new_file = "", skip_fields =
                 check = False
             if isinstance(data1[name], float): data1[name] = round(data1[name],6)
             if isinstance(data2[name], float): data2[name] = round(data2[name],6)
-            if isinstance(data1[name], list) and isinstance(data2[name], list): 
+            if isinstance(data1[name], list) and isinstance(data2[name], list):
+                if len(data1[name]) != len(data2[name]):
+                    logging.warn("Different list size for " + name)
+                    continue
                 for i in range(0, len(data1[name])): 
                     if isinstance(data1[name][i], float): data1[name][i] = round(data1[name][i],6)
                     if isinstance(data2[name][i], float): data2[name][i] = round(data2[name][i],6)
