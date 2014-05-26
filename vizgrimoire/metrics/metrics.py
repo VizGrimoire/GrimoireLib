@@ -90,7 +90,7 @@ class Metrics(object):
         prev = int(prev[self.id])
 
         data = {}
-        data['diff_'+self.id+'_'+str(days)] = last - prev
+        data['diff_net'+self.id+'_'+str(days)] = last - prev
         data['percentage_'+self.id+'_'+str(days)] = GetPercentageDiff(prev, last)
         return (data)
 

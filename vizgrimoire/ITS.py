@@ -137,23 +137,19 @@ class ITS(DataSource):
             data = TrackerURL()
             agg = dict(agg.items() +  data.items())
 
-            # Tendencies    
-            for i in [7,30,365]:
-                closed = ITS.get_metrics('closed', ITS)
-                period_data = closed.get_agg_diff_days(enddate, i)
-                # period_data = GetDiffClosedDays(period, identities_db, enddate, i, [], closed_condition)
-                agg = dict(agg.items() + period_data.items())
-                period_data = GetDiffOpenedDays(period, identities_db, enddate, i, [])
-                agg = dict(agg.items() + period_data.items())
-                period_data = GetDiffClosersDays(period, identities_db, enddate, i, [], closed_condition)
-                agg = dict(agg.items() + period_data.items())
-                period_data = GetDiffChangersDays(period, identities_db, enddate, i, [])
-                agg = dict(agg.items() + period_data.items())
+            # Tendencies
+            metrics_trends = ['closed','closers','opened','openers','changed','changers']
+            all_metrics = ITS.get_metrics_set(ITS)
 
-            # Last Activity: to be removed
-            for i in [7,14,30,60,90,180,365,730]:
-                period_activity = GetLastActivityITS(i, closed_condition)
-                agg = dict(agg.items() + period_activity.items())
+            for i in [7,30,365]:
+                for item in all_metrics:
+                    if item.id not in metrics_trends: continue
+                    period_data = item.get_agg_diff_days(enddate, i)
+                    agg = dict(agg.items() +  period_data.items())
+#            # Last Activity: to be removed
+#            for i in [7,14,30,60,90,180,365,730]:
+#                period_activity = GetLastActivityITS(i, closed_condition)
+#                agg = dict(agg.items() + period_activity.items())
 
         return agg
 
