@@ -47,7 +47,7 @@ class Authors(Metrics):
     desc = "People authoring commits (changes to source code)"
     data_source = SCM
 
-    def __get_authors__ (self, evolutionary):
+    def __get_sql__ (self, evolutionary):
         # This function contains basic parts of the query to count authors
         # That query is later built and executed
 
@@ -72,22 +72,8 @@ class Authors(Metrics):
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate, 
                                self.filters.enddate, " s.date ", fields, 
                                tables, filters, evolutionary)
-        return(self.db.ExecuteQuery(q))
+        return q
 
-
-    def get_ts (self):
-        # returns the evolution of authors through the time
-        data = self.__get_authors__(True)
-        return completePeriodIds(data, self.filters.period, self.filters.startdate, self.filters.enddate)
-
-
-    def get_agg (self):
-        # returns the aggregated number of authors in the specified timeperiod (enddate - startdate)
-        return (self.__get_authors__(False))
-
-    def get_list(self):
-        #to be implemented
-        pass
 
 # example of use
 if __name__ == '__main__':
