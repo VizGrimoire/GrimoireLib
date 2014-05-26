@@ -139,7 +139,9 @@ class ITS(DataSource):
 
             # Tendencies    
             for i in [7,30,365]:
-                period_data = GetDiffClosedDays(period, identities_db, enddate, i, [], closed_condition)
+                closed = ITS.get_metrics('closed', ITS)
+                period_data = closed.get_agg_diff_days(enddate, i)
+                # period_data = GetDiffClosedDays(period, identities_db, enddate, i, [], closed_condition)
                 agg = dict(agg.items() + period_data.items())
                 period_data = GetDiffOpenedDays(period, identities_db, enddate, i, [])
                 agg = dict(agg.items() + period_data.items())

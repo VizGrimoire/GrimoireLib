@@ -22,7 +22,7 @@
 ##   Daniel Izquierdo-Cortazar <dizquierdo@bitergia.com>
 
 
-from GrimoireUtils import completePeriodIds
+from GrimoireUtils import completePeriodIds, GetDates, GetPercentageDiff
 from metrics_filter import MetricFilters
 
 class Metrics(object):
@@ -75,6 +75,24 @@ class Metrics(object):
         """ Returns an aggregated value """
         query = self.__get_sql__(False)
         return self.db.ExecuteQuery(query)
+
+    def get_agg_diff_days(self, date, days):
+        """ Returns an the trend metrics between now and now-days values """
+
+        chardates = GetDates(date, days)
+        self.filters = MetricFilters(Metrics.default_period,
+                                     chardates[1], chardates[0], None)
+        last = self.get_agg()
+        last = int(last[self.id])
+        self.filters = MetricFilters(Metrics.default_period,
+                                     chardates[2], chardates[1], None)
+        prev = self.get_agg()
+        prev = int(prev[self.id])
+
+        data = {}
+        data['diff_'+self.id+'_'+str(days)] = last - prev
+        data['percentage_'+self.id+'_'+str(days)] = GetPercentageDiff(prev, last)
+        return (data)
 
     def get_list(self):
         """ Returns a list of items """
