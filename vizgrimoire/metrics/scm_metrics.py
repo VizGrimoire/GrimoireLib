@@ -248,3 +248,25 @@ class Branches(Metrics):
         return q
 
 
+class Actions(Metrics):
+    """ Actions metrics class for source code management system """
+    
+    id = "actions"
+    name = "Actions"
+    desc = "Actions performed on several files (add, remove, copy, ... each file)"
+    data_source = SCM
+
+    def __get_sql__ (self, evolutionary):
+        # Basic parts of the query needed when calculating actions
+        fields = " count(distinct(a.id)) as actions "
+        tables = " scmlog s, actions a "
+        filters = " a.commit_id = s.id "
+
+        tables += self.db.GetSQLReportFrom(self.filters.type_analysis)
+        filters += self.db.GetSQLReportWhere(self.filters.type_analysis, "author")
+
+        q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
+                               self.filters.enddate, " s.date ", fields,
+                               tables, filters, evolutionary)
+        return q
+
