@@ -272,7 +272,7 @@ class Domains(Metrics):
                                            ['domain', ''], evolutionary, 'domains')
         return q
 
-class Projects(object):
+class Projects(Metrics):
     """ Projects metric class for issue tracking systems """
     id = "projects"
     name = "Projects"
@@ -285,5 +285,23 @@ class Projects(object):
                                            ['project', ''], evolutionary, 'projects')
         return q
 
-#init_date
-#end_date
+# Only agg metrics
+class AllParticipants(Metrics):
+    """ Total number of participants metric class for issue tracking systems """
+    id = "allhistory_participants"
+    name = "All Participants"
+    desc = "Number of participants in all history in the ticketing system"
+    data_source = ITS
+
+    def __get_sql__(self, evolutionary):
+        q = "SELECT count(distinct(pup.upeople_id)) as allhistory_participants from people_upeople pup"
+        return q
+
+    def get_ts (self):
+        pass
+
+    def get_agg(self):
+        if self.filters.type_analysis is None:
+            query = self.__get_sql__(False)
+            return self.db.ExecuteQuery(query)
+        else: return {}
