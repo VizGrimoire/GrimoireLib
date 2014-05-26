@@ -638,49 +638,40 @@ def GetITSInfo (period, startdate, enddate, identities_db, type_analysis, closed
     # aggregated functions
 
     data = {}
+    metrics_on = ['closed','closers','changed','changers',"opened",'openers','trackers','domains','companies']
     from metrics_filter import MetricFilters
     filter_ = MetricFilters(period, startdate, enddate, type_analysis)
-    closed_metrics = ITS.get_metrics("closed", ITS)
-    closed_metrics.filters = filter_
+    all_metrics = ITS.get_metrics_set(ITS)
 
-    if (evolutionary):
-        closed = closed_metrics.get_ts()
-        closed = completePeriodIds(closed, period, startdate, enddate)
-        closers = EvolIssuesClosers(period, startdate, enddate, identities_db, type_analysis, closed_condition)
-        closers = completePeriodIds(closers, period, startdate, enddate)
-        changed = EvolIssuesChanged(period, startdate, enddate, identities_db, type_analysis)
-        changed = completePeriodIds(changed, period, startdate, enddate)
-        changers = EvolIssuesChangers(period, startdate, enddate, identities_db, type_analysis)
-        changers = completePeriodIds(changers, period, startdate, enddate)
-        open = EvolIssuesOpened(period, startdate, enddate, identities_db, type_analysis)
-        open = completePeriodIds(open, period, startdate, enddate)
-        openers = EvolIssuesOpeners(period, startdate, enddate, identities_db, type_analysis, closed_condition)
-        openers = completePeriodIds(openers, period, startdate, enddate)
-        repos = EvolIssuesRepositories(period, startdate, enddate, identities_db, type_analysis)
-        repos = completePeriodIds(repos, period, startdate, enddate)
-    else :
-        closed = closed_metrics.get_agg()
-        closers = AggIssuesClosers(period, startdate, enddate, identities_db, type_analysis, closed_condition)
-        changed = AggIssuesChanged(period, startdate, enddate, identities_db, type_analysis)
-        changers = AggIssuesChangers(period, startdate, enddate, identities_db, type_analysis)
-        open = AggIssuesOpened(period, startdate, enddate, identities_db, type_analysis)
-        openers = AggIssuesOpeners(period, startdate, enddate, identities_db, type_analysis, closed_condition)
-        repos = AggIssuesRepositories(period, startdate, enddate, identities_db, type_analysis)
+
+    for item in all_metrics:
+        if item.id not in metrics_on: continue
+        item.filters = filter_
+        if (evolutionary):
+            mvalue = item.get_ts()
+        else:
+            mvalue = item.get_agg()
+            print(mvalue)
+        data = dict(data.items() + mvalue.items())
+
+    if not evolutionary:
         init_date = GetInitDate(startdate, enddate, identities_db, type_analysis)
         end_date = GetEndDate(startdate, enddate, identities_db, type_analysis)
 
         # Data from the last 365 days
         fromdate = GetDates(enddate, 365)[1]
-        closed_365 = AggIssuesClosed(period, fromdate, enddate, identities_db, type_analysis, closed_condition)
-        closers_365 = AggIssuesClosers(period, fromdate, enddate, identities_db, type_analysis, closed_condition)
-        closed['closed_365'] = closed_365['closed']
-        closers['closers_365'] = closers_365['closers']
-
-    data = dict(closed.items() + closers.items()+ changed.items())
-    data = dict(data.items() + changers.items() + open.items())
-    data = dict(data.items() + openers.items() + repos.items())
-    if (not evolutionary):
+        filter_ = MetricFilters(period, fromdate, enddate, type_analysis)
+        closed = ITS.get_metrics('closed', ITS)
+        closers = ITS.get_metrics('closers', ITS)
+        closed.filters = filter_
+        closers.filters = filter_
+        closed_365 = closed.get_agg()
+        closers_365 = closers.get_agg()
+        last_365 = {}
+        last_365['closed_365'] = closed_365['closed']
+        last_365['closers_365'] = closers_365['closers']
         data = dict(data.items() + init_date.items() + end_date.items())
+        data = dict(data.items() + last_365.items())
 
     return(data)
 
