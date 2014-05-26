@@ -651,7 +651,6 @@ def GetITSInfo (period, startdate, enddate, identities_db, type_analysis, closed
             mvalue = item.get_ts()
         else:
             mvalue = item.get_agg()
-            print(mvalue)
         data = dict(data.items() + mvalue.items())
 
     if not evolutionary:
