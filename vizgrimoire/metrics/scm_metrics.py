@@ -300,7 +300,7 @@ class CommitsPeriod(Metrics):
 
     def get_ts(self):
         # WARNING: This function should provide same information as Commits.get_ts(), do not use this.
-        raise NotImplementedError
+        return {}
 
 
 class FilesPeriod(Metrics):
@@ -333,6 +333,6 @@ class FilesPeriod(Metrics):
 
     def get_ts(self):
         # WARNING: This function should provide same information as Files.get_ts(), do not use this.
-        raise NotImplementedError
+        return {}
 
 
