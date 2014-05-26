@@ -78,6 +78,8 @@ class Metrics(object):
 
     def get_agg_diff_days(self, date, days):
         """ Returns an the trend metrics between now and now-days values """
+        # Keeping state of origin filters
+        filters = self.filters
 
         chardates = GetDates(date, days)
         self.filters = MetricFilters(Metrics.default_period,
@@ -92,6 +94,9 @@ class Metrics(object):
         data = {}
         data['diff_net'+self.id+'_'+str(days)] = last - prev
         data['percentage_'+self.id+'_'+str(days)] = GetPercentageDiff(prev, last)
+
+        # Returning filters to their original value
+        self.filters = filters
         return (data)
 
     def get_list(self):

@@ -28,7 +28,7 @@ import MySQLdb
 
 import re, sys
 
-from GrimoireUtils import completePeriodIds
+from GrimoireUtils import completePeriodIds, GetDates, GetPercentageDiff
 
 from metrics import Metrics
 
@@ -193,5 +193,33 @@ class Lines(Metrics):
 
         return completePeriodIds(data, self.filters.period,
                                  self.filters.startdate, self.filters.enddate)
+
+    def get_agg_diff_days(self, date, days):
+        #Specific needs for Added and Removed lines not considered in meta class Metrics
+        filters = self.filters
+
+        chardates = GetDates(date, days)
+
+        self.filters = MetricFilters(Metrics.default_period,
+                                     chardates[1], chardates[0], None)        
+        last = self.get_agg()
+        last_added = int(last['added_lines'])
+        last_removed = int(last['removed_lines'])
+
+        self.filters = MetricFilters(Metrics.default_period,
+                                     chardates[2], chardates[1], None)
+        prev = self.get_agg()
+        prev_added = int(prev['added_lines'])
+        prev_removed = int(prev['removed_lines'])
+
+        data = {}
+        data['diff_netadded_lines_'+str(days)] = last_added - prev_added
+        data['percentage_added_lines_'+str(days)] = GetPercentageDiff(prev_added, last_added)
+        data['diff_netremoved_lines_'+str(days)] = last_removed - prev_removed
+        data['percentage_removed_lines_'+str(days)] = GetPercentageDiff(prev_removed, last_removed)
+
+        #Returning filters to their original value
+        self.filters = filters
+        return (data) 
 
 
