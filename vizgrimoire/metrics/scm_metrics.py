@@ -336,3 +336,40 @@ class FilesPeriod(Metrics):
         return {}
 
 
+class CommitsAuthor(Metrics):
+    """ Commits per author class for source code management system """
+
+    id = "avg_commits_author"
+    name = "Average Commits per Author"
+    desc = "Average number of commits per author"
+    data_source = SCM
+
+    def __get_sql__(self, evolutionary):
+        # Basic parts of the query needed when calculating commits per author
+  
+        fields = " count(distinct(s.id))/count(distinct(pup.upeople_id)) as avg_commits_author "
+        tables = " scmlog s, actions a "
+        filters = " s.id = a.commit_id "
+
+        filters += self.db.GetSQLReportWhere(self.filters.type_analysis, "author")
+
+        #specific parts of the query depending on the report needed
+        tables += self.db.GetSQLReportFrom(self.filters.type_analysis)
+ 
+        if (self.filters.type_analysis is None or len (self.filters.type_analysis) != 2) :
+            #Specific case for the basic option where people_upeople table is needed
+            #and not taken into account in the initial part of the query
+            tables += ",  "+self.db.identities_db+".people_upeople pup"
+            filters += " and s.author_id = pup.people_id"
+
+        elif (self.filters.type_analysis[0] == "repository" or self.filters.type_analysis[0] == "project"):
+            #Adding people_upeople table
+            tables += ",  "+self.db.identities_db+".people_upeople pup"
+            filters += " and s.author_id = pup.people_id "
+
+        q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
+                               self.filters.enddate, " s.date ", fields,
+                               tables, filters, evolutionary)
+        return q
+
+
