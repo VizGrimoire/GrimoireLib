@@ -46,13 +46,6 @@ class Commits(Metrics):
     desc = "Changes to the source code"
     data_source = SCM
 
-    def __get_commits__ (self, evolutionary):
-        # This function contains basic parts of the query to count commits.
-        # That query is built and results returned.
-        query = self.__get_sql__(evolutionary)
-        return self.db.ExecuteQuery(query)
-
-
     def __get_sql__(self, evolutionary):
         fields = " count(distinct(s.id)) as commits "
         tables = " scmlog s, actions a " + self.db.GetSQLReportFrom(self.filters.type_analysis)
@@ -63,21 +56,6 @@ class Commits(Metrics):
                                    tables, filters, evolutionary)
         return query
 
-    def get_data_source(self):
-        return self.data_source
-
-    def get_ts (self):
-        # Returns the evolution of commits through the time
-        data = self.__get_commits__(True)
-        return completePeriodIds(data, self.filters.period, self.filters.startdate, self.filters.enddate)
-    
-    def get_agg(self):
-        return self.__get_commits__(False)        
-
-    def get_list(self):
-        #to be implemented
-        pass
-
 # Examples of use
 if __name__ == '__main__':
     filters = MetricFilters("week", "'2010-01-01'", "'2014-01-01'", ["company", "'Red Hat'"])
@@ -85,7 +63,7 @@ if __name__ == '__main__':
     dbcon = SCMQuery("root", "", "cp_cvsanaly_SingleProject", "cp_cvsanaly_SingleProject",)
     redhat = Commits(dbcon, filters)
     all = Commits(dbcon)
-    # print redhat.get_ts()
+    print redhat.get_ts()
     print redhat.get_agg()
     print all.get_agg()
     print redhat.get_data_source()
