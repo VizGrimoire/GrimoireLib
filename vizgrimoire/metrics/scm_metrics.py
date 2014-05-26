@@ -155,3 +155,43 @@ class Files(Metrics):
         return q
 
 
+class Lines(Metrics):
+    """ Added and Removed lines for source code management system """
+
+    id = "lines"
+    name = "Lines"
+    desc = "Number of added and/or removed lines"
+    data_source = SCM
+
+    def __get_sql__(self, evolutionary):
+        # This function contains basic parts of the query to count added and removed lines
+        fields = "sum(cl.added) as added_lines, sum(cl.removed) as removed_lines"
+        tables = "scmlog s, commits_lines cl "
+        filters = "cl.commit_id = s.id "
+
+        # specific parts of the query depending on the report needed
+        tables += self.db.GetSQLReportFrom(self.filters.type_analysis)
+        #TODO: left "author" as generic option coming from parameters (this should be specified by command line)
+        filters += self.db.GetSQLReportWhere(self.filters.type_analysis, "author")
+
+        q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
+                               self.filters.enddate, " s.date ", fields,
+                               tables, filters, evolutionary)
+
+        return q
+
+    def get_ts(self):
+        #Specific needs for Added and Removed lines not considered in meta class Metrics
+        query = self.__get_sql__(True)
+        data = self.db.ExecuteQuery(query)
+
+        if not (isinstance(data['removed_lines'], list)): data['removed_lines'] = [data['removed_lines']]
+        if not (isinstance(data['added_lines'], list)): data['added_lines'] = [data['added_lines']]
+
+        data['removed_lines'] = [float(lines)  for lines in data['removed_lines']]
+        data['added_lines'] = [float(lines)  for lines in data['added_lines']]
+
+        return completePeriodIds(data, self.filters.period,
+                                 self.filters.startdate, self.filters.enddate)
+
+
