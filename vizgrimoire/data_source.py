@@ -193,6 +193,14 @@ class DataSource(object):
         ds._metrics_set.append(metrics)
 
     @staticmethod
+    def get_metrics(id, ds):
+        metrics = None
+        for item in ds._metrics_set:
+            if item.id == id:
+                metrics = item
+        return metrics
+
+    @staticmethod
     def remove_filter_data():
         """Remove from the database all information about this filter (i.e. a repository)"""
         raise NotImplementedError
