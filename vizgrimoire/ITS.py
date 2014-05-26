@@ -137,15 +137,6 @@ class ITS(DataSource):
             data = TrackerURL()
             agg = dict(agg.items() +  data.items())
 
-            data = AggIssuesCompanies(period, startdate, enddate, identities_db)
-            agg = dict(agg.items() + data.items())
-
-            data = AggIssuesCountries(period, startdate, enddate, identities_db)
-            agg = dict(agg.items() + data.items())
-
-            data = AggIssuesDomains(period, startdate, enddate, identities_db)
-            agg = dict(agg.items() + data.items())
-
             # Tendencies    
             for i in [7,30,365]:
                 period_data = GetDiffClosedDays(period, identities_db, enddate, i, [], closed_condition)
@@ -638,7 +629,7 @@ def GetITSInfo (period, startdate, enddate, identities_db, type_analysis, closed
     # aggregated functions
 
     data = {}
-    metrics_on = ['closed','closers','changed','changers',"opened",'openers','trackers','domains','companies']
+    metrics_on = ['closed','closers','changed','changers',"opened",'openers','trackers','domains','countries','companies']
     from metrics_filter import MetricFilters
     filter_ = MetricFilters(period, startdate, enddate, type_analysis)
     all_metrics = ITS.get_metrics_set(ITS)
@@ -659,11 +650,11 @@ def GetITSInfo (period, startdate, enddate, identities_db, type_analysis, closed
 
         # Data from the last 365 days
         fromdate = GetDates(enddate, 365)[1]
-        filter_ = MetricFilters(period, fromdate, enddate, type_analysis)
+        filter_365 = MetricFilters(period, fromdate, enddate, type_analysis)
         closed = ITS.get_metrics('closed', ITS)
         closers = ITS.get_metrics('closers', ITS)
-        closed.filters = filter_
-        closers.filters = filter_
+        closed.filters = filter_365
+        closers.filters = filter_365
         closed_365 = closed.get_agg()
         closers_365 = closers.get_agg()
         last_365 = {}
