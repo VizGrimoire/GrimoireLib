@@ -420,3 +420,48 @@ class AuthorsPeriod(Metrics):
         return {}
 
 
+class CommittersPeriod(Metrics):
+    """ Committers per period class for source code management system """
+
+    #id = "avg_committers_" + self.filters.period
+    #name = "Average Committers per " + self.filters.period
+    #desc = "Average number of committers per " + self.filters.period
+    data_source = SCM
+
+    def __get_sql__(self, evolutionary):
+        # Basic parts of the query needed when calculating commits per period
+
+        #TODO: the following three lines should be initialize in a __init__ method.
+        self.id = "avg_committers_" + self.filters.period
+        self.name = "Average Committers per " + self.filters.period
+        self.desc = "Average number of committers per " + self.filters.period
+
+        fields = " count(distinct(pup.upeople_id))/timestampdiff("+self.filters.period+",min(s.date),max(s.date)) as avg_committers_"+self.filters.period
+        tables = " scmlog s "
+        # filters = ""
+
+        filters = self.db.GetSQLReportWhere(self.filters.type_analysis, "committer")
+
+        #specific parts of the query depending on the report needed
+        tables += self.db.GetSQLReportFrom(self.filters.type_analysis)
+
+        if (self.filters.type_analysis is None or len (self.filters.type_analysis) != 2) :
+            #Specific case for the basic option where people_upeople table is needed
+            #and not taken into account in the initial part of the query
+            tables += ",  "+self.db.identities_db+".people_upeople pup"
+            filters += " and s.committer_id = pup.people_id"
+
+        elif (self.filters.type_analysis[0] == "repository" or self.filters.type_analysis[0] == "project"):
+            #Adding people_upeople table
+            tables += ",  "+self.db.identities_db+".people_upeople pup"
+            filters += " and s.committer_id = pup.people_id "
+        q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
+                               self.filters.enddate, " s.date ", fields,
+                               tables, filters, evolutionary)
+        return q
+
+    def get_ts(self):
+        # WARNING, this function should return same information as Committers.get_ts(), do not use this
+        return {}
+
+
