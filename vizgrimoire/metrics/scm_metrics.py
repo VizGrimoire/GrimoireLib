@@ -270,3 +270,35 @@ class Actions(Metrics):
                                tables, filters, evolutionary)
         return q
 
+class CommitsPeriod(Metrics):
+    """ Commits per period class for source code management system """
+
+    #id = "avg_commits_" + self.filters.period
+    #name = "Average Commits per " + self.filters.period
+    #desc = "Average number of commits per " + self.filters.period
+    data_source = SCM
+
+    def __get_sql__(self, evolutionary):
+        # Basic parts of the query needed when calculating commits per period
+
+        #TODO: the following three lines should be initialize in a __init__ method.
+        self.id = "avg_commits_" + self.filters.period
+        self.name = "Average Commits per " + self.filters.period
+        self.desc = "Average number of commits per " + self.filters.period
+
+        fields = " count(distinct(s.id))/timestampdiff("+self.filters.period+",min(s.date),max(s.date)) as avg_commits_"+self.filters.period
+        tables = " scmlog s, actions a "
+        filters = " s.id = a.commit_id "
+
+        tables += self.db.GetSQLReportFrom(self.filters.type_analysis)
+        filters += self.db.GetSQLReportWhere(self.filters.type_analysis, "author")
+
+        q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
+                               self.filters.enddate, " s.date ", fields,
+                               tables, filters, evolutionary)
+        return q
+
+    def get_ts(self):
+        # WARNING: This function should provide same information as Commits.get_ts(), do not use this.
+        raise NotImplementedError
+
