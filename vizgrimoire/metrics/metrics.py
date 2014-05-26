@@ -82,12 +82,12 @@ class Metrics(object):
         filters = self.filters
 
         chardates = GetDates(date, days)
-        self.filters = MetricFilters(Metrics.default_period,
-                                     chardates[1], chardates[0], None)
+        self.filters = MetricFilters(filters.period,
+                                     chardates[1], chardates[0], filters.type_analysis)
         last = self.get_agg()
         last = int(last[self.id])
-        self.filters = MetricFilters(Metrics.default_period,
-                                     chardates[2], chardates[1], None)
+        self.filters = MetricFilters(filters.period,
+                                     chardates[2], chardates[1], filters.type_analysis)
         prev = self.get_agg()
         prev = int(prev[self.id])
 
