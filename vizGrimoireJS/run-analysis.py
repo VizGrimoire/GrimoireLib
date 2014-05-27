@@ -88,8 +88,9 @@ def get_vars():
         v.update(options['bicho'])
     # Fixed locations
     v['r_libs'] = '../../r-lib'
-    v['python_libs'] = '../vizgrimoire:../vizgrimoire/analysis'
+    v['python_libs'] = '../vizgrimoire:../vizgrimoire/analysis:../vizgrimoire/metrics'
     v['json_dir'] = '../../../json'
+    v['metrics_dir'] = '../vizgrimoire/metrics'
 
     # if end_date is not present or is empty we set up today's date
     if not ('end_date' in v):
@@ -108,8 +109,8 @@ def get_analysis_cmd(v, script, db):
     else:
         script = script.replace(".R",".py")
         print(script)
-        cmd = "PYTHONPATH=%s LANG= R_LIBS=%s ./%s -r %s -d %s -u %s -p %s " % \
-            (v['python_libs'], v['r_libs'], script, v['reports'], db , v['db_user'], v['db_password'])
+        cmd = "PYTHONPATH=%s LANG= R_LIBS=%s ./%s -r %s -d %s -u %s -p %s --metrics %s " % \
+            (v['python_libs'], v['r_libs'], script, v['reports'], db , v['db_user'], v['db_password'], v['metrics_dir'])
     cmd += "-i %s -s %s -e %s -o %s -g %s " % \
         (v['db_identities'], v['start_date'], v['end_date'], v['json_dir'], v['period'])
     if script == "its-analysis.R" or script == "its-analysis.py":
