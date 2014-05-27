@@ -42,7 +42,7 @@ class EmailsSent(Metrics):
     """ Emails metric class for mailing lists analysis """
 
     id = "sent"
-    name = "EmailsSent"
+    name = "Emails Sent"
     desc = "Emails sent to mailing lists"
     data_source = MLS
 
@@ -62,4 +62,35 @@ class EmailsSent(Metrics):
                                    tables, filters, evolutionary)
         return query
 
+
+class EmailsSenders(Metrics):
+    """ Emails Senders class for mailing list analysis """
+
+    id = "senders"
+    name = "Email Senders"
+    desc = "People sending emails"
+    data_source = MLS
+
+    def __get_sql__ (self, evolutionary):
+        fields = " count(distinct(pup.upeople_id)) as senders "
+        tables = " messages m " + self.db.GetSQLReportFrom(self.filters.type_analysis)
+        if (tables == " messages m "):
+            # basic case: it's needed to add unique ids filters
+            tables = tables + ", messages_people mp, people_upeople pup "
+            filters = self.db.GetFiltersOwnUniqueIds()
+        else:
+            #not sure if this line is useful anymore...
+            filters = self.db.GetSQLReportWhere(self.filters.type_analysis)
+
+        if (self.filters.type_analysis and self.filters.type_analysis[0] in ("repository", "project")):
+            #Adding people_upeople table
+            tables += ",  messages_people mp, people_upeople pup "
+            filters += " and m.message_ID = mp.message_id and "+\
+                       "mp.email_address = pup.people_id and "+\
+                       "mp.type_of_recipient=\'From\' "
+
+        query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
+                                   self.filters.enddate, " m.first_date ", fields,
+                                   tables, filters, evolutionary)
+        return query
 
