@@ -92,10 +92,14 @@ def read_options():
                       dest="filter",
                       help="filter to be generated")
     parser.add_option("-m", "--metrics",
-                  action="store",
-                  dest="metrics_path",
-                  help="Path to the metrics modules to be loaded")
-
+                      action="store",
+                      dest="metrics_path",
+                      help="Path to the metrics modules to be loaded")
+    parser.add_option("-t", "--type",
+                      action="store",
+                      dest="backend",
+                      default="bugzilla",
+                      help="Type of backend: bugzilla, allura, jira, github")
 
     (opts, args) = parser.parse_args()
 
