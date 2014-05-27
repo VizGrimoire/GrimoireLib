@@ -501,3 +501,102 @@ class FilesAuthor(Metrics):
                                tables, filters, evolutionary)
         return q
 
+class Companies(Metrics):
+    """ Companies participating in the source code management system """
+    #TO BE REFACTORED
+
+    id = "companies"
+    name = "Companies"
+    desc = "Companies participating in the source code management system"
+    data_source = SCM
+
+    def get_ts(self):
+        fields = "count(distinct(upc.company_id)) as companies"
+        tables = " scmlog s, people_upeople pup, upeople_companies upc"
+        filters = "s.author_id = pup.people_id and "+\
+               "pup.upeople_id = upc.upeople_id and "+\
+               "s.date >= upc.init and  "+\
+               "s.date < upc.end"
+        q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
+                               self.filters.enddate, " s.date ", fields, 
+                               tables, filters, True)
+        data = self.db.ExecuteQuery(q)
+        return completePeriodIds(data, self.filters.period,
+                                 self.filters.startdate, self.filters.enddate)
+
+    def get_agg(self):
+        q = "select count(distinct(c.id)) as companies "+\
+            "from companies c, "+\
+            "     upeople_companies upc, "+\
+            "     people_upeople pup, "+\
+            "     scmlog s "+\
+            "where c.id = upc.company_id and "+\
+            "      upc.upeople_id = pup.upeople_id and "+\
+            "      pup.people_id = s.author_id and "+\
+            "      s.date >="+ self.filters.startdate+ " and "+\
+            "      s.date < "+ self.filters.enddate
+        return self.db.ExecuteQuery(q)
+
+class Countries(Metrics):
+    """ Countries participating in the source code management system """
+    #TO BE REFACTORED
+
+    id = "countries"
+    name = "Countries"
+    desc = "Countries participating in the source code management system"
+    data_source = SCM
+
+    def get_ts(self):
+        fields = "count(distinct(upc.country_id)) as countries"
+        tables = "scmlog s, people_upeople pup, upeople_countries upc"
+        filters = "s.author_id = pup.people_id and pup.upeople_id = upc.upeople_id"
+        q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
+                               self.filters.enddate, " s.date ", fields,
+                               tables, filters, True)
+        data = self.db.ExecuteQuery(q)
+        return completePeriodIds(data, self.filters.period,
+                                 self.filters.startdate, self.filters.enddate)
+
+    def get_agg(self):
+        q = "select count(distinct(upc.country_id)) as countries "+\
+            "from upeople_countries upc, "+\
+            "     people_upeople pup, "+\
+            "     scmlog s "+\
+            "where upc.upeople_id = pup.upeople_id and "+\
+            "      pup.people_id = s.author_id and "+\
+            "      s.date >="+ self.filters.startdate+ " and "+\
+            "      s.date < "+ self.filters.enddate
+        return self.db.ExecuteQuery(q)
+
+class Domains(Metrics):
+    """ Domains participating in the source code management system """
+    #TO BE REFACTORED
+
+    id = "domains"
+    name = "Domains"
+    desc = "Domains participating in the source code management system"
+    data_source = SCM
+
+    def get_ts(self):
+        fields = "COUNT(DISTINCT(upd.domain_id)) AS domains"
+        tables = "scmlog s, people_upeople pup, upeople_domains upd"
+        filters = "s.author_id = pup.people_id and pup.upeople_id = upd.upeople_id"
+        q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
+                               self.filters.enddate, " s.date ", fields,
+                               tables, filters, True)
+        data = self.db.ExecuteQuery(q)
+        return completePeriodIds(data, self.filters.period,
+                                 self.filters.startdate, self.filters.enddate)
+ 
+    def get_agg(self):
+        q = "SELECT COUNT(DISTINCT(upd.domain_id)) AS domains "+\
+            "FROM upeople_domains upd, "+\
+            "  people_upeople pup, "+\
+            "  scmlog s "+\
+            "WHERE upd.upeople_id = pup.upeople_id AND "+\
+            "  pup.people_id = s.author_id AND "+\
+            "  s.date >="+ self.filters.startdate+ " AND "+\
+            "  s.date < "+ self.filters.enddate
+        return self.db.ExecuteQuery(q)
+
+
