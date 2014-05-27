@@ -17,9 +17,6 @@
 ## This file is a part of the vizGrimoire R package
 ##  (an R library for the MetricsGrimoire and vizGrimoire systems)
 ##
-## AuxiliarySCM.R
-##
-## Queries for SCM data analysis
 ##
 ## Authors:
 ##   Alvaro del Castillo <acs@bitergia.com>

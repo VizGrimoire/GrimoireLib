@@ -14,9 +14,6 @@
 ## along with this program; if not, write to the Free Software
 ## Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 ##
-## This file is a part of the vizGrimoire R package
-##  (an R library for the MetricsGrimoire and vizGrimoire systems)
-##
 ## Authors:
 ##   Daniel Izquierdo <dizquierdo@bitergia.com>
 ##   Alvaro del Castillo <acso@bitergia.com>
