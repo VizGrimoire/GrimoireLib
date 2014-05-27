@@ -40,7 +40,7 @@ class Metrics(object):
         self.db = dbcon
         self.filters = filters
         if filters == None:
-            self.filters = MetricFilters(Metrics.default_period, 
+            self.filters = MetricFilters(Metrics.default_period,
                                          Metrics.default_start, Metrics.default_end, 
                                          None)
 
