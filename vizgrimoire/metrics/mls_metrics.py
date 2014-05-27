@@ -128,3 +128,34 @@ class SendersResponse(Metrics):
         return query
 
 
+class SendersInit(Metrics):
+    """ People initiating threads """
+
+    id = "senders_init"
+    name = "SendersInit"
+    desc = "People initiating threads"
+    data_source = MLS
+
+    def __get_sql__(self, evolutionary):
+        fields = " count(distinct(pup.upeople_id)) as senders_init "
+        tables = " messages m " + self.db.GetSQLReportFrom(self.filters.type_analysis)
+        if (tables == " messages m "):
+            # basic case: it's needed to add unique ids filters
+            tables += ", messages_people mp, people_upeople pup "
+            filters = self.db.GetFiltersOwnUniqueIds()
+        else:
+            filters = self.db.GetSQLReportWhere(self.filters.type_analysis)
+
+        if (self.filters.type_analysis and self.filters.type_analysis[0] in ("repository", "project")):
+            #Adding people_upeople table
+            tables += ",  messages_people mp, people_upeople pup "
+            filters += " and m.message_ID = mp.message_id and "+\
+                       " mp.email_address = pup.people_id and "+\
+                       " mp.type_of_recipient=\'From\' "
+        filters += " and m.is_response_of is null "
+
+        query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
+                                   self.filters.enddate, " m.first_date ", fields,
+                                   tables, filters, evolutionary)
+        return query
+
