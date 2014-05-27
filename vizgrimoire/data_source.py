@@ -51,6 +51,21 @@ class DataSource(object):
         """Get the name of the database with the data"""
         raise NotImplementedError
 
+    @staticmethod
+    def get_date_init(self):
+        """Get the date of the first activity in the data source"""
+        pass
+
+    @staticmethod
+    def get_date_end(self):
+        """Get the date of the last activity in the data source"""
+        pass
+
+    @staticmethod
+    def get_url(self):
+        """Get the URL from which the data source was gathered"""
+        pass
+
     def get_evolutionary_filename (self, filter_ = None):
         """Get the filename used to store evolutionary data"""
         name = None
