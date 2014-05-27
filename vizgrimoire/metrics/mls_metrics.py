@@ -159,3 +159,26 @@ class SendersInit(Metrics):
                                    tables, filters, evolutionary)
         return query
 
+
+class Repositories(Metrics):
+    """ Mailing lists repositories """
+
+    id = "repositories"
+    name = "Mailing Lists"
+    desc = "Mailing lists with activity"
+    data_source = MLS
+
+    def __get_sql__(self, evolutionary):
+   
+        #fields = " COUNT(DISTINCT(m."+rfield+")) AS repositories  "
+        fields = " COUNT(DISTINCT(m.mailing_list_url)) AS repositories "
+        tables = " messages m " + self.db.GetSQLReportFrom(self.filters.type_analysis)
+        filters = self.db.GetSQLReportWhere(self.filters.type_analysis)
+     
+        query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
+                                   self.filters.enddate, " m.first_date ", fields,
+                                   tables, filters, evolutionary)
+        return query
+
+
+
