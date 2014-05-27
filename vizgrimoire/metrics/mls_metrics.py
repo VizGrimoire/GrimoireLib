@@ -180,5 +180,22 @@ class Repositories(Metrics):
                                    tables, filters, evolutionary)
         return query
 
+class EmailsSentResponse(Metrics):
+    """ Emails sent as response """
+
+    id = "sent_response"
+    name = "SentResponse"
+    desc = "Emails sent as response"
+    data_source = MLS
+
+    def __get_sql__(self, evolutionary):
+        fields = " count(distinct(m.message_ID)) as sent_response "
+        tables = " messages m " + self.db.GetSQLReportFrom(self.filters.type_analysis)
+        filters = self.db.GetSQLReportWhere(self.filters.type_analysis) + " and m.is_response_of is not null "
+
+        query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
+                                   self.filters.enddate, " m.first_date ", fields,
+                                   tables, filters, evolutionary)
+        return query
 
 
