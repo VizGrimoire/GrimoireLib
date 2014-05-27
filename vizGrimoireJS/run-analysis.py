@@ -109,8 +109,8 @@ def get_analysis_cmd(v, script, db):
     else:
         script = script.replace(".R",".py")
         print(script)
-        cmd = "PYTHONPATH=%s LANG= R_LIBS=%s ./%s -r %s -d %s -u %s -p %s --metrics %s " % \
-            (v['python_libs'], v['r_libs'], script, v['reports'], db , v['db_user'], v['db_password'], v['metrics_dir'])
+        cmd = "PYTHONPATH=%s LANG= R_LIBS=%s ./%s -r %s -d %s -u %s -p %s --metrics %s -c %s " % \
+            (v['python_libs'], v['r_libs'], script, v['reports'], db , v['db_user'], v['db_password'], v['metrics_dir'], get_options().config_file)
     cmd += "-i %s -s %s -e %s -o %s -g %s " % \
         (v['db_identities'], v['start_date'], v['end_date'], v['json_dir'], v['period'])
     if script == "its-analysis.R" or script == "its-analysis.py":
