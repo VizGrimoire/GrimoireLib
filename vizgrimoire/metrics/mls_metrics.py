@@ -94,3 +94,37 @@ class EmailsSenders(Metrics):
                                    tables, filters, evolutionary)
         return query
 
+
+class SendersResponse(Metrics):
+    """ People answering in a thread """
+    # Threads class is not needed here. This is thanks to the use of the
+    # field is_reponse_of.
+
+    id = "senders_response"
+    name = "Senders Response"
+    desc = "People answering in a thread"
+
+    def __get_sql__ (self, evolutionary):
+        fields = " count(distinct(pup.upeople_id)) as senders_response "
+        tables = " messages m " + self.db.GetSQLReportFrom(self.filters.type_analysis)
+        if (tables == " messages m "):
+            # basic case: it's needed to add unique ids filters
+            tables += ", messages_people mp, people_upeople pup "
+            filters = self.db.GetFiltersOwnUniqueIds()
+        else:
+            filters = self.db.GetSQLReportWhere(self.filters.type_analysis)
+
+        if (self.filters.type_analysis and self.filters.type_analysis[0] in ("repository", "project")):
+            #Adding people_upeople table
+            tables += ",  messages_people mp, people_upeople pup "
+            filters += " and m.message_ID = mp.message_id and "+\
+                       "mp.email_address = pup.people_id and "+\
+                       "mp.type_of_recipient=\'From\' "
+        filters += " and m.is_response_of is not null "
+
+        query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
+                                   self.filters.enddate, " m.first_date ", fields,
+                                   tables, filters, evolutionary)
+        return query
+
+
