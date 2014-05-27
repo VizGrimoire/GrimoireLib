@@ -199,3 +199,22 @@ class EmailsSentResponse(Metrics):
         return query
 
 
+class EmailsSentInit(Metrics):
+    """ Emails sent as initiating a thread """
+
+    id = "sent_init"
+    name = "EmailsSentInit"
+    desc = "Emails sent to start a thread"
+    data_source = MLS
+
+    def __get_sql__(self, evolutionary):
+        fields = " count(distinct(m.message_ID)) as sent_init"
+        tables = " messages m " + self.db.GetSQLReportFrom(self.filters.type_analysis)
+        filters = self.db.GetSQLReportWhere(self.filters.type_analysis) + " and m.is_response_of is null "
+
+        query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
+                                   self.filters.enddate, " m.first_date ", fields,
+                                   tables, filters, evolutionary)
+        return query
+
+
