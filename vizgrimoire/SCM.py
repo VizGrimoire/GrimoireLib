@@ -505,6 +505,13 @@ def GetSCMStaticData (period, startdate, enddate, i_db, type_analysis):
     fromdate = GetDates(enddate, 365)[1]
     commits_365 = StaticNumCommits(period, fromdate, enddate, i_db, type_analysis)
     authors_365 = StaticNumAuthors(period, fromdate, enddate, i_db, type_analysis)
+    fromdate = GetDates(enddate, 30)[1]
+    commits_30 = StaticNumCommits(period, fromdate, enddate, i_db, type_analysis)
+    authors_30 = StaticNumAuthors(period, fromdate, enddate, i_db, type_analysis)
+    fromdate = GetDates(enddate, 7)[1]
+    commits_7 = StaticNumCommits(period, fromdate, enddate, i_db, type_analysis)
+    authors_7 = StaticNumAuthors(period, fromdate, enddate, i_db, type_analysis)
+
 
     # 2- Merging information
     agg = dict(commits.items() + repositories.items() + committers.items())
@@ -514,6 +521,10 @@ def GetSCMStaticData (period, startdate, enddate, i_db, type_analysis):
     agg = dict(agg.items() + avg_commits_author.items() + avg_files_author.items())
     agg['commits_365'] = commits_365['commits']
     agg['authors_365'] = authors_365['authors']
+    agg['commits_30'] = commits_30['commits']
+    agg['authors_30'] = authors_30['authors']
+    agg['commits_7'] = commits_7['commits']
+    agg['authors_7'] = authors_7['authors']
 
     return (agg)
 
