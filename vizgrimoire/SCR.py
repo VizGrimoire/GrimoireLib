@@ -158,6 +158,16 @@ class SCR(DataSource):
             if (not val or val == 0): data['review_time_days_median'] = 0
             else: data['review_time_days_median'] = float(val)
             agg = dict(agg.items() + data.items())
+            # Tendencies
+            for i in [7,30,365]:
+                period_data = GetSCRDiffSubmittedDays(period, enddate, i, identities_db, type_analysis)
+                agg = dict(agg.items() + period_data.items())
+                period_data = GetSCRDiffMergedDays(period, enddate, i, identities_db, type_analysis)
+                agg = dict(agg.items() + period_data.items())
+                period_data = GetSCRDiffPendingDays(period, enddate, i, identities_db, type_analysis)
+                agg = dict(agg.items() + period_data.items())
+                period_data = GetSCRDiffAbandonedDays(period, enddate, i, identities_db, type_analysis)
+                agg = dict(agg.items() + period_data.items())
 
         else:
             agg = StaticReviewsSubmitted(period, startdate, enddate)
