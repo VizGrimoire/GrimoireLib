@@ -120,6 +120,7 @@ class DSQuery(object):
         return cursor
 
     def ExecuteQuery (self, sql):
+        if sql is None: return {}
         result = {}
         self.cursor.execute(sql)
         rows = self.cursor.rowcount
@@ -273,14 +274,18 @@ class ITSQuery(DSQuery):
             if (project[0] == "'" and project[-1] == "'"):
                 project = project[1:-1]
 
+        subprojects = get_subprojects(project, identities_db, self)
+
         repos = """ t.url IN (
                SELECT repository_name
                FROM   %s.projects p, %s.project_repositories pr
-               WHERE  p.project_id = pr.project_id AND p.project_id IN (%s)
-                   AND pr.data_source='its'
-        )""" % (identities_db, identities_db, get_subprojects(project, identities_db))
+               WHERE  p.project_id = pr.project_id AND pr.data_source='its'
+        """ % (identities_db, identities_db)
 
-        return (repos   + " and t.id = i.tracker_id")
+        if subprojects != "[]":
+            repos += " AND p.project_id IN (%s) " % subprojects
+
+        return (repos   + ") and t.id = i.tracker_id")
 
     def GetSQLCompaniesFrom (self, i_db):
         # fields necessary for the companies analysis
