@@ -218,3 +218,43 @@ class EmailsSentInit(Metrics):
         return query
 
 
+class Companies(Metrics):
+    """ Companies participating in mailing lists """
+
+    id = "companies"
+    name = "Companies"
+    desc = "Companies participating in mailing lists"
+    data_source = MLS
+
+    def __get_sql__(self, evolutionary):
+        return self.db.GetStudies(self.filters.period, self.filters.startdate, 
+                                  self.filters.enddate, ['company', ''], True, 'companies')
+
+
+class Domains(Metrics):
+    """ Domains found in the analysis of mailing lists """
+
+    id = "domains"
+    name = "Domains"
+    desc = "Domains found in the analysis of mailing lists """
+    data_source = MLS
+
+    def __get_sql__(self, evolutionary):
+        return self.db.GetStudies(self.filters.period, self.filters.startdate,    
+                                  self.filters.enddate, ['domain', ''], True, 'domains')
+
+
+class Countries(Metrics):
+    """ Countries participating in mailing lists """
+
+    id = "countries"
+    name = "Countries"
+    desc = "Countries participating in mailing lists """
+    data_source = MLS
+
+    def __get_sql__(self, evolutionary):
+        return self.db.GetStudies(self.filters.period, self.filters.startdate,
+                                  self.filters.enddate, ['country', ''], True, 'countries')
+
+
+

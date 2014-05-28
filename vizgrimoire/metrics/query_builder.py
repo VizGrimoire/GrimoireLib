@@ -521,6 +521,23 @@ class MLSQuery(DSQuery):
 
         return (where)
 
+    def GetStudies (self, period, startdate, enddate, type_analysis, evolutionary, study):
+        # Generic function that counts evolution/agg number of specific studies with similar
+        # database schema such as domains, companies and countries
+
+        fields = ' count(distinct(name)) as ' + study
+        tables = " messages m " + self.GetSQLReportFrom(type_analysis)
+        filters = self.GetSQLReportWhere(type_analysis) + " and m.is_response_of is null "
+
+        #Filtering last part of the query, not used in this case
+        #filters = gsub("and\n( )+(d|c|cou|com).name =.*$", "", filters)
+
+        q = self.BuildQuery(period, startdate, enddate, " m.first_date ", fields, tables, filters, evolutionary)
+        q = re.sub(r'(d|c|cou|com).name.*and', "", q)
+
+        return q
+
+
 class SCRQuery(DSQuery):
     """ Specific query builders for source code review source"""
 
