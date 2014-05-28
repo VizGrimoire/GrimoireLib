@@ -34,6 +34,17 @@ from query_builder import ITSQuery
 
 from SCR import SCR
 
+class Submitted(Metrics):
+    id = "submitted"
+    name = "Submitted reviews"
+    desc = "Number of submitted code review processes"
+    data_source = SCR
+
+    def __get_sql__(self, evolutionary):
+        q = self.db.GetReviewsSQL(self.filters.period, self.filters.startdate,
+                                  self.filters.enddate, "submitted",
+                                  self.filters.type_analysis, evolutionary, self.db.identities_db)
+        return q
 
 class Merged(Metrics):
     id = "merged"
@@ -42,39 +53,15 @@ class Merged(Metrics):
     data_source = SCR
 
     def __get_sql__(self, evolutionary):
-        pass
+        q = self.db.GetReviewsSQL(self.filters.period, self.filters.startdate,
+                                  self.filters.enddate, "merged",
+                                  self.filters.type_analysis, evolutionary, self.db.identities_db)
+        return q
 
 class Mergers(Metrics):
     id = "mergers"
     name = "Successful submitters"
     desc = "Number of persons submitting changes that got accepted"
-    data_source = SCR
-
-    def __get_sql__(self, evolutionary):
-        pass
-
-class Opened(Metrics):
-    id = "opened"
-    name = "Opened reviews"
-    desc = "Number of review processes opened"
-    data_source = SCR
-
-    def __get_sql__(self, evolutionary):
-        pass
-
-class Closed(Metrics):
-    id = "closed"
-    name = "Closed reviews"
-    desc = "Number of closed review processes (merged or abandoned)"
-    data_source = SCR
-
-    def __get_sql__(self, evolutionary):
-        pass
-
-class New(Metrics):
-    id = "new"
-    name = "New reviews"
-    desc = "Number of new review processes"
     data_source = SCR
 
     def __get_sql__(self, evolutionary):
@@ -87,7 +74,59 @@ class Abandoned(Metrics):
     data_source = SCR
 
     def __get_sql__(self, evolutionary):
-        pass
+        q = self.db.GetReviewsSQL(self.filters.period, self.filters.startdate,
+                                  self.filters.enddate, "abandoned",
+                                  self.filters.type_analysis, evolutionary, self.db.identities_db)
+        return q
+
+class Opened(Metrics):
+    id = "opened"
+    name = "Opened reviews"
+    desc = "Number of review processes opened"
+    data_source = SCR
+
+    def __get_sql__(self, evolutionary):
+        q = self.db.GetReviewsSQL(self.filters.period, self.filters.startdate,
+                                  self.filters.enddate, "opened",
+                                  self.filters.type_analysis, evolutionary, self.db.identities_db)
+        return q
+
+class Closed(Metrics):
+    id = "closed"
+    name = "Closed reviews"
+    desc = "Number of closed review processes (merged or abandoned)"
+    data_source = SCR
+
+    def __get_sql__(self, evolutionary):
+        q = self.db.GetReviewsSQL(self.filters.period, self.filters.startdate,
+                                  self.filters.enddate, "closed",
+                                  self.filters.type_analysis, evolutionary, self.db.identities_db)
+        return q
+
+class InProgress(Metrics):
+    id = "inprogress"
+    name = "In progress reviews"
+    desc = "Number review processes in progress"
+    data_source = SCR
+
+    def __get_sql__(self, evolutionary):
+        q = self.db.GetReviewsSQL(self.filters.period, self.filters.startdate,
+                                  self.filters.enddate, "inprogress",
+                                  self.filters.type_analysis, evolutionary, self.db.identities_db)
+        return q
+
+
+class New(Metrics):
+    id = "new"
+    name = "New reviews"
+    desc = "Number of new review processes"
+    data_source = SCR
+
+    def __get_sql__(self, evolutionary):
+        q = self.db.GetReviewsSQL(self.filters.period, self.filters.startdate,
+                                  self.filters.enddate, "new",
+                                  self.filters.type_analysis, evolutionary, self.db.identities_db)
+        return q
 
 class Verified(Metrics):
     id = "verified"
@@ -151,17 +190,6 @@ class ReviewsWaitingForSubmitter(Metrics):
 
     def __get_sql__(self, evolutionary):
         pass
-
-class Submitted(Metrics):
-    id = "submitted"
-    name = "Submitted reviews"
-    desc = "Number of submitted code review processes"
-    data_source = SCR
-
-    def __get_sql__(self, evolutionary):
-        return self.db.GetReviewsSQL(self.filters.period, self.filters.startdate,
-                                     self.filters.enddate, "submitted", 
-                                     self.filters.type_analysis, evolutionary, self.db.identities_db)
 
 class Companies(Metrics):
     id = "companies"
@@ -227,4 +255,3 @@ class Openers(Metrics):
 
     def __get_sql__(self, evolutionary):
         pass
-    
