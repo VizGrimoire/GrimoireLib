@@ -115,6 +115,14 @@ class Report(object):
         return data_sources
 
     @staticmethod
+    def get_data_source(name):
+        found = None
+        for ds in Report.get_data_sources():
+            if ds.get_name() == name:
+                found = ds
+        return found
+
+    @staticmethod
     def set_data_sources(dss):
         Report._all_data_sources = dss 
 
