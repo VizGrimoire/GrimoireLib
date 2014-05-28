@@ -476,7 +476,7 @@ class MLSQuery(DSQuery):
     #Generic functions to obtain FROM and WHERE clauses per type of report
     ##########
 
-    def GetSQLReportFrom (self, identities_db, type_analysis):
+    def GetSQLReportFrom (self, type_analysis):
         #generic function to generate 'from' clauses
         #"type" is a list of two values: type of analysis and value of 
         #such analysis
@@ -488,18 +488,18 @@ class MLSQuery(DSQuery):
         analysis = type_analysis[0]
 
         if analysis == 'repository': From = self.GetSQLRepositoriesFrom()
-        elif analysis == 'company': From = self.GetSQLCompaniesFrom(identities_db)
-        elif analysis == 'country': From = self.GetSQLCountriesFrom(identities_db)
-        elif analysis == 'domain': From = self.GetSQLDomainsFrom(identities_db)
+        elif analysis == 'company': From = self.GetSQLCompaniesFrom(self.identities_db)
+        elif analysis == 'country': From = self.GetSQLCountriesFrom(self.identities_db)
+        elif analysis == 'domain': From = self.GetSQLDomainsFrom(self.identities_db)
         elif analysis == 'project': From = self.GetSQLProjectsFrom()
 
         return (From)
 
 
-    def GetSQLReportWhere (self, type_analysis, identities_db=None):
+    def GetSQLReportWhere (self, type_analysis):
         #generic function to generate 'where' clauses
         #"type" is a list of two values: type of analysis and value of 
-        #such analysis
+        #such analysisd
 
         where = ""
 
@@ -513,11 +513,11 @@ class MLSQuery(DSQuery):
         elif analysis == 'country': where = self.GetSQLCountriesWhere(value)
         elif analysis == 'domain': where = self.GetSQLDomainsWhere(value)
         elif analysis == 'project':
-            if (identities_db is None):
+            if (self.identities_db is None):
                 logging.error("project filter not supported without identities_db")
                 sys.exit(0)
             else:
-                where = self.GetSQLProjectsWhere(value, identities_db)
+                where = self.GetSQLProjectsWhere(value, self.identities_db)
 
         return (where)
 
