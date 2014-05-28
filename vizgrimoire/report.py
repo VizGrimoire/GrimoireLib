@@ -125,3 +125,11 @@ class Report(object):
     @staticmethod
     def set_filters(filters):
         Report._filters = filters 
+
+    @staticmethod
+    def get_filter(name):
+        found = None
+        for filter_ in Report.get_filters():
+            if filter_.get_name() == name:
+                found = filter_
+        return found
