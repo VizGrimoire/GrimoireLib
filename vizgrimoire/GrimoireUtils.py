@@ -424,19 +424,21 @@ def read_main_conf(config_file):
             options[s][o] = parser.get(s, o)
     return options
 
-def get_subprojects(project, identities_db):
+def get_subprojects(project, identities_db, dsquery = None):
     """ Return all subprojects ids for a project in a string join by comma """
 
     from GrimoireSQL import ExecuteQuery
+    query = ExecuteQuery
+    if dsquery is not None: query = dsquery.ExecuteQuery
 
     q = "SELECT project_id from %s.projects WHERE id='%s'" % (identities_db, project)
-    project_id = ExecuteQuery(q)['project_id']
+    project_id = query(q)['project_id']
 
     q = """
         SELECT subproject_id from %s.project_children pc where pc.project_id = '%s'
     """ % (identities_db, project_id)
 
-    subprojects = ExecuteQuery(q)
+    subprojects = query(q)
 
     if not isinstance(subprojects['subproject_id'], list):
         subprojects['subproject_id'] = [subprojects['subproject_id']]
