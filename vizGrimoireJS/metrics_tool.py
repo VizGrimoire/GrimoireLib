@@ -44,7 +44,10 @@ def get_options():
                   action="store",
                   dest="metrics_path",
                   help="Path to the metrics modules to be loaded")
-
+    parser.add_option("--data-source",
+                      action="store",
+                      dest="data_source",
+                      help="data source to be generated")
 
     (opts, args) = parser.parse_args()
 
@@ -68,6 +71,14 @@ if __name__ == '__main__':
     #     print name
 
     dss = Report.get_data_sources()
+
+    if (opts.data_source):
+        ds = Report.get_data_source(opts.data_source)
+        dss = [ds]
+        if ds is None:
+            logging.error("Data source not found " + opts.data_source)
+            dss = []
+
     for ds in dss:
         logging.info("Getting metrics for " + ds.get_name())
         metrics_set = ds.get_metrics_set(ds)
