@@ -35,6 +35,8 @@ from GrimoireSQL import ExecuteQuery
 from GrimoireUtils import GetPercentageDiff, GetDates, completePeriodIds
 from GrimoireUtils import checkListArray, removeDecimals, get_subprojects
 from GrimoireUtils import getPeriod, createJSON, checkFloatArray, medianAndAvgByPeriod
+from metrics_filter import MetricFilters
+
 
 from data_source import DataSource
 from filter import Filter
@@ -142,8 +144,14 @@ class SCR(DataSource):
 
         if (filter_ is not None):
             type_analysis = [filter_.get_name(), filter_.get_item()]
-            data = StaticReviewsSubmitted(period, startdate, enddate, type_analysis, identities_db)
+            # data = StaticReviewsSubmitted(period, startdate, enddate, type_analysis, identities_db)
+            # agg = dict(agg.items() + data.items())
+            filter_com = MetricFilters(period, startdate, enddate, type_analysis)
+            msub = SCR.get_metrics("submitted", SCR)
+            msub.filters = filter_com
+            data = msub.get_agg()
             agg = dict(agg.items() + data.items())
+
             data = StaticReviewsMerged(period, startdate, enddate, type_analysis, identities_db)
             agg = dict(agg.items() + data.items())
             data = StaticReviewsAbandoned(period, startdate, enddate, type_analysis, identities_db)
