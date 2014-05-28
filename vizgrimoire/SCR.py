@@ -56,11 +56,24 @@ class SCR(DataSource):
     def get_evolutionary_data (period, startdate, enddate, identities_db, filter_ = None):
         evol = {}
 
+        metrics_on = ['submitted']
+        type_analysis = None
+        if filter_ is not None:
+            type_analysis = [filter_.get_name(), filter_.get_item()]
+        mfilter = MetricFilters(period, startdate, enddate, type_analysis)
+        all_metrics = SCR.get_metrics_set(SCR)
+
+        for item in all_metrics:
+            if item.id not in metrics_on: continue
+            item.filters = mfilter
+            mvalue = item.get_ts()
+            evol = dict(evol.items() + mvalue.items())
+
+
         if (filter_ is not None):
             type_analysis = [filter_.get_name(), filter_.get_item()]
-
-            data = EvolReviewsSubmitted(period, startdate, enddate, type_analysis, identities_db)
-            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
+            # data = EvolReviewsSubmitted(period, startdate, enddate, type_analysis, identities_db)
+            # evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
             data = EvolReviewsMerged(period, startdate, enddate, type_analysis, identities_db)
             evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
             data = EvolReviewsAbandoned(period, startdate, enddate, type_analysis, identities_db)
@@ -75,8 +88,8 @@ class SCR(DataSource):
             return evol
 
         else:
-            data = EvolReviewsSubmitted(period, startdate, enddate)
-            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
+            # data = EvolReviewsSubmitted(period, startdate, enddate)
+            # evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
             data = EvolReviewsOpened(period, startdate, enddate)
             evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
             data = EvolReviewsNew(period, startdate, enddate)
@@ -142,16 +155,24 @@ class SCR(DataSource):
     def get_agg_data (period, startdate, enddate, identities_db, filter_ = None):
         agg = {}
 
+        type_analysis = None
+        if filter_ is not None:
+            type_analysis = [filter_.get_name(), filter_.get_item()]
+        metrics_on = ['submitted']
+        mfilter = MetricFilters(period, startdate, enddate, type_analysis)
+        all_metrics = SCR.get_metrics_set(SCR)
+
+        for item in all_metrics:
+            if item.id not in metrics_on: continue
+            item.filters = mfilter
+            mvalue = item.get_agg()
+            agg = dict(agg.items() + mvalue.items())
+
+
         if (filter_ is not None):
             type_analysis = [filter_.get_name(), filter_.get_item()]
             # data = StaticReviewsSubmitted(period, startdate, enddate, type_analysis, identities_db)
             # agg = dict(agg.items() + data.items())
-            filter_com = MetricFilters(period, startdate, enddate, type_analysis)
-            msub = SCR.get_metrics("submitted", SCR)
-            msub.filters = filter_com
-            data = msub.get_agg()
-            agg = dict(agg.items() + data.items())
-
             data = StaticReviewsMerged(period, startdate, enddate, type_analysis, identities_db)
             agg = dict(agg.items() + data.items())
             data = StaticReviewsAbandoned(period, startdate, enddate, type_analysis, identities_db)
@@ -178,7 +199,7 @@ class SCR(DataSource):
                 agg = dict(agg.items() + period_data.items())
 
         else:
-            agg = StaticReviewsSubmitted(period, startdate, enddate)
+            # agg = StaticReviewsSubmitted(period, startdate, enddate)
             data = StaticReviewsOpened(period, startdate, enddate)
             agg = dict(agg.items() + data.items())
             data = StaticReviewsNew(period, startdate, enddate)
