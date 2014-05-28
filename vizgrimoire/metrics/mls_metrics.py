@@ -244,3 +244,17 @@ class Domains(Metrics):
                                   self.filters.enddate, ['domain', ''], True, 'domains')
 
 
+class Countries(Metrics):
+    """ Countries participating in mailing lists """
+
+    id = "countries"
+    name = "Countries"
+    desc = "Countries participating in mailing lists """
+    data_source = MLS
+
+    def __get_sql__(self, evolutionary):
+        return self.db.GetStudies(self.filters.period, self.filters.startdate,
+                                  self.filters.enddate, ['country', ''], True, 'countries')
+
+
+
