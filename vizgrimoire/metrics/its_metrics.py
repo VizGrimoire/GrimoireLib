@@ -21,7 +21,7 @@
 ## Authors:
 ##   Alvaro del Castillo <acs@bitergia.com>
 
-""" Opened metric for the issue tracking system """
+""" Metrics for the issue tracking system """
 
 import logging
 import MySQLdb
@@ -280,6 +280,8 @@ class Projects(Metrics):
     data_source = ITS
 
     def __get_sql__(self, evolutionary):
+        # Not yet working
+        return None
         q = self.db.GetSQLIssuesStudies(self.filters.period, self.filters.startdate, 
                                            self.filters.enddate, self.db.identities_db, 
                                            ['project', ''], evolutionary, 'projects')
