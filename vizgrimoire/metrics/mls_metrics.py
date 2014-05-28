@@ -231,7 +231,16 @@ class Companies(Metrics):
                                   self.filters.enddate, ['company', ''], True, 'companies')
 
 
+class Domains(Metrics):
+    """ Domains found in the analysis of mailing lists """
 
+    id = "domains"
+    name = "Domains"
+    desc = "Domains found in the analysis of mailing lists """
+    data_source = MLS
 
+    def __get_sql__(self, evolutionary):
+        return self.db.GetStudies(self.filters.period, self.filters.startdate,    
+                                  self.filters.enddate, ['domain', ''], True, 'domains')
 
 
