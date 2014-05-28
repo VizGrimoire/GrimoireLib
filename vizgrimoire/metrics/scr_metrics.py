@@ -159,7 +159,9 @@ class Submitted(Metrics):
     data_source = SCR
 
     def __get_sql__(self, evolutionary):
-        pass
+        return self.db.GetReviewsSQL(self.filters.period, self.filters.startdate,
+                                     self.filters.enddate, "submitted", 
+                                     self.filters.type_analysis, evolutionary, self.db.identities_db)
 
 class Companies(Metrics):
     id = "companies"
