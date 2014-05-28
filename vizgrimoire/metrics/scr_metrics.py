@@ -79,6 +79,54 @@ class Abandoned(Metrics):
                                   self.filters.type_analysis, evolutionary, self.db.identities_db)
         return q
 
+class Pending(Metrics):
+    id = "pending"
+    name = "Pending reviews"
+    desc = "Number of pending review processes"
+    data_source = SCR
+
+
+    def _get_metrics_for_pending(self):
+        # We need to fix the same filter for all metrics
+        metrics_for_pendig = {}
+
+        metric = SCR.get_metrics("submitted", SCR)
+        metric.filters = self.filters
+        metrics_for_pendig['submitted'] = metric
+
+        metric = SCR.get_metrics("merged", SCR)
+        metric.filters = self.filters
+        metrics_for_pendig['merged'] = metric
+
+        metric = SCR.get_metrics("abandoned", SCR)
+        metric.filters = self.filters
+        metrics_for_pendig['abandoned'] = metric
+
+        return metrics_for_pendig
+
+
+    def get_agg(self):
+        metrics = self._get_metrics_for_pending()
+        submitted = metrics['submitted'].get_agg()
+        merged = metrics['merged'].get_agg()
+        abandoned = metrics['abandoned'].get_agg()
+
+        pending = submitted['submitted']-merged['merged']-abandoned['abandoned']
+        return ({"pending":pending})
+
+    def get_ts(self):
+        metrics = self._get_metrics_for_pending()
+        submitted = metrics["submitted"].get_ts()
+        merged = metrics["merged"].get_ts()
+        abandoned = metrics["abandoned"].get_ts()
+        evol = dict(submitted.items() + merged.items() + abandoned.items())
+        pending = {"pending":[]}
+        for i in range(0, len(evol['submitted'])):
+            pending_val = evol["submitted"][i] - evol["merged"][i] - evol["abandoned"][i]
+            pending["pending"].append(pending_val)
+        pending[self.filters.period] = evol[self.filters.period]
+        return pending
+
 class Opened(Metrics):
     id = "opened"
     name = "Opened reviews"

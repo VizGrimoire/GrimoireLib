@@ -56,7 +56,7 @@ class SCR(DataSource):
     def get_evolutionary_data (period, startdate, enddate, identities_db, filter_ = None):
         evol = {}
 
-        metrics_on = ['submitted','opened','closed','merged','abandoned','new']
+        metrics_on = ['submitted','opened','closed','merged','abandoned','new','pending']
         type_analysis = None
         if filter_ is not None:
             type_analysis = [filter_.get_name(), filter_.get_item()]
@@ -82,8 +82,8 @@ class SCR(DataSource):
             return evol
 
         else:
-            data = EvolReviewsPending(period, startdate, enddate)
-            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
+            # data = EvolReviewsPending(period, startdate, enddate)
+            # evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
             data = EvolReviewsNewChanges(period, startdate, enddate)
             evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
             # data = EvolReviewsInProgress(period, startdate, enddate)
@@ -140,7 +140,7 @@ class SCR(DataSource):
         type_analysis = None
         if filter_ is not None:
             type_analysis = [filter_.get_name(), filter_.get_item()]
-        metrics_on = ['submitted','opened','closed','merged','abandoned','new','inprogress']
+        metrics_on = ['submitted','opened','closed','merged','abandoned','new','inprogress','pending']
         mfilter = MetricFilters(period, startdate, enddate, type_analysis)
         all_metrics = SCR.get_metrics_set(SCR)
 
