@@ -637,19 +637,6 @@ def GetITSInfo (period, startdate, enddate, identities_db, type_analysis, closed
         end_date = ITS.get_date_end(startdate, enddate, identities_db, type_analysis)
         data = dict(data.items() + init_date.items() + end_date.items())
 
-        # Data from the last 365, 30, 7 days
-        for i in [7,30,365]:
-            fromdate = GetDates(enddate, i)[1]
-            filter_i = MetricFilters(period, fromdate, enddate, type_analysis)
-            metrics_i = ['closed','closers']
-            last_i = {}
-            for item_i in all_metrics:
-                if item_i.id not in metrics_i: continue
-                item_i.filters = filter_i
-                data_i = item_i.get_agg()
-                last_i[item_i.id+'_'+str(i)] = data_i[item_i.id]
-            data = dict(data.items() + last_i.items())
-
         # Tendencies
         metrics_trends = ['closed','closers','opened','openers','changed','changers']
 

@@ -94,6 +94,7 @@ class Metrics(object):
         data = {}
         data['diff_net'+self.id+'_'+str(days)] = last - prev
         data['percentage_'+self.id+'_'+str(days)] = GetPercentageDiff(prev, last)
+        data[self.id+'_'+str(days)] = last
 
         # Returning filters to their original value
         self.filters = filters
