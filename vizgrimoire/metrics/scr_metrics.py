@@ -274,7 +274,14 @@ class Companies(Metrics):
     data_source = SCR
 
     def __get_sql__(self, evolutionary):
-        pass
+        fields = "count(distinct(upc.company_id)) as companies"
+        tables = "issues i, people_upeople pup, %s.upeople_companies upc" % (self.db.identities_db)
+        filters = "i.submitted_by = pup.people_id and pup.upeople_id = upc.upeople_id"
+
+        q = self.db.BuildQuery (self.filters.period, self.filters.startdate,
+                                self.filters.enddate, " i.submitted_on",
+                                fields, tables, filters, evolutionary)
+        return q
 
 class Countries(Metrics):
     id = "countries"
@@ -283,7 +290,14 @@ class Countries(Metrics):
     data_source = SCR
 
     def __get_sql__(self, evolutionary):
-        pass
+        fields = "count(distinct(upc.country_id)) as countries"
+        tables = "issues i, people_upeople pup, %s.upeople_countries upc" % (self.db.identities_db)
+        filters = "i.submitted_by = pup.people_id and pup.upeople_id = upc.upeople_id"
+
+        q = self.db.BuildQuery (self.filters.period, self.filters.startdate,
+                                self.filters.enddate, " i.submitted_on",
+                                fields, tables, filters, evolutionary)
+        return q
 
 class Domains(Metrics):
     id = "domains"
@@ -301,7 +315,13 @@ class Repositories(Metrics):
     data_source = SCR
 
     def __get_sql__(self, evolutionary):
-        pass
+        fields = "count(distinct(t.id)) as repositories"
+        tables = "issues i, trackers t"
+        filters = "i.tracker_id = t.id"
+        q = self.db.BuildQuery (self.filters.period, self.filters.startdate,
+                                self.filters.enddate, " i.submitted_on",
+                                fields, tables, filters, evolutionary)
+        return q
 
 class People(Metrics):
     id = "people"
