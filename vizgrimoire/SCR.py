@@ -56,7 +56,19 @@ class SCR(DataSource):
     def get_evolutionary_data (period, startdate, enddate, identities_db, filter_ = None):
         evol = {}
 
-        metrics_on = ['submitted','opened','closed','merged','abandoned','new','pending']
+        metrics_on = ['submitted','opened','closed','merged','abandoned','new','pending','review_time']
+
+        # Get metrics using changes table for more precise results
+        metrics_on_changes = ['merged','abandoned','new']
+        metrics_patches = ['verified','codereview','sent','WaitingForReviewer','WaitingForSubmitter']
+        metrics_reports = ['countries','companies','repositories']
+        if filter_ is None:
+            # not for filters. SQL not tested. 
+            metrics_on += metrics_patches
+            metrics_on += metrics_reports
+        # people
+        metrics_on += ['reviewers']
+
         type_analysis = None
         if filter_ is not None:
             type_analysis = [filter_.get_name(), filter_.get_item()]
@@ -68,64 +80,11 @@ class SCR(DataSource):
             item.filters = mfilter
             mvalue = item.get_ts()
             evol = dict(evol.items() + mvalue.items())
+            if item.id in metrics_on_changes and filter_ is None:
+                mvalue = item.get_ts_changes()
+                evol = dict(evol.items() + mvalue.items())
+        return evol
 
-
-        if (filter_ is not None):
-            type_analysis = [filter_.get_name(), filter_.get_item()]
-            # data = EvolReviewsSubmitted(period, startdate, enddate, type_analysis, identities_db)
-            # evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
-            if (period == "month"):
-                data = EvolTimeToReviewSCR(period, startdate, enddate, identities_db, type_analysis)
-                data['review_time_days_avg'] = checkFloatArray(data['review_time_days_avg'])
-                data['review_time_days_median'] = checkFloatArray(data['review_time_days_median'])
-                evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
-            return evol
-
-        else:
-            # data = EvolReviewsPending(period, startdate, enddate)
-            # evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
-            data = EvolReviewsNewChanges(period, startdate, enddate)
-            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
-            # data = EvolReviewsInProgress(period, startdate, enddate)
-            # evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
-            data = EvolReviewsMergedChanges(period, startdate, enddate)
-            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
-            data = EvolReviewsAbandonedChanges(period, startdate, enddate)
-            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
-            #Patches info
-            data = EvolPatchesVerified(period, startdate, enddate)
-            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
-            # data = EvolPatchesApproved(period, startdate, enddate)
-            # evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
-            data = EvolPatchesCodeReview(period, startdate, enddate)
-            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
-            data = EvolPatchesSent(period, startdate, enddate)
-            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
-            #Waiting for actions info
-            data = EvolWaiting4Reviewer(period, startdate, enddate)
-            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
-            data = EvolWaiting4Submitter(period, startdate, enddate)
-            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
-            #Reviewers info
-            data = EvolReviewers(period, startdate, enddate)
-            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
-            # Time to Review info
-            if period == "month": # only month supported now
-                data = EvolTimeToReviewSCR (period, startdate, enddate)
-                for i in range(0,len(data['review_time_days_avg'])):
-                    val = data['review_time_days_avg'][i] 
-                    data['review_time_days_avg'][i] = float(val)
-                    if (val == 0): data['review_time_days_avg'][i] = 0
-                evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
-            # number of filter items evol in time
-            data = get_countries(period, startdate, enddate,identities_db)
-            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
-            data = get_companies(period, startdate, enddate,identities_db)
-            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
-            data = get_repositories(period, startdate, enddate,identities_db)
-            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
-
-            return evol
 
     @staticmethod
     def create_evolutionary_report (period, startdate, enddate, destdir, i_db, filter_ = None):
