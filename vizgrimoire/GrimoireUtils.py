@@ -343,6 +343,7 @@ def compare_json_data(data1, data2, orig_file = "", new_file = "", skip_fields =
             if data2.has_key(name) is False:
                 logging.warn (name + " does not exists in " + new_file)
                 check = False
+                continue
             if isinstance(data1[name], float): data1[name] = round(data1[name],6)
             if isinstance(data2[name], float): data2[name] = round(data2[name],6)
             if isinstance(data1[name], list) and isinstance(data2[name], list):
