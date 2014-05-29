@@ -47,22 +47,22 @@ class DataSource(object):
         DataSource._bots = ds_bots
 
     @staticmethod
-    def get_db_name(self):
+    def get_db_name():
         """Get the name of the database with the data"""
         raise NotImplementedError
 
     @staticmethod
-    def get_date_init(self):
+    def get_date_init():
         """Get the date of the first activity in the data source"""
         pass
 
     @staticmethod
-    def get_date_end(self):
+    def get_date_end():
         """Get the date of the last activity in the data source"""
         pass
 
     @staticmethod
-    def get_url(self):
+    def get_url():
         """Get the URL from which the data source was gathered"""
         pass
 
