@@ -187,6 +187,7 @@ class QAForums(DataSource):
         fromtable = " FROM %s, people p" % (table_name)        
         filters = " WHERE %s = p.identifier AND %s >= %s AND %s < %s " % \
           (author_field, date_field, startdate, date_field, enddate)          
+        
         tail = " GROUP BY senders ORDER BY sent DESC, senders LIMIT %s" % (limit)
         q = select + fromtable + filters + date_limit + tail
         return(ExecuteQuery(q))
@@ -422,7 +423,8 @@ class QAForums(DataSource):
     def get_filter_items(filter_, period, startdate, enddate, identities_db, bots):
         items = None
         filter_name = filter_.get_name()
-        print filter_name
+        #TODO: repository needs to be change to tag, once this is accepted as new
+        #      data source in VizGrimoireJS-lib
         if (filter_name == "repository"):
             items = QAForums.tags_name(startdate, enddate)
         else:
@@ -479,7 +481,9 @@ class QAForums(DataSource):
             report = type_analysis[0]
             value = type_analysis[1]
 
-        if report == "tag":
+        #TODO: repository needs to be change to tag, once this is accepted as new
+        #      data source in VizGrimoireJS-lib
+        if report == "repository":
             tables = ", tags t, questionstags qt "
         
         #rest of reports to be implemented
@@ -503,7 +507,9 @@ class QAForums(DataSource):
             report = type_analysis[0]
             value = type_analysis[1]
 
-        if report == "tag":
+        #TODO: repository needs to be change to tag, once this is accepted as new
+        #      data source in VizGrimoireJS-lib
+        if report == "repository":
             where = shorttable + ".question_identifier = qt.question_identifier and " +\
                     " qt.tag_id = t.id and t.tag = " + value
 
