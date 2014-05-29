@@ -43,7 +43,6 @@ class Releases(DataSource):
 
     @staticmethod
     def get_modules(period, startdate, enddate, evol = False, days = None):
-        print (period, startdate, enddate, evol, days)
         fields = "COUNT(*) AS modules"
         tables = "projects p"
         filters = ""
@@ -56,7 +55,6 @@ class Releases(DataSource):
         else:
             q = GetSQLGlobal('p.created_on', fields, tables, filters,
                              startdate, enddate)
-        print(q)
         return(ExecuteQuery(q))
 
     @staticmethod
@@ -193,22 +191,36 @@ class Releases(DataSource):
 
         top_data = Releases.get_top_data (startdate, enddate, identities_db, None, npeople)
 
-        return []
-
-        top = top_data['authors.']["id"]
-        top += top_data['authors.last year']["id"]
-        top += top_data['authors.last month']["id"]
+        top = top_data['authors.']["username"]
+        top += top_data['authors.last year']["username"]
+        top += top_data['authors.last month']["username"]
         # remove duplicates
         people = list(set(top))
         return people
 
     @staticmethod
+    def _get_people_sql (developer_id, period, startdate, enddate, evol):
+        fields = "COUNT(r.id) AS releases"
+        tables = "users u, releases r"
+        filters = " r.author_id = u.id AND u.username = '" + str(developer_id) + "'"
+
+        if (evol) :
+            q = GetSQLPeriod(period,'r.created_on', fields, tables, filters,
+                    startdate, enddate)
+        else:
+            q = GetSQLGlobal('r.created_on', fields, tables, filters,
+                    startdate, enddate)
+        return (q)
+
+    @staticmethod
     def get_person_evol(upeople_id, period, startdate, enddate, identities_db, type_analysis):
-        pass
+        q = Releases._get_people_sql (upeople_id, period, startdate, enddate, True)
+        return ExecuteQuery(q)
 
     @staticmethod
     def get_person_agg(upeople_id, startdate, enddate, identities_db, type_analysis):
-        pass
+        q = Releases._get_people_sql (upeople_id, None, startdate, enddate, False)
+        return ExecuteQuery(q)
 
     @staticmethod
     def create_r_reports(vizr, enddate, destdir):
