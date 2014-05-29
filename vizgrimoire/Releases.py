@@ -63,12 +63,7 @@ class Releases(DataSource):
         if days is not None:
             fields = "COUNT(*) AS modules_"+str(days)
             filters += " AND (DATEDIFF(NOW(),p.created_on)<%s OR DATEDIFF(NOW(),p.updated_on)<%s) " % (days, days)
-        if evol:
-            q = GetSQLPeriod(period,'p.created_on', fields, tables, filters,
-                             startdate, enddate)
-        else:
-            q = GetSQLGlobal('p.created_on', fields, tables, filters,
-                             startdate, enddate)
+        q = BuildQuery (period, startdate, enddate, 'p.created_on', fields, tables, filters, evol)
         return(ExecuteQuery(q))
 
     @staticmethod
@@ -79,12 +74,7 @@ class Releases(DataSource):
         if days is not None:
             fields = "COUNT(DISTINCT(r.id)) AS releases_"+str(days)
             filters += " AND (DATEDIFF(NOW(),r.created_on)<%s OR DATEDIFF(NOW(),r.updated_on)<%s) " % (days, days)
-        if evol:
-            q = GetSQLPeriod(period,'r.created_on', fields, tables, filters,
-                             startdate, enddate)
-        else:
-            q = GetSQLGlobal('r.created_on', fields, tables, filters,
-                             startdate, enddate)
+        q = BuildQuery (period, startdate, enddate, 'r.created_on', fields, tables, filters, evol)
         return(ExecuteQuery(q))
 
     @staticmethod
@@ -95,12 +85,7 @@ class Releases(DataSource):
         if days is not None:
             fields = "COUNT(DISTINCT(u.id)) AS authors_"+str(days)
             filters += " AND (DATEDIFF(NOW(),r.created_on)<%s OR DATEDIFF(NOW(),r.updated_on)<%s) " % (days, days)
-        if evol:
-            q = GetSQLPeriod(period,'r.created_on', fields, tables, filters,
-                             startdate, enddate)
-        else:
-            q = GetSQLGlobal('r.created_on', fields, tables, filters,
-                             startdate, enddate)
+        q = BuildQuery (period, startdate, enddate, 'r.created_on', fields, tables, filters, evol)
         return(ExecuteQuery(q))
 
     @staticmethod
@@ -245,19 +230,13 @@ class Releases(DataSource):
         fields = "COUNT(r.id) AS releases"
         tables = "users u, releases r"
         filters = " r.author_id = u.id AND u.id = '" + str(developer_id) + "'"
-
-        if (evol) :
-            q = GetSQLPeriod(period,'r.created_on', fields, tables, filters,
-                    startdate, enddate)
-        else:
-            q = GetSQLGlobal('r.created_on', fields, tables, filters,
-                    startdate, enddate)
+        q = BuildQuery (period, startdate, enddate, 'r.created_on', fields, tables, filters, evol)
         return (q)
 
     @staticmethod
     def get_person_evol(upeople_id, period, startdate, enddate, identities_db, type_analysis):
         q = Releases._get_people_sql (upeople_id, period, startdate, enddate, True)
-        return ExecuteQuery(q)
+        return completePeriodIds(ExecuteQuery(q), period, startdate, enddate)
 
     @staticmethod
     def get_person_agg(upeople_id, startdate, enddate, identities_db, type_analysis):
