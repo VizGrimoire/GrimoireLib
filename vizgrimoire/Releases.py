@@ -42,6 +42,21 @@ class Releases(DataSource):
     #
 
     @staticmethod
+    def get_date_init():
+        """Get the date of the first activity in the data source"""
+        q = "SELECT MIN(created_on) AS date FROM projects"
+        return(ExecuteQuery(q))
+
+    @staticmethod
+    def get_date_end():
+        """Get the date of the last activity in the data source"""
+#        q1 = "SELECT MAX(updated_on) as ru, MAX(created_on) as rc FROM releases"
+#        q2 = "SELECT MAX(updated_on) as pu, MAX(created_on) as pr FROM projects"
+#        q = "SELECT MAX(*) FROM (%s) r, (%s) p" % (q1, q2)
+        q = "SELECT MAX(updated_on) AS date FROM releases"
+        return(ExecuteQuery(q))
+
+    @staticmethod
     def get_modules(period, startdate, enddate, evol = False, days = None):
         fields = "COUNT(*) AS modules"
         tables = "projects p"
@@ -153,6 +168,9 @@ class Releases(DataSource):
             agg = dict(agg.items() + data.items())
             data = Releases.get_releases(period, startdate, enddate)
             agg = dict(agg.items() + data.items())
+
+            agg["init_date"] = Releases.get_date_init()['date']
+            agg["last_date"] = Releases.get_date_end()['date']
 
         else:
             logging.warn("Releases does not support filters yet.")
