@@ -143,60 +143,30 @@ class SCR(DataSource):
         metrics_on = ['submitted','opened','closed','merged','abandoned','new','inprogress','pending','review_time']
         # patches metrics
         metrics_patches = ['verified','approved','codereview','sent','WaitingForReviewer','WaitingForSubmitter']
-        metrics_on += metrics_patches
+        metrics_reports = ['countries','companies','repositories']
+        if filter_ is None:
+            # not for filters. SQL not tested. 
+            metrics_on += metrics_patches
+            metrics_on += metrics_reports
         # people
         metrics_on += ['reviewers']
-        # not for filters. SQL not tested.
-        metrics_filters_off = metrics_patches
+
         mfilter = MetricFilters(period, startdate, enddate, type_analysis)
         all_metrics = SCR.get_metrics_set(SCR)
 
         for item in all_metrics:
             if item.id not in metrics_on: continue
-            if filter_ is not None and item.id in metrics_filters_off: continue
             item.filters = mfilter
             mvalue = item.get_agg()
             agg = dict(agg.items() + mvalue.items())
 
-
-        if (filter_ is not None):
-            type_analysis = [filter_.get_name(), filter_.get_item()]
-            data = StaticTimeToReviewSCR(startdate, enddate, identities_db, type_analysis, identities_db)
-            val = data['review_time_days_avg']
-            if (not val or val == 0): data['review_time_days_avg'] = 0
-            else: data['review_time_days_avg'] = float(val)
-            val = data['review_time_days_median']
-            if (not val or val == 0): data['review_time_days_median'] = 0
-            else: data['review_time_days_median'] = float(val)
-            agg = dict(agg.items() + data.items())
-            # Tendencies
-            for i in [7,30,365]:
-                period_data = GetSCRDiffSubmittedDays(period, enddate, i, identities_db, type_analysis)
-                agg = dict(agg.items() + period_data.items())
-                period_data = GetSCRDiffMergedDays(period, enddate, i, identities_db, type_analysis)
-                agg = dict(agg.items() + period_data.items())
-                period_data = GetSCRDiffPendingDays(period, enddate, i, identities_db, type_analysis)
-                agg = dict(agg.items() + period_data.items())
-                period_data = GetSCRDiffAbandonedDays(period, enddate, i, identities_db, type_analysis)
-                agg = dict(agg.items() + period_data.items())
-
-        else:
-            # Tendencies
-            metrics_trends = ['submitted','merged','pending','abandoned','closed']
-
-            for i in [7,30,365]:
-                for item in all_metrics:
-                    if item.id not in metrics_trends: continue
-                    period_data = item.get_agg_diff_days(enddate, i)
-                    agg = dict(agg.items() +  period_data.items())
-
-            # number of filter items
-            data = get_countries(period, startdate, enddate,identities_db, False)
-            agg = dict(agg.items() + data.items())
-            data = get_companies(period, startdate, enddate,identities_db, False)
-            agg = dict(agg.items() + data.items())
-            data = get_repositories(period, startdate, enddate,identities_db, False)
-            agg = dict(agg.items() + data.items())
+        # Tendencies
+        metrics_trends = ['submitted','merged','pending','abandoned','closed']
+        for i in [7,30,365]:
+            for item in all_metrics:
+                if item.id not in metrics_trends: continue
+                period_data = item.get_agg_diff_days(enddate, i)
+                agg = dict(agg.items() +  period_data.items())
 
         return agg
 
