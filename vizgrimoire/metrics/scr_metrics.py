@@ -295,7 +295,23 @@ class ReviewsWaitingForReviewer(Metrics):
     data_source = SCR
 
     def __get_sql__(self, evolutionary):
-        pass
+        q_last_change = self.db.get_sql_last_change_for_issues_new()
+
+        fields = "COUNT(DISTINCT(i.id)) as ReviewsWaitingForReviewer"
+        tables = "changes c, issues i, (%s) t1" % q_last_change
+        tables += self.db.GetSQLReportFrom(self.db.identities_db, self.filters.type_analysis)
+        filters = """
+            i.id = c.issue_id  AND t1.id = c.id
+            AND (c.field='CRVW' or c.field='Code-Review' or c.field='Verified' or c.field='VRIF')
+            AND (c.new_value=1 or c.new_value=2)
+        """
+        filters = filters + self.db.GetSQLReportWhere(self.filters.type_analysis, self.db.identities_db)
+
+        q = self.db.BuildQuery (self.filters.period, self.filters.startdate,
+                                self.filters.enddate, " c.changed_on",
+                                fields, tables, filters, evolutionary)
+        return(q)
+
 
 class ReviewsWaitingForSubmitter(Metrics):
     id = "ReviewsWaitingForSubmitter"
@@ -303,8 +319,24 @@ class ReviewsWaitingForSubmitter(Metrics):
     desc = "Number of review processes waiting for submitter"
     data_source = SCR
 
+
     def __get_sql__(self, evolutionary):
-        pass
+        q_last_change = self.db.get_sql_last_change_for_issues_new()
+
+        fields = "COUNT(DISTINCT(i.id)) as ReviewsWaitingForSubmitter"
+        tables = "changes c, issues i, (%s) t1" % q_last_change
+        tables += self.db.GetSQLReportFrom(self.db.identities_db, self.filters.type_analysis)
+        filters = """
+            i.id = c.issue_id  AND t1.id = c.id
+            AND (c.field='CRVW' or c.field='Code-Review' or c.field='Verified' or c.field='VRIF')
+            AND (c.new_value=-1 or c.new_value=-2)
+        """
+        filters = filters + self.db.GetSQLReportWhere(self.filters.type_analysis, self.db.identities_db)
+
+        q = self.db.BuildQuery (self.filters.period, self.filters.startdate,
+                                self.filters.enddate, " c.changed_on",
+                                fields, tables, filters, evolutionary)
+        return q
 
 class Companies(Metrics):
     id = "companies"
