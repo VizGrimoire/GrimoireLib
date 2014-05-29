@@ -77,7 +77,7 @@ class Metrics(object):
         return self.db.ExecuteQuery(query)
 
     def get_agg_diff_days(self, date, days):
-        """ Returns an the trend metrics between now and now-days values """
+        """ Returns the trend metrics between now and now-days values """
         # Keeping state of origin filters
         filters = self.filters
 
