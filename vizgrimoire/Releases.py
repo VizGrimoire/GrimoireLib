@@ -143,7 +143,7 @@ class Releases(DataSource):
     def get_top_authors (days_period, startdate, enddate, identities_db, bots, npeople):
 
         # Unique identities not supported yet
-        fields = "COUNT(r.id) as releases, username"
+        fields = "COUNT(r.id) as releases, username, u.id"
         tables = "users u, releases r, projects p"
         filters = "r.author_id = u.id AND r.project_id = p.id"
         if (days_period > 0):
@@ -191,9 +191,9 @@ class Releases(DataSource):
 
         top_data = Releases.get_top_data (startdate, enddate, identities_db, None, npeople)
 
-        top = top_data['authors.']["username"]
-        top += top_data['authors.last year']["username"]
-        top += top_data['authors.last month']["username"]
+        top = top_data['authors.']["id"]
+        top += top_data['authors.last year']["id"]
+        top += top_data['authors.last month']["id"]
         # remove duplicates
         people = list(set(top))
         return people
@@ -202,7 +202,7 @@ class Releases(DataSource):
     def _get_people_sql (developer_id, period, startdate, enddate, evol):
         fields = "COUNT(r.id) AS releases"
         tables = "users u, releases r"
-        filters = " r.author_id = u.id AND u.username = '" + str(developer_id) + "'"
+        filters = " r.author_id = u.id AND u.id = '" + str(developer_id) + "'"
 
         if (evol) :
             q = GetSQLPeriod(period,'r.created_on', fields, tables, filters,
