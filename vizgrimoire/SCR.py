@@ -56,7 +56,7 @@ class SCR(DataSource):
     def get_evolutionary_data (period, startdate, enddate, identities_db, filter_ = None):
         evol = {}
 
-        metrics_on = ['submitted']
+        metrics_on = ['submitted','opened','closed','merged','abandoned','new','pending']
         type_analysis = None
         if filter_ is not None:
             type_analysis = [filter_.get_name(), filter_.get_item()]
@@ -74,12 +74,6 @@ class SCR(DataSource):
             type_analysis = [filter_.get_name(), filter_.get_item()]
             # data = EvolReviewsSubmitted(period, startdate, enddate, type_analysis, identities_db)
             # evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
-            data = EvolReviewsMerged(period, startdate, enddate, type_analysis, identities_db)
-            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
-            data = EvolReviewsAbandoned(period, startdate, enddate, type_analysis, identities_db)
-            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
-            data = EvolReviewsPending(period, startdate, enddate, type_analysis, identities_db)
-            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
             if (period == "month"):
                 data = EvolTimeToReviewSCR(period, startdate, enddate, identities_db, type_analysis)
                 data['review_time_days_avg'] = checkFloatArray(data['review_time_days_avg'])
@@ -88,27 +82,15 @@ class SCR(DataSource):
             return evol
 
         else:
-            # data = EvolReviewsSubmitted(period, startdate, enddate)
+            # data = EvolReviewsPending(period, startdate, enddate)
             # evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
-            data = EvolReviewsOpened(period, startdate, enddate)
-            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
-            data = EvolReviewsNew(period, startdate, enddate)
-            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
             data = EvolReviewsNewChanges(period, startdate, enddate)
             evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
             # data = EvolReviewsInProgress(period, startdate, enddate)
             # evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
-            data = EvolReviewsClosed(period, startdate, enddate)
-            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
-            data = EvolReviewsMerged(period, startdate, enddate)
-            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
             data = EvolReviewsMergedChanges(period, startdate, enddate)
             evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
-            data = EvolReviewsAbandoned(period, startdate, enddate)
-            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
             data = EvolReviewsAbandonedChanges(period, startdate, enddate)
-            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
-            data = EvolReviewsPending(period, startdate, enddate, [])
             evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
             #Patches info
             data = EvolPatchesVerified(period, startdate, enddate)
@@ -158,12 +140,20 @@ class SCR(DataSource):
         type_analysis = None
         if filter_ is not None:
             type_analysis = [filter_.get_name(), filter_.get_item()]
-        metrics_on = ['submitted']
+        metrics_on = ['submitted','opened','closed','merged','abandoned','new','inprogress','pending','review_time']
+        # patches metrics
+        metrics_patches = ['verified','approved','codereview','sent','WaitingForReviewer','WaitingForSubmitter']
+        metrics_on += metrics_patches
+        # people
+        metrics_on += ['reviewers']
+        # not for filters. SQL not tested.
+        metrics_filters_off = metrics_patches
         mfilter = MetricFilters(period, startdate, enddate, type_analysis)
         all_metrics = SCR.get_metrics_set(SCR)
 
         for item in all_metrics:
             if item.id not in metrics_on: continue
+            if filter_ is not None and item.id in metrics_filters_off: continue
             item.filters = mfilter
             mvalue = item.get_agg()
             agg = dict(agg.items() + mvalue.items())
@@ -171,14 +161,6 @@ class SCR(DataSource):
 
         if (filter_ is not None):
             type_analysis = [filter_.get_name(), filter_.get_item()]
-            # data = StaticReviewsSubmitted(period, startdate, enddate, type_analysis, identities_db)
-            # agg = dict(agg.items() + data.items())
-            data = StaticReviewsMerged(period, startdate, enddate, type_analysis, identities_db)
-            agg = dict(agg.items() + data.items())
-            data = StaticReviewsAbandoned(period, startdate, enddate, type_analysis, identities_db)
-            agg = dict(agg.items() + data.items())
-            data = StaticReviewsPending(period, startdate, enddate, type_analysis, identities_db)
-            agg = dict(agg.items() + data.items())
             data = StaticTimeToReviewSCR(startdate, enddate, identities_db, type_analysis, identities_db)
             val = data['review_time_days_avg']
             if (not val or val == 0): data['review_time_days_avg'] = 0
@@ -199,42 +181,6 @@ class SCR(DataSource):
                 agg = dict(agg.items() + period_data.items())
 
         else:
-            # agg = StaticReviewsSubmitted(period, startdate, enddate)
-            data = StaticReviewsOpened(period, startdate, enddate)
-            agg = dict(agg.items() + data.items())
-            data = StaticReviewsNew(period, startdate, enddate)
-            agg = dict(agg.items() + data.items())
-            data = StaticReviewsInProgress(period, startdate, enddate)
-            agg = dict(agg.items() + data.items())
-            data = StaticReviewsClosed(period, startdate, enddate)
-            agg = dict(agg.items() + data.items())
-            data = StaticReviewsMerged(period, startdate, enddate)
-            agg = dict(agg.items() + data.items())
-            data = StaticReviewsAbandoned(period, startdate, enddate)
-            agg = dict(agg.items() + data.items())
-            data = StaticReviewsPending(period, startdate, enddate)
-            agg = dict(agg.items() + data.items())
-            data = StaticPatchesVerified(period, startdate, enddate)
-            agg = dict(agg.items() + data.items())
-            data = StaticPatchesApproved(period, startdate, enddate)
-            agg = dict(agg.items() + data.items())
-            data = StaticPatchesCodeReview(period, startdate, enddate)
-            agg = dict(agg.items() + data.items())
-            data = StaticPatchesSent(period, startdate, enddate)
-            agg = dict(agg.items() + data.items())
-            data = StaticWaiting4Reviewer(period, startdate, enddate)
-            agg = dict(agg.items() + data.items())
-            data = StaticWaiting4Submitter(period, startdate, enddate)
-            agg = dict(agg.items() + data.items())
-            #Reviewers info
-            data = StaticReviewers(period, startdate, enddate)
-            agg = dict(agg.items() + data.items())
-            # Time to Review info
-            data = StaticTimeToReviewSCR(startdate, enddate)
-            data['review_time_days_avg'] = float(data['review_time_days_avg'])
-            data['review_time_days_median'] = float(data['review_time_days_median'])
-            agg = dict(agg.items() + data.items())
-
             # Tendencies
             for i in [7,30,365]:
                 period_data = GetSCRDiffSubmittedDays(period, enddate, i, identities_db)

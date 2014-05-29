@@ -42,10 +42,13 @@ class Releases(DataSource):
     #
 
     @staticmethod
-    def get_modules(period, startdate, enddate, evol = False):
+    def get_modules(period, startdate, enddate, evol = False, days = None):
         fields = "COUNT(*) AS modules"
         tables = "projects p"
         filters = ""
+        if days is not None:
+            fields = "COUNT(*) AS modules_"+str(days)
+            filters += " AND (DATEDIFF(NOW(),p.created_on)<%s OR DATEDIFF(NOW(),p.updated_on)<%s) " % (days, days)
         if evol:
             q = GetSQLPeriod(period,'p.created_on', fields, tables, filters,
                              startdate, enddate)
@@ -55,10 +58,13 @@ class Releases(DataSource):
         return(ExecuteQuery(q))
 
     @staticmethod
-    def get_releases(period, startdate, enddate, evol = False):
+    def get_releases(period, startdate, enddate, evol = False, days = None):
         fields = "COUNT(DISTINCT(r.id)) AS releases"
         tables = "releases r, projects p"
         filters = "r.project_id = p.id"
+        if days is not None:
+            fields = "COUNT(DISTINCT(r.id)) AS releases_"+str(days)
+            filters += " AND (DATEDIFF(NOW(),r.created_on)<%s OR DATEDIFF(NOW(),r.updated_on)<%s) " % (days, days)
         if evol:
             q = GetSQLPeriod(period,'r.created_on', fields, tables, filters,
                              startdate, enddate)
@@ -68,10 +74,13 @@ class Releases(DataSource):
         return(ExecuteQuery(q))
 
     @staticmethod
-    def get_authors(period, startdate, enddate, evol = False):
+    def get_authors(period, startdate, enddate, evol = False, days = None):
         fields = "COUNT(DISTINCT(u.id)) AS authors"
         tables = "users u, releases r, projects p"
         filters = "r.author_id = u.id AND r.project_id = p.id"
+        if days is not None:
+            fields = "COUNT(DISTINCT(u.id)) AS authors_"+str(days)
+            filters += " AND (DATEDIFF(NOW(),r.created_on)<%s OR DATEDIFF(NOW(),r.updated_on)<%s) " % (days, days)
         if evol:
             q = GetSQLPeriod(period,'r.created_on', fields, tables, filters,
                              startdate, enddate)
@@ -100,23 +109,18 @@ class Releases(DataSource):
         createJSON (data, os.path.join(destdir, filename))
 
     @staticmethod
-    def get_modules_days(period, enddate, identities_db, i):
-        return {}
-
-    @staticmethod
-    def get_authors_days(period, enddate, identities_db, i):
-        return {}
-
-    @staticmethod
     def get_agg_data (period, startdate, enddate, identities_db, filter_ = None):
-        # Tendencies
         agg = {}
+        evol = False
 
+        # Tendencies
         if (filter_ is None):
             for i in [7,30,365]:
-                data = Releases.get_modules_days(period, enddate, identities_db, i)
+                data = Releases.get_modules(period, startdate, enddate, evol, i)
                 agg = dict(agg.items() + data.items())
-                data = Releases.get_authors_days(period, enddate, identities_db, i)
+                data = Releases.get_authors(period, startdate, enddate, evol, i)
+                agg = dict(agg.items() + data.items())
+                data = Releases.get_releases(period, startdate, enddate, evol, i)
                 agg = dict(agg.items() + data.items())
             data = Releases.get_authors(period, startdate, enddate)
             agg = dict(agg.items() + data.items())
@@ -187,22 +191,36 @@ class Releases(DataSource):
 
         top_data = Releases.get_top_data (startdate, enddate, identities_db, None, npeople)
 
-        return []
-
-        top = top_data['authors.']["id"]
-        top += top_data['authors.last year']["id"]
-        top += top_data['authors.last month']["id"]
+        top = top_data['authors.']["username"]
+        top += top_data['authors.last year']["username"]
+        top += top_data['authors.last month']["username"]
         # remove duplicates
         people = list(set(top))
         return people
 
     @staticmethod
+    def _get_people_sql (developer_id, period, startdate, enddate, evol):
+        fields = "COUNT(r.id) AS releases"
+        tables = "users u, releases r"
+        filters = " r.author_id = u.id AND u.username = '" + str(developer_id) + "'"
+
+        if (evol) :
+            q = GetSQLPeriod(period,'r.created_on', fields, tables, filters,
+                    startdate, enddate)
+        else:
+            q = GetSQLGlobal('r.created_on', fields, tables, filters,
+                    startdate, enddate)
+        return (q)
+
+    @staticmethod
     def get_person_evol(upeople_id, period, startdate, enddate, identities_db, type_analysis):
-        pass
+        q = Releases._get_people_sql (upeople_id, period, startdate, enddate, True)
+        return ExecuteQuery(q)
 
     @staticmethod
     def get_person_agg(upeople_id, startdate, enddate, identities_db, type_analysis):
-        pass
+        q = Releases._get_people_sql (upeople_id, None, startdate, enddate, False)
+        return ExecuteQuery(q)
 
     @staticmethod
     def create_r_reports(vizr, enddate, destdir):

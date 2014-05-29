@@ -668,6 +668,94 @@ class SCRQuery(DSQuery):
 
         return q
 
+    def GetEvaluationsSQL (self, period, startdate, enddate, type_, type_analysis, evolutionary, identities_db = None):
+        # verified - VRIF
+        # approved - APRV
+        # code review - CRVW
+        # submitted - SUBM
+
+        #Building the query
+        fields = " count(distinct(c.id)) as " + type_
+        tables = " changes c, issues i " + self.GetSQLReportFrom(identities_db, type_analysis)
+        if type_ == "verified": filters =  " (c.field = 'VRIF' OR c.field = 'Verified') "
+        elif type_ == "approved": filters =  " c.field = 'APRV'  "
+        elif type_ == "codereview": filters =  "   (c.field = 'CRVW' OR c.field = 'Code-Review') "
+        elif type_ == "sent": filters =  " c.field = 'SUBM'  "
+        filters = filters + " and i.id = c.issue_id "
+        filters = filters + self.GetSQLReportWhere(type_analysis, identities_db)
+
+        q = self.BuildQuery (period, startdate, enddate, "c.changed_on",
+                             fields, tables, filters, evolutionary)
+        return q
+
+    def GetWaiting4ReviewerSQL (self, period, startdate, enddate, identities_db, type_analysis, evolutionary):
+        fields = " count(distinct(c.id)) as WaitingForReviewer "
+        tables = " changes c, "+\
+                 "  issues i, "+\
+                 "        (select c.issue_id as issue_id, "+\
+                 "                c.old_value as old_value, "+\
+                 "                max(c.id) as id "+\
+                 "         from changes c, "+\
+                 "              issues i "+\
+                 "         where c.issue_id = i.id and "+\
+                 "               i.status='NEW' "+\
+                 "         group by c.issue_id, c.old_value) t1 "
+        tables = tables + self.GetSQLReportFrom(identities_db, type_analysis)
+        filters =  " i.id = c.issue_id  "+\
+                   "  and t1.id = c.id "+\
+                   "  and (c.field='CRVW' or c.field='Code-Review' or c.field='Verified' or c.field='VRIF') "+\
+                   "  and (c.new_value=1 or c.new_value=2) "
+        filters = filters + self.GetSQLReportWhere(type_analysis, identities_db)
+
+        q = self.BuildQuery (period, startdate, enddate, "c.changed_on",
+                             fields, tables, filters, evolutionary)
+        return q
+
+    def GetWaiting4SubmitterSQL (self, period, startdate, enddate, identities_db, type_analysis, evolutionary):
+        fields = "count(distinct(c.id)) as WaitingForSubmitter "
+        tables = "  changes c, "+\
+                 "   issues i, "+\
+                 "        (select c.issue_id as issue_id, "+\
+                 "                c.old_value as old_value, "+\
+                 "                max(c.id) as id "+\
+                 "         from changes c, "+\
+                 "              issues i "+\
+                 "         where c.issue_id = i.id and "+\
+                 "               i.status='NEW' "+\
+                 "         group by c.issue_id, c.old_value) t1 "
+        tables = tables + self.GetSQLReportFrom(identities_db, type_analysis)
+        filters = " i.id = c.issue_id "+\
+                  "  and t1.id = c.id "+\
+                  "  and (c.field='CRVW' or c.field='Code-Review' or c.field='Verified' or c.field='VRIF') "+\
+                  "  and (c.new_value=-1 or c.new_value=-2) "
+        filters = filters + self.GetSQLReportWhere(type_analysis, identities_db)
+
+        q = self.BuildQuery (period, startdate, enddate, "c.changed_on",
+                             fields, tables, filters, evolutionary)
+        return q
+
+    def GetTimeToReviewQuerySQL (self, startdate, enddate, identities_db = None, type_analysis = [], bots = []):
+        filter_bots = ''
+        for bot in bots:
+            filter_bots = filter_bots + " people.name<>'"+bot+"' and "
+
+        # Subquery to get the time to review for all reviews
+        fields = "TIMESTAMPDIFF(SECOND, submitted_on, changed_on)/(24*3600) AS revtime, changed_on "
+        tables = "issues i, changes, people "
+        tables = tables + self.GetSQLReportFrom(identities_db, type_analysis)
+        filters = filter_bots + " i.id = changes.issue_id "
+        filters += " AND people.id = changes.changed_by "
+        filters += self.GetSQLReportWhere(type_analysis, identities_db)
+        filters += " AND field='status' AND new_value='MERGED' "
+        # remove autoreviews
+        filters += " AND i.submitted_by<>changes.changed_by "
+        filters += " ORDER BY changed_on "
+        q = self.GetSQLGlobal('changed_on', fields, tables, filters,
+                        startdate, enddate)
+        # min_days_for_review = 0.042 # one hour
+        # q = "SELECT revtime, changed_on FROM ("+q+") qrevs WHERE revtime>"+str(min_days_for_review)
+        return (q)
+
 class IRCQuery(DSQuery):
 
     def GetSQLRepositoriesFrom (self):
