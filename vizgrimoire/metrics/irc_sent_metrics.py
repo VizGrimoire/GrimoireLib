@@ -36,19 +36,13 @@ from query_builder import IRCQuery
 
 from IRC import IRC
 
+
 class Sent(Metrics):
-    """ Messages sent  metric class for mailing lists """
+    """Messages sent metric class for IRC channels"""
     id = "sent"
     name = "Sent messages"
-    desc = "Number of messages sent to mailing list(s)"
+    desc = "Number of messages sent to IRC channels"
     data_source = IRC
-
-    def __get_sent__ (self, evolutionary):
-        # This function contains basic parts of the query to COUNT opened tickets.
-        # That query is built and results returned.
-        query = self.__get_sql__(evolutionary)
-        return self.db.ExecuteQuery(query)
-
 
     def __get_sql__(self, evolutionary):
         fields = " COUNT(DISTINCT(message)) AS sent "
@@ -60,20 +54,6 @@ class Sent(Metrics):
                                tables, filters, evolutionary)
         return q
 
-    def get_data_source(self):
-        return self.data_source
-
-    def get_ts (self):
-        # Returns the evolution of commits through the time
-        data = self.__get_sent__(True)
-        return completePeriodIds(data, self.filters.period, self.filters.startdate, self.filters.enddate)
-
-    def get_agg(self):
-        return self.__get_sent__(False)
-
-    def get_list(self):
-        #to be implemented
-        pass
 
 # Examples of use
 if __name__ == '__main__':
