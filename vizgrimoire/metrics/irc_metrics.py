@@ -45,8 +45,8 @@ class Sent(Metrics):
     data_source = IRC
 
     def __get_sql__(self, evolutionary):
-        fields = " COUNT(DISTINCT(message)) AS sent "
-        tables = " irclog " + self.db.GetSQLReportFrom(self.filters.type_analysis)
+        fields = " COUNT(message) AS sent "
+        tables = " irclog i " + self.db.GetSQLReportFrom(self.filters.type_analysis)
         filters = self.db.GetSQLReportWhere(self.filters.type_analysis)
         filters += " and type='COMMENT' "
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
