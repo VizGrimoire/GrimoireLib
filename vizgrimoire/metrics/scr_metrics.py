@@ -26,6 +26,8 @@
 import logging
 import MySQLdb
 
+from GrimoireUtils import completePeriodIds, checkListArray, medianAndAvgByPeriod
+
 from metrics import Metrics
 
 from metrics_filter import MetricFilters
@@ -58,6 +60,19 @@ class Merged(Metrics):
                                   self.filters.type_analysis, evolutionary, self.db.identities_db)
         return q
 
+    def __get_sql__changes (self, evolutionary):
+        q = self.db.GetReviewsChangesSQL(self.filters.period, self.filters.startdate,
+                                         self.filters.enddate, "merged",
+                                         self.filters.type_analysis, evolutionary, self.db.identities_db)
+        return q
+
+    def get_ts_changes(self):
+        query = self.__get_sql__changes(True)
+        ts = self.db.ExecuteQuery(query)
+        return completePeriodIds(ts, self.filters.period,
+                                 self.filters.startdate, self.filters.enddate)
+
+
 class Mergers(Metrics):
     id = "mergers"
     name = "Successful submitters"
@@ -78,6 +93,18 @@ class Abandoned(Metrics):
                                   self.filters.enddate, "abandoned",
                                   self.filters.type_analysis, evolutionary, self.db.identities_db)
         return q
+
+    def __get_sql__changes (self, evolutionary):
+        q = self.db.GetReviewsChangesSQL(self.filters.period, self.filters.startdate,
+                                         self.filters.enddate, "abandoned",
+                                         self.filters.type_analysis, evolutionary, self.db.identities_db)
+        return q
+
+    def get_ts_changes(self):
+        query = self.__get_sql__changes(True)
+        ts = self.db.ExecuteQuery(query)
+        return completePeriodIds(ts, self.filters.period,
+                                 self.filters.startdate, self.filters.enddate)
 
 class Pending(Metrics):
     id = "pending"
@@ -175,6 +202,18 @@ class New(Metrics):
                                   self.filters.enddate, "new",
                                   self.filters.type_analysis, evolutionary, self.db.identities_db)
         return q
+
+    def __get_sql__changes (self, evolutionary):
+        q = self.db.GetReviewsChangesSQL(self.filters.period, self.filters.startdate,
+                                         self.filters.enddate, "new",
+                                         self.filters.type_analysis, evolutionary, self.db.identities_db)
+        return q
+
+    def get_ts_changes(self):
+        query = self.__get_sql__changes(True)
+        ts = self.db.ExecuteQuery(query)
+        return completePeriodIds(ts, self.filters.period,
+                                 self.filters.startdate, self.filters.enddate)
 
 class PatchesVerified(Metrics):
     id = "verified"
@@ -376,6 +415,7 @@ class TimeToReview(Metrics):
     data_source = SCR
 
     def __get_sql__(self):
+        if self.filters.period != "month": return None
         bots = []
         q = self.db.GetTimeToReviewQuerySQL (self.filters.startdate, self.filters.enddate,
                                              self.db.identities_db, self.filters.type_analysis, bots)
@@ -402,8 +442,10 @@ class TimeToReview(Metrics):
         q = self.__get_sql__()
         review_list = self.db.ExecuteQuery(q)
         checkListArray(review_list)
+        metrics_list = {}
 
-        med_avg_list = medianAndAvgByPeriod(period, review_list['changed_on'], review_list['revtime'])
+
+        med_avg_list = medianAndAvgByPeriod(self.filters.period, review_list['changed_on'], review_list['revtime'])
         if (med_avg_list != None):
             metrics_list['review_time_days_median'] = med_avg_list['median']
             metrics_list['review_time_days_avg'] = med_avg_list['avg']
@@ -412,4 +454,8 @@ class TimeToReview(Metrics):
             metrics_list['review_time_days_median'] = []
             metrics_list['review_time_days_avg'] = []
             metrics_list['month'] = []
+
+        metrics_list = completePeriodIds(metrics_list, self.filters.period,
+                          self.filters.startdate, self.filters.enddate)
+
         return metrics_list
