@@ -152,6 +152,7 @@ class QAForums(DataSource):
             filters = filters + " and " + extra_filters
 
         q = fields + tables + filters
+        print q
         return(ExecuteQuery(q))
 
     @staticmethod
@@ -164,7 +165,11 @@ class QAForums(DataSource):
 
         fields = "SELECT count(distinct(%s.%s)) as senders" % (prefix_table, author_field)
         tables = " FROM %s %s " % (table_name, prefix_table)
+        tables = tables + QAForums.GetSQLReportFrom(identities_db, type_analysis)
         filters = "WHERE %s.%s >= %s AND %s.%s < %s " % (prefix_table, date_field, startdate, prefix_table, date_field, enddate)
+        extra_filters = QAForums.GetSQLReportWhere(type_analysis, type_post)
+        if extra_filters <> "":
+            filters = filters + " and " + extra_filters
         q = fields + tables + filters
         return(ExecuteQuery(q))
 
