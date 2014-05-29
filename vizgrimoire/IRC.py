@@ -108,6 +108,13 @@ class IRC(DataSource):
 
             agg = dict(agg.items() + mvalue.items() + init_date.items() + end_date.items())
 
+        # Tendencies
+        metrics_trends = ['sent', 'senders']
+        for i in [7,30,365]:
+            for item in all_metrics:
+                if item.id not in metrics_trends: continue
+                period_data = item.get_agg_diff_days(enddate, i)
+                agg = dict(agg.items() + period_data.items())
 
         tagg = {}
         if filter_ is not None:
@@ -117,13 +124,6 @@ class IRC(DataSource):
             if (filter_name == "repository"):
                 tagg = GetRepoStaticSentSendersIRC(item, startdate, enddate)
         else:
-            # Tendencies
-            for i in [7,30,365]:
-                period_data = GetIRCDiffSentDays(period, enddate, i)
-                tagg = dict(tagg.items() + period_data.items())
-                period_data = GetIRCDiffSendersDays(period, enddate, identities_db, i)
-                tagg = dict(tagg.items() + period_data.items())
-
             static_data = GetStaticDataIRC(period, startdate, enddate, identities_db, None)
             tagg = dict(tagg.items() + static_data.items())
 
