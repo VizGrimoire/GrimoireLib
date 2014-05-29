@@ -773,9 +773,9 @@ class IRCQuery(DSQuery):
         # tables necessary for repositories
         return (", channels c")
 
-    def GetSQLRepositoriesWhere (self, repository):
+    def GetSQLRepositoriesWhere(self, repository):
         # filters necessaries for repositories
-        return (" i.channel_id = c.id and c.name="+repository+" ")
+        return (" i.channel_id = c.id and c.name='" + repository + "'")
 
     def GetSQLCompaniesFrom(self):
         # tables necessary to companies analysis
@@ -783,14 +783,14 @@ class IRCQuery(DSQuery):
                self.identities_db + "companies c, " +\
                self.identities_db + ".upeople_companies upc")
 
-    def GetSQLCompaniesWhere (self, name):
+    def GetSQLCompaniesWhere(self, name):
         # filters necessary to companies analysis
         return(" i.nick = pup.people_id and "+\
                "pup.upeople_id = upc.upeople_id and "+\
                "upc.company_id = c.id and "+\
                "i.submitted_on >= upc.init and "+\
                "i.submitted_on < upc.end and "+\
-               "c.name = "+name)
+               "c.name = '" + name + "'")
 
     def GetSQLCountriesFrom(self):
         # tables necessary to countries analysis
@@ -798,12 +798,12 @@ class IRCQuery(DSQuery):
                self.identities_db + ".countries c, " +\
                self.identities_db + ".upeople_countries upc")
 
-    def GetSQLCountriesWhere (self, name):
+    def GetSQLCountriesWhere(self, name):
         # filters necessary to countries analysis
         return(" i.nick = pup.people_id and "+\
                "pup.upeople_id = upc.upeople_id and "+\
                "upc.country_id = c.id and "+\
-               "c.name = "+name)
+               "c.name = '" + name + "'")
 
     def GetSQLDomainsFrom(self):
         # tables necessary to domains analysis
@@ -811,12 +811,12 @@ class IRCQuery(DSQuery):
                self.identities_db + ".domains d, " +\
                self.identities_db + ".upeople_domains upd")
 
-    def GetSQLDomainsWhere (self, name):
+    def GetSQLDomainsWhere(self, name):
         # filters necessary to domains analysis
         return(" i.nick = pup.people_id and "+\
                "pup.upeople_id = upd.upeople_id and "+\
                "upd.domain_id = d.id and "+\
-               "d.name = "+name)
+               "d.name = '" + name + "'")
 
     def GetTablesOwnUniqueIds (self) :
         tables = 'irclog, people_upeople pup'

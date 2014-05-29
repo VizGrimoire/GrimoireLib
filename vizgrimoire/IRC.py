@@ -187,9 +187,9 @@ def GetIRCSQLRepositoriesFrom ():
     return (", channels c")
 
 
-def GetIRCSQLRepositoriesWhere (repository):
+def GetIRCSQLRepositoriesWhere(repository):
     # filters necessaries for repositories
-    return (" i.channel_id = c.id and c.name="+repository+" ")
+    return (" i.channel_id = c.id and c.name='" + repository + "'")
 
 
 def GetIRCSQLCompaniesFrom (i_db):
@@ -199,14 +199,14 @@ def GetIRCSQLCompaniesFrom (i_db):
                    i_db+".upeople_companies upc")
 
 
-def GetIRCSQLCompaniesWhere (name):
+def GetIRCSQLCompaniesWhere(name):
     # filters necessary to companies analysis
     return(" i.nick = pup.people_id and "+\
            "pup.upeople_id = upc.upeople_id and "+\
            "upc.company_id = c.id and "+\
            "i.submitted_on >= upc.init and "+\
            "i.submitted_on < upc.end and "+\
-           "c.name = "+name)
+           "c.name = '" + name + "'")
 
 
 def GetIRCSQLCountriesFrom (i_db):
@@ -216,12 +216,12 @@ def GetIRCSQLCountriesFrom (i_db):
            i_db+".upeople_countries upc")
 
 
-def GetIRCSQLCountriesWhere (name):
+def GetIRCSQLCountriesWhere(name):
     # filters necessary to countries analysis
     return(" i.nick = pup.people_id and "+\
            "pup.upeople_id = upc.upeople_id and "+\
            "upc.country_id = c.id and "+\
-           "c.name = "+name)
+           "c.name = '" + name + "'")
 
 def GetIRCSQLDomainsFrom (i_db):
     # tables necessary to domains analysis
@@ -234,7 +234,7 @@ def GetIRCSQLDomainsWhere (name):
     return(" i.nick = pup.people_id and "+\
            "pup.upeople_id = upd.upeople_id and "+\
            "upd.domain_id = d.id and "+\
-           "d.name = "+name)
+           "d.name = '" + name + "'")
 
 def GetTablesOwnUniqueIdsIRC () :
     tables = 'irclog, people_upeople pup'
