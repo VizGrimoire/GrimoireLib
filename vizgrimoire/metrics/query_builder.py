@@ -767,7 +767,6 @@ class SCRQuery(DSQuery):
         return q_last_change
 
 
-
 class IRCQuery(DSQuery):
 
     def GetSQLRepositoriesFrom (self):
@@ -778,11 +777,11 @@ class IRCQuery(DSQuery):
         # filters necessaries for repositories
         return (" i.channel_id = c.id and c.name="+repository+" ")
 
-    def GetSQLCompaniesFrom (self, i_db):
+    def GetSQLCompaniesFrom(self):
         # tables necessary to companies analysis
-        return(" , people_upeople pup, "+\
-                       i_db+"companies c, "+\
-                       i_db+".upeople_companies upc")
+        return(" , people_upeople pup, " +\
+               self.identities_db + "companies c, " +\
+               self.identities_db + ".upeople_companies upc")
 
     def GetSQLCompaniesWhere (self, name):
         # filters necessary to companies analysis
@@ -793,11 +792,11 @@ class IRCQuery(DSQuery):
                "i.submitted_on < upc.end and "+\
                "c.name = "+name)
 
-    def GetSQLCountriesFrom (self, i_db):
+    def GetSQLCountriesFrom(self):
         # tables necessary to countries analysis
-        return(" , people_upeople pup, "+\
-               i_db+".countries c, "+\
-               i_db+".upeople_countries upc")
+        return(" , people_upeople pup, " +\
+               self.identities_db + ".countries c, " +\
+               self.identities_db + ".upeople_countries upc")
 
     def GetSQLCountriesWhere (self, name):
         # filters necessary to countries analysis
@@ -806,11 +805,11 @@ class IRCQuery(DSQuery):
                "upc.country_id = c.id and "+\
                "c.name = "+name)
 
-    def GetSQLDomainsFrom (self, i_db):
+    def GetSQLDomainsFrom(self):
         # tables necessary to domains analysis
-        return(" , people_upeople pup, "+\
-               i_db+".domains d, "+\
-               i_db+".upeople_domains upd")
+        return(" , people_upeople pup, " +\
+               self.identities_db + ".domains d, " +\
+               self.identities_db + ".upeople_domains upd")
 
     def GetSQLDomainsWhere (self, name):
         # filters necessary to domains analysis
@@ -827,7 +826,7 @@ class IRCQuery(DSQuery):
         filters = 'pup.people_id = irclog.nick'
         return (filters) 
 
-    def GetSQLReportFrom (self, identities_db, type_analysis):
+    def GetSQLReportFrom(self, type_analysis):
         #generic function to generate 'from' clauses
         #"type" is a list of two values: type of analysis and value of 
         #such analysis
@@ -839,9 +838,9 @@ class IRCQuery(DSQuery):
         analysis = type_analysis[0]
 
         if analysis == 'repository': From = self.GetSQLRepositoriesFrom()
-        elif analysis == 'company': From = self.GetSQLCompaniesFrom(identities_db)
-        elif analysis == 'country': From = self.GetSQLCountriesFrom(identities_db)
-        elif analysis == 'domain': From = self.GetSQLDomainsFrom(identities_db)
+        elif analysis == 'company': From = self.GetSQLCompaniesFrom(self.identities_db)
+        elif analysis == 'country': From = self.GetSQLCountriesFrom(self.identities_db)
+        elif analysis == 'domain': From = self.GetSQLDomainsFrom(self.identities_db)
 
         return (From)
 
