@@ -50,10 +50,9 @@ class Releases(DataSource):
     @staticmethod
     def get_date_end():
         """Get the date of the last activity in the data source"""
-#        q1 = "SELECT MAX(updated_on) as ru, MAX(created_on) as rc FROM releases"
-#        q2 = "SELECT MAX(updated_on) as pu, MAX(created_on) as pr FROM projects"
-#        q = "SELECT MAX(*) FROM (%s) r, (%s) p" % (q1, q2)
-        q = "SELECT MAX(updated_on) AS date FROM releases"
+        q1 = "SELECT MAX(updated_on) as ru, MAX(created_on) as rc FROM releases"
+        q2 = "SELECT MAX(updated_on) as pu, MAX(created_on) as pr FROM projects"
+        q = "SELECT GREATEST(ru, rc, pu, pr) AS date FROM (%s) r, (%s) p" % (q1, q2)
         return(ExecuteQuery(q))
 
     @staticmethod
