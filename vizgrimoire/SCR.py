@@ -140,12 +140,20 @@ class SCR(DataSource):
         type_analysis = None
         if filter_ is not None:
             type_analysis = [filter_.get_name(), filter_.get_item()]
-        metrics_on = ['submitted','opened','closed','merged','abandoned','new','inprogress','pending']
+        metrics_on = ['submitted','opened','closed','merged','abandoned','new','inprogress','pending','review_time']
+        # patches metrics
+        metrics_patches = ['verified','approved','codereview','sent','WaitingForReviewer','WaitingForSubmitter']
+        metrics_on += metrics_patches
+        # people
+        metrics_on += ['reviewers']
+        # not for filters. SQL not tested.
+        metrics_filters_off = metrics_patches
         mfilter = MetricFilters(period, startdate, enddate, type_analysis)
         all_metrics = SCR.get_metrics_set(SCR)
 
         for item in all_metrics:
             if item.id not in metrics_on: continue
+            if filter_ is not None and item.id in metrics_filters_off: continue
             item.filters = mfilter
             mvalue = item.get_agg()
             agg = dict(agg.items() + mvalue.items())
@@ -173,29 +181,6 @@ class SCR(DataSource):
                 agg = dict(agg.items() + period_data.items())
 
         else:
-            data = StaticReviewsPending(period, startdate, enddate)
-            agg = dict(agg.items() + data.items())
-            data = StaticPatchesVerified(period, startdate, enddate)
-            agg = dict(agg.items() + data.items())
-            data = StaticPatchesApproved(period, startdate, enddate)
-            agg = dict(agg.items() + data.items())
-            data = StaticPatchesCodeReview(period, startdate, enddate)
-            agg = dict(agg.items() + data.items())
-            data = StaticPatchesSent(period, startdate, enddate)
-            agg = dict(agg.items() + data.items())
-            data = StaticWaiting4Reviewer(period, startdate, enddate)
-            agg = dict(agg.items() + data.items())
-            data = StaticWaiting4Submitter(period, startdate, enddate)
-            agg = dict(agg.items() + data.items())
-            #Reviewers info
-            data = StaticReviewers(period, startdate, enddate)
-            agg = dict(agg.items() + data.items())
-            # Time to Review info
-            data = StaticTimeToReviewSCR(startdate, enddate)
-            data['review_time_days_avg'] = float(data['review_time_days_avg'])
-            data['review_time_days_median'] = float(data['review_time_days_median'])
-            agg = dict(agg.items() + data.items())
-
             # Tendencies
             for i in [7,30,365]:
                 period_data = GetSCRDiffSubmittedDays(period, enddate, i, identities_db)

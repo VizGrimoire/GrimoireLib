@@ -176,50 +176,78 @@ class New(Metrics):
                                   self.filters.type_analysis, evolutionary, self.db.identities_db)
         return q
 
-class Verified(Metrics):
+class PatchesVerified(Metrics):
     id = "verified"
-    name = "Verified reviews"
+    name = "Verified patches reviews"
     desc = "Number of verified review processes"
     data_source = SCR
 
     def __get_sql__(self, evolutionary):
-        pass
+        q = self.db.GetEvaluationsSQL (self.filters.period, self.filters.startdate,
+                                       self.filters.enddate, "verified",
+                                       self.filters.type_analysis, evolutionary, self.db.identities_db)
+        return q
 
-class Approved(Metrics):
+class PatchesApproved(Metrics):
     id = "approved"
-    name = "Approved reviews"
+    name = "Approved patches reviews"
     desc = "Number of approved review processes"
     data_source = SCR
 
     def __get_sql__(self, evolutionary):
-        pass
+        q = self.db.GetEvaluationsSQL (self.filters.period, self.filters.startdate,
+                                       self.filters.enddate, "approved",
+                                       self.filters.type_analysis, evolutionary, self.db.identities_db)
+        return q
 
-class CodeReview(Metrics):
+class PatchesCodeReview(Metrics):
     id = "codereview"
-    name = "Code review"
-    desc = "Number of review processes in code review state"
+    name = "Code review patches"
+    desc = "Number of patches in review processes in code review state"
     data_source = SCR
 
     def __get_sql__(self, evolutionary):
-        pass
+        q = self.db.GetEvaluationsSQL (self.filters.period, self.filters.startdate,
+                                       self.filters.enddate, "codereview",
+                                       self.filters.type_analysis, evolutionary, self.db.identities_db)
+        return q
 
-class WaitingForReviewer(Metrics):
+class PatchesSent(Metrics):
+    id = "sent"
+    name = "Number of patches sent"
+    desc = "Number of patches sent"
+    data_source = SCR
+
+    def __get_sql__(self, evolutionary):
+        q = self.db.GetEvaluationsSQL (self.filters.period, self.filters.startdate,
+                                       self.filters.enddate, "sent",
+                                       self.filters.type_analysis, evolutionary, self.db.identities_db)
+        return q
+
+class PatchesWaitingForReviewer(Metrics):
     id = "WaitingForReviewer"
-    name = "Waiting for reviewer"
+    name = "Waiting for reviewer patches"
     desc = "Number of patches from review processes waiting for reviewer"
     data_source = SCR
 
-    def __get_sql__(self, evolutionary):
-        pass
 
-class WaitingForSubmitter(Metrics):
+    def __get_sql__(self, evolutionary):
+        q = self.db.GetWaiting4ReviewerSQL(self.filters.period, self.filters.startdate,
+                                           self.filters.enddate, self.db.identities_db,
+                                           self.filters.type_analysis, evolutionary)
+        return q
+
+class PatchesWaitingForSubmitter(Metrics):
     id = "WaitingForSubmitter"
-    name = "Waiting for submitter"
+    name = "Waiting for submitter patches"
     desc = "Number of patches from review processes waiting for submitter"
     data_source = SCR
 
     def __get_sql__(self, evolutionary):
-        pass
+        q = self.db.GetWaiting4SubmitterSQL(self.filters.period, self.filters.startdate,
+                                            self.filters.enddate, self.db.identities_db,
+                                            self.filters.type_analysis, evolutionary)
+        return q
 
 class ReviewsWaitingForReviewer(Metrics):
     id = "ReviewsWaitingForReviewer"
@@ -284,6 +312,23 @@ class People(Metrics):
     def __get_sql__(self, evolutionary):
         pass
 
+class Reviewers(Metrics):
+    id = "reviewers"
+    name = "Reviewers"
+    desc = "Number of persons reviewing code review activities"
+    data_source = SCR
+    action = "reviews"
+
+    def __get_sql__(self, evolutionary):
+        fields = " count(distinct(changed_by)) as reviewers "
+        tables = " changes c "
+        filters = ""
+
+        q = self.db.BuildQuery (self.filters.period, self.filters.startdate,
+                                self.filters.enddate, " c.changed_on",
+                                fields, tables, filters, evolutionary)
+        return q
+
 class Closers(Metrics):
     id = "closers"
     name = "Closers"
@@ -303,3 +348,48 @@ class Openers(Metrics):
 
     def __get_sql__(self, evolutionary):
         pass
+
+class TimeToReview(Metrics):
+    id = "review_time"
+    name = "Review Time"
+    desc = "Time to review"
+    data_source = SCR
+
+    def __get_sql__(self):
+        bots = []
+        q = self.db.GetTimeToReviewQuerySQL (self.filters.startdate, self.filters.enddate,
+                                             self.db.identities_db, self.filters.type_analysis, bots)
+        return q
+
+    def get_agg(self):
+        from numpy import median, average
+        from GrimoireUtils import removeDecimals
+
+        q = self.__get_sql__()
+        data = self.db.ExecuteQuery(q)
+        data = data['revtime']
+        if (isinstance(data, list) == False): data = [data]
+        # ttr_median = sorted(data)[len(data)//2]
+        if (len(data) == 0):
+            ttr_median = float("nan")
+            ttr_avg = float("nan")
+        else:
+            ttr_median = float(median(removeDecimals(data)))
+            ttr_avg = float(average(removeDecimals(data)))
+        return {"review_time_days_median":ttr_median, "review_time_days_avg":ttr_avg}
+
+    def get_ts(self):
+        q = self.__get_sql__()
+        review_list = self.db.ExecuteQuery(q)
+        checkListArray(review_list)
+
+        med_avg_list = medianAndAvgByPeriod(period, review_list['changed_on'], review_list['revtime'])
+        if (med_avg_list != None):
+            metrics_list['review_time_days_median'] = med_avg_list['median']
+            metrics_list['review_time_days_avg'] = med_avg_list['avg']
+            metrics_list['month'] = med_avg_list['month']
+        else:
+            metrics_list['review_time_days_median'] = []
+            metrics_list['review_time_days_avg'] = []
+            metrics_list['month'] = []
+        return metrics_list
