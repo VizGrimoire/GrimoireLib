@@ -109,18 +109,43 @@ class Releases(DataSource):
         createJSON (data, os.path.join(destdir, filename))
 
     @staticmethod
+    def get_agg_diff_days(metric, period, date, days):
+        """ Returns the trend metrics between now and now-days values """
+        chardates = GetDates(date, days)
+
+        if metric == "authors":
+            prev = Releases.get_authors(period, chardates[2], chardates[1])
+            last = Releases.get_authors(period, chardates[1], chardates[0])
+        elif metric == "releases":
+            prev = Releases.get_releases(period, chardates[2], chardates[1])
+            last = Releases.get_releases(period, chardates[1], chardates[0])
+        elif metric == "modules":
+            prev = Releases.get_modules(period, chardates[2], chardates[1])
+            last = Releases.get_modules(period, chardates[1], chardates[0])
+
+        last = int(last[metric])
+        prev = int(prev[metric])
+
+        data = {}
+        data['diff_net'+metric+'_'+str(days)] = last - prev
+        data['percentage_'+metric+'_'+str(days)] = GetPercentageDiff(prev, last)
+        data[metric+'_'+str(days)] = last
+
+        return (data)
+
+    @staticmethod
     def get_agg_data (period, startdate, enddate, identities_db, filter_ = None):
         agg = {}
         evol = False
 
-        # Tendencies
+        # Trends
         if (filter_ is None):
             for i in [7,30,365]:
-                data = Releases.get_modules(period, startdate, enddate, evol, i)
+                data = Releases.get_agg_diff_days("authors", period, enddate, i)
                 agg = dict(agg.items() + data.items())
-                data = Releases.get_authors(period, startdate, enddate, evol, i)
+                data = Releases.get_agg_diff_days("modules", period, enddate, i)
                 agg = dict(agg.items() + data.items())
-                data = Releases.get_releases(period, startdate, enddate, evol, i)
+                data = Releases.get_agg_diff_days("releases", period, enddate, i)
                 agg = dict(agg.items() + data.items())
             data = Releases.get_authors(period, startdate, enddate)
             agg = dict(agg.items() + data.items())
