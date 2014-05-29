@@ -182,15 +182,13 @@ class SCR(DataSource):
 
         else:
             # Tendencies
+            metrics_trends = ['submitted','merged','pending','abandoned','closed']
+
             for i in [7,30,365]:
-                period_data = GetSCRDiffSubmittedDays(period, enddate, i, identities_db)
-                agg = dict(agg.items() + period_data.items())
-                period_data = GetSCRDiffMergedDays(period, enddate, i, identities_db)
-                agg = dict(agg.items() + period_data.items())
-                period_data = GetSCRDiffPendingDays(period, enddate, i, identities_db)
-                agg = dict(agg.items() + period_data.items())
-                period_data = GetSCRDiffAbandonedDays(period, enddate, i, identities_db)
-                agg = dict(agg.items() + period_data.items())
+                for item in all_metrics:
+                    if item.id not in metrics_trends: continue
+                    period_data = item.get_agg_diff_days(enddate, i)
+                    agg = dict(agg.items() +  period_data.items())
 
             # number of filter items
             data = get_countries(period, startdate, enddate,identities_db, False)
