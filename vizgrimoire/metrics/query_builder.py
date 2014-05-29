@@ -756,6 +756,18 @@ class SCRQuery(DSQuery):
         # q = "SELECT revtime, changed_on FROM ("+q+") qrevs WHERE revtime>"+str(min_days_for_review)
         return (q)
 
+    def get_sql_last_change_for_issues_new(self):
+        # last changes for reviews. Removed added change status = NEW that is "artificial"
+        q_last_change = """
+            SELECT c.issue_id as issue_id,  max(c.id) as id
+            FROM changes c, issues i
+            WHERE c.issue_id = i.id and i.status='NEW' and field<>'status'
+            GROUP BY c.issue_id
+        """
+        return q_last_change
+
+
+
 class IRCQuery(DSQuery):
 
     def GetSQLRepositoriesFrom (self):
