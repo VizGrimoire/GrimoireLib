@@ -40,6 +40,16 @@ class IRC(DataSource):
     def get_name(): return "irc"
 
     @staticmethod
+    def get_date_init(startdate, enddate, identities_db, type_analysis):
+        """Get the date of the first activity in the data source"""
+        return GetInitDate (startdate, enddate, identities_db, type_analysis)
+
+    @staticmethod
+    def get_date_end(startdate, enddate, identities_db, type_analysis):
+        """Get the date of the last activity in the data source"""
+        return GetEndDate (startdate, enddate, identities_db, type_analysis)
+
+    @staticmethod
     def get_evolutionary_data (period, startdate, enddate, identities_db, filter_ = None):
         evol = {}
         if filter_ is not None:
@@ -180,6 +190,30 @@ class IRC(DataSource):
     @staticmethod
     def get_metrics_definition ():
         pass
+
+
+def GetDate (startdate, enddate, identities_db, type_analysis, type):
+    # date of submmitted issues (type= max or min)
+    if (type=="max"):
+        fields = " DATE_FORMAT (max(date), '%Y-%m-%d') as last_date"
+    else :
+        fields = " DATE_FORMAT (min(date), '%Y-%m-%d') as first_date"
+
+    tables = " irclog i " + GetIRCSQLReportFrom(identities_db, type_analysis)
+    filters = GetIRCSQLReportWhere(type_analysis)
+
+    q = BuildQuery(None, startdate, enddate, " i.date ", fields, tables, filters, False)
+    data = ExecuteQuery(q)
+    return(data)
+
+def GetInitDate (startdate, enddate, identities_db, type_analysis):
+    #Initial date of submitted issues
+    return(GetDate(startdate, enddate, identities_db, type_analysis, "min"))
+
+def GetEndDate (startdate, enddate, identities_db, type_analysis):
+    #End date of submitted issues
+    return(GetDate(startdate, enddate, identities_db, type_analysis, "max"))
+
 
 # SQL Metaqueries
 def GetIRCSQLRepositoriesFrom ():
