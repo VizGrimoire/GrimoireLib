@@ -55,6 +55,23 @@ class Sent(Metrics):
         return q
 
 
+class Senders(Metrics):
+    """Messages senders class for IRC channels"""
+    id = "senders"
+    name = "Message senders"
+    desc = "Number of message senders to IRC channels"
+    data_source = IRC
+
+    def __get_sql__(self, evolutionary):
+        fields = " COUNT(DISTINCT(nick)) AS senders "
+        tables = " irclog i " + self.db.GetSQLReportFrom(self.filters.type_analysis)
+        filters = self.db.GetSQLReportWhere(self.filters.type_analysis)
+        filters += " and type='COMMENT' "
+        q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
+                               self.filters.enddate, " date ", fields,
+                               tables, filters, evolutionary)
+        return q
+
 # Examples of use
 if __name__ == '__main__':
     filters = MetricFilters("week", "'2010-01-01'", "'2014-01-01'", ["company", "'Red Hat'"])
