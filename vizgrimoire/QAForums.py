@@ -422,8 +422,8 @@ class QAForums(DataSource):
     def get_filter_items(filter_, period, startdate, enddate, identities_db, bots):
         items = None
         filter_name = filter_.get_name()
-        
-        if (filter_name == "tag"):
+        print filter_name
+        if (filter_name == "repository"):
             items = QAForums.tags_name(startdate, enddate)
         else:
             logging.error(filter_name + "not supported")
