@@ -877,3 +877,182 @@ class MediawikiQuery(DSQuery):
 
     def GetSQLReportWhere (self, type_analysis):
         return ""
+
+
+class QAForumsQuery(DSQuery):
+    """ Specific query builders for question and answer platforms """
+
+    def GetSQLReportFrom(type_analysis):
+        # generic function to generate "from" clauses
+        # type_analysis contains two values: type of analysis (company, country...)
+        # and the value itself
+
+        #WARNING: if needed, identities_db is accessed as self.identities_db
+        tables = ""
+        report = ""
+        value = ""
+
+        if type_analysis is not None and len(type_analysis) == 2:
+            report = type_analysis[0]
+            value = type_analysis[1]
+
+        #TODO: repository needs to be change to tag, once this is accepted as new
+        #      data source in VizGrimoireJS-lib
+        if report == "repository":
+            tables = ", tags t, questionstags qt "
+
+        #rest of reports to be implemented
+
+        return tables
+
+    def GetSQLReportWhere(type_analysis, table):
+        # generic function to generate "where" clauses
+        # type_analysis contains two values: type of analysis (company, country...)
+        # and the value itself
+
+        shorttable = str(table[0])
+
+        #WARNING: if needed, identities_db is accessed as self.identities_db
+        where = ""
+        report = ""
+        value = ""
+
+        if type_analysis is not None and len(type_analysis) == 2:
+            report = type_analysis[0]
+            value = type_analysis[1]
+
+        #TODO: repository needs to be change to tag, once this is accepted as new
+        #      data source in VizGrimoireJS-lib
+        if report == "repository":
+            where = shorttable + ".question_identifier = qt.question_identifier and " +\
+                    " qt.tag_id = t.id and t.tag = " + value
+
+        return where
+  
+
+
+    def __get_date_field(table_name):
+        # the tables of the Sibyl tool are not coherent among them
+        #so we have different fields for the date of the different posts
+        if (table_name == "questions"):
+            return "added_at"
+        elif (table_name == "answers"):
+            return "submitted_on"
+        elif (table_name == "comments"):
+            return "submitted_on"
+        # FIXME add exceptions here
+
+    def __get_author_field(table_name):
+        # the tables of the Sibyl tool are not coherent among them
+        #so we have different fields for the author ids of the different posts
+        if (table_name == "questions"):
+            return "author_identifier"
+        elif (table_name == "answers"):
+            return "user_identifier"
+        elif (table_name == "comments"):
+            return "user_identifier"
+        # FIXME add exceptions here
+
+    def __get_metric_name(type_post, suffix):
+        metric_str = ""
+        if (type_post == "questions"):
+            metric_str = "q"
+        elif (type_post == "answers"):
+            metric_str = "a"
+        elif (type_post == "comments"):
+            metric_str = "c"
+        metric_str += suffix
+        #else: raise UnexpectedParameter
+        return metric_str
+
+    def get_sent(period, startdate, enddate, type_analysis, evolutionary,
+                 type_post = "questions"):
+        # type_post has to be "comment", "question", "answer"
+
+        date_field = self.__get_date_field(type_post)
+        date_field = " " + date_field + " "
+
+        if ( type_post == "questions"):
+            fields = " count(distinct(q.id)) as sent "
+            tables = " questions q " + self.GetSQLReportFrom(type_analysis)
+            filters = self.GetSQLReportWhere(type_analysis, "questions")
+        elif ( type_post == "answers"):
+            fields = " count(distinct(a.id)) as sent "
+            tables = " answers a " + self.GetSQLReportFrom(type_analysis)
+            filters = self.GetSQLReportWhere(type_analysis, "answers")
+        else:
+            fields = " count(distinct(c.id)) as sent "
+            tables = " comments c " + self.GetSQLReportFrom(type_analysis)
+            filters = self.GetSQLReportWhere(type_analysis, "comments")
+
+        q = self.BuildQuery(period, startdate, enddate, date_field, fields, tables, filters, evolutionary)
+
+        return q
+
+    def get_senders(period, startdate, enddate, type_analysis, evolutionary,
+                    type_post = "questions"):
+        table_name = type_post
+        date_field = self.__get_date_field(table_name)
+        author_field = self.__get_author_field(table_name)
+
+
+        if ( type_post == "questions"):
+            fields = " count(distinct(q.%s)) as senders " % (author_field)
+            tables = " questions q " + self.GetSQLReportFrom(type_analysis)
+            filters = self.GetSQLReportWhere(type_analysis, "questions")
+        elif ( type_post == "answers"):
+            fields = " count(distinct(a.%s)) as senders " % (author_field)
+            tables = " answers a " + self.GetSQLReportFrom(type_analysis)
+            filters = self.GetSQLReportWhere(type_analysis, "answers")
+        else:
+            fields = " count(distinct(c.%s)) as senders " % (author_field)
+            tables = " comments c " + self.GetSQLReportFrom(type_analysis)
+            filters = self.GetSQLReportWhere(type_analysis, "comments")
+
+
+        q = self.BuildQuery(period, startdate, enddate, date_field, fields, tables, filters, evolutionary)
+
+
+
+    def static_num_sent(period, startdate, enddate, type_analysis=[],
+                        type_post = "questions"):
+        table_name = type_post #type_post matches the name of the table
+        date_field = self.__get_date_field(table_name)
+        prefix_table = table_name[0]
+
+        fields = "SELECT count(distinct("+prefix_table+".id)) as sent, \
+        DATE_FORMAT (min(" + prefix_table + "." + date_field + "), '%Y-%m-%d') as first_date, \
+        DATE_FORMAT (max(" + prefix_table + "." + date_field + "), '%Y-%m-%d') as last_date "
+
+        tables = " FROM %s %s " % (table_name, prefix_table)
+        tables = tables + self.GetSQLReportFrom(type_analysis)
+
+        filters = "WHERE %s.%s >= %s AND %s.%s < %s " % (prefix_table, date_field, startdate, prefix_table, date_field, enddate)
+        extra_filters = self.GetSQLReportWhere(type_analysis, type_post)
+        if extra_filters <> "":
+            filters = filters + " and " + extra_filters
+
+        q = fields + tables + filters
+
+        return q
+
+    def static_num_senders(period, startdate, enddate, type_analysis=[],
+                           type_post = "questions"):
+        table_name = type_post #type_post matches the name of the table
+        date_field = self.__get_date_field(table_name)
+        author_field = self.__get_author_field(table_name)
+        prefix_table = table_name[0]
+
+        fields = "SELECT count(distinct(%s.%s)) as senders" % (prefix_table, author_field)
+        tables = " FROM %s %s " % (table_name, prefix_table)
+        tables = tables + self.GetSQLReportFrom(type_analysis)
+        filters = "WHERE %s.%s >= %s AND %s.%s < %s " % (prefix_table, date_field, startdate, prefix_table, date_field, enddate)
+        extra_filters = self.GetSQLReportWhere(type_analysis, type_post)
+        if extra_filters <> "":
+            filters = filters + " and " + extra_filters
+        q = fields + tables + filters
+
+        return q
+
+
+
