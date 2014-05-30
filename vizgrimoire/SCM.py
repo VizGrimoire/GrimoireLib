@@ -764,46 +764,6 @@ def GetCommunityMembers():
     data = ExecuteQuery(q)
     return(data['members'])
 
-def EvolCompanies (period, startdate, enddate):	
-    # Returns the evolution in the provided period of the number of total companies
-
-    fields = "count(distinct(upc.company_id)) as companies"
-    tables = " scmlog s, people_upeople pup, upeople_companies upc"
-    filters = "s.author_id = pup.people_id and "+\
-               "pup.upeople_id = upc.upeople_id and "+\
-               "s.date >= upc.init and  "+\
-               "s.date < upc.end"
-    q = GetSQLPeriod(period,'s.date', fields, tables, filters,
-                     startdate, enddate)
-
-    return(ExecuteQuery(q))
-
-
-def EvolCountries (period, startdate, enddate):	
-    # Returns the evolution in the provided period of the number of total countries
-
-    fields = "count(distinct(upc.country_id)) as countries"
-    tables = "scmlog s, people_upeople pup, upeople_countries upc"
-    filters = "s.author_id = pup.people_id and pup.upeople_id = upc.upeople_id"
-    q = GetSQLPeriod(period,'s.date', fields, tables, filters, 
-               startdate, enddate)
-
-    countries= ExecuteQuery(q)
-    return(countries)
-
-
-def EvolDomains (period, startdate, enddate):
-    # Returns the evolution in the provided period of the number of total domains
-
-    fields = "COUNT(DISTINCT(upd.domain_id)) AS domains"
-    tables = "scmlog s, people_upeople pup, upeople_domains upd"
-    filters = "s.author_id = pup.people_id and pup.upeople_id = upd.upeople_id"
-    q = GetSQLPeriod(period,'s.date', fields, tables, filters,
-            startdate, enddate)
-
-    domains= ExecuteQuery(q)
-    return(domains)
-
 def top_people (days, startdate, enddate, role, filters, limit) :
     # This function returns the 10 top people participating in the source code.
     # Dataset can be filtered by the affiliations, where specific companies
