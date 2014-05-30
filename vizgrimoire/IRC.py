@@ -54,7 +54,7 @@ class IRC(DataSource):
     def get_evolutionary_data (period, startdate, enddate, identities_db, filter_ = None):
         evol = {}
 
-        metrics_on = ['sent', 'senders']
+        metrics_on = ['sent', 'senders', 'repositories']
         type_analysis = None
         if filter_ is not None:
             type_analysis = [filter_.get_name(), filter_.get_item()]
@@ -63,21 +63,10 @@ class IRC(DataSource):
 
         for item in all_metrics:
             if item.id not in metrics_on: continue
+            item.filters = mfilter
+
             mvalue = item.get_ts()
             evol = dict(evol.items() + mvalue.items())
-
-        tevol = {}
-        if filter_ is not None:
-            type_analysis = [filter_.get_name(), filter_.get_item()]
-
-            if (filter_ == "repository"):
-                # evol = GetRepoEvolSentSendersIRC(filter_.get_item(), period, startdate, enddate)
-                tevol = GetEvolDataIRC (period, startdate, enddate, identities_db, type_analysis)
-                tevol = completePeriodIds(tevol, period, startdate, enddate)
-        else:
-            tevol = GetEvolDataIRC (period, startdate, enddate, identities_db, None)
-            tevol = completePeriodIds(tevol, period, startdate, enddate)
-        evol = dict(evol.items() + tevol.items())
 
         return evol
 
@@ -91,7 +80,7 @@ class IRC(DataSource):
     def get_agg_data (period, startdate, enddate, identities_db, filter_ = None):
         agg = {}
 
-        metrics_on = ['sent', 'senders']
+        metrics_on = ['sent', 'senders', 'repositories']
         type_analysis = None
         if filter_ is not None:
             type_analysis = [filter_.get_name(), filter_.get_item()]
@@ -115,19 +104,6 @@ class IRC(DataSource):
                 if item.id not in metrics_trends: continue
                 period_data = item.get_agg_diff_days(enddate, i)
                 agg = dict(agg.items() + period_data.items())
-
-        tagg = {}
-        if filter_ is not None:
-            filter_name = filter_.get_name()
-            item = filter_.get_item()
-
-            if (filter_name == "repository"):
-                tagg = GetRepoStaticSentSendersIRC(item, startdate, enddate)
-        else:
-            static_data = GetStaticDataIRC(period, startdate, enddate, identities_db, None)
-            tagg = dict(tagg.items() + static_data.items())
-
-        agg = dict(agg.items() + tagg.items())
 
         return agg
 
@@ -362,13 +338,12 @@ def GetIRCSQLReportWhere (type_analysis):
 def GetStaticDataIRC (period, startdate, enddate, i_db, type_analysis):
 
     # 1- Retrieving information
-    #sent = StaticNumSentIRC(period, startdate, enddate, i_db, type_analysis)
-    #senders = StaticNumSendersIRC(period, startdate, enddate, i_db, type_analysis)
+    sent = StaticNumSentIRC(period, startdate, enddate, i_db, type_analysis)
+    senders = StaticNumSendersIRC(period, startdate, enddate, i_db, type_analysis)
     repositories = StaticNumRepositoriesIRC(period, startdate	, enddate, i_db, type_analysis)
 
     # 2- Merging information
-    #static_data = dict(sent.items()+ senders.items()+ repositories.items())
-    static_data = dict(repositories.items())
+    static_data = dict(sent.items()+ senders.items()+ repositories.items())
 
     return (static_data)
 
@@ -376,16 +351,15 @@ def GetStaticDataIRC (period, startdate, enddate, i_db, type_analysis):
 def GetEvolDataIRC (period, startdate, enddate, i_db, type_analysis):
 
     # 1- Retrieving information
-    #sent = EvolSentIRC(period, startdate, enddate, i_db, type_analysis)
-    #sent = completePeriodIds(sent, period, startdate, enddate)
-    #senders = EvolSendersIRC(period, startdate, enddate, i_db, type_analysis)
-    #senders = completePeriodIds(senders, period, startdate, enddate)
+    sent = EvolSentIRC(period, startdate, enddate, i_db, type_analysis)
+    sent = completePeriodIds(sent, period, startdate, enddate)
+    senders = EvolSendersIRC(period, startdate, enddate, i_db, type_analysis)
+    senders = completePeriodIds(senders, period, startdate, enddate)
     repositories = EvolRepositoriesIRC(period, startdate, enddate, i_db, type_analysis)
     repositories = completePeriodIds(repositories, period, startdate, enddate)
 
     # 2- Merging information
-    #evol_data = dict(sent.items()+ senders.items()+ repositories.items())
-    evol_data = dict(repositories.items())
+    evol_data = dict(sent.items()+ senders.items()+ repositories.items())
 
     return (evol_data)
 
