@@ -294,8 +294,10 @@ class ITS(DataSource):
 
     @staticmethod
     def create_r_reports(vizr, enddate, destdir):
-        # Time to Close: Other backends not yet supported
-        vizr.ReportTimeToCloseITS(ITS._get_backend().its_type, destdir)
+        backend = ITS._get_backend().its_type
+        # Change name for R code
+        if (backend == "bg"): backend = "bugzilla"
+        vizr.ReportTimeToCloseITS(backend, destdir)
         unique_ids = True
 
         # Demographics
