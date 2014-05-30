@@ -31,6 +31,7 @@ import sys
 from GrimoireSQL import GetSQLGlobal, GetSQLPeriod
 from GrimoireSQL import ExecuteQuery, BuildQuery
 from GrimoireUtils import GetPercentageDiff, GetDates, completePeriodIds, getPeriod, createJSON, get_subprojects
+from metrics_filter import MetricFilters
 
 from data_source import DataSource
 import report
@@ -52,27 +53,32 @@ class MLS(DataSource):
     def get_name(): return "mls"
 
     @staticmethod
+    def get_date_init(startdate, enddate):
+        fields = "DATE_FORMAT(MIN(m.first_date),'%Y-%m-%d') AS first_date"
+        tables = "messages m"
+        filters = ""
+        q = GetSQLGlobal('m.first_date',fields, tables, filters, startdate, enddate)
+        return ExecuteQuery(q)
+
+    @staticmethod
+    def get_date_end(startdate, enddate):
+        fields = "DATE_FORMAT(MAX(m.first_date),'%Y-%m-%d') AS last_date"
+        tables = "messages m"
+        filters = ""
+        q = GetSQLGlobal('m.first_date',fields, tables, filters, startdate, enddate)
+        return ExecuteQuery(q)
+
+    @staticmethod
     def get_evolutionary_data (period, startdate, enddate, identities_db, filter_ = None):
         rfield = MLS.get_repo_field()
         evol = {}
 
-        if filter_ is not None:
+        rfield = MLS.get_repo_field()
+
+        type_analysis = None
+        if (filter_ is not None):
             type_analysis = [filter_.get_name(), "'"+filter_.get_item()+"'"]
-            data = EvolMLSInfo(period, startdate, enddate, identities_db, rfield, type_analysis)
-            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
-
-        else:
-            data = EvolMLSInfo(period, startdate, enddate, identities_db, rfield, None)
-            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
-
-            data  = EvolMLSCompanies(period, startdate, enddate, identities_db)
-            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
-
-            data = EvolMLSCountries(period, startdate, enddate, identities_db)
-            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
-
-            data = EvolMLSDomains(period, startdate, enddate, identities_db)
-            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
+        evol = EvolMLSInfo(period, startdate, enddate, identities_db, rfield, type_analysis)
 
         return evol
 
@@ -86,33 +92,10 @@ class MLS(DataSource):
     def get_agg_data (period, startdate, enddate, identities_db, filter_ = None):
         rfield = MLS.get_repo_field()
 
-
-        if (filter_ is None):
-            agg = StaticMLSInfo(period, startdate, enddate, identities_db, rfield, None)
-            # Tendencies
-            for i in [7,30,365]:
-                period_data = GetDiffSentDays(period, enddate, i)
-                agg = dict(agg.items() + period_data.items())
-                period_data = GetDiffSendersDays(period, enddate, i)
-                agg = dict(agg.items() + period_data.items())
-
-            # Last Activity: to be removed
-            for i in [7,14,30,60,90,180,365,730]:
-                period_activity = lastActivity(i)
-                agg = dict(agg.items() + period_activity.items())
-
-            data = AggMLSCompanies(period, startdate, enddate, identities_db)
-            agg = dict(agg.items() + data.items())
-
-            data = AggMLSCountries(period, startdate, enddate, identities_db)
-            agg = dict(agg.items() + data.items())
-
-            data = AggMLSDomains(period, startdate, enddate, identities_db)
-            agg = dict(agg.items() + data.items())
-
-        else:
+        type_analysis = None
+        if (filter_ is not None):
             type_analysis = [filter_.get_name(), "'"+filter_.get_item()+"'"]
-            agg = StaticMLSInfo(period, startdate, enddate, identities_db, rfield, type_analysis)
+        agg = StaticMLSInfo(period, startdate, enddate, identities_db, rfield, type_analysis)
 
         return agg
 
@@ -536,42 +519,38 @@ def GetMLSFiltersResponse () :
 
 def GetMLSInfo (period, startdate, enddate, identities_db, rfield, type_analysis, evolutionary):
 
-    if (evolutionary == True):
-        sent = EvolEmailsSent(period, startdate, enddate, identities_db, type_analysis)
-        sent = completePeriodIds(sent, period, startdate, enddate)
-        senders = EvolMLSSenders(period, startdate, enddate, identities_db, type_analysis)
-        senders = completePeriodIds(senders, period, startdate, enddate)
-        repositories = EvolMLSRepositories(rfield, period, startdate, enddate, identities_db, type_analysis)
-        repositories = completePeriodIds(repositories, period, startdate, enddate)
-        threads = EvolThreads(period, startdate, enddate, identities_db, type_analysis)
-        threads = completePeriodIds(threads, period, startdate, enddate)
-        sent_response = EvolMLSResponses(period, startdate, enddate, identities_db, type_analysis)
-        sent_response = completePeriodIds(sent_response, period, startdate, enddate)
-        senders_response = EvolMLSSendersResponse(period, startdate, enddate, identities_db, type_analysis)
-        senders_response = completePeriodIds(senders_response, period, startdate, enddate)
-        senders_init = EvolMLSSendersInit(period, startdate, enddate, identities_db, type_analysis)
-        senders_init = completePeriodIds(senders_init, period, startdate, enddate)
-    else:
-        sent = AggEmailsSent(period, startdate, enddate, identities_db, type_analysis)
-        senders = AggMLSSenders(period, startdate, enddate, identities_db, type_analysis)
-        repositories = AggMLSRepositories(rfield, period, startdate, enddate, identities_db, type_analysis)
-        threads = AggThreads(period, startdate, enddate, identities_db, type_analysis)
-        sent_response = AggMLSResponses(period, startdate, enddate, identities_db, type_analysis)
-        senders_response = AggMLSSendersResponse(period, startdate, enddate, identities_db, type_analysis)
-        senders_init = AggMLSSendersInit(period, startdate, enddate, identities_db, type_analysis)
+    data = {}
+    metrics_on = ['sent','senders','threads','sent_response','senders_response','senders_init','repositories']
+    metrics_reports = ['companies','countries','domains']
+    if type_analysis is None: metrics_on += metrics_reports
+    filter_ = MetricFilters(period, startdate, enddate, type_analysis)
+    all_metrics = MLS.get_metrics_set(MLS)
 
-        # Data from the last 365 days
-        fromdate = GetDates(enddate, 365)[1]
-        sent_365 = AggEmailsSent(period, fromdate, enddate, identities_db, type_analysis)
-        senders_365 = AggMLSSenders(period, fromdate, enddate, identities_db, type_analysis)
-        sent['sent_365'] = sent_365['sent']
-        senders['senders_365'] = senders_365['senders']
+    for item in all_metrics:
+        if item.id not in metrics_on: continue
+        item.filters = filter_
+        if (evolutionary):
+            mvalue = item.get_ts()
+        else:
+            mvalue = item.get_agg()
+        data = dict(data.items() + mvalue.items())
 
-    data = dict(sent.items() + senders.items()+ repositories.items())
-    data = dict(data.items() + threads.items()+ sent_response.items())
-    data = dict(data.items() + senders_response.items() + senders_init.items())
+    if not evolutionary:
+        init_date = MLS.get_date_init(startdate, enddate)
+        end_date = MLS.get_date_end(startdate, enddate)
+        data = dict(data.items() + init_date.items() + end_date.items())
 
-    return (data)
+        # Tendencies
+        metrics_trends = ['sent','senders']
+
+        for i in [7,30,365]:
+            for item in all_metrics:
+                if item.id not in metrics_trends: continue
+                period_data = item.get_agg_diff_days(enddate, i)
+                data = dict(data.items() +  period_data.items())
+    agg = data
+
+    return (agg)
 
 def EvolMLSInfo (period, startdate, enddate, identities_db, rfield, type_analysis = []):
     #Evolutionary info all merged in a dataframe
@@ -581,79 +560,6 @@ def StaticMLSInfo (period, startdate, enddate, identities_db, rfield, type_analy
     #Agg info all merged in a dataframe
     return(GetMLSInfo(period, startdate, enddate, identities_db, rfield, type_analysis, False))
 
-#########
-#Functions to obtain info per type of basic piece of data
-#########
-
-# All of the EvolXXX or StaticXXX contains the same parameters:
-#    period:
-#    startdate:
-#    enddate:
-#    identities_db: MySQL database name
-#    type_analysis: tuple with two values: typeof and value
-#                   typeof = 'companies', 'countries', 'repositories' or ''
-#                   value = any value that corresponds with the type of analysis
-
-
-# Emails Sent
-def GetEmailsSent (period, startdate, enddate, identities_db, type_analysis, evolutionary):
-    # Generic function that counts emails sent
-
-    if (evolutionary):
-        fields = " count(distinct(m.message_ID)) as sent "
-    else:
-        fields = " count(distinct(m.message_ID)) as sent, "+\
-                  " DATE_FORMAT (min(m.first_date), '%Y-%m-%d') as first_date, "+\
-                  " DATE_FORMAT (max(m.first_date), '%Y-%m-%d') as last_date "
-
-    tables = " messages m " + GetMLSSQLReportFrom(identities_db, type_analysis)
-    filters = GetMLSSQLReportWhere(type_analysis, identities_db)
-
-    q = BuildQuery(period, startdate, enddate, " m.first_date ", fields, tables, filters, evolutionary)
-    return(ExecuteQuery(q))
-
-def EvolEmailsSent (period, startdate, enddate, identities_db, type_analysis = []):
-    # Evolution of emails sent
-    return(GetEmailsSent(period, startdate, enddate, identities_db, type_analysis , True))
-
-
-def AggEmailsSent (period, startdate, enddate, identities_db, type_analysis = []):
-    # Aggregated number of emails sent
-    return(GetEmailsSent(period, startdate, enddate, identities_db, type_analysis, False))
-
-
-# People sending emails
-def GetMLSSenders (period, startdate, enddate, identities_db, type_analysis, evolutionary):
-    #Generic function that counts people sending messages
-
-    fields = " count(distinct(pup.upeople_id)) as senders "
-    tables = " messages m " + GetMLSSQLReportFrom(identities_db, type_analysis)
-    if (tables == " messages m "):
-        # basic case: it's needed to add unique ids filters
-        tables = tables + ", messages_people mp, people_upeople pup "
-        filters = GetMLSFiltersOwnUniqueIdsMLS()
-    else:
-        #not sure if this line is useful anymore...
-        filters = GetMLSSQLReportWhere(type_analysis, identities_db)
-
-    if (type_analysis and type_analysis[0] in ("repository", "project")):
-        #Adding people_upeople table
-        tables += ",  messages_people mp, people_upeople pup "
-        filters += " and m.message_ID = mp.message_id and "+\
-                   "mp.email_address = pup.people_id and "+\
-                   "mp.type_of_recipient=\'From\' "
-
-    q = BuildQuery(period, startdate, enddate, " m.first_date ", fields, tables, filters, evolutionary)
-    return(ExecuteQuery(q))
-
-
-def EvolMLSSenders (period, startdate, enddate, identities_db, type_analysis = []):
-    # Evolution of people sending emails
-    return(GetMLSSenders(period, startdate, enddate, identities_db, type_analysis , True))
-
-def AggMLSSenders (period, startdate, enddate, identities_db, type_analysis = []):
-    # Agg of people sending emails
-    return(GetMLSSenders(period, startdate, enddate, identities_db, type_analysis , False))
 
 def GetActiveSendersMLS(days, enddate):
     # FIXME parameters should be: startdate and enddate
@@ -678,202 +584,30 @@ def GetActivePeopleMLS(days, enddate):
         active_people = aux
     return(active_people)
 
-# People answering in a thread
+def GetEmailsSent (period, startdate, enddate, identities_db, type_analysis, evolutionary):
+    # Generic function that counts emails sent
 
-def GetMLSSendersResponse (period, startdate, enddate, identities_db, type_analysis, evolutionary):
-    #Generic function that counts people sending messages
-
-    fields = " count(distinct(pup.upeople_id)) as senders_response "
-    tables = " messages m " + GetMLSSQLReportFrom(identities_db, type_analysis)
-    if (tables == " messages m "):
-        # basic case: it's needed to add unique ids filters
-        tables += ", messages_people mp, people_upeople pup "
-        filters = GetMLSFiltersOwnUniqueIdsMLS()
+    if (evolutionary):
+        fields = " count(distinct(m.message_ID)) as sent "
     else:
-        filters = GetMLSSQLReportWhere(type_analysis, identities_db)
+        fields = " count(distinct(m.message_ID)) as sent, "+\
+                  " DATE_FORMAT (min(m.first_date), '%Y-%m-%d') as first_date, "+\
+                  " DATE_FORMAT (max(m.first_date), '%Y-%m-%d') as last_date "
 
-    if (type_analysis and type_analysis[0] in ("repository", "project")):
-        #Adding people_upeople table
-        tables += ",  messages_people mp, people_upeople pup "
-        filters += " and m.message_ID = mp.message_id and "+\
-                   "mp.email_address = pup.people_id and "+\
-                   "mp.type_of_recipient=\'From\' "
-    filters += " and m.is_response_of is not null "
-
-    q = BuildQuery(period, startdate, enddate, " m.first_date ", fields, tables, filters, evolutionary)
-    return(ExecuteQuery(q))
-
-
-def EvolMLSSendersResponse (period, startdate, enddate, identities_db, type_analysis = []):
-    # Evolution of people sending emails
-    return(GetMLSSendersResponse(period, startdate, enddate, identities_db, type_analysis , True))
-
-
-def AggMLSSendersResponse (period, startdate, enddate, identities_db, type_analysis = []):
-    # Agg of people sending emails
-    return(GetMLSSendersResponse(period, startdate, enddate, identities_db, type_analysis , False))
-
-
-# People starting threads
-
-def GetMLSSendersInit (period, startdate, enddate, identities_db, type_analysis, evolutionary):
-    #Generic function that counts people sending messages
-
-    fields = " count(distinct(pup.upeople_id)) as senders_init "
-    tables = " messages m " + GetMLSSQLReportFrom(identities_db, type_analysis)
-    if (tables == " messages m "):
-        # basic case: it's needed to add unique ids filters
-        tables += ", messages_people mp, people_upeople pup "
-        filters = GetMLSFiltersOwnUniqueIdsMLS()
-    else:
-        filters = GetMLSSQLReportWhere(type_analysis, identities_db)
-
-    if (type_analysis and type_analysis[0] in ("repository", "project")):
-        #Adding people_upeople table
-        tables += ",  messages_people mp, people_upeople pup "
-        filters += " and m.message_ID = mp.message_id and "+\
-                   " mp.email_address = pup.people_id and "+\
-                   " mp.type_of_recipient=\'From\' "
-    filters += " and m.is_response_of is null "
-
-    q = BuildQuery(period, startdate, enddate, " m.first_date ", fields, tables, filters, evolutionary)
-    return(ExecuteQuery(q))
-
-
-def EvolMLSSendersInit (period, startdate, enddate, identities_db, type_analysis = []):
-    # Evolution of people sending emails
-    return(GetMLSSendersInit(period, startdate, enddate, identities_db, type_analysis , True))
-
-
-def AggMLSSendersInit (period, startdate, enddate, identities_db, type_analysis = []):
-    # Agg of people sending emails
-    return(GetMLSSendersInit(period, startdate, enddate, identities_db, type_analysis , False))
-
-# Threads
-def GetThreads (period, startdate, enddate, identities_db, type_analysis, evolutionary):
-    # Generic function that counts threads
-
-    fields = " count(distinct(m.is_response_of)) as threads"
     tables = " messages m " + GetMLSSQLReportFrom(identities_db, type_analysis)
     filters = GetMLSSQLReportWhere(type_analysis, identities_db)
 
     q = BuildQuery(period, startdate, enddate, " m.first_date ", fields, tables, filters, evolutionary)
     return(ExecuteQuery(q))
 
+def EvolEmailsSent (period, startdate, enddate, identities_db, type_analysis = []):
+    # Evolution of emails sent
+    return(GetEmailsSent(period, startdate, enddate, identities_db, type_analysis , True))
 
-def EvolThreads (period, startdate, enddate, identities_db, type_analysis = []):
+
+def AggEmailsSent (period, startdate, enddate, identities_db, type_analysis = []):
     # Aggregated number of emails sent
-    return(GetThreads(period, startdate, enddate, identities_db, type_analysis, True))
-
-
-def AggThreads (period, startdate, enddate, identities_db, type_analysis = []):
-    # Aggregated number of emails sent
-    return(GetThreads(period, startdate, enddate, identities_db, type_analysis, False))
-
-# Repositories
-def GetMLSRepositories (rfield, period, startdate, enddate, identities_db, type_analysis, evolutionary):
-    # Generic function that counts threads
-
-    fields = " COUNT(DISTINCT(m."+rfield+")) AS repositories  "
-    tables = " messages m " + GetMLSSQLReportFrom(identities_db, type_analysis)
-    filters = GetMLSSQLReportWhere(type_analysis, identities_db)
-
-    q = BuildQuery(period, startdate, enddate, " m.first_date ", fields, tables, filters, evolutionary)
-    return(ExecuteQuery(q))
-
-
-def EvolMLSRepositories (rfield, period, startdate, enddate, identities_db, type_analysis = []):
-    # Aggregated number of emails sent
-    return(GetMLSRepositories(rfield, period, startdate, enddate, identities_db, type_analysis, True))
-
-
-def AggMLSRepositories (rfield, period, startdate, enddate, identities_db, type_analysis = []):
-    # Aggregated number of emails sent
-    return(GetMLSRepositories(rfield, period, startdate, enddate, identities_db, type_analysis, False))
-
-# Messages replying a thread
-def GetMLSResponses (period, startdate, enddate, identities_db, type_analysis, evolutionary):
-    # Generic function that counts replies
-
-    fields = " count(distinct(m.message_ID)) as sent_response"
-    tables = " messages m " + GetMLSSQLReportFrom(identities_db, type_analysis)
-    filters = GetMLSSQLReportWhere(type_analysis, identities_db) + " and m.is_response_of is not null "
-
-    q = BuildQuery(period, startdate, enddate, " m.first_date ", fields, tables, filters, evolutionary)
-    return(ExecuteQuery(q))
-
-def EvolMLSResponses (period, startdate, enddate, identities_db, type_analysis = []):
-    # Evol number of replies
-    return(GetMLSResponses(period, startdate, enddate, identities_db, type_analysis, True))
-
-def AggMLSResponses (period, startdate, enddate, identities_db, type_analysis = []):
-    # Aggregated number of emails replied
-    return(GetMLSResponses(period, startdate, enddate, identities_db, type_analysis, False))
-
-# Messages starting threads
-def GetMLSInit (period, startdate, enddate, identities_db, type_analysis, evolutionary):
-    # Generic function that counts replies
-
-    fields = " count(distinct(m.message_ID)) as sent_init"
-    tables = " messages m " + GetMLSSQLReportFrom(identities_db, type_analysis)
-    filters = GetMLSSQLReportWhere(type_analysis, identities_db) + " m.is_response_of is null "
-
-    q = BuildQuery(period, startdate, enddate, " m.first_date ", fields, tables, filters, evolutionary)
-    return(ExecuteQuery(q))
-
-def EvolMLSInit (period, startdate, enddate, identities_db, type_analysis = []):
-    # Evol number of messages starting a thread
-    return(GetMLSInit(period, startdate, enddate, identities_db, type_analysis, True))
-
-def AggMLSInit (period, startdate, enddate, identities_db, type_analysis = []):
-    # Aggregated number of emails starting a thread
-    return(GetMLSInit(period, startdate, enddate, identities_db, type_analysis, False))
-
-
-def GetMLSStudies (period, startdate, enddate, identities_db, type_analysis, evolutionary, study):
-    # Generic function that counts evolution/agg number of specific studies with similar
-    # database schema such as domains, companies and countries
-
-    fields = ' count(distinct(name)) as ' + study
-    tables = " messages m " + GetMLSSQLReportFrom(identities_db, type_analysis)
-    filters = GetMLSSQLReportWhere(type_analysis, identities_db) + " and m.is_response_of is null "
-
-    #Filtering last part of the query, not used in this case
-    #filters = gsub("and\n( )+(d|c|cou|com).name =.*$", "", filters)
-
-    q = BuildQuery(period, startdate, enddate, " m.first_date ", fields, tables, filters, evolutionary)
-    q = re.sub(r'(d|c|cou|com).name.*and', "", q)
-
-    data = ExecuteQuery(q)
-    return(data)
-
-
-def EvolMLSDomains (period, startdate, enddate, identities_db):
-    # Evol number of domains used
-    return(GetMLSStudies(period, startdate, enddate, identities_db, ['domain', ''], True, 'domains'))
-
-
-def EvolMLSCountries (period, startdate, enddate, identities_db):
-    # Evol number of countries
-    return(GetMLSStudies(period, startdate, enddate, identities_db, ['country', ''], True, 'countries'))
-
-
-def EvolMLSCompanies (period, startdate, enddate, identities_db):
-    # Evol number of companies
-    data = GetMLSStudies(period, startdate, enddate, identities_db, ['company', ''], True, 'companies')
-    return(data)
-
-def AggMLSDomains (period, startdate, enddate, identities_db):
-    # Agg number of domains
-    return(GetMLSStudies(period, startdate, enddate, identities_db, ['domain', ''], False, 'domains'))
-
-def AggMLSCountries (period, startdate, enddate, identities_db):
-    # Agg number of countries
-    return(GetMLSStudies(period, startdate, enddate, identities_db, ['country', ''], False, 'countries'))
-
-def AggMLSCompanies (period, startdate, enddate, identities_db):
-    # Agg number of companies
-    return(GetMLSStudies(period, startdate, enddate, identities_db, ['company', ''], False, 'companies'))
+    return(GetEmailsSent(period, startdate, enddate, identities_db, type_analysis, False))
 
 
 ####################
