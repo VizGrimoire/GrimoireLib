@@ -195,10 +195,6 @@ class SCM(DataSource):
             createJSON(evol_data, fn)
 
             agg = SCM.get_agg_data(period, startdate, enddate, identities_db, filter_item)
-            # Add tendencies for project filter
-            if filter_name in ("project"):
-                data = SCM.get_trends (period, enddate, identities_db, filter_item)
-                agg = dict(agg.items() + data.items())
             fn = os.path.join(destdir, filter_item.get_static_filename(SCM()))
             createJSON(agg, fn)
 
@@ -451,6 +447,7 @@ def GetSCMEvolutionaryData (period, startdate, enddate, i_db, type_analysis):
 
     data = {}
     metrics_on = ['commits','authors','committers','branches','files','lines','repositories']
+    # metrics_on += ['companies','countries','domains']
     filter_ = MetricFilters(period, startdate, enddate, type_analysis)
     all_metrics = SCM.get_metrics_set(SCM)
 
