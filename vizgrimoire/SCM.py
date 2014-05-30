@@ -32,6 +32,8 @@ from GrimoireUtils import GetPercentageDiff, GetDates, completePeriodIds
 from GrimoireUtils import createJSON, getPeriod, get_subprojects
 from data_source import DataSource
 from filter import Filter
+from metrics_filter import MetricFilters
+
 
 class SCM(DataSource):
     _metrics_set = []
@@ -43,6 +45,27 @@ class SCM(DataSource):
     @staticmethod
     def get_name():
         return "scm"
+
+    @staticmethod
+    def get_date_init(startdate, enddate):
+        fields = "DATE_FORMAT (min(s.date), '%Y-%m-%d') as first_date"
+        tables = "scmlog s"
+        filters = ""
+        q = GetSQLGlobal('s.date',fields, tables, filters, startdate, enddate)
+        return ExecuteQuery(q)
+
+    @staticmethod
+    def get_date_end(startdate, enddate):
+        fields = "DATE_FORMAT (max(s.date), '%Y-%m-%d') as last_date"
+        tables = "scmlog s"
+        filters = ""
+        q = GetSQLGlobal('s.date',fields, tables, filters, startdate, enddate)
+        return ExecuteQuery(q)
+
+    @staticmethod
+    def get_url():
+        return StaticURL()
+
 
     @staticmethod
     def get_evolutionary_data (period, startdate, enddate, identities_db, filter_ = None):
@@ -71,51 +94,17 @@ class SCM(DataSource):
         createJSON (data, os.path.join(destdir, filename))
 
     @staticmethod
-    def get_trends (period, enddate, identities_db, filter_= None):
-        trends = {}
-        type_analysis = None
-        if filter_ is not None: type_analysis = filter_.get_type_analysis()
-        # Tendencies
-        for i in [7,30,365]:
-            data = GetDiffCommitsDays(period, enddate, identities_db, i, type_analysis)
-            trends = dict(trends.items() + data.items())
-            data = GetDiffAuthorsDays(period, enddate, identities_db, i, type_analysis)
-            trends = dict(trends.items() + data.items())
-            data = GetDiffFilesDays(period, enddate, identities_db, i, type_analysis)
-            trends = dict(trends.items() + data.items())
-            data = GetDiffLinesDays(period, enddate, identities_db, i, type_analysis)
-            trends = dict(trends.items() + data.items())
-        return trends
-
-
-    @staticmethod
     def get_agg_data (period, startdate, enddate, identities_db, filter_= None):
 
 
         if (filter_ is None):
             agg  = GetSCMStaticData(period, startdate, enddate, identities_db, filter_)
-            static_url = StaticURL()
+
+            static_url = SCM.get_url()
             agg = dict(agg.items() + static_url.items())
-
-            data = evol_info_data_companies (startdate, enddate)
-            agg = dict(agg.items() + data.items())
-
-            data = evol_info_data_countries (startdate, enddate)
-            agg = dict(agg.items() + data.items())
-
-            data = evol_info_data_domains (startdate, enddate)
-            agg = dict(agg.items() + data.items())
 
             data = GetCodeCommunityStructure(period, startdate, enddate, identities_db)
             agg = dict(agg.items() + data.items())
-
-            data = SCM.get_trends (period, enddate, identities_db, filter_= None)
-            agg = dict(agg.items() + data.items())
-
-            # Last Activity: to be removed
-            for i in [7,14,30,60,90,180,365,730]:
-                data = last_activity(i)
-                agg = dict(agg.items() + data.items())
         else:
             type_analysis = [filter_.get_name(), "'"+filter_.get_item()+"'"]
 
@@ -481,48 +470,34 @@ def GetSCMStaticData (period, startdate, enddate, i_db, type_analysis):
     # Meta function that includes basic aggregated metrics from the source code
     # management system. Those are merged and returned.
 
-    # 1- Retrieving information
-    commits = StaticNumCommits(period, startdate, enddate, i_db, type_analysis)
-    authors = StaticNumAuthors(period, startdate, enddate, i_db, type_analysis)
-    committers = StaticNumCommitters(period, startdate, enddate, i_db, type_analysis)
-    files = StaticNumFiles(period, startdate, enddate, i_db, type_analysis)
-    branches = StaticNumBranches(period, startdate, enddate, i_db, type_analysis)
-    repositories = StaticNumRepositories(period, startdate, enddate, i_db, type_analysis)
-    actions = StaticNumActions(period, startdate, enddate, i_db, type_analysis)
-    lines = StaticNumLines(period, startdate, enddate, i_db, type_analysis)
-    avg_commits_period = StaticAvgCommitsPeriod(period, startdate, enddate, i_db, type_analysis)
-    avg_files_period = StaticAvgFilesPeriod(period, startdate, enddate, i_db, type_analysis)
-    avg_commits_author = StaticAvgCommitsAuthor(period, startdate, enddate, i_db, type_analysis)
-    # avg_authors_period = StaticAvgAuthorPeriod(period, startdate, enddate, i_db, type_analysis)
-    # avg_committer_period = StaticAvgCommitterPeriod(period, startdate, enddate, i_db, type_analysis)
-    avg_files_author = StaticAvgFilesAuthor(period, startdate, enddate, i_db, type_analysis)
+    data = {}
+    metrics_on = ['commits','authors','committers','branches','files','actions','lines','repositories']
+    metrics_on += ['avg_commits', 'avg_files', 'avg_commits_author', 'avg_files_author']
+    metrics_reports = ['companies','countries','domains']
+    if type_analysis is None: metrics_on += metrics_reports
+    filter_ = MetricFilters(period, startdate, enddate, type_analysis)
+    all_metrics = SCM.get_metrics_set(SCM)
 
-    # Data from the last 365 days
-    fromdate = GetDates(enddate, 365)[1]
-    commits_365 = StaticNumCommits(period, fromdate, enddate, i_db, type_analysis)
-    authors_365 = StaticNumAuthors(period, fromdate, enddate, i_db, type_analysis)
-    fromdate = GetDates(enddate, 30)[1]
-    commits_30 = StaticNumCommits(period, fromdate, enddate, i_db, type_analysis)
-    authors_30 = StaticNumAuthors(period, fromdate, enddate, i_db, type_analysis)
-    fromdate = GetDates(enddate, 7)[1]
-    commits_7 = StaticNumCommits(period, fromdate, enddate, i_db, type_analysis)
-    authors_7 = StaticNumAuthors(period, fromdate, enddate, i_db, type_analysis)
+    for item in all_metrics:
+        if item.id not in metrics_on: continue
+        item.filters = filter_
+        mvalue = item.get_agg()
+        data = dict(data.items() + mvalue.items())
 
+    init_date = SCM.get_date_init(startdate, enddate)
+    end_date = SCM.get_date_end(startdate, enddate)
+    data = dict(data.items() + init_date.items() + end_date.items())
 
-    # 2- Merging information
-    agg = dict(commits.items() + repositories.items() + committers.items())
-    agg = dict(agg.items() + authors.items() + files.items() + actions.items())
-    agg = dict(agg.items() + lines.items() + branches.items())
-    agg = dict(agg.items() + avg_commits_period.items() + avg_files_period.items())
-    agg = dict(agg.items() + avg_commits_author.items() + avg_files_author.items())
-    agg['commits_365'] = commits_365['commits']
-    agg['authors_365'] = authors_365['authors']
-    agg['commits_30'] = commits_30['commits']
-    agg['authors_30'] = authors_30['authors']
-    agg['commits_7'] = commits_7['commits']
-    agg['authors_7'] = authors_7['authors']
+    # Tendencies
+    metrics_trends = ['commits','authors','files','lines']
 
-    return (agg)
+    for i in [7,30,365]:
+        for item in all_metrics:
+            if item.id not in metrics_trends: continue
+            period_data = item.get_agg_diff_days(enddate, i)
+            data = dict(data.items() +  period_data.items())
+
+    return (data)
 
 ##########
 # Specific FROM and WHERE clauses per type of report
