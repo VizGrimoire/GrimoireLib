@@ -217,6 +217,8 @@ class Lines(Metrics):
         data['percentage_added_lines_'+str(days)] = GetPercentageDiff(prev_added, last_added)
         data['diff_netremoved_lines_'+str(days)] = last_removed - prev_removed
         data['percentage_removed_lines_'+str(days)] = GetPercentageDiff(prev_removed, last_removed)
+        data['added_lines_'+str(days)] = last_added
+        data['removed_lines_'+str(days)] = last_removed
 
         #Returning filters to their original value
         self.filters = filters
@@ -250,7 +252,7 @@ class Branches(Metrics):
 
 class Actions(Metrics):
     """ Actions metrics class for source code management system """
-    
+
     id = "actions"
     name = "Actions"
     desc = "Actions performed on several files (add, remove, copy, ... each file)"
@@ -273,18 +275,13 @@ class Actions(Metrics):
 class CommitsPeriod(Metrics):
     """ Commits per period class for source code management system """
 
-    #id = "avg_commits_" + self.filters.period
-    #name = "Average Commits per " + self.filters.period
-    #desc = "Average number of commits per " + self.filters.period
+    id = "avg_commits"
+    name = "Average Commits per period"
+    desc = "Average number of commits per period"
     data_source = SCM
 
     def __get_sql__(self, evolutionary):
         # Basic parts of the query needed when calculating commits per period
-
-        #TODO: the following three lines should be initialize in a __init__ method.
-        self.id = "avg_commits_" + self.filters.period
-        self.name = "Average Commits per " + self.filters.period
-        self.desc = "Average number of commits per " + self.filters.period
 
         fields = " count(distinct(s.id))/timestampdiff("+self.filters.period+",min(s.date),max(s.date)) as avg_commits_"+self.filters.period
         tables = " scmlog s, actions a "
@@ -306,18 +303,13 @@ class CommitsPeriod(Metrics):
 class FilesPeriod(Metrics):
     """ Files per period class for source code management system  """
 
-    #id = "avg_files_" + self.filters.period
-    #name = "Average Files per " + self.filters.period
-    #desc = "Average number of files per " + self.filters.period
+    id = "avg_files"
+    name = "Average Files per period"
+    desc = "Average number of files per period"
     data_source = SCM
 
     def __get_sql__(self, evolutionary):
         # Basic parts of the query needed when calculating commits per period
-
-        #TODO: the following three lines should be initialize in a __init__ method.
-        self.id = "avg_files_" + self.filters.period
-        self.name = "Average Files per " + self.filters.period
-        self.desc = "Average number of files per " + self.filters.period
 
         fields = " count(distinct(a.file_id))/timestampdiff("+self.filters.period+",min(s.date),max(s.date)) as avg_files_"+self.filters.period
         tables = " scmlog s, actions a "
@@ -501,6 +493,29 @@ class FilesAuthor(Metrics):
                                tables, filters, evolutionary)
         return q
 
+class Repositories(Metrics):
+    """ Number of repositories in the source code management system """
+    #TO BE REFACTORED
+
+    id = "repositories"
+    name = "Repositories"
+    desc = "Number of repositories in the source code management system"
+    data_source = SCM
+
+    def __get_sql__(self, evolutionary):
+        fields = "count(distinct(s.repository_id)) AS repositories "
+        tables = "scmlog s "
+
+        # specific parts of the query depending on the report needed
+        tables += self.db.GetSQLReportFrom(self.filters.type_analysis)
+        #TODO: left "author" as generic option coming from parameters (this should be specified by command line)
+        filters = self.db.GetSQLReportWhere(self.filters.type_analysis, "author")
+
+        q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
+                               self.filters.enddate, " s.date ", fields,
+                               tables, filters, evolutionary)
+        return q
+
 class Companies(Metrics):
     """ Companies participating in the source code management system """
     #TO BE REFACTORED
@@ -598,5 +613,3 @@ class Domains(Metrics):
             "  s.date >="+ self.filters.startdate+ " AND "+\
             "  s.date < "+ self.filters.enddate
         return self.db.ExecuteQuery(q)
-
-
