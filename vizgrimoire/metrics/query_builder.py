@@ -766,8 +766,6 @@ class SCRQuery(DSQuery):
         """
         return q_last_change
 
-
-
 class IRCQuery(DSQuery):
 
     def GetSQLRepositoriesFrom (self):
@@ -863,3 +861,19 @@ class IRCQuery(DSQuery):
         elif analysis == 'domain': where = self.GetSQLDomainsWhere(value)
 
         return (where)
+
+class MediawikiQuery(DSQuery):
+
+    def GetTablesOwnUniqueIds () :
+        tables = 'wiki_pages_revs, people_upeople pup'
+        return (tables)
+
+    def GetFiltersOwnUniqueIds () :
+        filters = 'pup.people_id = wiki_pages_revs.user'
+        return (filters) 
+
+    def GetSQLReportFrom (self, type_analysis):
+        return ""
+
+    def GetSQLReportWhere (self, type_analysis):
+        return ""
