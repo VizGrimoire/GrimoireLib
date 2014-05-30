@@ -52,13 +52,13 @@ class DataSource(object):
         raise NotImplementedError
 
     @staticmethod
-    def get_date_init():
-        """Get the date of the first activity in the data source"""
+    def get_date_init(startdate, enddate):
+        """Get the date of the first activity in the data source in the window time analysis """
         pass
 
     @staticmethod
-    def get_date_end():
-        """Get the date of the last activity in the data source"""
+    def get_date_end(startdate, enddate):
+        """Get the date of the last activity in the data source in the window time analysis """
         pass
 
     @staticmethod
