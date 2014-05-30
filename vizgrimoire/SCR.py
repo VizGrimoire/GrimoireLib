@@ -588,8 +588,7 @@ def get_projects_scr_name  (startdate, enddate, identities_db, limit = 0):
         type_analysis = ['project', project]
         period = None
         evol = False
-        reviews = GetReviews (period, startdate, enddate, "submitted",
-                              type_analysis, evol, identities_db)
+        reviews = SCR.get_metrics("submitted", SCR).get_agg()
         reviews = reviews['submitted']
         if (reviews > 0):
             data.append([reviews,project])
