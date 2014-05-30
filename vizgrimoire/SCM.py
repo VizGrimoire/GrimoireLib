@@ -78,13 +78,6 @@ class SCM(DataSource):
             data = GetSCMEvolutionaryData(period, startdate, enddate, identities_db, None)
             evol_data = completePeriodIds(data, period, startdate, enddate)
 
-            data = EvolCompanies(period, startdate, enddate)
-            evol_data = dict(evol_data.items() + completePeriodIds(data, period, startdate, enddate).items())
-            data = EvolCountries(period, startdate, enddate)
-            evol_data = dict(evol_data.items() + completePeriodIds(data, period, startdate, enddate).items())
-            data = EvolDomains(period, startdate, enddate)
-            evol_data = dict(evol_data.items() + completePeriodIds(data, period, startdate, enddate).items())
-
         return evol_data
 
     @staticmethod
@@ -447,7 +440,8 @@ def GetSCMEvolutionaryData (period, startdate, enddate, i_db, type_analysis):
 
     data = {}
     metrics_on = ['commits','authors','committers','branches','files','lines','repositories']
-    # metrics_on += ['companies','countries','domains']
+    if type_analysis is None:
+        metrics_on += ['companies','countries','domains']
     filter_ = MetricFilters(period, startdate, enddate, type_analysis)
     all_metrics = SCM.get_metrics_set(SCM)
 
