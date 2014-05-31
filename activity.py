@@ -127,6 +127,24 @@ class ActivityList:
 
         self.list = state
 
+def init_json():
+    """Initialize JSON encoder.
+
+    """
+
+    # Register datetime flattener for jsonpickle
+    jsonpickle.handlers.registry.register(datetime, DatetimeHandler)
+    # Select json module
+    jsonpickle.set_preferred_backend('json')
+    # Opetions for producing nice JSON
+    jsonpickle.set_encoder_options('json', sort_keys=True, indent=4,
+                                   separators=(',', ': '),
+                                   ensure_ascii=False,
+                                   encoding="utf8")
+
+# Ensure JSON encoder is properly intialized
+init_json()
+
 if __name__ == "__main__":
 
     import sys
@@ -135,14 +153,6 @@ if __name__ == "__main__":
     # (pipes confuse the interpreter, which sets codec to None)
     # http://stackoverflow.com/questions/492483/setting-the-correct-encoding-when-piping-stdout-in-python
     sys.stdout = codecs.getwriter('utf8')(sys.stdout)
-
-    # Register datetime flattener for jsonpickle
-    jsonpickle.handlers.registry.register(datetime, DatetimeHandler)
-    jsonpickle.set_preferred_backend('json')
-    jsonpickle.set_encoder_options('json', sort_keys=True, indent=4,
-                                   separators=(',', ': '),
-                                   ensure_ascii=False,
-                                   encoding="utf8")
 
     period = Period(datetime(2011,12,1), datetime(2012,11,1))
     print period
