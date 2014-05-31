@@ -23,28 +23,40 @@
 ##
 
 from datetime import datetime
-from activity import Period
+from activity import Period, ActivityList
+from sqlalchemy.util import KeyedTuple
 from json import loads
 from jsonpickle import encode
 import unittest
 
+def _equalJSON (jsonA, jsonB):
+    """Compare two json strings
+    
+    Returns a boolean with the result of the comparison.
+
+    Parameters
+    ----------
+
+    jsonA: string
+       First string to compare
+    jsonB: string
+       Second string to compare
+
+    Returns
+    -------
+
+    Boolean
+
+    """
+
+    return loads(jsonA) == loads(jsonB)
+
 class TestPeriod (unittest.TestCase):
     """Unit tests for class Period"""
 
-    def _assertEqualJSON (self, jsonA, jsonB):
-        """Compare two json strings
-
-        - jsonA (string): first string to compare
-        - jsonB (string): second string to compare
-
-        Returns a boolean with the result of the comparison
-        """
-
-        self.assertEqual (loads(jsonA), loads(jsonB))
-
-
     def test_period_json (self):
         """Test Period producing JSON"""
+
         correct_json = """
 {
     "end": "2012-11-01T00:00:00",
@@ -53,8 +65,37 @@ class TestPeriod (unittest.TestCase):
 """
         period = Period(datetime(2011,12,1), datetime(2012,11,1))
         period_json = encode(period, unpicklable=False)
-        self._assertEqualJSON (period_json, correct_json)
+        self.assertTrue( _equalJSON(period_json, correct_json))
 
+class TestActivityList (unittest.TestCase):
+    """Unit tests for class ActivityList"""
+
+    def test_activity_json (self):
+        """Test Period producing JSON"""
+
+        correct_json = """
+[[{"id": 12,
+   "name": "Fulano Larguiño"},
+  {"end": "2012-11-01T00:00:00",
+   "start": "2011-12-01T00:00:00"}],
+ [{"id": 3,
+   "name": "Mengana Corta"},
+  {"end": "2013-02-03T00:00:00",
+   "start": "2010-02-03T00:00:00"
+}]]
+"""
+
+        rowlabels = ["person_id", "name", "firstdate", "lastdate"]
+        list = ActivityList((KeyedTuple([12, "Fulano Larguiño",
+                                         datetime(2011,12,1),
+                                         datetime(2012,11,1)],
+                                        labels = rowlabels),
+                             KeyedTuple([3, "Mengana Corta",
+                                         datetime(2010,2,3),
+                                         datetime(2013,2,3)],
+                                        labels = rowlabels)))
+        activity_json = encode(list, unpicklable=False)
+        self.assertTrue( _equalJSON( activity_json, correct_json ))
 
 if __name__ == "__main__":
     unittest.main()
