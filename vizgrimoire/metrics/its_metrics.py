@@ -147,7 +147,28 @@ class Closers(Metrics):
     data_source = ITS
     envision = {"gtype" : "whiskers"}
 
-    def __get_sql__(self, evolutionary):
+    def __get_sql_trk_prj__(self, evolutionary):
+        closed_condition =  ITS._get_closed_condition()
+
+        tpeople_sql  = "SELECT  distinct(changed_by) as cpeople, changed_on  "
+        tpeople_sql += " FROM issues i, changes ch " + self.db.GetSQLReportFrom(self.db.identities_db, self.filters.type_analysis)
+        tpeople_sql += " WHERE i.id = ch.issue_id and " + closed_condition
+        filters_ext = self.db.GetSQLReportWhere(self.filters.type_analysis, self.db.identities_db)
+        if (filters_ext != ""):
+            tpeople_sql += " and " + filters_ext
+
+
+        fields = " count(distinct(upeople_id)) as closers "
+        tables = " people_upeople, (%s) tpeople " % (tpeople_sql)
+        filters = " tpeople.cpeople = people_upeople.people_id "
+
+        q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
+                               self.filters.enddate, " tpeople.changed_on ",
+                               fields, tables, filters, evolutionary)
+        return q
+
+
+    def __get_sql_default__(self, evolutionary):
         closed_condition =  ITS._get_closed_condition()
 
         fields = " count(distinct(pup.upeople_id)) as closers "
@@ -176,6 +197,11 @@ class Closers(Metrics):
                                fields, tables, filters, evolutionary)
         return q
 
+    def __get_sql__(self, evolutionary):
+        if (self.filters.type_analysis is not None and (self.filters.type_analysis[0] in  ["repository","project"])):
+            return self.__get_sql_trk_prj__(evolutionary)
+        else:
+            return self.__get_sql_default__(evolutionary)
 
 class Changed(Metrics):
     """ Tickets Changed metric class for issue tracking systems """
