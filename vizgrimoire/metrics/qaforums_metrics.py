@@ -40,17 +40,28 @@ from QAForums import QAForums
 
 
 class Questions(Metrics):
-    "Questions class"
+    """Questions class"""
 
     id = "qsent"
     name = "Questions"
     desc = "Questions found in the QA platform"
     data_source = QAForums
-
-    
+  
     def __get_sql__(self, evolutionary):
         return self.db.get_sent(self.filters.period, self.filters.startdate, self.filters.enddate,
                                  self.filters.type_analysis, evolutionary, "questions")
 
+
+class Answers(Metrics):
+    """Answers class"""
+
+    id = "asent"
+    name = "Answers"
+    desc = "Answers found in the QA platform"
+    data_source = QAForums
+
+    def __get_sql__(self, evolutionary):
+        return self.db.get_sent(self.filters.period, self.filters.startdate, self.filters.enddate,
+                                 self.filters.type_analysis, evolutionary, "answers")
 
 
