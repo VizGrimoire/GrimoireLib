@@ -882,7 +882,7 @@ class MediawikiQuery(DSQuery):
 class QAForumsQuery(DSQuery):
     """ Specific query builders for question and answer platforms """
 
-    def GetSQLReportFrom(type_analysis):
+    def GetSQLReportFrom(self, type_analysis):
         # generic function to generate "from" clauses
         # type_analysis contains two values: type of analysis (company, country...)
         # and the value itself
@@ -905,7 +905,7 @@ class QAForumsQuery(DSQuery):
 
         return tables
 
-    def GetSQLReportWhere(type_analysis, table):
+    def GetSQLReportWhere(self, type_analysis, table):
         # generic function to generate "where" clauses
         # type_analysis contains two values: type of analysis (company, country...)
         # and the value itself
@@ -931,7 +931,7 @@ class QAForumsQuery(DSQuery):
   
 
 
-    def __get_date_field(table_name):
+    def __get_date_field(self, table_name):
         # the tables of the Sibyl tool are not coherent among them
         #so we have different fields for the date of the different posts
         if (table_name == "questions"):
@@ -942,7 +942,7 @@ class QAForumsQuery(DSQuery):
             return "submitted_on"
         # FIXME add exceptions here
 
-    def __get_author_field(table_name):
+    def __get_author_field(self, table_name):
         # the tables of the Sibyl tool are not coherent among them
         #so we have different fields for the author ids of the different posts
         if (table_name == "questions"):
@@ -953,7 +953,7 @@ class QAForumsQuery(DSQuery):
             return "user_identifier"
         # FIXME add exceptions here
 
-    def __get_metric_name(type_post, suffix):
+    def __get_metric_name(self, type_post, suffix):
         metric_str = ""
         if (type_post == "questions"):
             metric_str = "q"
@@ -965,7 +965,7 @@ class QAForumsQuery(DSQuery):
         #else: raise UnexpectedParameter
         return metric_str
 
-    def get_sent(period, startdate, enddate, type_analysis, evolutionary,
+    def get_sent(self, period, startdate, enddate, type_analysis, evolutionary,
                  type_post = "questions"):
         # type_post has to be "comment", "question", "answer"
 
@@ -973,15 +973,15 @@ class QAForumsQuery(DSQuery):
         date_field = " " + date_field + " "
 
         if ( type_post == "questions"):
-            fields = " count(distinct(q.id)) as sent "
+            fields = " count(distinct(q.id)) as qsent "
             tables = " questions q " + self.GetSQLReportFrom(type_analysis)
             filters = self.GetSQLReportWhere(type_analysis, "questions")
         elif ( type_post == "answers"):
-            fields = " count(distinct(a.id)) as sent "
+            fields = " count(distinct(a.id)) as asent "
             tables = " answers a " + self.GetSQLReportFrom(type_analysis)
             filters = self.GetSQLReportWhere(type_analysis, "answers")
         else:
-            fields = " count(distinct(c.id)) as sent "
+            fields = " count(distinct(c.id)) as csent "
             tables = " comments c " + self.GetSQLReportFrom(type_analysis)
             filters = self.GetSQLReportWhere(type_analysis, "comments")
 
@@ -989,7 +989,7 @@ class QAForumsQuery(DSQuery):
 
         return q
 
-    def get_senders(period, startdate, enddate, type_analysis, evolutionary,
+    def get_senders(self, period, startdate, enddate, type_analysis, evolutionary,
                     type_post = "questions"):
         table_name = type_post
         date_field = self.__get_date_field(table_name)
@@ -997,15 +997,15 @@ class QAForumsQuery(DSQuery):
 
 
         if ( type_post == "questions"):
-            fields = " count(distinct(q.%s)) as senders " % (author_field)
+            fields = " count(distinct(q.%s)) as qsenders " % (author_field)
             tables = " questions q " + self.GetSQLReportFrom(type_analysis)
             filters = self.GetSQLReportWhere(type_analysis, "questions")
         elif ( type_post == "answers"):
-            fields = " count(distinct(a.%s)) as senders " % (author_field)
+            fields = " count(distinct(a.%s)) as asenders " % (author_field)
             tables = " answers a " + self.GetSQLReportFrom(type_analysis)
             filters = self.GetSQLReportWhere(type_analysis, "answers")
         else:
-            fields = " count(distinct(c.%s)) as senders " % (author_field)
+            fields = " count(distinct(c.%s)) as csenders " % (author_field)
             tables = " comments c " + self.GetSQLReportFrom(type_analysis)
             filters = self.GetSQLReportWhere(type_analysis, "comments")
 
@@ -1014,13 +1014,20 @@ class QAForumsQuery(DSQuery):
 
 
 
-    def static_num_sent(period, startdate, enddate, type_analysis=[],
+    def static_num_sent(self, period, startdate, enddate, type_analysis=[],
                         type_post = "questions"):
         table_name = type_post #type_post matches the name of the table
         date_field = self.__get_date_field(table_name)
         prefix_table = table_name[0]
 
-        fields = "SELECT count(distinct("+prefix_table+".id)) as sent, \
+        if type_post == "questions":
+            metric_name = "qsent"
+        if type_post == "answers":
+            metric_name = "asent"
+        if type_post == "comments":
+            metric_name = "csent"
+
+        fields = "SELECT count(distinct("+prefix_table+".id)) as "+metric_name+", \
         DATE_FORMAT (min(" + prefix_table + "." + date_field + "), '%Y-%m-%d') as first_date, \
         DATE_FORMAT (max(" + prefix_table + "." + date_field + "), '%Y-%m-%d') as last_date "
 
@@ -1036,14 +1043,21 @@ class QAForumsQuery(DSQuery):
 
         return q
 
-    def static_num_senders(period, startdate, enddate, type_analysis=[],
+    def static_num_senders(self, period, startdate, enddate, type_analysis=[],
                            type_post = "questions"):
         table_name = type_post #type_post matches the name of the table
         date_field = self.__get_date_field(table_name)
         author_field = self.__get_author_field(table_name)
         prefix_table = table_name[0]
 
-        fields = "SELECT count(distinct(%s.%s)) as senders" % (prefix_table, author_field)
+        if type_post == "questions":
+            metric_name = "qsenders"
+        if type_post == "answers":
+            metric_name = "asenders"
+        if type_post == "comments":
+            metric_name = "csenders"
+
+        fields = "SELECT count(distinct(%s.%s)) as %s" % (prefix_table, author_field, metric_name)
         tables = " FROM %s %s " % (table_name, prefix_table)
         tables = tables + self.GetSQLReportFrom(type_analysis)
         filters = "WHERE %s.%s >= %s AND %s.%s < %s " % (prefix_table, date_field, startdate, prefix_table, date_field, enddate)
