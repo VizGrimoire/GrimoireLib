@@ -41,7 +41,7 @@ def connect(database):
    host = 'localhost'
    try:
       db =  MySQLdb.connect(host,user,password,database)
-      return db.cursor()
+      return db
    except:
       print("Database connection error")
 
@@ -151,7 +151,8 @@ def insert_in_company(connector, developer, company):
 
 def main(database, domain_map):
 
-   connector = connect(database)
+   db = connect(database)
+   connector = db.cursor()
    domains, companies = get_domains(domain_map)
    print domains
    print companies
@@ -172,6 +173,8 @@ def main(database, domain_map):
                print "Developer inserted..."
             if answer == 'n':
                print "Developer not inserted..."
+   db.commit()
+   db.close()
 
 
 if __name__ == "__main__":main(sys.argv[1], sys.argv[2])
