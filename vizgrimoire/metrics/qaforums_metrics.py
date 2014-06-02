@@ -91,5 +91,15 @@ class QuestionSenders(Metrics):
                                  self.filters.type_analysis, evolutionary, "questions")
        
 
+class AnswerSenders(Metrics):
+    """AnswerSenders class"""
 
+    id = "asenders"
+    name = "Answer Senders"
+    desc = "People sending answers in the QA platform"
+    data_source = QAForums
+
+    def __get_sql__(self, evolutionary):
+        return self.db.get_senders(self.filters.period, self.filters.startdate, self.filters.enddate,
+                                 self.filters.type_analysis, evolutionary, "answers")
 
