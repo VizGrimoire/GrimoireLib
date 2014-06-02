@@ -103,3 +103,16 @@ class AnswerSenders(Metrics):
         return self.db.get_senders(self.filters.period, self.filters.startdate, self.filters.enddate,
                                  self.filters.type_analysis, evolutionary, "answers")
 
+
+class CommentSenders(Metrics):
+    """CommentSenders class"""
+
+    id = "csenders"
+    name = "Comment Senders"
+    desc = "People commenting in questions or answers in the QA platform"
+    data_source = QAForums
+
+    def __get_sql__(self, evolutionary):
+        return self.db.get_senders(self.filters.period, self.filters.startdate, self.filters.enddate,
+                                 self.filters.type_analysis, evolutionary, "comments")
+
