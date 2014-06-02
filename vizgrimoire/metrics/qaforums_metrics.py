@@ -65,3 +65,18 @@ class Answers(Metrics):
                                  self.filters.type_analysis, evolutionary, "answers")
 
 
+class Comments(Metrics):
+    """Comments class"""
+
+    id = "csent"
+    name = "Comments"
+    desc = "Comments found in the QA platform"
+    data_source = QAForums
+
+    def __get_sql__(self, evolutionary):
+        return self.db.get_sent(self.filters.period, self.filters.startdate, self.filters.enddate,
+                                 self.filters.type_analysis, evolutionary, "comments")
+
+
+
+
