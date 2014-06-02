@@ -92,7 +92,31 @@ class Closed(Metrics):
     desc = "Number of closed tickets"
     data_source = ITS
 
-    def __get_sql__(self, evolutionary):
+    def __get_sql_trk_prj__(self, evolutionary):
+        """ First get the issues filtered and then join with changes. Optimization for projects and trackers """
+
+        issues_sql = "SELECT  i.id as id "
+        issues_sql += "FROM issues i " + self.db.GetSQLReportFrom(self.db.identities_db, self.filters.type_analysis)
+        filters_ext = self.db.GetSQLReportWhere(self.filters.type_analysis, self.db.identities_db)
+        if (filters_ext != ""):
+            issues_sql += " WHERE " + filters_ext
+                    #Action needed to replace issues filters by changes one
+        issues_sql = issues_sql.replace("i.submitted", "ch.changed")
+
+
+        closed_condition =  ITS._get_closed_condition()
+        fields = " count(distinct(t.id)) as closed "
+        tables = " changes ch LEFT JOIN (%s) t ON t.id = ch.issue_id" % (issues_sql)
+        filters = closed_condition
+
+        q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
+                               self.filters.enddate, " ch.changed_on ",
+                               fields, tables, filters, evolutionary)
+        return q
+
+
+    def __get_sql_default__(self, evolutionary):
+        """ Default SQL for closed. Valid for all filters """
         closed_condition =  ITS._get_closed_condition()
         fields = " count(distinct(i.id)) as closed "
         tables = " issues i, changes ch " + self.db.GetSQLReportFrom(self.db.identities_db, self.filters.type_analysis)
@@ -107,6 +131,12 @@ class Closed(Metrics):
                                self.filters.enddate, " ch.changed_on ",
                                fields, tables, filters, evolutionary)
         return q
+
+    def __get_sql__(self, evolutionary):
+        if (self.filters.type_analysis is not None and (self.filters.type_analysis[0] in  ["repository","project"])):
+            return self.__get_sql_trk_prj__(evolutionary)
+        else:
+            return self.__get_sql_default__(evolutionary)
 
 #closers
 class Closers(Metrics):
