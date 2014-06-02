@@ -78,5 +78,18 @@ class Comments(Metrics):
                                  self.filters.type_analysis, evolutionary, "comments")
 
 
+class QuestionSenders(Metrics):
+    """QuestionsSenders class"""
+
+    id = "qsenders"
+    name = "Question Senders"
+    desc = "People asking questions in the QA platform"
+    data_source = QAForums
+
+    def __get_sql__(self, evolutionary):
+        return self.db.get_senders(self.filters.period, self.filters.startdate, self.filters.enddate,
+                                 self.filters.type_analysis, evolutionary, "questions")
+       
+
 
 
