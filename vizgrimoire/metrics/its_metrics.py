@@ -63,7 +63,26 @@ class Openers(Metrics):
     envision =  {"gtype" : "whiskers"}
     data_source = ITS
 
-    def __get_sql__(self, evolutionary):
+    def __get_sql_trk_prj__(self, evolutionary):
+
+        tpeople_sql  = "SELECT  distinct(submitted_by) as submitted_by, submitted_on  "
+        tpeople_sql += " FROM issues i " + self.db.GetSQLReportFrom(self.db.identities_db, self.filters.type_analysis)
+        filters_ext = self.db.GetSQLReportWhere(self.filters.type_analysis, self.db.identities_db)
+        if (filters_ext != ""):
+            tpeople_sql += " WHERE " + filters_ext
+
+
+        fields = " count(distinct(upeople_id)) as openers "
+        tables = " people_upeople pup, (%s) tpeople " % (tpeople_sql)
+        filters = " tpeople.submitted_by = pup.people_id "
+
+        q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
+                               self.filters.enddate, " tpeople.submitted_on ",
+                               fields, tables, filters, evolutionary)
+        return q
+
+
+    def __get_sql_default__(self, evolutionary):
         """ This function returns the evolution or agg number of people opening issues """
         fields = " count(distinct(pup.upeople_id)) as openers "
         tables = " issues i " + self.db.GetSQLReportFrom(self.db.identities_db, self.filters.type_analysis)
@@ -83,6 +102,13 @@ class Openers(Metrics):
                                self.filters.enddate, " submitted_on ",
                                fields, tables, filters, evolutionary)
         return q
+
+    def __get_sql__(self, evolutionary):
+        if (self.filters.type_analysis is not None and (self.filters.type_analysis[0] in  ["repository","project"])):
+            return self.__get_sql_trk_prj__(evolutionary)
+        else:
+            return self.__get_sql_default__(evolutionary)
+
 
 #closed
 class Closed(Metrics):
