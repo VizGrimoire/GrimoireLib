@@ -64,7 +64,7 @@ class Openers(Metrics):
     data_source = ITS
 
     def __get_sql_trk_prj__(self, evolutionary):
-
+        """ First we get the submitters then join with unique identities """
         tpeople_sql  = "SELECT  distinct(submitted_by) as submitted_by, submitted_on  "
         tpeople_sql += " FROM issues i " + self.db.GetSQLReportFrom(self.db.identities_db, self.filters.type_analysis)
         filters_ext = self.db.GetSQLReportWhere(self.filters.type_analysis, self.db.identities_db)
