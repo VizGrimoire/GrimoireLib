@@ -67,7 +67,7 @@ class SCR(DataSource):
             metrics_on += metrics_patches
             metrics_on += metrics_reports
         # people
-        metrics_on += ['openers','reviewers']
+        metrics_on += ['submitters','reviewers']
 
         type_analysis = None
         if filter_ is not None:
@@ -108,7 +108,7 @@ class SCR(DataSource):
             metrics_on += metrics_patches
             metrics_on += metrics_reports
         # people
-        metrics_on += ['openers','reviewers']
+        metrics_on += ['submitters','reviewers']
 
         mfilter = MetricFilters(period, startdate, enddate, type_analysis)
         all_metrics = SCR.get_metrics_set(SCR)
@@ -120,7 +120,7 @@ class SCR(DataSource):
             agg = dict(agg.items() + mvalue.items())
 
         # Tendencies
-        metrics_trends = ['submitted','merged','pending','abandoned','closed']
+        metrics_trends = ['submitted','merged','pending','abandoned','closed','submitters']
         for i in [7,30,365]:
             for item in all_metrics:
                 if item.id not in metrics_trends: continue
