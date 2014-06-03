@@ -26,7 +26,7 @@ from GrimoireUtils import GetPercentageDiff, GetDates, completePeriodIds, create
 from data_source import DataSource
 
 
-class Releases(DataSource):
+class ReleasesDS(DataSource):
     """Data source representing project releases"""
     _metrics_set = []
 
@@ -92,19 +92,19 @@ class Releases(DataSource):
     def get_evolutionary_data (period, startdate, enddate, i_db, type_analysis = None):
         evol = {}
 
-        data = Releases.get_authors(period, startdate, enddate, True)
+        data = ReleasesDS.get_authors(period, startdate, enddate, True)
         evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
-        data = Releases.get_modules(period, startdate, enddate, True)
+        data = ReleasesDS.get_modules(period, startdate, enddate, True)
         evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
-        data = Releases.get_releases(period, startdate, enddate, True)
+        data = ReleasesDS.get_releases(period, startdate, enddate, True)
         evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
 
         return evol
  
     @staticmethod
     def create_evolutionary_report (period, startdate, enddate, destdir, i_db, type_analysis = None):
-        data =  Releases.get_evolutionary_data (period, startdate, enddate, i_db, type_analysis)
-        filename = Releases().get_evolutionary_filename()
+        data =  ReleasesDS.get_evolutionary_data (period, startdate, enddate, i_db, type_analysis)
+        filename = ReleasesDS().get_evolutionary_filename()
         createJSON (data, os.path.join(destdir, filename))
 
     @staticmethod
@@ -113,14 +113,14 @@ class Releases(DataSource):
         chardates = GetDates(date, days)
 
         if metric == "authors":
-            prev = Releases.get_authors(period, chardates[2], chardates[1])
-            last = Releases.get_authors(period, chardates[1], chardates[0])
+            prev = ReleasesDS.get_authors(period, chardates[2], chardates[1])
+            last = ReleasesDS.get_authors(period, chardates[1], chardates[0])
         elif metric == "releases":
-            prev = Releases.get_releases(period, chardates[2], chardates[1])
-            last = Releases.get_releases(period, chardates[1], chardates[0])
+            prev = ReleasesDS.get_releases(period, chardates[2], chardates[1])
+            last = ReleasesDS.get_releases(period, chardates[1], chardates[0])
         elif metric == "modules":
-            prev = Releases.get_modules(period, chardates[2], chardates[1])
-            last = Releases.get_modules(period, chardates[1], chardates[0])
+            prev = ReleasesDS.get_modules(period, chardates[2], chardates[1])
+            last = ReleasesDS.get_modules(period, chardates[1], chardates[0])
 
         last = int(last[metric])
         prev = int(prev[metric])
@@ -140,30 +140,30 @@ class Releases(DataSource):
         # Trends
         if (filter_ is None):
             for i in [7,30,365]:
-                data = Releases.get_agg_diff_days("authors", period, enddate, i)
+                data = ReleasesDS.get_agg_diff_days("authors", period, enddate, i)
                 agg = dict(agg.items() + data.items())
-                data = Releases.get_agg_diff_days("modules", period, enddate, i)
+                data = ReleasesDS.get_agg_diff_days("modules", period, enddate, i)
                 agg = dict(agg.items() + data.items())
-                data = Releases.get_agg_diff_days("releases", period, enddate, i)
+                data = ReleasesDS.get_agg_diff_days("releases", period, enddate, i)
                 agg = dict(agg.items() + data.items())
-            data = Releases.get_authors(period, startdate, enddate)
+            data = ReleasesDS.get_authors(period, startdate, enddate)
             agg = dict(agg.items() + data.items())
-            data = Releases.get_modules(period, startdate, enddate)
+            data = ReleasesDS.get_modules(period, startdate, enddate)
             agg = dict(agg.items() + data.items())
-            data = Releases.get_releases(period, startdate, enddate)
+            data = ReleasesDS.get_releases(period, startdate, enddate)
             agg = dict(agg.items() + data.items())
 
-            agg["init_date"] = Releases.get_date_init()['date']
-            agg["last_date"] = Releases.get_date_end()['date']
+            agg["init_date"] = ReleasesDS.get_date_init()['date']
+            agg["last_date"] = ReleasesDS.get_date_end()['date']
 
         else:
-            logging.warn("Releases does not support filters yet.")
+            logging.warn("ReleasesDS does not support filters yet.")
         return agg
 
     @staticmethod
     def create_agg_report (period, startdate, enddate, destdir, i_db, type_analysis = None):
-        data = Releases.get_agg_data (period, startdate, enddate, i_db, type_analysis)
-        filename = Releases().get_agg_filename()
+        data = ReleasesDS.get_agg_data (period, startdate, enddate, i_db, type_analysis)
+        filename = ReleasesDS().get_agg_filename()
         createJSON (data, os.path.join(destdir, filename))
 
     @staticmethod
@@ -185,19 +185,19 @@ class Releases(DataSource):
 
     @staticmethod
     def get_top_data (startdate, enddate, identities_db, filter_, npeople):
-        bots = Releases.get_bots()
+        bots = ReleasesDS.get_bots()
 
         top_authors = {}
-        top_authors['authors.'] = Releases.get_top_authors(0, startdate, enddate, identities_db, bots, npeople)
-        top_authors['authors.last month']= Releases.get_top_authors(31, startdate, enddate, identities_db, bots, npeople)
-        top_authors['authors.last year']= Releases.get_top_authors(365, startdate, enddate, identities_db, bots, npeople)
+        top_authors['authors.'] = ReleasesDS.get_top_authors(0, startdate, enddate, identities_db, bots, npeople)
+        top_authors['authors.last month']= ReleasesDS.get_top_authors(31, startdate, enddate, identities_db, bots, npeople)
+        top_authors['authors.last year']= ReleasesDS.get_top_authors(365, startdate, enddate, identities_db, bots, npeople)
 
         return(top_authors)
 
     @staticmethod
     def create_top_report (startdate, enddate, destdir, npeople, i_db):
-        data = Releases.get_top_data (startdate, enddate, i_db, None, npeople)
-        top_file = destdir+"/"+Releases().get_top_filename()
+        data = ReleasesDS.get_top_data (startdate, enddate, i_db, None, npeople)
+        top_file = destdir+"/"+ReleasesDS().get_top_filename()
         createJSON (data, top_file)
 
     @staticmethod
@@ -205,18 +205,18 @@ class Releases(DataSource):
         items = None
         filter_name = filter_.get_name()
 
-        logging.error("Releases " + filter_name + " not supported")
+        logging.error("ReleasesDS " + filter_name + " not supported")
         return items
 
     @staticmethod
     def create_filter_report(filter_, period, startdate, enddate, destdir, npeople, identities_db, bots):
-        items = Releases.get_filter_items(filter_, startdate, enddate, identities_db, bots)
+        items = ReleasesDS.get_filter_items(filter_, startdate, enddate, identities_db, bots)
         if (items == None): return
 
     @staticmethod
     def get_top_people(startdate, enddate, identities_db, npeople):
 
-        top_data = Releases.get_top_data (startdate, enddate, identities_db, None, npeople)
+        top_data = ReleasesDS.get_top_data (startdate, enddate, identities_db, None, npeople)
 
         top = top_data['authors.']["id"]
         top += top_data['authors.last year']["id"]
@@ -235,12 +235,12 @@ class Releases(DataSource):
 
     @staticmethod
     def get_person_evol(upeople_id, period, startdate, enddate, identities_db, type_analysis):
-        q = Releases._get_people_sql (upeople_id, period, startdate, enddate, True)
+        q = ReleasesDS._get_people_sql (upeople_id, period, startdate, enddate, True)
         return completePeriodIds(ExecuteQuery(q), period, startdate, enddate)
 
     @staticmethod
     def get_person_agg(upeople_id, startdate, enddate, identities_db, type_analysis):
-        q = Releases._get_people_sql (upeople_id, None, startdate, enddate, False)
+        q = ReleasesDS._get_people_sql (upeople_id, None, startdate, enddate, False)
         return ExecuteQuery(q)
 
     @staticmethod
@@ -250,3 +250,8 @@ class Releases(DataSource):
     @staticmethod
     def get_metrics_definition ():
         pass
+
+    @staticmethod
+    def get_query_builder ():
+        from query_builder import ReleasesDSQuery
+        return ReleasesDSQuery
