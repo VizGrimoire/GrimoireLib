@@ -57,3 +57,23 @@ class Downloads(Metrics):
         return query
 
 
+class Packages(Metrics):
+    """ Number of downloaded packages """
+
+    id = "packages"
+    name = "Packages"
+    desc = "Number of downloaded packages"
+    data_source = Downloads
+
+    def __get_sql__(self, evolutionary):
+        fields = "count(distinct(package)) as packages"
+        tables = "downloads"
+        filters = ""
+
+        query = self.db.BuildQuery(self.filters.period, self.filters.startdate,   
+                                      self.filters.enddate, " date ", fields, tables,
+                                      filters, evolutionary)
+        return query
+
+
+
