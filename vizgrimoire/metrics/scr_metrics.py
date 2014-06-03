@@ -430,6 +430,7 @@ class Closers(Metrics):
     def __get_sql__(self, evolutionary):
         pass
 
+# Pretty similar to ITS openers
 class Openers(Metrics):
     id = "openers"
     name = "Openers"
@@ -437,8 +438,53 @@ class Openers(Metrics):
     data_source = SCR
     action = "opened"
 
+    def __get_sql_trk_prj__(self, evolutionary):
+        """ First we get the submitters then join with unique identities """
+        tpeople_sql  = "SELECT  distinct(submitted_by) as submitted_by, submitted_on  "
+        tpeople_sql += " FROM issues i " + self.db.GetSQLReportFrom(self.db.identities_db, self.filters.type_analysis)
+        filters_ext = self.db.GetSQLReportWhere(self.filters.type_analysis, self.db.identities_db) 
+        if (filters_ext != ""):
+            # Hack: remove "and "
+            filters_ext = filters_ext[4:]
+            tpeople_sql += " WHERE " + filters_ext
+
+
+        fields = " count(distinct(upeople_id)) as openers "
+        tables = " people_upeople pup, (%s) tpeople " % (tpeople_sql)
+        filters = " tpeople.submitted_by = pup.people_id "
+
+        q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
+                               self.filters.enddate, " tpeople.submitted_on ",
+                               fields, tables, filters, evolutionary)
+        return q
+
+
+    def __get_sql_default__(self, evolutionary):
+        """ This function returns the evolution or agg number of people opening issues """
+        fields = " count(distinct(pup.upeople_id)) as openers "
+        tables = " issues i " + self.db.GetSQLReportFrom(self.db.identities_db, self.filters.type_analysis)
+        filters = self.db.GetSQLReportWhere(self.filters.type_analysis, self.db.identities_db)
+
+        if (self.filters.type_analysis is None or len (self.filters.type_analysis) != 2) :
+            #Specific case for the basic option where people_upeople table is needed
+            #and not taken into account in the initial part of the query
+            tables += ", people_upeople pup"
+            filters += " and i.submitted_by = pup.people_id"
+        elif (self.filters.type_analysis[0] == "repository" or self.filters.type_analysis[0] == "project"):
+            #Adding people_upeople table
+            tables += ", people_upeople pup"
+            filters += " and i.submitted_by = pup.people_id "
+
+        q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
+                               self.filters.enddate, " submitted_on ",
+                               fields, tables, filters, evolutionary)
+        return q
+
     def __get_sql__(self, evolutionary):
-        pass
+        if (self.filters.type_analysis is not None and (self.filters.type_analysis[0] in  ["repository","project"])):
+            return self.__get_sql_trk_prj__(evolutionary)
+        else:
+            return self.__get_sql_default__(evolutionary)
 
 class TimeToReview(Metrics):
     id = "review_time"
