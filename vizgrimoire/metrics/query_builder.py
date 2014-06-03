@@ -1071,7 +1071,7 @@ class QAForumsQuery(DSQuery):
         return q
 
 
-class DownloadsQuery(DSQuery):
+class DownloadsDSQuery(DSQuery):
     """ Specific query builders for downloads """
 
     pass

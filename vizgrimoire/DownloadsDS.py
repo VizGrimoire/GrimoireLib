@@ -33,7 +33,7 @@ from GrimoireUtils import completePeriodIds, createJSON
 from data_source import DataSource
 
 
-class Downloads(DataSource):
+class DownloadsDS(DataSource):
     _metrics_set = []
 
     @staticmethod
@@ -55,8 +55,8 @@ class Downloads(DataSource):
 
     @staticmethod
     def create_evolutionary_report (period, startdate, enddate, destdir, i_db, type_analysis = None):
-        data =  Downloads.get_evolutionary_data (period, startdate, enddate, i_db, type_analysis)
-        filename = Downloads().get_evolutionary_filename()
+        data =  DownloadsDS.get_evolutionary_data (period, startdate, enddate, i_db, type_analysis)
+        filename = DownloadsDS().get_evolutionary_filename()
         createJSON (data, os.path.join(destdir, filename))
 
     @staticmethod
@@ -71,14 +71,14 @@ class Downloads(DataSource):
             ips = AggIPs(period, startdate, enddate)
             agg = dict(downloads.items() + packages.items() + protocols.items() + ips.items())
         else:
-            logging.warn("Downloads does not support filters.")
+            logging.warn("DownloadsDS does not support filters.")
 
         return agg
 
     @staticmethod
     def create_agg_report (period, startdate, enddate, destdir, i_db, type_analysis = None):
-        data = Downloads.get_agg_data (period, startdate, enddate, i_db, type_analysis)
-        filename = Downloads().get_agg_filename()
+        data = DownloadsDS.get_agg_data (period, startdate, enddate, i_db, type_analysis)
+        filename = DownloadsDS().get_agg_filename()
         createJSON (data, os.path.join(destdir, filename))
 
     @staticmethod
@@ -91,8 +91,8 @@ class Downloads(DataSource):
 
     @staticmethod
     def create_top_report (startdate, enddate, destdir, npeople, i_db):
-        data = Downloads.get_top_data (startdate, enddate, i_db, None, npeople)
-        top_file = destdir+"/"+Downloads().get_top_filename()
+        data = DownloadsDS.get_top_data (startdate, enddate, i_db, None, npeople)
+        top_file = destdir+"/"+DownloadsDS().get_top_filename()
         createJSON (data, top_file)
 
     @staticmethod
@@ -100,12 +100,12 @@ class Downloads(DataSource):
         items = None
         filter_name = filter_.get_name()
 
-        logging.error("Downloads " + filter_name + " not supported")
+        logging.error("DownloadsDS " + filter_name + " not supported")
         return items
 
     @staticmethod
     def create_filter_report(filter_, period, startdate, enddate, destdir, npeople, identities_db, bots):
-        items = Downloads.get_filter_items(filter_, startdate, enddate, identities_db, bots)
+        items = DownloadsDS.get_filter_items(filter_, startdate, enddate, identities_db, bots)
         if (items == None): return
 
     @staticmethod
@@ -128,6 +128,10 @@ class Downloads(DataSource):
     def get_metrics_definition ():
         pass
 
+    @staticmethod
+    def get_query_builder ():
+        from query_builder import DownloadsDSQuery
+        return DownloadsDSQuery
 
 def GetDownloads(period, startdate, enddate, evolutionary):
     # Generic function to obtain number of downloads 

@@ -33,9 +33,9 @@ from metrics import Metrics
 
 from metrics_filter import MetricFilters
 
-from query_builder import DownloadsQuery
+from query_builder import DownloadsDSQuery
 
-from Downloads import Downloads
+from DownloadsDS import DownloadsDS
 
 
 class Downloads(Metrics):
@@ -44,7 +44,7 @@ class Downloads(Metrics):
     id = "downloads"
     name = "Downloads"
     desc = "Number of total downloads"
-    data_source = Downloads
+    data_source = DownloadsDS
 
     def __get_sql__(self, evolutionary):
         fields = "count(*) as downloads"
@@ -63,7 +63,7 @@ class Packages(Metrics):
     id = "packages"
     name = "Packages"
     desc = "Number of downloaded packages"
-    data_source = Downloads
+    data_source = DownloadsDS
 
     def __get_sql__(self, evolutionary):
         fields = "count(distinct(package)) as packages"
@@ -82,7 +82,7 @@ class Protocols(Metrics):
     id = "protocols"
     name = "Protocols"
     desc = "Number of protocols used to download packages """
-    data_source = Downloads
+    data_source = DownloadsDS
 
     def __get_sql__(self, evolutionary):
         fields = "count(distinct(protocol)) as protocols"
@@ -101,7 +101,7 @@ class IPs(Metrics):
     id = "ips"
     name = "IPs"
     desc = "Number of IPs downloading packages """
-    data_source = Downloads
+    data_source = DownloadsDS
 
     def __get_sql__(self, evolutionary):
         fields = "count(distinct(ip)) as ips"
