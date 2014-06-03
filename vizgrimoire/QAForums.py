@@ -424,7 +424,7 @@ class QAForums(DataSource):
         return data
 
     @staticmethod
-    def get_filter_items(filter_, period, startdate, enddate, identities_db, bots):
+    def get_filter_items(filter_, startdate, enddate, identities_db, bots):
         items = None
         filter_name = filter_.get_name()
         #TODO: repository needs to be change to tag, once this is accepted as new
@@ -446,7 +446,7 @@ class QAForums(DataSource):
 
     @staticmethod
     def create_filter_report(filter_, period, startdate, enddate, destdir, npeople, identities_db, bots):
-        items =  QAForums.get_filter_items(filter_, period, startdate, enddate, identities_db, bots)
+        items =  QAForums.get_filter_items(filter_, startdate, enddate, identities_db, bots)
         if items == None:
             return
         items = items['name']
