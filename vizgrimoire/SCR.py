@@ -67,7 +67,7 @@ class SCR(DataSource):
             metrics_on += metrics_patches
             metrics_on += metrics_reports
         # people
-        metrics_on += ['reviewers']
+        metrics_on += ['openers','reviewers']
 
         type_analysis = None
         if filter_ is not None:
@@ -108,7 +108,7 @@ class SCR(DataSource):
             metrics_on += metrics_patches
             metrics_on += metrics_reports
         # people
-        metrics_on += ['reviewers']
+        metrics_on += ['openers','reviewers']
 
         mfilter = MetricFilters(period, startdate, enddate, type_analysis)
         all_metrics = SCR.get_metrics_set(SCR)
