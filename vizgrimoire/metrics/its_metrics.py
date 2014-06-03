@@ -118,7 +118,43 @@ class Closed(Metrics):
     desc = "Number of closed tickets"
     data_source = ITS
 
-    def __get_sql_trk_prj__(self, evolutionary):
+    def __get_sql__(self, evolutionary):
+        """ Implemented using Changed """
+        close = True
+        changed = ITS.get_metrics("changed", ITS)
+        cfilters = changed.filters
+        changed.filters = self.filters
+        q = changed.__get_sql__(evolutionary, close)
+        changed.filters = cfilters
+        return q
+
+#closers
+class Closers(Metrics):
+    """ Tickets Closers metric class for issue tracking systems """
+    id = "closers"
+    name = "Tickets closers"
+    desc = "Number of persons closing tickets"
+    data_source = ITS
+    envision = {"gtype" : "whiskers"}
+
+    def __get_sql__(self, evolutionary):
+        """ Implemented using Changers """
+        close = True
+        changers = ITS.get_metrics("changers", ITS)
+        cfilters = changers.filters
+        changers.filters = self.filters
+        q = changers.__get_sql__(evolutionary, close)
+        changers.filters = cfilters
+        return q
+
+class Changed(Metrics):
+    """ Tickets Changed metric class for issue tracking systems. Also supports closed metric. """
+    id = "changed"
+    name = "Tickets changed"
+    desc = "Number of changes to the state of tickets"
+    data_source = ITS
+
+    def __get_sql_trk_prj__(self, evolutionary, close = False):
         """ First get the issues filtered and then join with changes. Optimization for projects and trackers """
 
         issues_sql = "SELECT  i.id as id "
@@ -130,10 +166,15 @@ class Closed(Metrics):
         issues_sql = issues_sql.replace("i.submitted", "ch.changed")
 
 
-        closed_condition =  ITS._get_closed_condition()
-        fields = " count(distinct(t.id)) as closed "
+        # closed_condition =  ITS._get_closed_condition()
+        fields = " count(distinct(t.id)) as changed "
         tables = " changes ch LEFT JOIN (%s) t ON t.id = ch.issue_id" % (issues_sql)
-        filters = closed_condition
+
+        filters = ""
+        if close:
+            closed_condition =  ITS._get_closed_condition()
+            fields = " count(distinct(t.id)) as closed "
+            filters += closed_condition
 
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                self.filters.enddate, " ch.changed_on ",
@@ -141,12 +182,17 @@ class Closed(Metrics):
         return q
 
 
-    def __get_sql_default__(self, evolutionary):
-        """ Default SQL for closed. Valid for all filters """
-        closed_condition =  ITS._get_closed_condition()
-        fields = " count(distinct(i.id)) as closed "
+    def __get_sql_default__(self, evolutionary, close = False):
+        """ Default SQL for changed. Valid for all filters """
+        fields = " count(distinct(i.id)) as changed "
         tables = " issues i, changes ch " + self.db.GetSQLReportFrom(self.db.identities_db, self.filters.type_analysis)
-        filters = " i.id = ch.issue_id and " + closed_condition
+        filters = " i.id = ch.issue_id "
+
+        if close:
+            closed_condition =  ITS._get_closed_condition()
+            fields = " count(distinct(i.id)) as closed "
+            filters += " AND " + closed_condition
+
         filters_ext = self.db.GetSQLReportWhere(self.filters.type_analysis, self.db.identities_db)
         if (filters_ext != ""):
             filters += " and " + filters_ext
@@ -158,35 +204,41 @@ class Closed(Metrics):
                                fields, tables, filters, evolutionary)
         return q
 
-    def __get_sql__(self, evolutionary):
+    def __get_sql__(self, evolutionary, close = False):
         if (self.filters.type_analysis is not None and (self.filters.type_analysis[0] in  ["repository","project"])):
-            return self.__get_sql_trk_prj__(evolutionary)
+            return self.__get_sql_trk_prj__(evolutionary, close)
         else:
-            return self.__get_sql_default__(evolutionary)
+            return self.__get_sql_default__(evolutionary, close)
 
-#closers
-class Closers(Metrics):
-    """ Tickets Closers metric class for issue tracking systems """
-    id = "closers"
-    name = "Tickets closers"
-    desc = "Number of persons closing tickets"
+class Changers(Metrics):
+    """ Tickets Changers metric class for issue tracking systems """
+    id = "changers"
+    name = "Tickets changers"
+    desc = "Number of persons changing the state of tickets"
     data_source = ITS
-    envision = {"gtype" : "whiskers"}
 
-    def __get_sql_trk_prj__(self, evolutionary):
-        closed_condition =  ITS._get_closed_condition()
+    def __get_sql_trk_prj__(self, evolutionary, close = False):
+        # First get changers and then join with people_upeople
 
         tpeople_sql  = "SELECT  distinct(changed_by) as cpeople, changed_on  "
         tpeople_sql += " FROM issues i, changes ch " + self.db.GetSQLReportFrom(self.db.identities_db, self.filters.type_analysis)
-        tpeople_sql += " WHERE i.id = ch.issue_id and " + closed_condition
+        tpeople_sql += " WHERE i.id = ch.issue_id "
+        if close:
+            closed_condition =  ITS._get_closed_condition()
+            tpeople_sql += " AND " + closed_condition
+
+
         filters_ext = self.db.GetSQLReportWhere(self.filters.type_analysis, self.db.identities_db)
         if (filters_ext != ""):
             tpeople_sql += " and " + filters_ext
 
 
-        fields = " count(distinct(upeople_id)) as closers "
+        fields = " count(distinct(upeople_id)) as changers "
         tables = " people_upeople, (%s) tpeople " % (tpeople_sql)
         filters = " tpeople.cpeople = people_upeople.people_id "
+        if close:
+            fields = " count(distinct(upeople_id)) as closers "
+
 
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                self.filters.enddate, " tpeople.changed_on ",
@@ -194,13 +246,16 @@ class Closers(Metrics):
         return q
 
 
-    def __get_sql_default__(self, evolutionary):
-        closed_condition =  ITS._get_closed_condition()
+    def __get_sql_default__(self, evolutionary, close = False):
+        # closed_condition =  ITS._get_closed_condition()
 
-        fields = " count(distinct(pup.upeople_id)) as closers "
-        tables = " issues i, changes ch " + self.db.GetSQLReportFrom(self.db.identities_db, self.filters.type_analysis)
-        #closed condition filters
-        filters = " i.id = ch.issue_id and " + closed_condition
+        fields = " count(distinct(pup.upeople_id)) as changers "
+        tables = " issues i, changes ch " + self.db.GetSQLReportFrom(self.db.identities_db, self.filters.type_analysis) 
+        if close:
+            fields = " count(distinct(pup.upeople_id)) as closers "
+            closed_condition =  ITS._get_closed_condition()
+            filters += " AND " + closed_condition
+        filters = " i.id = ch.issue_id and "
         filters_ext = self.db.GetSQLReportWhere(self.filters.type_analysis, self.db.identities_db)
         if (filters_ext != ""):
             filters += " and " + filters_ext
@@ -223,48 +278,13 @@ class Closers(Metrics):
                                fields, tables, filters, evolutionary)
         return q
 
-    def __get_sql__(self, evolutionary):
+    def __get_sql__(self, evolutionary, close = False):
         if (self.filters.type_analysis is not None and (self.filters.type_analysis[0] in  ["repository","project"])):
-            return self.__get_sql_trk_prj__(evolutionary)
+            return self.__get_sql_trk_prj__(evolutionary, close)
         else:
-            return self.__get_sql_default__(evolutionary)
+            return self.__get_sql_default__(evolutionary, close)
 
-class Changed(Metrics):
-    """ Tickets Changed metric class for issue tracking systems """
-    id = "changed"
-    name = "Tickets changed"
-    desc = "Number of changes to the state of tickets"
-    data_source = ITS
-
-    def __get_sql__(self, evolutionary):
-        #This function returns the evolution or agg number of changed issues
-        #This function can be also reproduced using the Backlog function.
-        #However this function is less time expensive.
-        fields = " count(distinct(ch.issue_id)) as changed "
-        tables = " issues i, changes ch " + self.db.GetSQLReportFrom(self.db.identities_db, self.filters.type_analysis)
-
-        filters = " i.id = ch.issue_id "
-        filters_ext = self.db.GetSQLReportWhere(self.filters.type_analysis, self.db.identities_db)
-        if (filters_ext != ""):
-            filters += " and " + filters_ext
-
-        #Action needed to replace issues filters by changes one
-        filters = filters.replace("i.submitted", "ch.changed")
-
-        q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
-                               self.filters.enddate, " ch.changed_on ",
-                               fields, tables, filters, evolutionary)
-
-        return q
-
-class Changers(Metrics):
-    """ Tickets Changers metric class for issue tracking systems """
-    id = "changers"
-    name = "Tickets changers"
-    desc = "Number of persons changing the state of tickets"
-    data_source = ITS
-
-    def __get_sql__(self, evolutionary):
+    def __get_sql_old__(self, evolutionary):
         #This function returns the evolution or agg number of changed issues
         #This function can be also reproduced using the Backlog function.
         #However this function is less time expensive.
