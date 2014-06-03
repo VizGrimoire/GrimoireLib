@@ -928,8 +928,6 @@ class QAForumsQuery(DSQuery):
                     " qt.tag_id = t.id and t.tag = " + value
 
         return where
-  
-
 
     def __get_date_field(self, table_name):
         # the tables of the Sibyl tool are not coherent among them
@@ -1076,3 +1074,6 @@ class DownloadsDSQuery(DSQuery):
 
     pass
 
+class ReleasesDSQuery(DSQuery):
+    """ Specific query builders for downloads """
+    pass
