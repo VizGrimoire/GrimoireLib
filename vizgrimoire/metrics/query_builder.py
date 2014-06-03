@@ -1012,6 +1012,8 @@ class QAForumsQuery(DSQuery):
 
         q = self.BuildQuery(period, startdate, enddate, date_field, fields, tables, filters, evolutionary)
 
+        return q
+
 
 
     def static_num_sent(self, period, startdate, enddate, type_analysis=[],
@@ -1069,4 +1071,8 @@ class QAForumsQuery(DSQuery):
         return q
 
 
+class DownloadsQuery(DSQuery):
+    """ Specific query builders for downloads """
+
+    pass
 
