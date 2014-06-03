@@ -152,7 +152,6 @@ class QAForums(DataSource):
             filters = filters + " and " + extra_filters
 
         q = fields + tables + filters
-        print q
         return(ExecuteQuery(q))
 
     @staticmethod
@@ -434,9 +433,9 @@ class QAForums(DataSource):
             items = QAForums.tags_name(startdate, enddate)
         else:
             logging.error(filter_name + "not supported")
-        
+
         return items
-       
+
     @staticmethod
     def get_top_people(startdate, enddate, identities_db, npeople):
         return []
@@ -459,7 +458,6 @@ class QAForums(DataSource):
 
         fn = os.path.join(destdir, filter_.get_filename(QAForums()))
         createJSON(items, fn)
-        print items
         for item in items:
             logging.info(item)
             filter_item = Filter(filter_.get_name(), item)
@@ -473,11 +471,16 @@ class QAForums(DataSource):
             createJSON(agg, fn)
 
     @staticmethod
+    def get_query_builder ():
+        from query_builder import QAForumsQuery
+        return QAForumsQuery
+
+    @staticmethod
     def GetSQLReportFrom(identities_db, type_analysis):
         # generic function to generate "from" clauses
         # type_analysis contains two values: type of analysis (company, country...)
         # and the value itself
-       
+
         tables = ""
         report = ""
         value = ""
@@ -490,7 +493,7 @@ class QAForums(DataSource):
         #      data source in VizGrimoireJS-lib
         if report == "repository":
             tables = ", tags t, questionstags qt "
-        
+
         #rest of reports to be implemented
 
         return tables
