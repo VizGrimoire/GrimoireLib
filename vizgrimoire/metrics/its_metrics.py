@@ -251,11 +251,11 @@ class Changers(Metrics):
 
         fields = " count(distinct(pup.upeople_id)) as changers "
         tables = " issues i, changes ch " + self.db.GetSQLReportFrom(self.db.identities_db, self.filters.type_analysis) 
+        filters = " i.id = ch.issue_id "
         if close:
             fields = " count(distinct(pup.upeople_id)) as closers "
             closed_condition =  ITS._get_closed_condition()
             filters += " AND " + closed_condition
-        filters = " i.id = ch.issue_id and "
         filters_ext = self.db.GetSQLReportWhere(self.filters.type_analysis, self.db.identities_db)
         if (filters_ext != ""):
             filters += " and " + filters_ext
