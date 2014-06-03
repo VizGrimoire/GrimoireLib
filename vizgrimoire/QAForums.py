@@ -419,7 +419,7 @@ class QAForums(DataSource):
                          q.added_at < %s
                    group by t.tag 
                    having total > 20
-                   order by total desc;""" % (startdate, enddate)
+                   order by total desc, name;""" % (startdate, enddate)
         data = ExecuteQuery(query)
         return data
 
