@@ -94,3 +94,22 @@ class Protocols(Metrics):
                                       filters, evolutionary)
         return query
 
+
+class IPs(Metrics):
+    """ Number of IPs downloading packages """
+
+    id = "ips"
+    name = "IPs"
+    desc = "Number of IPs downloading packages """
+    data_source = Downloads
+
+    def __get_sql__(self, evolutionary):
+        fields = "count(distinct(ip)) as ips"
+        tables = "downloads"
+        filters = ""
+
+        query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
+                                      self.filters.enddate, " date ", fields, tables,
+                                      filters, evolutionary)
+        return query
+
