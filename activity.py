@@ -48,6 +48,11 @@ class Period:
         end: datetime.datetime
            End of the period
 
+        Attributes
+        ----------
+
+        Same as parameters
+
         """
 
         self.start = start
@@ -65,15 +70,66 @@ class Period:
         repr = "Period, from %s to %s" % (self.start, self.end)
         return repr
 
-class ActivityList:
-    """Abstract data type for activity lists.
+class ActorsDuration:
+    """Duration for actors.
 
-    List of agents, with activity information (start and end dates)
+    List of actors, with duration information (timedelta)
+    for each of them.
+
+    """
+
+    def __init__ (self, list = []):
+        """Intialize ActorsDuration object
+        
+        Parameters
+        ----------
+
+        list: list of dictionaries. Each dictionary includes
+        information about an actor, with the following fields:
+        id (integer), name (string), duration (datetime.timedelta)
+
+        """
+
+        self.list = [actor for actor in list]
+
+    def __repr__ (self):
+
+        repr = "ActorsDuration:\n"
+        for item in self.list:
+            repr = repr + str(item) + "\n"
+        return repr
+
+    def __getstate__(self):
+        """Return the state to be used for pickling.
+
+        Needed by jsonpickle, which will use this to produce
+        the JSON string.
+
+        """
+
+        return [{"id": actor["id"],
+                 "name": actor["name"],
+                 "duration": actor["duration"].days}
+                for actor in self.list]
+
+    def __setstate__(self, state):
+        """Set the state from pckling.
+
+        Not really used, just needed by jsonpickle.
+
+        """
+
+        self.list = state
+
+class ActivityList:
+    """Activity lists.
+
+    List of actors, with activity information (start and end dates)
     for each of them.
     """
 
-    def __init__ (self, list):
-        """Intialize an ActivityList object
+    def __init__ (self, list = []):
+        """Intialize ActivityList object
 
         Parameters
         ----------
@@ -88,11 +144,12 @@ class ActivityList:
 
         self.list = []
         for entry in list:
-            actor = {"id": entry.person_id,
-                     "name": entry.name}
-            period = Period(start = entry.firstdate,
-                            end = entry.lastdate)
-            self.list.append([actor, period])
+            item = {}
+            item["id"] =  entry.person_id
+            item["name"] = entry.name
+            item["period"]  = Period(start = entry.firstdate,
+                                     end = entry.lastdate)
+            self.list.append(item)
 
     def __eq__(self, other):
         return (isinstance(other, self.__class__)
@@ -126,6 +183,38 @@ class ActivityList:
         """
 
         self.list = state
+
+
+    def get_ages (self, date, normalization = 0):
+        """Get age (in days) for each actor with activity before date.
+
+        The age for each actor is the difference between date and their
+        first activity.
+
+        Parameters
+        ----------
+
+        date: datetime.datetime
+           shanpshot date to calculate ages
+        normalization: datetime.timedelta
+           Delta to add to each age. This is useful for considering
+           actors of age 0 to be really of age normalization
+
+        Returns
+        -------
+
+        ActorsDuration: activity duration for each actor
+
+        """
+
+        active = [actor for actor in self.list
+                  if actor["period"].end >= date]
+        ages = [{"id": actor["id"],
+                 "name": actor["name"],
+                 "duration": date - actor["period"].start}
+                for actor in active]
+        return ActorsDuration(ages)
+
 
 def init_json():
     """Initialize JSON encoder.
@@ -169,3 +258,6 @@ if __name__ == "__main__":
                                     labels = rowlabels)))
     print list
     print jsonpickle.encode(list, unpicklable=False)
+    ages = list.get_ages(datetime(2013,1,1))
+    print ages
+    print jsonpickle.encode(ages, unpicklable=False)
