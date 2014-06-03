@@ -76,4 +76,21 @@ class Packages(Metrics):
         return query
 
 
+class Protocols(Metrics):
+    """ Number of protocols used to download packages """
+
+    id = "protocols"
+    name = "Protocols"
+    desc = "Number of protocols used to download packages """
+    data_source = Downloads
+
+    def __get_sql__(self, evolutionary):
+        fields = "count(distinct(protocol)) as protocols"
+        tables = "downloads"
+        filters = ""
+
+        query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
+                                      self.filters.enddate, " date ", fields, tables,
+                                      filters, evolutionary)
+        return query
 
