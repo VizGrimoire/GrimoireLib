@@ -431,12 +431,12 @@ class Closers(Metrics):
         pass
 
 # Pretty similar to ITS openers
-class Openers(Metrics):
-    id = "openers"
-    name = "Openers"
-    desc = "Number of persons opening code review activities"
+class Submitters(Metrics):
+    id = "submitters"
+    name = "Submitters"
+    desc = "Number of persons submitting code review processes"
     data_source = SCR
-    action = "opened"
+    action = "submitted"
 
     def __get_sql_trk_prj__(self, evolutionary):
         """ First we get the submitters then join with unique identities """
@@ -449,7 +449,7 @@ class Openers(Metrics):
             tpeople_sql += " WHERE " + filters_ext
 
 
-        fields = " count(distinct(upeople_id)) as openers "
+        fields = " count(distinct(upeople_id)) as submitters "
         tables = " people_upeople pup, (%s) tpeople " % (tpeople_sql)
         filters = " tpeople.submitted_by = pup.people_id "
 
@@ -461,7 +461,7 @@ class Openers(Metrics):
 
     def __get_sql_default__(self, evolutionary):
         """ This function returns the evolution or agg number of people opening issues """
-        fields = " count(distinct(pup.upeople_id)) as openers "
+        fields = " count(distinct(pup.upeople_id)) as submitters "
         tables = " issues i " + self.db.GetSQLReportFrom(self.db.identities_db, self.filters.type_analysis)
         filters = self.db.GetSQLReportWhere(self.filters.type_analysis, self.db.identities_db)
 
