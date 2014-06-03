@@ -9,6 +9,8 @@ In order to execute the tests you need to create the test dbs in MySQL.
     mysqladmin -u root create  cp_irc_GrimoireLibTests
     mysqladmin -u root create  cp_mediawiki_GrimoireLibTests
     mysqladmin -u root create  cp_downloads_GrimoireLibTests
+    mysqladmin -u root create  cp_releases_GrimoireLibTests
+    mysqladmin -u root create  cp_qaforums_GrimoireLibTests
 
 In testing/db execute:
 
@@ -19,6 +21,8 @@ In testing/db execute:
     7zr x source_code.mysql.7z
     7zr x tickets.mysql.7z
     7zr x downloads.mysql.7z
+    7zr x releases.mysql.7z
+    7zr x qaforums.mysql.7z
 
     mysql -u root cp_cvsanaly_GrimoireLibTests < source_code.mysql
     mysql -u root cp_bicho_GrimoireLibTests < tickets.mysql
@@ -27,6 +31,8 @@ In testing/db execute:
     mysql -u root cp_irc_GrimoireLibTests < irc.mysql
     mysql -u root cp_mediawiki_GrimoireLibTests < mediawiki.mysql
     mysql -u root cp_downloads_GrimoireLibTests < downloads.mysql
+    mysql -u root cp_releases_GrimoireLibTests < releases.mysql
+    mysql -u root cp_qaforums_GrimoireLibTests < qaforums.mysql
 
 Install R environment in root dir:
 
