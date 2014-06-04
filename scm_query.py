@@ -326,7 +326,6 @@ class SCMQuery (Query):
                              % kind)
         query = self.add_columns (label("person_id", UPeople.id),
                                   label("name", UPeople.identifier))
-        print self.joined
         if not self.joined:
             # First table, UPeople is in FROM
             self.joined.append (UPeople)
