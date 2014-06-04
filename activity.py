@@ -232,7 +232,8 @@ class ActivityList:
         """Get age (in days) for each actor with activity before date.
 
         The age for each actor is the difference between date and their
-        first activity.
+        first activity. Age is always positive: actors who are only
+        active after date are not considered.
 
         Parameters
         ----------
@@ -251,7 +252,7 @@ class ActivityList:
         """
 
         active = [actor for actor in self.list
-                  if actor["period"].end >= date]
+                  if actor["period"].start <= date]
         ages = [{"id": actor["id"],
                  "name": actor["name"],
                  "age": date - actor["period"].start + offset}

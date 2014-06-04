@@ -25,7 +25,7 @@
 ##
 
 from scm_query import buildSession, SCMQuery
-from scm import PeriodCondition
+from scm import PeriodCondition, NomergesCondition
 
 class ActivityPersons:
     """High level interface to variables related to demography studies.
@@ -78,11 +78,23 @@ if __name__ == "__main__":
     data = ActivityPersons (
         database = 'mysql://jgb:XXX@localhost/vizgrimoire_cvsanaly',
         var = "listauthors")
-    print data.activity()
+    activity = data.activity()
+    print activity
+
+    age = activity.get_age(datetime(2014,1,1))
+    print age.json()
+    idle = activity.get_idle(datetime(2014,1,1))
+    print idle.json()
 
     period = PeriodCondition (start = datetime(2014,1,1), end = None)
+    nomerges = NomergesCondition()
 
     data = ActivityPersons (
         database = 'mysql://jgb:XXX@localhost/vizgrimoire_cvsanaly',
-        var = "listauthors", conditions = (period,))
-    print data.activity()
+        var = "listauthors", conditions = (period,nomerges))
+    activity = data.activity()
+    print activity
+
+    age = activity.get_age(datetime(2012,1,1))
+    print age.json()
+

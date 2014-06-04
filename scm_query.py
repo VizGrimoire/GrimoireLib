@@ -166,7 +166,7 @@ class SCMQuery (Query):
 
 
     def select_nscmlog(self, variables):
-        """Select a variable which is a field in Scmlog.
+        """Select a variable which is a field in SCMLog.
 
         - variables (list): variables to select
             Currently supported: "commits", "authors", "committers"
@@ -286,16 +286,23 @@ class SCMQuery (Query):
         else:
             raise Exception ("select_personsdata: Unknown kind %s." \
                              % kind)
-        query = query.filter (People.id == person)
+        if SCMLog in self.joined:
+            query = query.filter (People.id == person)
+        else:
+            self.joined.append (SCMLog)
+            query = query.join (SCMLog, People.id == person)
         return query
 
 
     def select_personsdata_uid(self, kind):
         """Adds columns with persons data to select clause (uid version).
 
-        Adds people.name, to the select clause of query, having unique
+        Adds person_id, name, to the select clause of query, having unique
         identities into account.
-        Does not join new tables.
+        Joins with PeopleUPeople, UPeople, SCMLog if they are not
+        already joined.
+        Relationships: UPeople.id == PeopleUPeople.upeople_id,
+        PeopleUPeople.people_id == person
 
         Parameters
         ----------
@@ -319,12 +326,42 @@ class SCMQuery (Query):
                              % kind)
         query = self.add_columns (label("person_id", UPeople.id),
                                   label("name", UPeople.identifier))
-        query = query.join (PeopleUPeople,
-                            PeopleUPeople.people_id == person)
-        query = query.join (UPeople,
-                            UPeople.id == PeopleUPeople.upeople_id)
+        print self.joined
+        if not self.joined:
+            # First table, UPeople is in FROM
+            self.joined.append (UPeople)
+        if not self.joined or UPeople in self.joined:
+            # First table, UPeople is in FROM, or we have UPeople
+            if PeopleUPeople not in self.joined:
+                self.joined.append (PeopleUPeople)
+                query = query.join (PeopleUPeople,
+                                    UPeople.id == PeopleUPeople.upeople_id)
+            if SCMLog not in self.joined:
+                self.joined.append (SCMLog)
+                query = query.join (SCMLog,
+                                    PeopleUPeople.people_id == person)
+        elif PeopleUPeople in self.joined:
+            # We have PeopleUPeople (SCMLog should be joined), no UPeople
+            if SCMLog not in self.joined:
+                raise Exception ("select_personsdata_uid: " + \
+                                     "If PeopleUPeople is joined, " + \
+                                     "SCMLog should be joined too")
+            self.joined.append (UPeople)
+            query = query.join (UPeople,
+                                UPeople.id == PeopleUPeople.upeople_id)
+        elif SCMLog in self.joined:
+            # We have SCMLog, and no PeopleUPeople, no UPeople
+            self.joined.append (PeopleUPeople)
+            query = query.join (PeopleUPeople,
+                                PeopleUPeople.people_id == person)
+            self.joined.append (UPeople)
+            query = query.join (UPeople,
+                                UPeople.id == PeopleUPeople.upeople_id)
+        else:
+            # No SCMLog, no PeopleUPeople, no UPeople but some other table
+            raise Exception ("select_personsdata_uid: " + \
+                                 "Unknown table to join to")
         return query
-
 
 
     def select_commitsperiod(self):
@@ -567,6 +604,7 @@ class SCMQuery (Query):
         else:
             end = "ever"
         repr = "SCMQuery from %s to %s\n" % (start, end)
+        repr = "  Joined: %s\n" % str(self.joined)
         repr += Query.__str__(self)
         return repr
 
@@ -596,6 +634,7 @@ if __name__ == "__main__":
         database='mysql://jgb:XXX@localhost/vizgrimoire_cvsanaly',
         echo=False)
 
+    #---------------------------------
     print_banner ("Number of commits")
     res = session.query().select_nscmlog(["commits",]) \
         .filter_period(start=datetime(2012,9,1),
@@ -610,6 +649,7 @@ if __name__ == "__main__":
         .filter_period(end=datetime(2014,1,1))
     print res.scalar()
 
+    #---------------------------------
     print_banner("Number of commits, grouped by authors")
     res = session.query().select_nscmlog(["commits",]) \
         .select_personsdata("authors") \
@@ -617,6 +657,7 @@ if __name__ == "__main__":
     for row in res.limit(10).all():
         print row.person_id, row.nocommits
 
+    #---------------------------------
     print_banner("Number of commits, grouped by authors, \n" +
                  "including data per author")
     res = session.query().select_nscmlog(["commits",]) \
@@ -625,6 +666,7 @@ if __name__ == "__main__":
     for row in res.limit(10).all():
         print row.nocommits, row.person_id, row.name, row.email
 
+    #---------------------------------
     print_banner("Number of commits, grouped by authors, including data\n" +
                  "and period of activity per author")
     res = session.query().select_nscmlog(["commits",]) \
@@ -635,6 +677,7 @@ if __name__ == "__main__":
         print row.nocommits, row.person_id, row.name, row.email, \
             row.firstdate, row.lastdate
 
+    #---------------------------------
     print_banner("Number of commits, grouped by authors, including data\n" +
                  "and period of activity per author, for a certain period")
     res = session.query().select_nscmlog(["commits",]) \
@@ -647,17 +690,21 @@ if __name__ == "__main__":
         print row.person_id, row.nocommits, row.name, row.email, \
             row.firstdate, row.lastdate
 
+    #---------------------------------
     print_banner("Number of commits, grouped by authors, including data\n" +
                  "and period of activity per author (uid version)")
     res = session.query().select_nscmlog(["commits",]) \
         .select_personsdata_uid("authors") \
         .select_commitsperiod() \
         .group_by_person()
+
     for row in res.order_by("nocommits desc").limit(10).all():
         print row.nocommits, row.person_id, row.name, \
             row.firstdate, row.lastdate
 
-    print_banner("Data and period of activity per author, for a certain period")
+    #---------------------------------
+    print_banner("Data and period of activity per author, " + \
+                     "for a certain period")
     res = session.query() \
         .select_personsdata("authors") \
         .select_commitsperiod() \
@@ -668,6 +715,7 @@ if __name__ == "__main__":
         print row.person_id, row.name, row.email, \
             row.firstdate, row.lastdate
 
+    #---------------------------------
     print_banner("Activity list (authors, for a certain period)")
     print res.activity()
 
@@ -678,6 +726,37 @@ if __name__ == "__main__":
     ts = res.timeseries ()
     print (ts)
 
+    #---------------------------------
+    print_banner("Data and period of activity per author, " + \
+                     "for a certain period, no merge commits.")
+    res = session.query() \
+        .select_personsdata("authors") \
+        .select_commitsperiod() \
+        .filter_nomerges() \
+        .filter_period(start=datetime(2013,12,1),
+                       end=datetime(2014,2,1)) \
+        .group_by_person()
+
+    for row in res.order_by("firstdate").limit(10).all():
+        print row.person_id, row.name, row.email, \
+            row.firstdate, row.lastdate
+
+    #---------------------------------
+    print_banner("Data and period of activity per author, " + \
+                     "for a certain period, no merge commits " + \
+                     "(uid version).")
+    res = session.query() \
+        .select_personsdata_uid("authors") \
+        .select_commitsperiod() \
+        .filter_nomerges() \
+        .filter_period(start=datetime(2013,12,1),
+                       end=datetime(2014,2,1)) \
+        .group_by_person()
+
+    for row in res.order_by("firstdate").limit(10).all():
+        print row.person_id, row.name, row.firstdate, row.lastdate
+
+    #---------------------------------
     print_banner("List of commits")
     res = session.query() \
         .select_listcommits() \
@@ -686,12 +765,14 @@ if __name__ == "__main__":
     for row in res.limit(10).all():
         print row.id, row.date
 
+    #---------------------------------
     print_banner("Number of authors")
     res = session.query().select_nscmlog(["authors",]) \
         .filter_period(start=datetime(2012,9,1),
                        end=datetime(2014,1,1))
     print res.scalar()
     
+    #---------------------------------
     print_banner("List of authors")
     resAuth = session.query() \
         .select_listpersons("authors") \
@@ -700,10 +781,12 @@ if __name__ == "__main__":
     for row in resAuth.limit(10).all():
         print row.id, row.name
     
+    #---------------------------------
     print_banner("Filter master branch")
     res = res.filter_branches(("master",))
     print res.all()
 
+    #---------------------------------
     print_banner("List of branches")
     res = session.query().select_listbranches()
     print res.all()
@@ -713,8 +796,8 @@ if __name__ == "__main__":
                        end=datetime(2014,2,1))
     print res.all()
 
+    #---------------------------------
     print_banner("Filter some paths")
     res = resAuth.filter_paths(("examples",))
     print res.all()
-
 
