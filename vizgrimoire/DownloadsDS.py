@@ -32,6 +32,8 @@ from GrimoireUtils import completePeriodIds, createJSON
 
 from data_source import DataSource
 
+from metrics_filter import MetricFilters
+
 
 class DownloadsDS(DataSource):
     _metrics_set = []
@@ -44,40 +46,56 @@ class DownloadsDS(DataSource):
     def get_name(): return "downloads"
 
     @staticmethod
-    def get_evolutionary_data (period, startdate, enddate, i_db, type_analysis = None):
-        downloads = EvolDownloads(period, startdate, enddate)
-        packages = EvolPackages(period, startdate, enddate)
-        protocols = EvolProtocols(period, startdate, enddate)
-        ips = EvolIPs(period, startdate, enddate)
-        evol = dict(downloads.items() + packages.items() + protocols.items() + ips.items())
-        evol = completePeriodIds(evol,  period, startdate, enddate)
-        return evol
+    def _get_data (period, startdate, enddate, i_db, filter_, evol):
+        data = {}
+
+        type_analysis = None
+        if (filter_ is not None):
+            type_analysis = [filter_.get_name(), filter_.get_item()]
+            logging.warn("DownloadsDS does not support filters.")
+            return data
+
+        metrics_on = ['downloads','packages','protocols','ips']
+        mfilter = MetricFilters(period, startdate, enddate, type_analysis)
+        all_metrics = DownloadsDS.get_metrics_set(DownloadsDS)
+
+        for item in all_metrics:
+            if item.id not in metrics_on: continue
+            item.filters = mfilter
+            if evol is False:
+                mvalue = item.get_agg()
+            else:
+                mvalue = item.get_ts()
+            data = dict(data.items() + mvalue.items())
+
+            if evol is False:
+                # Tendencies
+                metrics_trends = ['downloads','packages']
+
+                for i in [7,30,365]:
+                    for item in all_metrics:
+                        if item.id not in metrics_trends: continue
+                        period_data = item.get_agg_diff_days(enddate, i)
+                        data = dict(data.items() +  period_data.items())
+        return data
 
     @staticmethod
-    def create_evolutionary_report (period, startdate, enddate, destdir, i_db, type_analysis = None):
-        data =  DownloadsDS.get_evolutionary_data (period, startdate, enddate, i_db, type_analysis)
+    def get_evolutionary_data (period, startdate, enddate, i_db, filter_ = None):
+        return DownloadsDS._get_data(period, startdate, enddate, i_db, filter_, True)
+
+    @staticmethod
+    def create_evolutionary_report (period, startdate, enddate, destdir, i_db, filter_ = None):
+        data =  DownloadsDS.get_evolutionary_data (period, startdate, enddate, i_db, filter_)
         filename = DownloadsDS().get_evolutionary_filename()
         createJSON (data, os.path.join(destdir, filename))
 
     @staticmethod
-    def get_agg_data (period, startdate, enddate, identities_db, filter_ = None):
-        # Tendencies
-        agg = {}
-
-        if (filter_ is None):
-            downloads = AggDownloads(period, startdate, enddate)
-            packages = AggPackages(period, startdate, enddate)
-            protocols = AggProtocols(period, startdate, enddate)
-            ips = AggIPs(period, startdate, enddate)
-            agg = dict(downloads.items() + packages.items() + protocols.items() + ips.items())
-        else:
-            logging.warn("DownloadsDS does not support filters.")
-
-        return agg
+    def get_agg_data (period, startdate, enddate, i_db, filter_ = None):
+        return DownloadsDS._get_data(period, startdate, enddate, i_db, filter_, False)
 
     @staticmethod
-    def create_agg_report (period, startdate, enddate, destdir, i_db, type_analysis = None):
-        data = DownloadsDS.get_agg_data (period, startdate, enddate, i_db, type_analysis)
+    def create_agg_report (period, startdate, enddate, destdir, i_db, filter_ = None):
+        data = DownloadsDS.get_agg_data (period, startdate, enddate, i_db, filter_)
         filename = DownloadsDS().get_agg_filename()
         createJSON (data, os.path.join(destdir, filename))
 
