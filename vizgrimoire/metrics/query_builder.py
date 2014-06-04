@@ -925,7 +925,7 @@ class QAForumsQuery(DSQuery):
         #      data source in VizGrimoireJS-lib
         if report == "repository":
             where = shorttable + ".question_identifier = qt.question_identifier and " +\
-                    " qt.tag_id = t.id and t.tag = " + value
+                    " qt.tag_id = t.id and t.tag = '" + value + "'"
 
         return where
 
