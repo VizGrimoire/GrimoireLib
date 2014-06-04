@@ -1129,37 +1129,30 @@ def GetCompanyTopClosers (company_name, startdate, enddate,
     return (data)
 
 def GetTopClosers (days, startdate, enddate,
-        identities_db, filter, closed_condition, limit) :
+        identities_db, bots, closed_condition, limit) :
 
-    if not filter:
-        affiliations_from = GetTablesOwnUniqueIdsITS()
-        affiliations_where = GetFiltersOwnUniqueIdsITS ()
-    else:
-        affiliations = ""
-        for aff in filter:
-            affiliations += " com.name<>'"+ aff +"' and "
-        affiliations_from = GetTablesCompaniesITS(identities_db) + ", " + \
-            identities_db + ".companies com"
-        affiliations_where = GetFiltersCompaniesITS() + " and " + \
-            affiliations + \
-            " upc.company_id = com.id"
+    filter_bots = ''
+    for bot in bots:
+        filter_bots = filter_bots + " up.identifier<>'"+bot+"' and "
 
-    date_limit = ""
-    if (days != 0) :
-        sql = "SELECT @maxdate:=max(changed_on) from changes limit 1"
-        ExecuteQuery(sql)
-        date_limit = " AND DATEDIFF(@maxdate, changed_on)<"+str(days)
+    tables = GetTablesOwnUniqueIdsITS()
+    filters = GetFiltersOwnUniqueIdsITS ()
+
+    dtables = dfilters = ""
+    if (days > 0):
+        dtables = ", (SELECT MAX(changed_on) as last_date from changes) t "
+        dfilters = " AND DATEDIFF (last_date, changed_on) < %s " % (days)
 
     q = "SELECT up.id as id, up.identifier as closers, "+\
         "       count(distinct(c.id)) as closed "+\
-        "FROM  "+affiliations_from+\
-        ",     "+identities_db+".upeople up "+\
-        "WHERE "+affiliations_where+" and "+\
+        "FROM  "+tables+\
+        ",     "+identities_db+".upeople up "+ dtables +\
+        "WHERE "+filter_bots + filters + " and "+\
         "      c.changed_by = pup.people_id and "+\
         "      pup.upeople_id = up.id and "+\
         "      c.changed_on >= "+ startdate+ " and "+\
         "      c.changed_on < "+ enddate+ " and " +\
-        "      "+closed_condition+ " " + date_limit+ " "+\
+        "      "+closed_condition + " " + dfilters+ " "+\
         "GROUP BY up.identifier "+\
         "ORDER BY closed desc, closers "+\
         "LIMIT "+ limit
@@ -1200,10 +1193,10 @@ def GetTopOpeners (days, startdate, enddate,
 
     filter_bots = ''
     for bot in bots:
-        filter_bots = filter_bots + " u.identifier<>'"+bot+"' and "
+        filter_bots = filter_bots + " up.identifier<>'"+bot+"' and "
 
-    affiliations_from = GetTablesOwnUniqueIdsITS("issues")
-    affiliations_where = GetFiltersOwnUniqueIdsITS ("issues")
+    tables = GetTablesOwnUniqueIdsITS("issues")
+    filters = GetFiltersOwnUniqueIdsITS ("issues")
 
 
     dtables = dfilters = ""
@@ -1213,9 +1206,9 @@ def GetTopOpeners (days, startdate, enddate,
 
     q = "SELECT up.id as id, up.identifier as openers, "+\
         "    count(distinct(i.id)) as opened "+\
-        "FROM " +affiliations_from +\
+        "FROM " +tables +\
         " ,   "+identities_db+".upeople up "+ dtables + \
-        "WHERE "+affiliations_where+" and "+\
+        "WHERE "+filter_bots + filters +" and "+\
         "    pup.upeople_id = up.id and "+\
         "    i.submitted_on >= "+ startdate+ " and "+\
         "    i.submitted_on < "+ enddate + dfilters +\
