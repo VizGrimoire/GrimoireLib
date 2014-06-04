@@ -108,7 +108,7 @@ class SCM(DataSource):
             metric_filters = MetricFilters(period, startdate, enddate, [])
             onion = CommunityStructure(dbcon, metric_filters)
             data = onion.result()
-            print data
+            # print data
             #data = GetCodeCommunityStructure(period, startdate, enddate, identities_db)
             agg = dict(agg.items() + data.items())
         else:
