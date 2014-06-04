@@ -98,7 +98,7 @@ class SCM(DataSource):
             agg = dict(agg.items() + static_url.items())
 
             # Init analysis section
-            print "Analysis section"
+            # print "Analysis section"
             from report import Report
             db_identities= Report.get_config()['generic']['db_identities']
             dbuser = Report.get_config()['generic']['db_user']
