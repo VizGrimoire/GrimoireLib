@@ -33,9 +33,11 @@ class Report(object):
     _filters = []
     _all_data_sources = []
     _automator = None
+    _automator_file = None
 
     @staticmethod
     def init(automator_file, metrics_path = None):
+        Report._automator_file = automator_file
         Report._automator = read_main_conf(automator_file)
         Report._init_filters()
         Report._init_data_sources()
@@ -55,7 +57,7 @@ class Report(object):
             if filter_ is not None:
                 Report._filters.append(filter_)
             else:
-                logging.error("Wrong filter " + name + ", review " + opts.config_file)
+                logging.error("Wrong filter " + name + ", review " + Report._automator_file)
 
     @staticmethod
     def _init_data_sources():
