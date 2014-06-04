@@ -219,7 +219,7 @@ class ActivityList:
         self.list = state
 
 
-    def get_ages (self, date, offset = timedelta(0)):
+    def get_age (self, date, offset = timedelta(0)):
         """Get age (in days) for each actor with activity before date.
 
         The age for each actor is the difference between date and their
@@ -248,6 +248,43 @@ class ActivityList:
                  "age": date - actor["period"].start + offset}
                 for actor in active]
         return ActorsDuration(ages, date)
+
+    def get_idle (self, date, offset = timedelta(0)):
+        """Get idle (in days) for each actor with activity before date.
+
+        The idle period for each actor is the difference between date
+        and their last activity, if last activity is before date, 0
+        otherwise.
+
+        Parameters
+        ----------
+
+        date: datetime.datetime
+           shanpshot date to calculate ages
+        offset: datetime.timedelta
+           Delta to add to each period. This is useful for considering
+           actors of age 0 as of age offset
+
+        Returns
+        -------
+
+        ActorsDuration: idle duration for each actor
+
+        """
+
+        list = []
+        for actor in self.list:
+            id = actor["id"]
+            name = actor["name"]
+            if actor["period"].end >= date:
+                idle = 0
+            else:
+                idle = date - actor["period"].end + offset
+            list.append ({"id": id,
+                          "name": name,
+                          "age": idle}
+                         )
+        return ActorsDuration(list, date)
 
 
 def init_json():
@@ -293,8 +330,13 @@ if __name__ == "__main__":
                                     labels = rowlabels)))
     print list
     print jsonpickle.encode(list, unpicklable=False)
-    ages = list.get_ages(datetime(2013,1,1))
-    print ages
-    print jsonpickle.encode(ages, unpicklable=False)
-    ages = list.get_ages(datetime(2012,1,1))
-    print jsonpickle.encode(ages, unpicklable=False)
+    age = list.get_age(datetime(2013,1,1))
+    print age
+    print jsonpickle.encode(age, unpicklable=False)
+    age = list.get_age(datetime(2012,1,1))
+    print jsonpickle.encode(age, unpicklable=False)
+    idle = list.get_idle(datetime(2013,1,1))
+    print jsonpickle.encode(idle, unpicklable=False)
+    idle = list.get_idle(datetime(2012,1,1))
+    print jsonpickle.encode(idle, unpicklable=False)
+    
