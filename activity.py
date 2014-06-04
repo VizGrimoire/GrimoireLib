@@ -136,6 +136,11 @@ class ActorsDuration:
 
         self.list = state
 
+    def json (self):
+        """Produce a JSON string from the object."""
+
+        return jsonpickle.encode(self, unpicklable=False)
+
     def get_long (self):
         """Get long version of the object.
 
@@ -218,6 +223,10 @@ class ActivityList:
 
         self.list = state
 
+    def json (self):
+        """Produce a JSON string from the object."""
+
+        return jsonpickle.encode(self, unpicklable=False)
 
     def get_age (self, date, offset = timedelta(0)):
         """Get age (in days) for each actor with activity before date.
@@ -329,14 +338,13 @@ if __name__ == "__main__":
                                      datetime(2013,2,3)],
                                     labels = rowlabels)))
     print list
-    print jsonpickle.encode(list, unpicklable=False)
+    print list.json()
     age = list.get_age(datetime(2013,1,1))
     print age
-    print jsonpickle.encode(age, unpicklable=False)
+    print age.json()
     age = list.get_age(datetime(2012,1,1))
-    print jsonpickle.encode(age, unpicklable=False)
+    print age.json()
     idle = list.get_idle(datetime(2013,1,1))
-    print jsonpickle.encode(idle, unpicklable=False)
+    print idle.json()
     idle = list.get_idle(datetime(2012,1,1))
-    print jsonpickle.encode(idle, unpicklable=False)
-    
+    print idle.json() 
