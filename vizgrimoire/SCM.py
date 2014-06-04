@@ -114,11 +114,12 @@ class SCM(DataSource):
     @staticmethod
     def get_top_data (startdate, enddate, i_db, filter_, npeople):
         top = {}
+        bots = SCM.get_bots()
 
         if filter_ is None:
-            top['authors.'] = top_people(0, startdate, enddate, "author" , "" , npeople)
-            top['authors.last month']= top_people(31, startdate, enddate, "author", "", npeople)
-            top['authors.last year']= top_people(365, startdate, enddate, "author", "", npeople)
+            top['authors.'] = top_people(0, startdate, enddate, "author" , bots , npeople)
+            top['authors.last month']= top_people(31, startdate, enddate, "author", bots, npeople)
+            top['authors.last year']= top_people(365, startdate, enddate, "author", bots, npeople)
         elif filter_.get_name() == "company":
             top = company_top_authors("'"+filter_.get_item()+"'", startdate, enddate, npeople)
         else:
@@ -774,51 +775,36 @@ def GetCommunityMembers():
     data = ExecuteQuery(q)
     return(data['members'])
 
-def top_people (days, startdate, enddate, role, filters, limit) :
+def top_people (days, startdate, enddate, role, bots, limit) :
     # This function returns the 10 top people participating in the source code.
-    # Dataset can be filtered by the affiliations, where specific companies
-    # can be ignored. This is done by using the argument "filters",
-    # which can be "None" (no filetering) or the list of companies to
-    # filter out.
+    # Dataset can be filtered removing bots.
     # In addition, the number of days allows to limit the study to the last
     # X days specified in that parameter
 
-    if not filters:
-        affiliations_from = ""
-        affiliations_where = ""
-    else:
-        affiliations = ""
-        for aff in filters:
-            affiliations += " c.name<>'"+aff+"' and "
-        affiliations_from = ", upeople_companies upc, companies c "
-        affiliations_where = " and u.id = upc.upeople_id and "+\
-            " s.date >= upc.init and "+\
-            " s.date < upc.end and "+ affiliations+ " "+\
-            " upc.company_id = c.id "
- 
-    date_limit = ""
-    if (days != 0 ) :
-        ExecuteQuery("SELECT @maxdate:=max(date) from scmlog limit 1")
-        date_limit = " AND DATEDIFF(@maxdate, date)<"+str(days)
+    filter_bots = ''
+    for bot in bots:
+        filter_bots = filter_bots + " u.identifier<>'"+bot+"' and "
+
+    dtables = dfilters = ""
+    if (days > 0):
+        dtables = ", (SELECT MAX(date) as last_date from scmlog) t"
+        dfilters = " DATEDIFF (last_date, date) < %s AND " % (days)
 
     q = "SELECT u.id as id, u.identifier as "+ role+ "s, "+\
-        "count(distinct(s.id)) as commits "+\
-        " FROM scmlog s, "+\
-        " people_upeople pup, "+\
-        " upeople u "+\
-        affiliations_from +\
-        " WHERE s."+ role+ "_id = pup.people_id and "+\
-        " pup.upeople_id = u.id and "+\
-        " s.date >= "+ startdate+ " and "+\
-        " s.date < "+ enddate+" "+ date_limit +\
-        affiliations_where +\
+        " count(distinct(s.id)) as commits "+\
+        " FROM scmlog s, people_upeople pup, upeople u " + dtables +\
+        " WHERE " + filter_bots + dfilters +\
+        "s."+ role+ "_id = pup.people_id AND "+\
+        " pup.upeople_id = u.id AND" +\
+        " s.date >= "+ startdate+ " AND "+\
+        " s.date < "+ enddate +\
         " GROUP BY u.identifier "+\
         " ORDER BY commits desc, "+role+"s "+\
         " LIMIT "+ limit
-
     data = ExecuteQuery(q)
+    for id in data:
+        if not isinstance(data[id], (list)): data[id] = [data[id]]
     return (data)	
-
 
 def top_files_modified () :
     # Top 10 modified files
@@ -831,33 +817,6 @@ def top_files_modified () :
         "order by modifications desc limit 10; "	
     data = ExecuteQuery(q)
     return (data)	
-
-
-## TODO: Follow top_committers implementation
-def top_authors (startdate, enddate, limit) :
-    # Top 10 authors without filters
-    #
-    # DEPRECATED use top_people instead
-    #
-
-    q = "SELECT u.id as id, u.identifier as authors, "+\
-        "       count(distinct(s.id)) as commits "+\
-        "FROM scmlog s, "+\
-        "     actions a, "+\
-        "     people_upeople pup, "+\
-        "     upeople u "+\
-        "where s.id = a.commit_id and "+\
-        "      s.author_id = pup.people_id and "+\
-        "      pup.upeople_id = u.id and "+\
-        "      s.date >="+ startdate+ " and "+\
-        "      s.date < "+ enddate+ " "+\
-        "group by u.identifier "+\
-        "order by commits desc "+\
-        "LIMIT " + limit
-
-    data = ExecuteQuery(q)
-    return (data)
-
 
 
 def top_authors_wo_affiliations (list_affs, startdate, enddate, limit) :
