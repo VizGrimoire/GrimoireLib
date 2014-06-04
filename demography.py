@@ -26,48 +26,82 @@
 
 from scm_query import buildSession, SCMQuery
 from scm import PeriodCondition, NomergesCondition
+from sqlalchemy.orm.session import Session
 
 class ActivityPersons:
     """High level interface to variables related to demography studies.
-
-    Tracks activity periods for persons.
+    
+    Objects of this class are instantiated with a SQLAlchemy url,
+    a variable to be obtained from it, and a list of conditions.
+    
+    Objects of this class provide the function activity() to
+    obtain an ActivityList object. From this ActivityList, ages or
+    idle period for actors can be obtained.
 
     """
 
-    def __init__ (self, database, var, conditions = (), echo = False):
+    def __init__ (self, var, conditions = (), 
+                  session = None, database = None, echo = False):
         """Instantiation of the object.
+
+        Instantiation can be specified with an SQLAlchemy url or
+        with an SQLAlchemy session.
 
         Parameters
         ----------
         
-        database: string
-           SQLAlchemy url of the database to work with
         var: {"list_authors" | "list_committers"}
            Variable
         conditions: list of Condition objects
            Conditions to be applied to get the values
+        session: sqlalchemy.orm.session.Session
+           SQLAlchemy session
+        database: string
+           SQLAlchemy url of the database to work with (default: "")
         echo: boolean
            Write SQL queries to output stream
         """
 
-        self.session = buildSession(
-            database=database,
-            echo=echo)
-        if var == "list_authors":
+        if session is not None:
+            self.session = session
+        elif database is not None:
+            self.session = buildSession(
+                database=database,
+                echo=echo)
+        else:
+            raise Exception ("ActivityPersons: Either a session or a " + \
+                                 "database must be specified")
+        if var in ("list_authors", "list_uauthors"):
             persons = "authors"
-        elif var == "list_committers":
+        elif var in ("list_committers", "list_ucommitters"):
             persons = "committers"
         else:
             raise Exception ("ActivityPersons: Unknown variable %s." % var)
-        self.query = self.session.query() \
-            .select_personsdata(persons) \
+        self.query = self.session.query()
+        if var in ("list_authors", "list_committers"):
+            self.query = self.query.select_personsdata(persons)
+        elif var in ("list_uauthors", "list_ucommitters"):
+            self.query = self.query.select_personsdata_uid(persons)
+        else:
+            raise Exception ("ActivityPersons: Unknown variable %s." % var)
+        self.query = self.query \
             .select_commitsperiod() \
             .group_by_person()
         for condition in conditions:
             self.query = condition.filter(self.query)
 
     def activity (self):
-        """Return an ActivityList for the specified variable"""
+        """Obtain the activity list (ActivityList object).
+
+        Extracts the activity list by querying the database
+        according to the initialization of the object.
+        
+        Returns
+        -------
+
+        ActivityList: activity list for all actors
+
+        """
 
         return self.query.activity()
 
@@ -125,4 +159,14 @@ if __name__ == "__main__":
     print_banner("Idle (days since last activity) for each author.")
     idle = activity.get_idle(datetime(2012,1,1))
     print idle.json()
+
+    #---------------------------------
+    print_banner("List of activity for each committer (no merges, uid)")
+    session = buildSession(
+        database = 'mysql://jgb:XXX@localhost/vizgrimoire_cvsanaly',
+        echo = False)
+    data = ActivityPersons (var = "list_ucommitters",
+                            conditions = (period,nomerges),
+                            session = session)
+    print data.activity()
 
