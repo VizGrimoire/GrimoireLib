@@ -1196,36 +1196,29 @@ def GetDomainTopClosers (domain_name, startdate, enddate,
 
 
 def GetTopOpeners (days, startdate, enddate,
-        identities_db, filter, closed_condition, limit) :
+        identities_db, bots, closed_condition, limit) :
 
-    if not filter:
-        affiliations_from = GetTablesOwnUniqueIdsITS('issues')
-        affiliations_where = GetFiltersOwnUniqueIdsITS ('issues')
-    else:
-        affiliations = ""
-        for aff in filter:
-            affiliations += " com.name<>'"+ aff +"' and "
-        affiliations_from = GetTablesCompaniesITS(identities_db,'issues') + \
-            ", " + identities_db + ".companies com"
-        affiliations_where = GetFiltersCompaniesITS('issues') + " and " + \
-            affiliations + \
-            " upc.company_id = com.id"
+    filter_bots = ''
+    for bot in bots:
+        filter_bots = filter_bots + " u.identifier<>'"+bot+"' and "
 
-    date_limit = ""
-    if (days != 0 ) :
-        sql = "SELECT @maxdate:=max(submitted_on) from issues limit 1"
-        ExecuteQuery(sql)
-        date_limit = " AND DATEDIFF(@maxdate, submitted_on)<"+str(days)
+    affiliations_from = GetTablesOwnUniqueIdsITS("issues")
+    affiliations_where = GetFiltersOwnUniqueIdsITS ("issues")
+
+
+    dtables = dfilters = ""
+    if (days > 0):
+        dtables = ", (SELECT MAX(submitted_on) as last_date from issues) t "
+        dfilters = " AND DATEDIFF (last_date, submitted_on) < %s " % (days)
 
     q = "SELECT up.id as id, up.identifier as openers, "+\
         "    count(distinct(i.id)) as opened "+\
-        "FROM "+affiliations_from+\
-        " ,   "+identities_db+".upeople up "+\
+        "FROM " +affiliations_from +\
+        " ,   "+identities_db+".upeople up "+ dtables + \
         "WHERE "+affiliations_where+" and "+\
         "    pup.upeople_id = up.id and "+\
         "    i.submitted_on >= "+ startdate+ " and "+\
-        "    i.submitted_on < "+ enddate+\
-            date_limit+ " "+\
+        "    i.submitted_on < "+ enddate + dfilters +\
         "    GROUP BY up.identifier "+\
         "    ORDER BY opened desc, openers "+\
         "    LIMIT " + limit
