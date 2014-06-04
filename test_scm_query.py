@@ -144,42 +144,42 @@ class TestSCMQuery (unittest.TestCase):
 
         correct_nouid = {
             "authors":
-                [(1L, 'Alvaro del Castillo', 'acs@bitergia.com'),
-                 (3L, 'Jesus M. Gonzalez-Barahona', 'jgb@gsyc.es'),
-                 (4L, 'Daniel Izquierdo', 'dizquierdo@bitergia.com'),
-                 (5L, 'Daniel Izquierdo Cortazar','dizquierdo@bitergia.com'),
-                 (6L, 'Luis Cañas-Díaz', 'lcanas@bitergia.com')],
+                [(1L, u'Alvaro del Castillo', 'acs@bitergia.com'),
+                 (3L, u'Jesus M. Gonzalez-Barahona', 'jgb@gsyc.es'),
+                 (4L, u'Daniel Izquierdo', 'dizquierdo@bitergia.com'),
+                 (5L, u'Daniel Izquierdo Cortazar','dizquierdo@bitergia.com'),
+                 (6L, u'Luis Cañas-Díaz', 'lcanas@bitergia.com')],
             "committers":
-                [(1L, 'Alvaro del Castillo', 'acs@bitergia.com'),
-                 (3L, 'Jesus M. Gonzalez-Barahona', 'jgb@gsyc.es'),
-                 (4L, 'Daniel Izquierdo', 'dizquierdo@bitergia.com'),
-                 (5L, 'Daniel Izquierdo Cortazar', 'dizquierdo@bitergia.com'),
-                 (6L, 'Luis Cañas-Díaz', 'lcanas@bitergia.com')],
+                [(1L, u'Alvaro del Castillo', 'acs@bitergia.com'),
+                 (3L, u'Jesus M. Gonzalez-Barahona', 'jgb@gsyc.es'),
+                 (4L, u'Daniel Izquierdo', 'dizquierdo@bitergia.com'),
+                 (5L, u'Daniel Izquierdo Cortazar', 'dizquierdo@bitergia.com'),
+                 (6L, u'Luis Cañas-Díaz', 'lcanas@bitergia.com')],
             "all":
-                [(1L, 'Alvaro del Castillo', 'acs@bitergia.com'),
-                 (3L, 'Jesus M. Gonzalez-Barahona', 'jgb@gsyc.es'),
-                 (4L, 'Daniel Izquierdo', 'dizquierdo@bitergia.com'),
-                 (5L, 'Daniel Izquierdo Cortazar', 'dizquierdo@bitergia.com'),
-                 (6L, 'Luis Cañas-Díaz', 'lcanas@bitergia.com')]}
+                [(1L, u'Alvaro del Castillo', 'acs@bitergia.com'),
+                 (3L, u'Jesus M. Gonzalez-Barahona', 'jgb@gsyc.es'),
+                 (4L, u'Daniel Izquierdo', 'dizquierdo@bitergia.com'),
+                 (5L, u'Daniel Izquierdo Cortazar', 'dizquierdo@bitergia.com'),
+                 (6L, u'Luis Cañas-Díaz', 'lcanas@bitergia.com')]}
         correct_uid = {
             "authors":
-                [(1L, 'Alvaro del Castillo'), 
-                 (3L, 'Jesus M. Gonzalez-Barahona'),
-                 (4L, 'Daniel Izquierdo'),
-                 (6L, 'Luis Cañas-Díaz'),
-                 (7L, 'Santiago Dueñas')],
+                [(1L, u'Alvaro del Castillo'), 
+                 (3L, u'Jesus M. Gonzalez-Barahona'),
+                 (4L, u'Daniel Izquierdo'),
+                 (6L, u'Luis Cañas-Díaz'),
+                 (7L, u'Santiago Dueñas')],
             "committers": 
-                [(1L, 'Alvaro del Castillo'), 
-                 (3L, 'Jesus M. Gonzalez-Barahona'),
-                 (4L, 'Daniel Izquierdo'),
-                 (6L, 'Luis Cañas-Díaz'),
-                 (7L, 'Santiago Dueñas')],
+                [(1L, u'Alvaro del Castillo'), 
+                 (3L, u'Jesus M. Gonzalez-Barahona'),
+                 (4L, u'Daniel Izquierdo'),
+                 (6L, u'Luis Cañas-Díaz'),
+                 (7L, u'Santiago Dueñas')],
             "all":
-                [(1L, 'Alvaro del Castillo'), 
-                 (3L, 'Jesus M. Gonzalez-Barahona'),
-                 (4L, 'Daniel Izquierdo'),
-                 (6L, 'Luis Cañas-Díaz'),
-                 (7L, 'Santiago Dueñas')]}
+                [(1L, u'Alvaro del Castillo'), 
+                 (3L, u'Jesus M. Gonzalez-Barahona'),
+                 (4L, u'Daniel Izquierdo'),
+                 (6L, u'Luis Cañas-Díaz'),
+                 (7L, u'Santiago Dueñas')]}
 
         for uid in (False, True):
             if uid:
