@@ -42,7 +42,7 @@ class ActivityPersons:
         
         database: string
            SQLAlchemy url of the database to work with
-        var: {"listauthors" | "listcommitters"}
+        var: {"list_authors" | "list_committers"}
            Variable
         conditions: list of Condition objects
            Conditions to be applied to get the values
@@ -53,9 +53,9 @@ class ActivityPersons:
         self.session = buildSession(
             database=database,
             echo=echo)
-        if var == "listauthors":
+        if var == "list_authors":
             persons = "authors"
-        elif var == "listcommitters":
+        elif var == "list_committers":
             persons = "committers"
         else:
             raise Exception ("ActivityPersons: Unknown variable %s." % var)
@@ -74,27 +74,55 @@ class ActivityPersons:
 if __name__ == "__main__":
 
     from datetime import datetime
+    import sys
+    import codecs
+    # Trick to make the script work when using pipes
+    # (pipes confuse the interpreter, which sets codec to None)
+    # http://stackoverflow.com/questions/492483/setting-the-correct-encoding-when-piping-stdout-in-python
+    sys.stdout = codecs.getwriter('utf8')(sys.stdout)
 
+    def print_banner (banner):
+        """Print a simple banner for a kind of result"""
+
+        print
+        print "===================================="
+        print banner
+        print
+
+    #---------------------------------
+    print_banner("List of activity for each author")
     data = ActivityPersons (
         database = 'mysql://jgb:XXX@localhost/vizgrimoire_cvsanaly',
-        var = "listauthors")
+        var = "list_authors")
     activity = data.activity()
     print activity
 
+    #---------------------------------
+    print_banner("Age (days since first activity) for each author.")
     age = activity.get_age(datetime(2014,1,1))
     print age.json()
+    #---------------------------------
+    print_banner("Idle (days since last activity) for each author.")
     idle = activity.get_idle(datetime(2014,1,1))
     print idle.json()
 
+    #---------------------------------
+    print_banner("List of activity for each author (no merges)")
     period = PeriodCondition (start = datetime(2014,1,1), end = None)
     nomerges = NomergesCondition()
 
     data = ActivityPersons (
         database = 'mysql://jgb:XXX@localhost/vizgrimoire_cvsanaly',
-        var = "listauthors", conditions = (period,nomerges))
+        var = "list_authors", conditions = (period,nomerges))
     activity = data.activity()
     print activity
 
+    #---------------------------------
+    print_banner("Age (days since first activity) for each author.")
     age = activity.get_age(datetime(2012,1,1))
     print age.json()
+    #---------------------------------
+    print_banner("Idle (days since last activity) for each author.")
+    idle = activity.get_idle(datetime(2012,1,1))
+    print idle.json()
 
