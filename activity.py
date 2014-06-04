@@ -23,7 +23,7 @@
 ##   Jesus M. Gonzalez-Barahona <jgb@bitergia.com>
 ##
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from sqlalchemy.util import KeyedTuple
 from jsonpickle import encode
 import jsonpickle
@@ -31,6 +31,10 @@ import jsonpickle
 class DatetimeHandler(jsonpickle.handlers.BaseHandler):
     def flatten(self, obj, data):
         return obj.isoformat()
+
+class TimedeltaHandler(jsonpickle.handlers.BaseHandler):
+    def flatten(self, obj, data):
+        return obj.days
 
 class Period:
     """Abstract data type for activity periods.
@@ -70,6 +74,7 @@ class Period:
         repr = "Period, from %s to %s" % (self.start, self.end)
         return repr
 
+
 class ActorsDuration:
     """Duration for actors.
 
@@ -78,19 +83,27 @@ class ActorsDuration:
 
     """
 
-    def __init__ (self, list = []):
+    def __init__ (self, list = [], date = None):
         """Intialize ActorsDuration object
         
         Parameters
         ----------
 
-        list: list of dictionaries. Each dictionary includes
-        information about an actor, with the following fields:
-        id (integer), name (string), duration (datetime.timedelta)
-
+        list: list of dictionaries
+           Each dictionary includes
+           information about an actor, with the following fields:
+           id (integer), name (string), duration (datetime.timedelta)
+        date: datetime.datetime
+           Date for which the durations were calculated.
         """
 
+        if len(list) > 0:
+            self.durations = [key for key in list[0].keys()
+                              if key not in ["id", "name"]]
+        else:
+            self.durations = []
         self.list = [actor for actor in list]
+        self.date = date
 
     def __repr__ (self):
 
@@ -107,10 +120,12 @@ class ActorsDuration:
 
         """
 
-        return [{"id": actor["id"],
-                 "name": actor["name"],
-                 "duration": actor["duration"].days}
-                for actor in self.list]
+        # Get data in long format
+        long = self.get_long()
+        # Convert timedelta into number of days
+        return {"date": self.date,
+                "persons": long
+                }
 
     def __setstate__(self, state):
         """Set the state from pckling.
@@ -120,6 +135,25 @@ class ActorsDuration:
         """
 
         self.list = state
+
+    def get_long (self):
+        """Get long version of the object.
+
+        The object is stored in wide format (that is, a list with
+        one dictionary per entry, with components in the
+        dictionary being variables for the entry). This function
+        produces a long format (that is, a dictionry of lists,
+        with each compoenent in the dictionary being the list
+        of values for a variable).
+        
+        """
+
+        long = {}
+        if len(self.list) > 0:
+            for key in self.list[0].keys():
+                long[key] = [actor[key] for actor in self.list]
+        return long
+
 
 class ActivityList:
     """Activity lists.
@@ -185,7 +219,7 @@ class ActivityList:
         self.list = state
 
 
-    def get_ages (self, date, normalization = 0):
+    def get_ages (self, date, offset = timedelta(0)):
         """Get age (in days) for each actor with activity before date.
 
         The age for each actor is the difference between date and their
@@ -196,9 +230,9 @@ class ActivityList:
 
         date: datetime.datetime
            shanpshot date to calculate ages
-        normalization: datetime.timedelta
+        offset: datetime.timedelta
            Delta to add to each age. This is useful for considering
-           actors of age 0 to be really of age normalization
+           actors of age 0 as of age offset
 
         Returns
         -------
@@ -211,9 +245,9 @@ class ActivityList:
                   if actor["period"].end >= date]
         ages = [{"id": actor["id"],
                  "name": actor["name"],
-                 "duration": date - actor["period"].start}
+                 "age": date - actor["period"].start + offset}
                 for actor in active]
-        return ActorsDuration(ages)
+        return ActorsDuration(ages, date)
 
 
 def init_json():
@@ -223,6 +257,7 @@ def init_json():
 
     # Register datetime flattener for jsonpickle
     jsonpickle.handlers.registry.register(datetime, DatetimeHandler)
+    jsonpickle.handlers.registry.register(timedelta, TimedeltaHandler)
     # Select json module
     jsonpickle.set_preferred_backend('json')
     # Opetions for producing nice JSON
@@ -260,4 +295,6 @@ if __name__ == "__main__":
     print jsonpickle.encode(list, unpicklable=False)
     ages = list.get_ages(datetime(2013,1,1))
     print ages
+    print jsonpickle.encode(ages, unpicklable=False)
+    ages = list.get_ages(datetime(2012,1,1))
     print jsonpickle.encode(ages, unpicklable=False)
