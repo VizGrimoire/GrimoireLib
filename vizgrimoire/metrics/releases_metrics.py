@@ -65,11 +65,12 @@ class Modules(Metrics):
     data_source = ReleasesDS
 
     def __get_sql__ (self, evolutionary):
-        fields = "COUNT(DISTINCT(r.id)) AS releases"
-        tables = "releases r, projects p"
-        filters = "r.project_id = p.id"
+        fields = "COUNT(*) AS modules"
+        tables = "projects p"
+        filters = ""
+
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
-                               self.filters.enddate, "r.created_on", fields,
+                               self.filters.enddate, "p.created_on", fields,
                                tables, filters, evolutionary)
         return q
 
