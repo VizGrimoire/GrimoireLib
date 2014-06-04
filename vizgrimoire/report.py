@@ -64,6 +64,10 @@ class Report(object):
         Report._all_data_sources = [SCM.SCM, ITS.ITS, MLS.MLS, SCR.SCR, 
                                     Mediawiki.Mediawiki, IRC.IRC, DownloadsDS.DownloadsDS,
                                     QAForums.QAForums, ReleasesDS.ReleasesDS]
+        if 'bots' in Report.get_config()['r']:
+            bots = Report.get_config()['r']['bots'].split(",")
+            for ds in Report._all_data_sources:
+                ds.set_bots(bots)
 
     @staticmethod
     def _init_metrics(metrics_path):
