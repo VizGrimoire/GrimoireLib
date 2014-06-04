@@ -25,6 +25,9 @@ from GrimoireUtils import GetPercentageDiff, GetDates, completePeriodIds, create
 
 from data_source import DataSource
 
+from metrics_filter import MetricFilters
+
+
 
 class ReleasesDS(DataSource):
     """Data source representing project releases"""
@@ -36,10 +39,6 @@ class ReleasesDS(DataSource):
 
     @staticmethod
     def get_name(): return "releases"
-
-    #
-    # Metrics: modules, releases and authors
-    #
 
     @staticmethod
     def get_date_init():
@@ -55,51 +54,28 @@ class ReleasesDS(DataSource):
         q = "SELECT GREATEST(ru, rc, pu, pr) AS date FROM (%s) r, (%s) p" % (q1, q2)
         return(ExecuteQuery(q))
 
-    @staticmethod
-    def get_modules(period, startdate, enddate, evol = False, days = None):
-        fields = "COUNT(*) AS modules"
-        tables = "projects p"
-        filters = ""
-        if days is not None:
-            fields = "COUNT(*) AS modules_"+str(days)
-            filters += " AND (DATEDIFF(NOW(),p.created_on)<%s OR DATEDIFF(NOW(),p.updated_on)<%s) " % (days, days)
-        q = BuildQuery (period, startdate, enddate, 'p.created_on', fields, tables, filters, evol)
-        return(ExecuteQuery(q))
 
     @staticmethod
-    def get_releases(period, startdate, enddate, evol = False, days = None):
-        fields = "COUNT(DISTINCT(r.id)) AS releases"
-        tables = "releases r, projects p"
-        filters = "r.project_id = p.id"
-        if days is not None:
-            fields = "COUNT(DISTINCT(r.id)) AS releases_"+str(days)
-            filters += " AND (DATEDIFF(NOW(),r.created_on)<%s OR DATEDIFF(NOW(),r.updated_on)<%s) " % (days, days)
-        q = BuildQuery (period, startdate, enddate, 'r.created_on', fields, tables, filters, evol)
-        return(ExecuteQuery(q))
+    def get_evolutionary_data (period, startdate, enddate, i_db, filter_ = None):
+        data = {}
 
-    @staticmethod
-    def get_authors(period, startdate, enddate, evol = False, days = None):
-        fields = "COUNT(DISTINCT(u.id)) AS authors"
-        tables = "users u, releases r, projects p"
-        filters = "r.author_id = u.id AND r.project_id = p.id"
-        if days is not None:
-            fields = "COUNT(DISTINCT(u.id)) AS authors_"+str(days)
-            filters += " AND (DATEDIFF(NOW(),r.created_on)<%s OR DATEDIFF(NOW(),r.updated_on)<%s) " % (days, days)
-        q = BuildQuery (period, startdate, enddate, 'r.created_on', fields, tables, filters, evol)
-        return(ExecuteQuery(q))
+        type_analysis = None
+        if filter_ is not None:
+            type_analysis = [filter_.get_name(), filter_.get_item()]
+            logging.warn("ReleasesDS does not support filters yet.")
+            return data
 
-    @staticmethod
-    def get_evolutionary_data (period, startdate, enddate, i_db, type_analysis = None):
-        evol = {}
+        metrics_on = ['modules','authors','releases']
+        filter_ = MetricFilters(period, startdate, enddate, type_analysis)
+        all_metrics = ReleasesDS.get_metrics_set(ReleasesDS)
 
-        data = ReleasesDS.get_authors(period, startdate, enddate, True)
-        evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
-        data = ReleasesDS.get_modules(period, startdate, enddate, True)
-        evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
-        data = ReleasesDS.get_releases(period, startdate, enddate, True)
-        evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
+        for item in all_metrics:
+            if item.id not in metrics_on: continue
+            item.filters = filter_
+            mvalue = item.get_ts()
+            data = dict(data.items() + mvalue.items())
 
-        return evol
+        return data
  
     @staticmethod
     def create_evolutionary_report (period, startdate, enddate, destdir, i_db, type_analysis = None):
@@ -108,57 +84,40 @@ class ReleasesDS(DataSource):
         createJSON (data, os.path.join(destdir, filename))
 
     @staticmethod
-    def get_agg_diff_days(metric, period, date, days):
-        """ Returns the trend metrics between now and now-days values """
-        chardates = GetDates(date, days)
-
-        if metric == "authors":
-            prev = ReleasesDS.get_authors(period, chardates[2], chardates[1])
-            last = ReleasesDS.get_authors(period, chardates[1], chardates[0])
-        elif metric == "releases":
-            prev = ReleasesDS.get_releases(period, chardates[2], chardates[1])
-            last = ReleasesDS.get_releases(period, chardates[1], chardates[0])
-        elif metric == "modules":
-            prev = ReleasesDS.get_modules(period, chardates[2], chardates[1])
-            last = ReleasesDS.get_modules(period, chardates[1], chardates[0])
-
-        last = int(last[metric])
-        prev = int(prev[metric])
-
-        data = {}
-        data['diff_net'+metric+'_'+str(days)] = last - prev
-        data['percentage_'+metric+'_'+str(days)] = GetPercentageDiff(prev, last)
-        data[metric+'_'+str(days)] = last
-
-        return (data)
-
-    @staticmethod
     def get_agg_data (period, startdate, enddate, identities_db, filter_ = None):
-        agg = {}
-        evol = False
+        data = {}
 
-        # Trends
-        if (filter_ is None):
-            for i in [7,30,365]:
-                data = ReleasesDS.get_agg_diff_days("authors", period, enddate, i)
-                agg = dict(agg.items() + data.items())
-                data = ReleasesDS.get_agg_diff_days("modules", period, enddate, i)
-                agg = dict(agg.items() + data.items())
-                data = ReleasesDS.get_agg_diff_days("releases", period, enddate, i)
-                agg = dict(agg.items() + data.items())
-            data = ReleasesDS.get_authors(period, startdate, enddate)
-            agg = dict(agg.items() + data.items())
-            data = ReleasesDS.get_modules(period, startdate, enddate)
-            agg = dict(agg.items() + data.items())
-            data = ReleasesDS.get_releases(period, startdate, enddate)
-            agg = dict(agg.items() + data.items())
-
-            agg["init_date"] = ReleasesDS.get_date_init()['date']
-            agg["last_date"] = ReleasesDS.get_date_end()['date']
-
-        else:
+        type_analysis = None
+        if filter_ is not None:
+            type_analysis = [filter_.get_name(), filter_.get_item()]
             logging.warn("ReleasesDS does not support filters yet.")
-        return agg
+            return data
+
+        filter_ = MetricFilters(period, startdate, enddate, type_analysis)
+
+        metrics_on = ['modules','authors','releases']
+        all_metrics = ReleasesDS.get_metrics_set(ReleasesDS)
+
+        for item in all_metrics:
+            if item.id not in metrics_on: continue
+            item.filters = filter_
+            mvalue = item.get_agg()
+            data = dict(data.items() + mvalue.items())
+
+        # Tendencies
+        metrics_trends = ['modules','authors','releases']
+
+        for i in [7,30,365]:
+            for item in all_metrics:
+                if item.id not in metrics_trends: continue
+                period_data = item.get_agg_diff_days(enddate, i)
+                data = dict(data.items() +  period_data.items())
+
+        data["init_date"] = ReleasesDS.get_date_init()['date']
+        data["last_date"] = ReleasesDS.get_date_end()['date']
+        # data["url"] = ReleasesDS.get_url()
+
+        return data
 
     @staticmethod
     def create_agg_report (period, startdate, enddate, destdir, i_db, type_analysis = None):
