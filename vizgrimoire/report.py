@@ -22,7 +22,7 @@
 from GrimoireSQL import SetDBChannel
 from GrimoireUtils import read_main_conf
 import logging
-import SCM, ITS, MLS, SCR, Mediawiki, IRC, Downloads, QAForums, Releases
+import SCM, ITS, MLS, SCR, Mediawiki, IRC, DownloadsDS, QAForums, ReleasesDS
 from filter import Filter
 from metrics import Metrics
 from query_builder import DSQuery
@@ -60,8 +60,8 @@ class Report(object):
     @staticmethod
     def _init_data_sources():
         Report._all_data_sources = [SCM.SCM, ITS.ITS, MLS.MLS, SCR.SCR, 
-                                    Mediawiki.Mediawiki, IRC.IRC, Downloads.Downloads,
-                                    QAForums.QAForums, Releases.Releases]
+                                    Mediawiki.Mediawiki, IRC.IRC, DownloadsDS.DownloadsDS,
+                                    QAForums.QAForums, ReleasesDS.ReleasesDS]
 
     @staticmethod
     def _init_metrics(metrics_path):
