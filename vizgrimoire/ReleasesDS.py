@@ -127,11 +127,16 @@ class ReleasesDS(DataSource):
 
     @staticmethod
     def get_top_authors (days_period, startdate, enddate, identities_db, bots, npeople):
-
         # Unique identities not supported yet
+
+        filter_bots = ''
+        for bot in bots:
+            filter_bots = filter_bots + " username<>'"+bot+"' and "
+        # filter_bots = ''
+
         fields = "COUNT(r.id) as releases, username, u.id"
         tables = "users u, releases r, projects p"
-        filters = "r.author_id = u.id AND r.project_id = p.id"
+        filters = filter_bots + "r.author_id = u.id AND r.project_id = p.id"
         if (days_period > 0):
             tables += ", (SELECT MAX(r.created_on) as last_date from releases r) t"
             filters += " AND DATEDIFF (last_date, r.created_on) < %s" % (days_period)
@@ -140,7 +145,10 @@ class ReleasesDS(DataSource):
         filters += " LIMIT %s" % (npeople)
 
         q = "SELECT %s FROM %s WHERE %s" % (fields, tables, filters)
-        return(ExecuteQuery(q))
+        data = ExecuteQuery(q)
+#        for id in data:
+#            if not isinstance(data[id], (list)): data[id] = [data[id]]
+        return(data)
 
     @staticmethod
     def get_top_data (startdate, enddate, identities_db, filter_, npeople):
