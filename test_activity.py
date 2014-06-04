@@ -74,15 +74,24 @@ class TestActivityList (unittest.TestCase):
         """Test Period producing JSON"""
 
         correct_json = """
-[[{"id": 12,
-   "name": "Fulano Larguiño"},
-  {"end": "2012-11-01T00:00:00",
-   "start": "2011-12-01T00:00:00"}],
- [{"id": 3,
-   "name": "Mengana Corta"},
-  {"end": "2013-02-03T00:00:00",
-   "start": "2010-02-03T00:00:00"
-}]]
+[
+    {
+        "id": 12,
+        "name": "Fulano Larguiño",
+        "period": {
+            "end": "2012-11-01T00:00:00",
+            "start": "2011-12-01T00:00:00"
+        }
+    },
+    {
+        "id": 3,
+        "name": "Mengana Corta",
+        "period": {
+            "end": "2013-02-03T00:00:00",
+            "start": "2010-02-03T00:00:00"
+        }
+    }
+]
 """
 
         rowlabels = ["person_id", "name", "firstdate", "lastdate"]
