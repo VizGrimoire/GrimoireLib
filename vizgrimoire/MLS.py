@@ -815,29 +815,29 @@ def GetStaticPeopleMLS (developer_id, startdate, enddate) :
 #########################
 
 
-def top_senders (days, startdate, enddate, identities_db, filter_, limit) :
+def top_senders (days, startdate, enddate, identities_db, bots, limit) :
 
-    affiliations = ""
-    if (not filter_): filter_ = []
-    for aff in filter_:
-        affiliations = affiliations+ " c.name<>'"+ aff +"' and "
+    filter_bots = ''
+    for bot in bots:
+        filter_bots = filter_bots + " up.identifier<>'"+bot+"' and "
 
-    date_limit = ""
-    if (days != 0 ) :
-        sql = "SELECT @maxdate:=max(first_date) from messages limit 1"
-        ExecuteQuery(sql)
-        date_limit = " AND DATEDIFF(@maxdate,first_date)<"+str(days)
+    dtables = dfilters = ""
+    if (days > 0):
+        dtables = ", (SELECT MAX(first_date) as last_date from messages) t"
+        dfilters = " AND DATEDIFF (last_date, first_date) < %s " % (days)
+
+    tables = GetTablesOwnUniqueIdsMLS()
+    filters = GetFiltersOwnUniqueIdsMLS()
 
     q = "SELECT up.id as id, up.identifier as senders, "+\
             "COUNT(distinct(m.message_id)) as sent "+\
-            "FROM "+ GetTablesCompanies(identities_db)+\
+            "FROM "+ tables + dtables +\
             " ,"+identities_db+".upeople up "+\
-            "WHERE "+ GetFiltersCompanies()+ " AND "+\
+            "WHERE "+ filter_bots + filters + " AND "+\
             "  pup.upeople_id = up.id AND "+\
-            "  "+ affiliations + " "+\
             "  m.first_date >= "+startdate+" AND "+\
             "  m.first_date < "+enddate +\
-            date_limit+ " "+\
+            dfilters+ " "+\
             "GROUP BY up.identifier "+\
             "ORDER BY sent desc, senders "+\
             "LIMIT " + limit
