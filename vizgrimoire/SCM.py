@@ -818,38 +818,6 @@ def top_files_modified () :
     data = ExecuteQuery(q)
     return (data)	
 
-
-def top_authors_wo_affiliations (list_affs, startdate, enddate, limit) :
-    # top ten authors with affiliation removal
-    #list_affs
-    affiliations = ""
-    for aff in list_affs:
-        affiliations += " c.name<>'"+aff+"' and "
-
-    q = "SELECT u.id as id, u.identifier as authors, "+\
-        "       count(distinct(s.id)) as commits "+\
-        "FROM scmlog s, "+\
-        "     actions a, "+\
-        "     people_upeople pup, "+\
-        "     upeople u,  "+\
-        "     upeople_companies upc, "+\
-        "     companies c "+\
-        "where s.id = a.commit_id and "+\
-        "      s.author_id = pup.people_id and "+\
-        "      pup.upeople_id = u.id and "+\
-        "      s.date >="+ startdate+ " and "+\
-        "      s.date < "+ enddate+ " and "+\
-        "      "+affiliations+" "+\
-        "      pup.upeople_id = upc.upeople_id and "+\
-        "      upc.company_id = c.id "+\
-        "group by u.identifier "+\
-        "order by commits desc "+\
-        "LIMIT " + limit
-
-    data = ExecuteQuery(q)
-    return (data)
-
-
 def top_authors_year (year, limit) :
     # Given a year, this functions provides the top 10 authors 
     # of such year
