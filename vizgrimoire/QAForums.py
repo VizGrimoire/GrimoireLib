@@ -131,6 +131,10 @@ class QAForums(DataSource):
         author_field = QAForums.__get_author_field(table_name)
         date_limit = ""
 
+        filter_bots = ''
+        for bot in bots:
+            filter_bots = filter_bots + " p.username<>'"+bot+"' and "
+
         if (days != 0):
             sql = "SELECT @maxdate:=max(%s) from %s limit 1" % (date_field, table_name)
             res = ExecuteQuery(sql)
@@ -139,9 +143,9 @@ class QAForums(DataSource):
 
         select = "SELECT %s AS id, p.username AS senders, COUNT(%s.id) AS sent" % \
           (author_field, table_name)
-        fromtable = " FROM %s, people p" % (table_name)        
-        filters = " WHERE %s = p.identifier AND %s >= %s AND %s < %s " % \
-          (author_field, date_field, startdate, date_field, enddate)          
+        fromtable = " FROM %s, people p" % (table_name)
+        filters = " WHERE %s %s = p.identifier AND %s >= %s AND %s < %s " % \
+          (filter_bots, author_field, date_field, startdate, date_field, enddate)
 
         tail = " GROUP BY senders ORDER BY sent DESC, senders LIMIT %s" % (limit)
         q = select + fromtable + filters + date_limit + tail
