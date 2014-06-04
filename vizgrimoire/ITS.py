@@ -619,10 +619,17 @@ def GetITSInfo (period, startdate, enddate, identities_db, type_analysis, closed
     # aggregated functions
 
     data = {}
-    metrics_on = ['closed','closers','changed','changers',"opened",'openers','trackers','domains','countries','companies']
+    metrics_on = ['closed','closers','changed','changers',"opened",'openers','trackers']
+    metrics_reports = ['domains','countries','companies']
     metrics_on_agg = ['allhistory_participants']
     filter_ = MetricFilters(period, startdate, enddate, type_analysis)
     all_metrics = ITS.get_metrics_set(ITS)
+
+    if type_analysis is None:
+        from report import Report
+        reports_on = Report.get_config()['r']['reports'].split(",")
+        for r in metrics_reports:
+            if r in reports_on: metrics_on += [r]
 
     for item in all_metrics:
         if item.id not in metrics_on and item.id not in metrics_on_agg: continue

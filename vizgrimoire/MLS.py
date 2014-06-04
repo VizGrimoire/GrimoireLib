@@ -520,9 +520,15 @@ def GetMLSFiltersResponse () :
 def GetMLSInfo (period, startdate, enddate, identities_db, rfield, type_analysis, evolutionary):
 
     data = {}
-    metrics_on = ['sent','senders','threads','sent_response','senders_response','senders_init','repositories']
-    metrics_reports = ['companies','countries','domains']
-    if type_analysis is None: metrics_on += metrics_reports
+    metrics_on = ['sent','senders','threads','sent_response','senders_response','senders_init']
+    metrics_reports = ['companies','countries','domains','repositories']
+
+    if type_analysis is None:
+        from report import Report
+        reports_on = Report.get_config()['r']['reports'].split(",")
+        for r in metrics_reports:
+            if r in reports_on: metrics_on += [r]
+
     filter_ = MetricFilters(period, startdate, enddate, type_analysis)
     all_metrics = MLS.get_metrics_set(MLS)
 

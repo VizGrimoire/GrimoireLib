@@ -34,7 +34,6 @@ from data_source import DataSource
 from filter import Filter
 from metrics_filter import MetricFilters
 
-
 class SCM(DataSource):
     _metrics_set = []
 
@@ -439,9 +438,14 @@ def GetSCMEvolutionaryData (period, startdate, enddate, i_db, type_analysis):
     # management system. Those are merged and returned.
 
     data = {}
-    metrics_on = ['commits','authors','committers','branches','files','lines','repositories']
+    metrics_on = ['commits','authors','committers','branches','files','lines']
+    metrics_reports = ['companies','countries','domains','repositories']
+
     if type_analysis is None:
-        metrics_on += ['companies','countries','domains']
+        from report import Report
+        reports_on = Report.get_config()['r']['reports'].split(",")
+        for r in metrics_reports:
+            if r in reports_on: metrics_on += [r]
     filter_ = MetricFilters(period, startdate, enddate, type_analysis)
     all_metrics = SCM.get_metrics_set(SCM)
 
@@ -459,10 +463,16 @@ def GetSCMStaticData (period, startdate, enddate, i_db, type_analysis):
     # management system. Those are merged and returned.
 
     data = {}
-    metrics_on = ['commits','authors','committers','branches','files','actions','lines','repositories']
+    metrics_on = ['commits','authors','committers','branches','files','actions','lines']
     metrics_on += ['avg_commits', 'avg_files', 'avg_commits_author', 'avg_files_author']
-    metrics_reports = ['companies','countries','domains']
-    if type_analysis is None: metrics_on += metrics_reports
+    metrics_reports = ['companies','countries','domains','repositories']
+
+    if type_analysis is None:
+        from report import Report
+        reports_on = Report.get_config()['r']['reports'].split(",")
+        for r in metrics_reports:
+            if r in reports_on: metrics_on += [r]
+
     filter_ = MetricFilters(period, startdate, enddate, type_analysis)
     all_metrics = SCM.get_metrics_set(SCM)
 

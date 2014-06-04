@@ -65,7 +65,11 @@ class SCR(DataSource):
         if filter_ is None:
             # not for filters. SQL not tested. 
             metrics_on += metrics_patches
-            metrics_on += metrics_reports
+
+            from report import Report
+            reports_on = Report.get_config()['r']['reports'].split(",")
+            for r in metrics_reports:
+                if r in reports_on: metrics_on += [r]
         # people
         metrics_on += ['submitters','reviewers']
 
@@ -106,7 +110,12 @@ class SCR(DataSource):
         if filter_ is None:
             # not for filters. SQL not tested. 
             metrics_on += metrics_patches
-            metrics_on += metrics_reports
+
+            from report import Report
+            reports_on = Report.get_config()['r']['reports'].split(",")
+            for r in metrics_reports:
+                if r in reports_on: metrics_on += [r]
+
         # people
         metrics_on += ['submitters','reviewers']
 
