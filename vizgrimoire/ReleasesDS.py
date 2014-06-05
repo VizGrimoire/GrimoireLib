@@ -134,9 +134,10 @@ class ReleasesDS(DataSource):
             filter_bots = filter_bots + " username<>'"+bot+"' and "
         # filter_bots = ''
 
-        fields = "COUNT(r.id) as releases, username, u.id"
-        tables = "users u, releases r, projects p"
-        filters = filter_bots + "r.author_id = u.id AND r.project_id = p.id"
+        # fields = "COUNT(r.id) as releases, username, u.id"
+        fields = "COUNT(r.id) as releases, pup.upeople_id AS id, username"
+        tables = "users u, releases r, projects p, people_upeople pup"
+        filters = filter_bots + "pup.people_id = u.id AND r.author_id = u.id AND r.project_id = p.id"
         if (days_period > 0):
             tables += ", (SELECT MAX(r.created_on) as last_date from releases r) t"
             filters += " AND DATEDIFF (last_date, r.created_on) < %s" % (days_period)
@@ -193,10 +194,10 @@ class ReleasesDS(DataSource):
         return people
 
     @staticmethod
-    def _get_people_sql (developer_id, period, startdate, enddate, evol):
+    def _get_people_sql (upeople_id, period, startdate, enddate, evol):
         fields = "COUNT(r.id) AS releases"
-        tables = "users u, releases r"
-        filters = " r.author_id = u.id AND u.id = '" + str(developer_id) + "'"
+        tables = "users u, releases r, people_upeople pup"
+        filters = "pup.people_id = u.id AND r.author_id = u.id AND pup.upeople_id = '" + str(upeople_id) + "'"
         q = BuildQuery (period, startdate, enddate, 'r.created_on', fields, tables, filters, evol)
         return (q)
 
