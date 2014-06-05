@@ -89,8 +89,10 @@ class SCMLeaders(Leaders):
         where = """
                 where a.commit_id = s.id and 
                       s.author_id = pup.people_id and 
-                      pup.upeople_id = u.id 
-                """
+                      pup.upeople_id = u.id and
+                      s.date >= %s and
+                      s.date < %s
+                """ % (self.filters.startdate, self.filters.enddate)
         group = " group by u.id order by count(distinct(s.id)) desc limit " + str(self.filters.npeople)
 
         if self.repository is not None:
@@ -120,8 +122,10 @@ class SCMLeaders(Leaders):
                       pup.upeople_id = upc.upeople_id and 
                       upc.company_id=c.id and 
                       s.date>=upc.init and 
-                      s.date<upc.end 
-                """
+                      s.date<upc.end and
+                      s.date >= %s and
+                      s.date < %s
+                """ % (self.filters.startdate, self.filters.enddate)
         group = " group by c.name order by count(distinct(s.id)) desc limit " + str(self.filters.npeople)
 
         if self.repository is not None:
