@@ -256,64 +256,6 @@ class MLS(DataSource):
         from query_builder import MLSQuery
         return MLSQuery
 
-    @staticmethod
-    def get_metrics_definition ():
-        mdef = {
-            "mls_responses" : {
-                "divid" : "mls_responses",
-                "column" : "responses",
-                "name" : "Reply messages",
-                "desc" : "Number of messages that are resplies (not first in thread) in mailing list(s)"
-            },
-            "mls_sent" : {
-                "divid" : "mls_sent",
-                "column" : "sent",
-                "name" : "Posted messages",
-                "desc" : "Number of messages posted to mailing list(s)"
-            },
-            "mls_senders" : {
-                "divid" : "mls_senders",
-                "column" : "senders",
-                "name" : "Message posters",
-                "desc" : "Number of persons posting messages in mailing list(s)",
-                "action" : "sent"
-            },
-            "mls_threads" : {
-                "divid" : "mls_threads",
-                "column" : "message_id",
-                "name" : "Message threads",
-                "desc" : "Number of messages threads in mailing lists 3",
-                "action" : "length",
-                "initiator_name" : "Initiator",
-                "length" : "Messages"
-            },
-            "mls_companies" : {
-                "divid" : "mls_companies",
-                "column" : "companies",
-                "name" : "Organizations",
-                "desc" : "Number of organizations (companies, etc.) with persons active in mailing list(s)"
-            },
-            "mls_countries" : {
-                "divid" : "mls_countries",
-                "column" : "countries",
-                "name" : "Countries",
-                "desc" : "Number of countries with persons active in mailing list(s)"
-            },
-            "mls_domains" : {
-                "divid" : "mls_domains",
-                "column" : "domains",
-                "name" : "Domains",
-                "desc" : "Number of distinct domains with persons active in mailing list(s)"
-            },
-            "mls_repositories" : {
-                "divid" : "mls_repositories",
-                "column" : "repositories",
-                "name" : "Mailing lists",
-                "desc" : "Number of active mailing lists"
-            }
-        }
-        return mdef
-
 ##############
 # Specific FROM and WHERE clauses per type of report
 ##############
