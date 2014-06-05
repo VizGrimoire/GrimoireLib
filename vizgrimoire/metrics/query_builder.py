@@ -31,6 +31,8 @@ from GrimoireUtils import get_subprojects
 class DSQuery(object):
     """ Generic methods to control access to db """
 
+    db_conn_pool = {} # one connection per database
+
     def __init__(self, user, password, database, identities_db = None, host="127.0.0.1", port=3306, group=None):
         self.identities_db = identities_db
         self.user = user
@@ -39,7 +41,15 @@ class DSQuery(object):
         self.host = host
         self.port = port
         self.group = group
-        self.cursor = self.__SetDBChannel__(user, password, database, host, port, group)
+        if database in DSQuery.db_conn_pool:
+            db = DSQuery.db_conn_pool[database]
+        else:
+            db = self.__SetDBChannel__(user, password, database, host, port, group)
+            DSQuery.db_conn_pool[database] = db
+        self.cursor = db.cursor()
+        self.cursor.execute("SET NAMES 'utf8'")
+
+        db = self.__SetDBChannel__(user, password, database, host, port, group)
 
     def GetSQLGlobal(self, date, fields, tables, filters, start, end):
         sql = 'SELECT '+ fields
@@ -115,9 +125,7 @@ class DSQuery(object):
         else:
             db = MySQLdb.connect(read_default_group=group, db=database)
 
-        cursor = db.cursor()
-        cursor.execute("SET NAMES 'utf8'")
-        return cursor
+        return db
 
     def ExecuteQuery (self, sql):
         if sql is None: return {}
