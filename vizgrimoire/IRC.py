@@ -199,10 +199,6 @@ class IRC(DataSource):
         from query_builder import IRCQuery
         return IRCQuery
 
-    @staticmethod
-    def get_metrics_definition ():
-        pass
-
 
 def GetDate (startdate, enddate, identities_db, type_analysis, type):
     # date of submmitted issues (type= max or min)

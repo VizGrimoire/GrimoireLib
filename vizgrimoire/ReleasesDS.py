@@ -216,10 +216,6 @@ class ReleasesDS(DataSource):
         pass
 
     @staticmethod
-    def get_metrics_definition ():
-        pass
-
-    @staticmethod
     def get_query_builder ():
         from query_builder import ReleasesDSQuery
         return ReleasesDSQuery

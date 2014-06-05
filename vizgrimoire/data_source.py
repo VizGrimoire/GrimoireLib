@@ -194,9 +194,25 @@ class DataSource(object):
         raise NotImplementedError
 
     @staticmethod
-    def get_metrics_definition ():
+    def get_metrics_definition (DS):
         """Return all metrics definition available"""
-        raise NotImplementedError
+        mdef = {}
+        ds_name = DS.get_name()
+        all_metrics = DS.get_metrics_set(DS)
+        for item in all_metrics:
+            ds_metric_id = ds_name+"_"+item.id
+            mdef[ds_metric_id] = {
+                "divid" : ds_metric_id,
+                "column" : item.id,
+                "name" :   item.name,
+                "desc" : item.desc
+            }
+            # old params to be removed in sync with clients
+            if hasattr(item, 'envision'):
+                mdef[ds_metric_id]['envision'] = item.envision
+            if hasattr(item, 'action'):
+                mdef[ds_metric_id]['action'] = item.action
+        return mdef
 
     @staticmethod
     def get_metrics_set(ds):
