@@ -44,10 +44,13 @@ class Leaders(Analyses):
 
 class SCMLeaders(Leaders):
     """ Class focuses on the development activity main actors (either organizations or developers)"""
-    
-    id = "main_developers"
-    name = "Code Main Developers"
-    desc = "Code main developers"
+   
+    TYPEOF_LEADER_DEVELOPERS = "developers"
+    TYPEOF_LEADER_ORGS = "organizations"
+ 
+    id = "main_actors_developing"
+    name = "Code Main Actors"
+    desc = "Code main actors"
 
     def __init__(self, dbcon, filters, typeof_leader, repository=None, length=365):
         # dbcon: connection to the database
@@ -70,8 +73,9 @@ class SCMLeaders(Leaders):
         self.repository = repository
         self.length = length
 
-    def _get_top_developers_sql(self):
-
+    def _top_developers_sql(self):
+        # This function returns sql needed to calculate top individual 
+        # contributors
         fields = """
                  select u.identifier as name, 
                         count(distinct(s.id)) as commits 
@@ -96,34 +100,64 @@ class SCMLeaders(Leaders):
         query = fields + tables + where + group
         return query
 
-    def _get_top_developers(self):
-        developers = self.db.ExecuteQuery(self._get_top_developers_sql())
-        print developers
-        type(developers)
- 
+    def _top_organizations_sql(self):
+        # This function returns query to calculate top organizations contributing
+        # to the source code
+        fields = """
+                 select c.name as name, 
+                        count(distinct(s.id)) as commits
+                 """
+        tables = """
+                 from actions a, 
+                      scmlog s, 
+                      people_upeople pup, 
+                      upeople_companies upc, 
+                      companies c 
+                 """
+        where = """
+                where a.commit_id=s.id and 
+                      s.author_id=pup.people_id and 
+                      pup.upeople_id = upc.upeople_id and 
+                      upc.company_id=c.id and 
+                      s.date>=upc.init and 
+                      s.date<upc.end 
+                """
+        group = " group by c.name order by count(distinct(s.id)) desc limit " + str(self.filters.npeople)
+
+        if self.repository is not None:
+            tables = tables + ", repositories r "
+            where = where + " and s.repository_id = r.id and r.name = " + self.repository
+
+        query = fields + tables + where + group
+        return query
+
+    def _top_actors(self):
+
+        if self.typeof_leader == self.TYPEOF_LEADER_DEVELOPERS:
+            actors = self.db.ExecuteQuery(self._top_developers_sql())
+        elif self.typeof_leader == self.TYPEOF_LEADER_ORGS:
+            actors = self.db.ExecuteQuery(self._top_organizations_sql())
+        else:
+            raise NotImplementedError
+
         if self.repository is None:
             self.filters.type_analysis = []
         else:
             self.filters.type_analysis = ["repository", self.repository]
+
         commits = Commits(self.db, self.filters)
         total_commits = commits.get_agg()
 
-        developers_commits = np.array(developers['commits'])
-        percentage_commits = (developers_commits / float(total_commits['commits'])) * 100
+        actors_commits = np.array(actors['commits'])
+        percentage_commits = (actors_commits / float(total_commits['commits'])) * 100
 
-        developers['percentage'] = list(percentage_commits)
- 
-        return developers
+        actors['percentage'] = list(percentage_commits)
 
-    def _get_top_organizations(self):
-        pass
+        return actors
 
+            
     def result(self): 
-        if self.typeof_leader == "developer":
-            developers = self._get_top_developers()
-
-        if self.typeof_leader == "organization":
-            organizations = self._get_top_organizations()
+        return self._top_actors()
 
 
 
@@ -131,6 +165,7 @@ class SCMLeaders(Leaders):
 if __name__ == '__main__':
     filters = MetricFilters("week", "'2010-01-01'", "'2014-01-01'", ["repository", "'nova.git'"], 10)
     dbcon = SCMQuery("root", "", "dic_cvsanaly_openstack_2259", "dic_cvsanaly_openstack_2259",)
-    leaders = SCMLeaders(dbcon, filters, "developer", "'nova.git'", 180)
+    leaders = SCMLeaders(dbcon, filters, SCMLeaders.TYPEOF_LEADER_DEVELOPERS, "'nova.git'", 180)
     print leaders.result()
-
+    leaders = SCMLeaders(dbcon, filters, SCMLeaders.TYPEOF_LEADER_ORGS, "'nova.git'", 180)
+    print leaders.result()
