@@ -91,5 +91,4 @@ class Authors(Metrics):
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                self.filters.enddate, "r.created_on", fields,
                                tables, filters, evolutionary)
-        print(q)
         return(q)
