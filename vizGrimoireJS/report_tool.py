@@ -127,13 +127,16 @@ def create_people_identifiers(startdate, enddate, destdir):
 def set_data_source(ds_name):
     ds_ok = False
     dss_active = Report.get_data_sources()
+    DS = None
     for ds in dss_active:
         if ds.get_name() == opts.data_source:
             ds_ok = True
-            Report.set_data_sources([ds])
+            DS = ds
+            Report.set_data_sources([DS])
     if not ds_ok:
         logging.error(opts.data_source + " data source not available")
         sys.exit(1)
+    return DS
 
 def set_filter(filter_name):
     filter_ok = False
@@ -144,6 +147,19 @@ def set_filter(filter_name):
             Report.set_filters([filter_])
     if not filter_ok:
         logging.error(opts.filter + " filter not available")
+        sys.exit(1)
+
+def set_metric(metric_name, ds_name):
+    metric_ok = False
+    DS = set_data_source(ds_name)
+
+    metrics = DS.get_metrics_set(DS)
+    for metric in metrics:
+        if metric.id == metric_name:
+            metric_ok = True
+            DS.set_metrics_set(DS, [metric])
+    if not metric_ok:
+        logging.error(metric_name + " metric not available in " + DS.get_name())
         sys.exit(1)
 
 if __name__ == '__main__':
@@ -181,6 +197,8 @@ if __name__ == '__main__':
         set_data_source(opts.data_source)
     if (opts.filter):
         set_filter(opts.filter)
+    if (opts.metric):
+        set_metric (opts.metric, opts.data_source)
 
     bots = []
 
@@ -191,11 +209,11 @@ if __name__ == '__main__':
         agg = create_agg_report(startdate, enddate, opts.destdir, identities_db, bots)
         logging.info("Creating global top metrics...")
         top = create_top_report(startdate, enddate, opts.destdir, opts.npeople, identities_db, bots)
+        if (automator['r']['reports'].find('people')>-1):
+            create_report_people(startdate, enddate, opts.destdir, opts.npeople, identities_db, bots)
+        create_reports_r(end_date, opts.destdir)
+        create_people_identifiers(startdate, enddate, opts.destdir)
 
     create_reports_filters(period, startdate, enddate, opts.destdir, opts.npeople, identities_db, bots)
-    if (automator['r']['reports'].find('people')>-1):
-        create_report_people(startdate, enddate, opts.destdir, opts.npeople, identities_db, bots)
-    create_reports_r(end_date, opts.destdir)
-    create_people_identifiers(startdate, enddate, opts.destdir)
 
     logging.info("Report data source analysis OK")

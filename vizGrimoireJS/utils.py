@@ -100,6 +100,10 @@ def read_options():
                       dest="backend",
                       default="bugzilla",
                       help="Type of backend: bugzilla, allura, jira, github")
+    parser.add_option("--metric",
+                      action="store",
+                      dest="metric",
+                      help="Select metric from data source to be generated.")
 
     (opts, args) = parser.parse_args()
 
@@ -111,5 +115,6 @@ def read_options():
             parser.error("--database --db-user and --identities are needed")
     if opts.metrics_path is None:
         parser.error("--metrics path is needed.")
+    if opts.metric and opts.data_source is None:
+        parser.error("--metric need also --data-source.")
     return opts
-
