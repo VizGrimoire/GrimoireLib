@@ -122,7 +122,6 @@ class ActorsDuration:
 
         # Get data in long format
         long = self.get_long()
-        # Convert timedelta into number of days
         return {"date": self.date,
                 "persons": long
                 }
