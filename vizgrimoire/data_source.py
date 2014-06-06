@@ -204,6 +204,11 @@ class DataSource(object):
         return ds._metrics_set
 
     @staticmethod
+    def set_metrics_set(ds, metrics_set):
+        """Set all metrics objects available"""
+        ds._metrics_set = metrics_set
+
+    @staticmethod
     def add_metrics(metrics, ds):
         ds._metrics_set.append(metrics)
 
