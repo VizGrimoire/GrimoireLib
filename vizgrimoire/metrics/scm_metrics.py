@@ -560,13 +560,13 @@ class Countries(Metrics):
     desc = "Countries participating in the source code management system"
     data_source = SCM
 
-    def __get_sql__(self):
+    def __get_sql__(self, evol):
         fields = "count(distinct(upc.country_id)) as countries"
         tables = "scmlog s, people_upeople pup, upeople_countries upc"
         filters = "s.author_id = pup.people_id and pup.upeople_id = upc.upeople_id"
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                self.filters.enddate, " s.date ", fields,
-                               tables, filters, True)
+                               tables, filters, evol)
         return q
 
 class Domains(Metrics):
@@ -578,11 +578,11 @@ class Domains(Metrics):
     desc = "Domains participating in the source code management system"
     data_source = SCM
 
-    def __get_sql__(self):
+    def __get_sql__(self, evol):
         fields = "COUNT(DISTINCT(upd.domain_id)) AS domains"
         tables = "scmlog s, people_upeople pup, upeople_domains upd"
         filters = "s.author_id = pup.people_id and pup.upeople_id = upd.upeople_id"
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                self.filters.enddate, " s.date ", fields,
-                               tables, filters, True)
+                               tables, filters, evol)
         return q
