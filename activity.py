@@ -227,12 +227,45 @@ class ActivityList:
 
         return jsonpickle.encode(self, unpicklable=False)
 
+    def active (self, after = None, before = None):
+        """Get an ActivityList object with thse active between dates.
+
+        Active actors are those with activity in the period
+        after .. before.
+
+        Parameters
+        ----------
+
+        after: datetime.datetime
+           Start of the activity period to consider (default: None).
+           None means "since the begining of time"
+        before: datetime.datetime
+           End of the activity period to consider (default: None).
+           None means "until the end of time
+
+        Returns
+        -------
+
+        ActivityList
+
+        """
+
+        active = ActivityList()
+        active.list = [actor for actor in self.list
+                       if (after == None or
+                           actor["period"].end >= after) and
+                          (before == None or
+                           actor["period"].start <= before)]
+        return active
+
+
     def get_age (self, date, offset = timedelta(0)):
-        """Get age (in days) for each actor with activity before date.
+        """Get age (in days) for each actor, relative to date.
 
         The age for each actor is the difference between date and their
-        first activity. Age is always positive: actors who are only
-        active after date are not considered.
+        first activity. Age is positive for actors who were already
+        active before date, and negative for actors active only after
+        date.
 
         Parameters
         ----------
@@ -250,12 +283,10 @@ class ActivityList:
 
         """
 
-        active = [actor for actor in self.list
-                  if actor["period"].start <= date]
         ages = [{"id": actor["id"],
                  "name": actor["name"],
                  "age": date - actor["period"].start + offset}
-                for actor in active]
+                for actor in self.list]
         return ActorsDuration(ages, date)
 
     def get_idle (self, date, offset = timedelta(0)):
@@ -348,3 +379,5 @@ if __name__ == "__main__":
     print idle.json()
     idle = list.get_idle(datetime(2012,1,1))
     print idle.json() 
+    filtered = list.active (after=datetime(2012,11,2))
+    print filtered.json()
