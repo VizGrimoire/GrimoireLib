@@ -38,6 +38,8 @@ import report
 
 class ITS(DataSource):
     _metrics_set = []
+    debug = False
+
 
     @staticmethod
     def get_db_name():
@@ -638,8 +640,10 @@ def GetITSInfo (period, startdate, enddate, identities_db, type_analysis, closed
             if item.id not in metrics_on: continue
             mvalue = item.get_ts()
         else:
+            # print (item.__get_sql__(False))
             mvalue = item.get_agg()
         data = dict(data.items() + mvalue.items())
+    logging.info (" End all metrics data")
 
     if not evolutionary:
         init_date = ITS.get_date_init(startdate, enddate, identities_db, type_analysis)
@@ -647,13 +651,16 @@ def GetITSInfo (period, startdate, enddate, identities_db, type_analysis, closed
         data = dict(data.items() + init_date.items() + end_date.items())
 
         # Tendencies
-        metrics_trends = ['closed','closers','opened','openers','changed','changers']
+        metrics_trends = ['closed','closers']
+        # debugging
+        if (ITS.debug): metrics_trends = metrics_on
 
-        for i in [7,30,365]:
-            for item in all_metrics:
-                if item.id not in metrics_trends: continue
+        for item in all_metrics:
+            if item.id not in metrics_trends: continue
+            for i in [7,30,365]:
                 period_data = item.get_agg_diff_days(enddate, i)
                 data = dict(data.items() +  period_data.items())
+        logging.info (" End TRENDS data")
 
     return(data)
 
@@ -837,6 +844,10 @@ def GetReposNameITS (startdate, enddate) :
 def get_projects_name (startdate, enddate, identities_db, closed_condition) :
     # Projects activity needs to include subprojects also
     logging.info ("Getting projects list for ITS")
+
+    # debug
+    if ITS.debug:
+        return {"name":['eclipse']}
 
     # Get all projects list
     q = "SELECT p.id AS name FROM  %s.projects p" % (identities_db)
