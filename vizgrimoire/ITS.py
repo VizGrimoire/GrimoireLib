@@ -563,7 +563,8 @@ def GetITSInfo (period, startdate, enddate, identities_db, type_analysis, closed
         data = dict(data.items() + init_date.items() + end_date.items())
 
         # Tendencies
-        metrics_trends = ['closed','closers']
+        # metrics_trends = ['closed','closers']
+        metrics_trends = ['closed','closers','changed','changers','openers','opened']
         # debugging
         if (ITS.debug): metrics_trends = metrics_on
 
