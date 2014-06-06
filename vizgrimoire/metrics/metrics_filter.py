@@ -25,9 +25,10 @@
 class MetricFilters(object):
 
     """ Specific filters for each analysis """
-    def __init__(self, period, startdate, enddate, type_analysis):
+    def __init__(self, period, startdate, enddate, type_analysis, npeople=10):
         self.period = period
         self.startdate = startdate
         self.enddate = enddate
         self.type_analysis = type_analysis
+        self.npeople = npeople
 

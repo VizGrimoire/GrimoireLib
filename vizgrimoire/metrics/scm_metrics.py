@@ -45,6 +45,8 @@ class Commits(Metrics):
     id = "commits"
     name = "Commits"
     desc = "Changes to the source code"
+    envision = {"y_labels" : "true",
+                "show_markers" : "true" }
     data_source = SCM
 
     def __get_sql__(self, evolutionary):
@@ -64,6 +66,8 @@ class Authors(Metrics):
     id = "authors"
     name = "Authors"
     desc = "People authoring commits (changes to source code)"
+    envision = {"gtype" : "whiskers"}
+    action = "commits"
     data_source = SCM
 
     def __get_sql__ (self, evolutionary):
@@ -100,6 +104,8 @@ class Committers(Metrics):
     id = "committers"
     name = "Committers"
     desc = "Number of developers committing (merging changes to source code)"
+    envision = {"gtype" : "whiskers"}
+    action = "commits"
     data_source = SCM
 
     def __get_sql__(self, evolutionary):
@@ -232,7 +238,7 @@ class Branches(Metrics):
     name = "Branches"
     desc = "Number of active branches"
     data_source = SCM
-    
+
     def __get_sql__(self, evolutionary):
         # Basic parts of the query needed when calculating branches
         fields = "count(distinct(a.branch_id)) as branches "
@@ -368,18 +374,13 @@ class CommitsAuthor(Metrics):
 class AuthorsPeriod(Metrics):
     """ Authors per period class for source code management system """
 
-    #id = "avg_authors_" + self.filters.period
-    #name = "Average Authors per " + self.filters.period
-    #desc = "Average number of authors per " + self.filters.period
+    id = "avg_authors_period"
+    name = "Average Authors per period"
+    desc = "Average number of authors per period"
     data_source = SCM
 
     def __get_sql__(self, evolutionary):
         # Basic parts of the query needed when calculating commits per period
-
-        #TODO: the following three lines should be initialize in a __init__ method.
-        self.id = "avg_authors_" + self.filters.period
-        self.name = "Average Authors per " + self.filters.period
-        self.desc = "Average number of authors per " + self.filters.period
 
         fields = " count(distinct(pup.upeople_id))/timestampdiff("+self.filters.period+",min(s.date),max(s.date)) as avg_authors_"+self.filters.period
         tables = " scmlog s "
@@ -415,9 +416,9 @@ class AuthorsPeriod(Metrics):
 class CommittersPeriod(Metrics):
     """ Committers per period class for source code management system """
 
-    #id = "avg_committers_" + self.filters.period
-    #name = "Average Committers per " + self.filters.period
-    #desc = "Average number of committers per " + self.filters.period
+    id = "avg_committers_period"
+    name = "Average Committers per period"
+    desc = "Average number of committers per period"
     data_source = SCM
 
     def __get_sql__(self, evolutionary):
@@ -500,6 +501,7 @@ class Repositories(Metrics):
     id = "repositories"
     name = "Repositories"
     desc = "Number of repositories in the source code management system"
+    envision = {"gtype" : "whiskers"}
     data_source = SCM
 
     def __get_sql__(self, evolutionary):

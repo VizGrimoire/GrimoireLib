@@ -206,10 +206,6 @@ class QAForums(DataSource):
         createJSON(data, top_file)
 
     @staticmethod
-    def get_metrics_definition ():
-        pass
-
-    @staticmethod
     def tags_name(startdate, enddate):
         # Returns list of tags
         query = "select tag as name from tags"

@@ -84,10 +84,10 @@ class Authors(Metrics):
     data_source = ReleasesDS
 
     def __get_sql__ (self, evolutionary):
-        fields = " count(distinct(user)) as authors "
-        fields = "COUNT(DISTINCT(u.id)) AS authors"
-        tables = "users u, releases r, projects p"
-        filters = "r.author_id = u.id AND r.project_id = p.id"
+        fields = " COUNT(DISTINCT(pup.upeople_id)) as authors "
+        # fields = "COUNT(DISTINCT(u.id)) AS authors"
+        tables = "users u, releases r, projects p, people_upeople pup"
+        filters = "r.author_id = u.id AND r.project_id = p.id AND pup.people_id = u.id"
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                self.filters.enddate, "r.created_on", fields,
                                tables, filters, evolutionary)

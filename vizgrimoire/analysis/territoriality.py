@@ -34,9 +34,14 @@ from query_builder import DSQuery
 from metrics_filter import MetricFilters
 
 class Territoriality(Analyses):
+    # Territoriality measures the percentage of files 
+    # touched by just one developer out of the total 
+    # number of files.
+    # Deleted files are also part of this analysis. In some
+    # cases a file can be added by one developer and removed by 
+    # another one.
+    #
     # TODO:
-    #  - Add date filters (start and end date)
-    #  - Add repository filters (s.repository_id= xxx)
     #  - Add type of file filter (so far 'code' is harcoded in the query)
     #  - Add evolutionary analysis of territoriality
 
@@ -45,6 +50,14 @@ class Territoriality(Analyses):
     desc = "Percentage of files 'touched' by just one developer"
 
     def __get_sql__(self):
+   
+        repos_tables = ""
+        repos_where  = ""
+        if self.filters.type_analysis[0] == "repository":
+            repos_tables = " , repositories r "
+            repo_name = self.filters.type_analysis[1]
+            repos_where = " and s.repository_id = r.id and r.name= " + repo_name
+
         query = """
                 select (
                     select count(*) from(
@@ -52,15 +65,13 @@ class Territoriality(Analyses):
                     from actions a, 
                          scmlog s, 
                          people_upeople pup, 
-                         file_types ft 
+                         file_types ft %s
                     where a.commit_id=s.id and 
+                          s.date >= %s and
+                          s.date < %s and
                           s.author_id=pup.people_id  and 
                           a.file_id=ft.file_id and 
-                          ft.type='code'  and 
-                          a.file_id not in
-                              (select file_id
-                               from actions
-                               where type='D')
+                          ft.type='code' %s
                     group by a.file_id
                     having count(distinct(pup.upeople_id)) = 1 ) as t )
                 /
@@ -68,19 +79,25 @@ class Territoriality(Analyses):
                     select count(distinct(a.file_id)) as total_files 
                     from actions a, 
                          scmlog s, 
-                         file_types ft 
-                    where a.commit_id=s.id  and 
+                         file_types ft %s
+                    where s.date >= %s and
+                          s.date < %s and
+                          a.commit_id=s.id  and 
                           a.file_id=ft.file_id and 
-                          ft.type='code' and 
-                          a.file_id not in  
-                              (select file_id
-                               from actions
-                               where type='D')
+                          ft.type='code'  %s
                     ) as territoriality
-             """
+             """ % (repos_tables, self.filters.startdate, self.filters.enddate, repos_where,
+                    repos_tables, self.filters.startdate, self.filters.enddate, repos_where)
+        print query
         return query
 
     def result(self):
         return self.db.ExecuteQuery(self.__get_sql__())
 
+
+if __name__ == '__main__':
+    filters = MetricFilters("week", "'2010-06-01'", "'2011-01-01'", ["repository", "'nova.git'"])
+    dbcon = DSQuery("root", "", "dic_cvsanaly_openstack_2259", "dic_cvsanaly_openstack_2259")
+    terr = Territoriality(dbcon, filters)
+    print terr.result()
 
