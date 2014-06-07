@@ -348,17 +348,18 @@ init_json()
 
 if __name__ == "__main__":
 
-    import sys
-    import codecs
-    # Trick to make the script work when using pipes
-    # (pipes confuse the interpreter, which sets codec to None)
-    # http://stackoverflow.com/questions/492483/setting-the-correct-encoding-when-piping-stdout-in-python
-    sys.stdout = codecs.getwriter('utf8')(sys.stdout)
+    from standalone import stdout_utf8, print_banner
 
+    stdout_utf8()
+
+    #---------------------------------
+    print_banner("Period (str, json)")
     period = Period(datetime(2011,12,1), datetime(2012,11,1))
     print period
     print encode(period, unpicklable=False)
 
+    #---------------------------------
+    print_banner("ActivityList (str, json)")
     rowlabels = ["person_id", "name", "firstdate", "lastdate"]
     list = ActivityList((KeyedTuple([12, "Fulano Larguiño",
                                      datetime(2011,12,1),
@@ -370,14 +371,29 @@ if __name__ == "__main__":
                                     labels = rowlabels)))
     print list
     print list.json()
+
+    #---------------------------------
+    print_banner("ActivityList.age() for 2013-01-01 (str, json)")
     age = list.get_age(datetime(2013,1,1))
     print age
     print age.json()
+
+    #---------------------------------
+    print_banner("ActivityList.age() for 2012-01-01 (str, json)")
     age = list.get_age(datetime(2012,1,1))
     print age.json()
+
+    #---------------------------------
+    print_banner("ActivityList.idle() for 2013-01-01 (str, json)")
     idle = list.get_idle(datetime(2013,1,1))
     print idle.json()
+
+    #---------------------------------
+    print_banner("ActivityList.idle() for 2012-01-01 (json)")
     idle = list.get_idle(datetime(2012,1,1))
-    print idle.json() 
+    print idle.json()
+
+    #---------------------------------
+    print_banner("ActivityList.active() after 2012-11-02 (json)")
     filtered = list.active (after=datetime(2012,11,2))
     print filtered.json()

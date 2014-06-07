@@ -170,3 +170,13 @@ if __name__ == "__main__":
                             session = session)
     print data.activity()
 
+    #---------------------------------
+    print_banner("List of activity for each committer (OpenStack)")
+    session = buildSession(
+        database = 'mysql://jgb:XXX@localhost/openstack_cvsanaly_2014-06-06',
+        echo = False)
+    data = ActivityPersons (var = "list_committers",
+                            session = session)
+    print data.activity()
+    print data.activity().get_age(datetime(2014,6,6)).json()
+    print data.activity().get_idle(datetime(2014,6,6)).json()
