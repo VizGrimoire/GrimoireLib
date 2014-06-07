@@ -18,6 +18,7 @@
 ## Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 ##
 ## Miscellanous support for running modules as standalone scripts
+## and for testing.
 ##
 ## Authors:
 ##   Jesus M. Gonzalez-Barahona <jgb@bitergia.com>
@@ -25,7 +26,6 @@
 
 import sys
 from codecs import getwriter
-
 
 def print_banner (banner):
     """Print a simple banner for a kind of result
@@ -56,6 +56,7 @@ def stdout_utf8 ():
 
     sys.stdout = getwriter('utf8')(sys.stdout)
         
+
 
 if __name__ == "__main__":
 
