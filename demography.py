@@ -31,8 +31,9 @@ from sqlalchemy.orm.session import Session
 class ActivityPersons:
     """High level interface to variables related to demography studies.
     
-    Objects of this class are instantiated with a SQLAlchemy url,
-    a variable to be obtained from it, and a list of conditions.
+    Objects of this class are instantiated with a SQLAlchemy url
+    (or a SQLAlchemy session), a variable to be obtained from it,
+    and a list of conditions.
     
     Objects of this class provide the function activity() to
     obtain an ActivityList object. From this ActivityList, ages or
