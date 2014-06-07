@@ -133,11 +133,11 @@ if __name__ == "__main__":
 
     #---------------------------------
     print_banner("Age (days since first activity) for each author.")
-    age = activity.get_age(datetime(2014,1,1))
+    age = activity.age(datetime(2014,1,1))
     print age.json()
     #---------------------------------
     print_banner("Idle (days since last activity) for each author.")
-    idle = activity.get_idle(datetime(2014,1,1))
+    idle = activity.idle(datetime(2014,1,1))
     print idle.json()
 
     #---------------------------------
@@ -153,11 +153,11 @@ if __name__ == "__main__":
 
     #---------------------------------
     print_banner("Age (days since first activity) for each author.")
-    age = activity.get_age(datetime(2012,1,1))
+    age = activity.age(datetime(2012,1,1))
     print age.json()
     #---------------------------------
     print_banner("Idle (days since last activity) for each author.")
-    idle = activity.get_idle(datetime(2012,1,1))
+    idle = activity.idle(datetime(2012,1,1))
     print idle.json()
 
     #---------------------------------
@@ -178,5 +178,5 @@ if __name__ == "__main__":
     data = ActivityPersons (var = "list_committers",
                             session = session)
     print data.activity()
-    print data.activity().get_age(datetime(2014,6,6)).json()
-    print data.activity().get_idle(datetime(2014,6,6)).json()
+    print data.activity().age(datetime(2014,6,6)).json()
+    print data.activity().idle(datetime(2014,6,6)).json()

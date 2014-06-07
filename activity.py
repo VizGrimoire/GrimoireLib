@@ -121,7 +121,7 @@ class ActorsDuration:
         """
 
         # Get data in long format
-        long = self.get_long()
+        long = self.long_format()
         return {"date": self.date,
                 "persons": long
                 }
@@ -140,7 +140,7 @@ class ActorsDuration:
 
         return jsonpickle.encode(self, unpicklable=False)
 
-    def get_long (self):
+    def long_format (self):
         """Get long version of the object.
 
         The object is stored in wide format (that is, a list with
@@ -259,7 +259,7 @@ class ActivityList:
         return active
 
 
-    def get_age (self, date, offset = timedelta(0)):
+    def age (self, date, offset = timedelta(0)):
         """Get age (in days) for each actor, relative to date.
 
         The age for each actor is the difference between date and their
@@ -289,7 +289,7 @@ class ActivityList:
                 for actor in self.list]
         return ActorsDuration(ages, date)
 
-    def get_idle (self, date, offset = timedelta(0)):
+    def idle (self, date, offset = timedelta(0)):
         """Get idle (in days) for each actor with activity before date.
 
         The idle period for each actor is the difference between date
@@ -374,23 +374,23 @@ if __name__ == "__main__":
 
     #---------------------------------
     print_banner("ActivityList.age() for 2013-01-01 (str, json)")
-    age = list.get_age(datetime(2013,1,1))
+    age = list.age(datetime(2013,1,1))
     print age
     print age.json()
 
     #---------------------------------
     print_banner("ActivityList.age() for 2012-01-01 (str, json)")
-    age = list.get_age(datetime(2012,1,1))
+    age = list.age(datetime(2012,1,1))
     print age.json()
 
     #---------------------------------
     print_banner("ActivityList.idle() for 2013-01-01 (str, json)")
-    idle = list.get_idle(datetime(2013,1,1))
+    idle = list.idle(datetime(2013,1,1))
     print idle.json()
 
     #---------------------------------
     print_banner("ActivityList.idle() for 2012-01-01 (json)")
-    idle = list.get_idle(datetime(2012,1,1))
+    idle = list.idle(datetime(2012,1,1))
     print idle.json()
 
     #---------------------------------
