@@ -107,7 +107,7 @@ class ActivityPersons:
 
 if __name__ == "__main__":
 
-    from datetime import datetime
+    from datetime import datetime, timedelta
     import sys
     import codecs
     # Trick to make the script work when using pipes
@@ -178,5 +178,14 @@ if __name__ == "__main__":
     data = ActivityPersons (var = "list_committers",
                             session = session)
     print data.activity()
+    #---------------------------------
+    print_banner("Age for each committer (OpenStack)")
     print data.activity().age(datetime(2014,6,6)).json()
+    #---------------------------------
+    print_banner("Time idle for each committer (OpenStack)")
     print data.activity().idle(datetime(2014,6,6)).json()
+    #---------------------------------
+    print_banner("Age for committers active during a period (OpenStack)")
+    print data.activity() \
+        .active(after = datetime(2014,6,6) - timedelta(days=180)) \
+        .age(datetime(2014,6,6)).json()
