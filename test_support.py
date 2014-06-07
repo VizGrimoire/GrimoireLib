@@ -25,6 +25,29 @@
 
 from json import loads
 
+def equalJSON(jsonA, jsonB):
+    """Compare two json strings
+    
+    Returns a boolean with the result of the comparison.
+
+    Parameters
+    ----------
+
+    jsonA: string
+       First string to compare
+    jsonB: string
+       Second string to compare
+
+    Returns
+    -------
+
+    Boolean
+
+    """
+
+    return loads(jsonA) == loads(jsonB)
+
+
 def equalJSON_file_persons (json, file_name):
     """Compare a JSON string with the content of a file (only persons).
 

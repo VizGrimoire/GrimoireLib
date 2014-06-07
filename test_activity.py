@@ -25,31 +25,10 @@
 from datetime import datetime
 from activity import Period, ActivityList
 from sqlalchemy.util import KeyedTuple
-from json import loads
 from jsonpickle import encode
+from test_support import equalJSON
 import unittest
 
-def _equalJSON (jsonA, jsonB):
-    """Compare two json strings
-    
-    Returns a boolean with the result of the comparison.
-
-    Parameters
-    ----------
-
-    jsonA: string
-       First string to compare
-    jsonB: string
-       Second string to compare
-
-    Returns
-    -------
-
-    Boolean
-
-    """
-
-    return loads(jsonA) == loads(jsonB)
 
 class TestPeriod (unittest.TestCase):
     """Unit tests for class Period"""
@@ -65,7 +44,7 @@ class TestPeriod (unittest.TestCase):
 """
         period = Period(datetime(2011,12,1), datetime(2012,11,1))
         period_json = encode(period, unpicklable=False)
-        self.assertTrue( _equalJSON(period_json, correct_json))
+        self.assertTrue( equalJSON(period_json, correct_json))
 
 class TestActivityList (unittest.TestCase):
     """Unit tests for class ActivityList"""
@@ -104,7 +83,7 @@ class TestActivityList (unittest.TestCase):
                                          datetime(2013,2,3)],
                                         labels = rowlabels)))
         activity_json = encode(list, unpicklable=False)
-        self.assertTrue( _equalJSON( activity_json, correct_json ))
+        self.assertTrue( equalJSON( activity_json, correct_json ))
 
 if __name__ == "__main__":
     unittest.main()
