@@ -227,6 +227,22 @@ class ActivityList:
 
         return jsonpickle.encode(self, unpicklable=False)
 
+    def maxend (self):
+        """Obtain the maximum end date for all the periods.
+
+        Returns
+        -------
+
+        datetime.datetime: maximum end date
+
+        """
+
+        maxend = self.list[0]["period"].end
+        for actor in self.list:
+            if maxend < actor["period"].end:
+                maxend = actor["period"].end
+        return maxend
+
     def active (self, after = None, before = None):
         """Get an ActivityList object with thse active between dates.
 

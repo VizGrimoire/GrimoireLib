@@ -29,7 +29,7 @@ from scm import PeriodCondition, NomergesCondition
 from sqlalchemy.orm.session import Session
 
 class ActivityPersons:
-    """High level interface to variables related to demography studies.
+    """High level interface to variables related to activity of persons.
     
     Objects of this class are instantiated with a SQLAlchemy url
     (or a SQLAlchemy session), a variable to be obtained from it,
@@ -51,7 +51,8 @@ class ActivityPersons:
         Parameters
         ----------
         
-        var: {"list_authors" | "list_committers"}
+        var: {"list_authors" | "list_committers" |
+           "list_uauthors" | "list_ucommitters"}
            Variable
         conditions: list of Condition objects
            Conditions to be applied to get the values
@@ -106,6 +107,170 @@ class ActivityPersons:
 
         return self.query.activity()
 
+class DurationCondition ():
+    """Root of all conditions for DurationPersons objects
+
+    Provides a filter method which will be called when applying
+    the condition.
+    """
+
+    def filter (object):
+        """Filter to apply for this condition
+
+        - query: query to which the filter will be applied
+        """
+
+        return object
+
+class SnapshotCondition (DurationCondition):
+    """Condition for specifiying "origin" of durations.
+
+    Durations (age, idle) are to be calculated from the time
+    specified by this condition.
+
+    """
+
+    def __init__ (self, date):
+        """Instatiation of the object.
+
+        Parameters
+        ----------
+
+        date: datetime.datetime
+           Time used as reference for the snapshot.
+
+        """
+
+        self.date = date
+
+    def modify (self, object):
+        """Modification for this condition.
+
+        Specifies the time for the snapshot.
+
+        """
+
+        object.set_snapshot(self.date)
+
+
+class ActiveCondition (DurationCondition):
+    """Condition for filtering persons active during a period
+
+    Only persons active during the specified period are to
+    be considered.
+
+    """
+
+    def __init__ (self, after = None, before = None):
+        """Instatiation of the object.
+
+        Parameters
+        ----------
+
+        after: datetime.datetime
+           Start of the activity period to consider (default: None).
+           None means "since the begining of time"
+        before: datetime.datetime
+           End of the activity period to consider (default: None).
+           None means "until the end of time
+
+        """
+
+        self.after = after
+        self.before = before
+
+    def modify (self, object):
+        """Modification for this condition.
+
+        Sets the new activity list, considering only active
+        persons during the period.
+
+        """
+
+        object.set_activity(object.activity.active(after = self.after,
+                                                   before = self.before))
+    
+
+class DurationPersons:
+    """High level interface to variables related to duration of persons.
+    
+    Duration can be different periods, such as age or idle time.
+    Objects of this class are instantiated with an ActivityPersons
+    object, and some relevant dates.
+    
+    Objects of this class provide the functions durations() to
+    obtain an ActorsDuration object.
+
+    """
+
+    def __init__ (self, var, activity, conditions = ()):
+        """Instantiation of the object.
+
+        Instantiation can be specified with an ActivityPersons object.
+
+        Parameters
+        ----------
+        
+        var: {"age" | "idle"}
+           Variable
+        conditions: list of DurationCondition objects
+           Conditions to be applied to get the values
+        activity: ActivityPersons
+           ActivityPersons object with the activity of persons to consider.
+
+        """
+
+        self.activity = activity
+        if var not in ("age", "idle"):
+            raise Exception ("Not a valid variable: " + self.var)
+        self.var = var
+        self.snapshot = None
+        for condition in conditions:
+            condition.modify(self)
+
+    def set_snapshot (self, time):
+        """Define a snapshot time for durations.
+
+        Durations (age, idle) are to be calculated from the time
+        specified.
+
+        Parameters
+        ----------
+
+        time: datetime.datetime
+           Time of snapshot.
+        """
+
+        self.snapshot = time
+
+    def set_activity (self, activity):
+        """Change the activity considered by the object.
+
+        Paraeters
+        ---------
+
+        activity: ActivityPersons
+           New list of activity per person to be used.
+
+        """
+
+        self.activity = activity
+
+    def durations (self):
+       """Durations for each person (age, idle,...) depending on variable
+
+       """
+
+       if self.snapshot is None:
+           snapshot = activity.maxend()
+       else:
+           snapshot = self.snapshot
+       if self.var == "age":
+           durations = self.activity.age(date = snapshot)
+       elif self.var == "idle":
+           durations = self.activity.idle(date = snapshot)
+       return durations
+
 if __name__ == "__main__":
 
     from standalone import stdout_utf8, print_banner
@@ -156,26 +321,47 @@ if __name__ == "__main__":
         database = 'mysql://jgb:XXX@localhost/vizgrimoire_cvsanaly',
         echo = False)
     data = ActivityPersons (var = "list_ucommitters",
-                            conditions = (period,nomerges),
+                            conditions = (nomerges,),
                             session = session)
     print data.activity()
+    print data.activity() \
+        .active(after = datetime(2014,1,1) - timedelta(days=183))
+    print data.activity() \
+        .active(after = datetime(2014,1,1) - timedelta(days=183)) \
+        .age(datetime(2014,1,1)).json()
 
     #---------------------------------
-    print_banner("List of activity for each committer (OpenStack)")
-    session = buildSession(
-        database = 'mysql://jgb:XXX@localhost/openstack_cvsanaly_2014-06-06',
-        echo = False)
-    data = ActivityPersons (var = "list_committers",
-                            session = session)
-    print data.activity()
+    print_banner("Age, using variables")
+    age = DurationPersons (var = "age",
+                           activity = data.activity())
+    print age.durations().json()
+
     #---------------------------------
-    print_banner("Age for each committer (OpenStack)")
-    print data.activity().age(datetime(2014,6,6)).json()
+    print_banner("Age, using variables and conditions")
+    snapshot = SnapshotCondition (date = datetime (2014,1,1))
+    active_period = ActiveCondition (after = datetime(2014,1,1) - \
+                                         timedelta(days=10))
+    age = DurationPersons (var = "age",
+                           conditions = (snapshot, active_period),
+                           activity = data.activity())
+    print age.durations().json()
+    
     #---------------------------------
-    print_banner("Time idle for each committer (OpenStack)")
-    print data.activity().idle(datetime(2014,6,6)).json()
-    #---------------------------------
-    print_banner("Age for committers active during a period (OpenStack)")
-    print data.activity() \
-        .active(after = datetime(2014,6,6) - timedelta(days=180)) \
-        .age(datetime(2014,6,6)).json()
+    # print_banner("List of activity for each committer (OpenStack)")
+    # session = buildSession(
+    #     database = 'mysql://jgb:XXX@localhost/openstack_cvsanaly_2014-06-06',
+    #     echo = False)
+    # data = ActivityPersons (var = "list_committers",
+    #                         session = session)
+    # print data.activity()
+    # #---------------------------------
+    # print_banner("Age for each committer (OpenStack)")
+    # print data.activity().age(datetime(2014,6,6)).json()
+    # #---------------------------------
+    # print_banner("Time idle for each committer (OpenStack)")
+    # print data.activity().idle(datetime(2014,6,6)).json()
+    # #---------------------------------
+    # print_banner("Age for committers active during a period (OpenStack)")
+    # print data.activity() \
+    #     .active(after = datetime(2014,6,6) - timedelta(days=180)) \
+    #     .age(datetime(2014,6,6)).json()
