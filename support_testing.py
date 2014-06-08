@@ -24,6 +24,7 @@
 ##
 
 from json import loads
+import codecs
 
 basic_types = (str, unicode, int, long, float, bool)
 sequence_types = (list, tuple)
@@ -111,7 +112,7 @@ def compare_seqs (a, b, level = 0):
     length = len_b
     if len_a != len_b:
         strings = " " * level + \
-            "Lengths are different: %d, %d" % (len_a, len_b)
+            "Lengths are different: %d, %d\n" % (len_a, len_b)
         equal = False
         if len_a < len_b:
             length = len_a
@@ -121,7 +122,7 @@ def compare_seqs (a, b, level = 0):
                                                           level + 1)
             if not equal_items:
                 equal = False
-                strings = " " * level + \
+                strings = strings + " " * level + \
                     "Item %d is different:\n" % (i,) + strings_items
     return (equal, strings)
 
@@ -159,7 +160,10 @@ def compare_dicts (a, b, level = 0):
     else:
         strings = ""
     for key in keys_a:
-        if a[key] != b[key]:
+        if key not in keys_b:
+            strings = strings + " " * level + \
+                "Key %s not in dict:\n" % (str(key),)
+        elif a[key] != b[key]:
             equal = False
             (equal_seq, strings_seq) = compare_items (a[key], b[key],
                                                       level + 1)
@@ -194,7 +198,7 @@ def print_comparison (a, b, func):
     print strings
 
 
-def equalJSON (jsonA, jsonB, details = False):
+def equal_JSON (jsonA, jsonB, details = False):
     """Compare two json strings
     
     Returns a boolean with the result of the comparison.
@@ -228,7 +232,7 @@ def equalJSON (jsonA, jsonB, details = False):
         return True
 
 
-def equalJSON_file (json, file_name, details = False):
+def equal_JSON_file (json, file_name, details = False):
     """Compare a JSON string with the content of a file.
 
     Returns a boolean with the result of the comparison.
@@ -253,29 +257,10 @@ def equalJSON_file (json, file_name, details = False):
 
     with open (file_name, "r") as file:
         file_content = file.read()
-    json_dict = loads(json)
-    file_dict = loads(file_content)
-    if json_dict["persons"]["id"] == file_dict["persons"]["id"]:
-        print "persons.id is equal"
-    if len(json_dict["persons"]["id"]) == len(file_dict["persons"]["id"]):
-        print "len(persons.id) is equal"
-    # Decrease age in one, because age of eg. 5 hours is 0 days
-    file_dict["persons"]["age"] = [age - 1 
-                                   for age in file_dict["persons"]["age"]]
-    if json_dict["persons"]["age"] == file_dict["persons"]["age"]:
-        print "persons.age is equal"
-    else:
-        for i in range(len(json_dict["persons"]["age"])):
-            if json_dict["persons"]["age"][i] != \
-                    file_dict["persons"]["age"][i]:
-                print json_dict["persons"]["id"][i], \
-                    json_dict["persons"]["name"][i], \
-                    json_dict["persons"]["age"][i], \
-                    file_dict["persons"]["age"][i]
-    return loads(json) == loads(file_content)
+    return equal_JSON (json, file_content, details)
 
 
-def equalJSON_file_persons (json, file_name):
+def equal_JSON_file_persons (json, file_name):
     """Compare a JSON string with the content of a file (only persons).
 
     Returns a boolean with the result of the comparison. The comparison
@@ -320,6 +305,23 @@ def equalJSON_file_persons (json, file_name):
                     file_dict["persons"]["age"][i]
     return loads(json) == loads(file_content)
 
+def write_JSON (filename, data):
+    """Write JSON string for data in file.
+
+    Parameters
+    ----------
+
+    filename: string
+       Name of the file in which to write the JSON string.
+    data: any
+       Data to write, in JSON format, to file. It is assumed that
+       data.json() can be called to produce the JSON string.
+
+    """
+
+    with codecs.open(filename, "w", "utf-8") as file:
+            file.write(data.json())
+
 
 if __name__ == "__main__":
 
@@ -345,5 +347,4 @@ if __name__ == "__main__":
     print_comparison (list_f, list_h, compare_items)
     print_comparison (dict_a, dict_b, compare_dicts)
     print_comparison (dict_a, dict_c, compare_items)
-    equalJSON (dict_a, dict_c, details = True)
-    
+    equal_JSON (dict_a, dict_c, details = True)

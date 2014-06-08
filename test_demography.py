@@ -22,11 +22,11 @@
 ##   Jesus M. Gonzalez-Barahona <jgb@bitergia.com>
 ##
 
-from datetime import datetime
-from demography import ActivityPersons
-import codecs
+from datetime import datetime, timedelta
+from demography import ActivityPersons, DurationPersons, \
+    SnapshotCondition, ActiveCondition
 import unittest
-from test_support import equalJSON_file_persons
+from support_testing import equal_JSON_file, write_JSON
 
 # Database with CVSAnaly data for OpenStack
 openstack_database = 'mysql://jgb:XXX@localhost/openstack_cvsanaly_2014-06-06'
@@ -36,6 +36,11 @@ tests_dir = 'tests'
 class TestActivityPersons (unittest.TestCase):
     """Unit tests for class ActivityPersons"""
 
+    def setUp (self):
+        self.snapshot = SnapshotCondition (date = datetime (2014,6,6))
+        self.active_period = ActiveCondition (after = datetime(2014,6,6) - \
+                                                  timedelta(days=180))
+
     def test_openstack_birth (self):
         """Test openstack "birth" JSON file"""
 
@@ -43,24 +48,28 @@ class TestActivityPersons (unittest.TestCase):
         data = ActivityPersons (
             database = openstack_database,
             var = "list_authors")
-        activity = data.activity()
-        age = activity.age(datetime(2014,6,6))
-        with codecs.open(tests_dir + '/' + "output.json", "w", "utf-8") as file:
-            file.write(age.json())
-        self.assertTrue( equalJSON_file_persons(age.json(),
-                                         tests_dir + '/' + birth))
+        age = DurationPersons (var = "age",
+                               conditions = (self.snapshot,),
+                               activity = data.activity())
+        # write_JSON (tests_dir + '/' + "output.json", age.durations())
+        self.assertTrue(equal_JSON_file(age.durations().json(),
+                                        tests_dir + '/' + birth,
+                                        details = True))
 
-    # def test_openstack_aging (self):
-    #     """Test openstack "aging" JSON file"""
+    def test_openstack_aging (self):
+        """Test openstack "aging" JSON file"""
 
-    #     aging = "openstack_2014-06-06_scm-demographics-aging.json"
-    #     data = ActivityPersons (
-    #         database = openstack_database,
-    #         var = "list_authors")
-    #     activity = data.activity()
-    #     idle = activity.idle(datetime(2014,6,6))
-    #     self.assertTrue( _equalJSON_file_persons(idle.json(),
-    #                                      tests_dir + '/' + aging))
+        aging = "openstack_2014-06-06_scm-demographics-aging.json"
+        data = ActivityPersons (
+            database = openstack_database,
+            var = "list_authors")
+        age = DurationPersons (var = "age",
+                               conditions = (self.snapshot,
+                                             self.active_period),
+                               activity = data.activity())
+        self.assertTrue(equal_JSON_file(age.durations().json(),
+                                        tests_dir + '/' + aging,
+                                        details = True))
 
 
 if __name__ == "__main__":
