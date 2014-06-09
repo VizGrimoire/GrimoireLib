@@ -93,7 +93,9 @@ def create_reports_r(enddate, destdir):
     for ds in Report.get_data_sources():
         automator = Report.get_config()
         db = automator['generic'][ds.get_db_name()]
-        vizr.SetDBChannel (database=db, user=opts.dbuser, password=opts.dbpassword)
+        dbuser = Report._automator['generic']['db_user']
+        dbpassword = Report._automator['generic']['db_password']
+        vizr.SetDBChannel (database=db, user=dbuser, password=dbpassword)
         logging.info("Creating R reports for " + ds.get_name())
         ds.create_r_reports(vizr, enddate, destdir)
 
