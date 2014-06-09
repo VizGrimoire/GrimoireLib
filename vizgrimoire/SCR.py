@@ -62,46 +62,6 @@ class SCR(DataSource):
     def get_evolutionary_data (period, startdate, enddate, identities_db, filter_ = None):
         return SCR.__get_data__ (period, startdate, enddate, identities_db, filter_, True)
 
-        evol = {}
-
-        # Get metrics using changes table for more precise results
-        metrics_on = SCR.get_metrics_core_ts()
-        metrics_reports = SCR.get_metrics_core_reports()
-        if filter_ is None:
-            from report import Report
-            reports_on = Report.get_config()['r']['reports'].split(",")
-            for r in metrics_reports:
-                if r in reports_on: metrics_on += [r]
-
-        type_analysis = None
-        if filter_ is not None:
-            type_analysis = [filter_.get_name(), filter_.get_item()]
-        mfilter = MetricFilters(period, startdate, enddate, type_analysis)
-        all_metrics = SCR.get_metrics_set(SCR)
-
-        # SCR specific: remove some metrics from filters
-        if filter_ is not None:
-            metrics_not_filters =  SCR.get_metrics_not_filters()
-            metrics_on = list(set(metrics_on) - set(metrics_not_filters))
-            if filter_.get_name() == "repository": metrics_on += ['review_time','submitted']
-
-        for item in all_metrics:
-            if item.id not in metrics_on: continue
-            item.filters = mfilter
-            mvalue = item.get_ts()
-            evol = dict(evol.items() + mvalue.items())
-
-        # SCR specific
-        metrics_on_changes = ['merged','abandoned','new']
-        for item in all_metrics:
-            if item.id in metrics_on_changes and filter_ is None:
-                mvalue = item.get_ts_changes()
-                evol = dict(evol.items() + mvalue.items())
-
-        return evol
-
-
-
     @staticmethod
     def create_evolutionary_report (period, startdate, enddate, destdir, i_db, filter_ = None):
         data =  SCR.get_evolutionary_data (period, startdate, enddate, i_db, filter_)
@@ -115,11 +75,27 @@ class SCR(DataSource):
     @staticmethod
     def __get_data__ (period, startdate, enddate, identities_db, filter_ = None, evol = False):
         data = {}
+        DS = SCR
 
         type_analysis = None
         if filter_ is not None:
             type_analysis = [filter_.get_name(), filter_.get_item()]
-        metrics_on = SCR.get_metrics_core_agg()
+
+        from report import Report
+        automator = Report.get_config()
+
+        if evol:
+            metrics_on = DS.get_metrics_core_ts()
+            automator_metrics = DS.get_name()+"_metrics_ts"
+        else:
+            metrics_on = DS.get_metrics_core_agg()
+            automator_metrics = DS.get_name()+"_metrics_agg"
+
+        if automator_metrics in automator['r']:
+            metrics_on = automator['r'][automator_metrics].split(",")
+            logging.info(automator_metrics + " found ")
+            print(metrics_on)
+
         metrics_reports = SCR.get_metrics_core_reports()
         if filter_ is None:
             from report import Report
@@ -157,6 +133,11 @@ class SCR(DataSource):
         if not evol:
             # Tendencies
             metrics_trends = SCR.get_metrics_core_trends()
+
+            automator_metrics = DS.get_name()+"_metrics_trends"
+            if automator_metrics in automator['r']:
+                metrics_trends = automator['r'][automator_metrics].split(",")
+
             for i in [7,30,365]:
                 for item in all_metrics:
                     if item.id not in metrics_trends: continue

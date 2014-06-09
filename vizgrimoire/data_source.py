@@ -24,7 +24,7 @@
 """ DataSource offers the API to get aggregated, evolutionary and top data with filter 
     support for Grimoire supported data sources """ 
 
-import os
+import logging, os
 from GrimoireUtils import createJSON
 from metrics_filter import MetricFilters
 
@@ -242,10 +242,18 @@ class DataSource(object):
         """ Get basic data from all core metrics """
         data = {}
 
+        from report import Report
+        automator = Report.get_config()
+
         if evol:
             metrics_on = DS.get_metrics_core_ts()
+            automator_metrics = DS.get_name()+"_metrics_ts"
         else:
             metrics_on = DS.get_metrics_core_agg()
+            automator_metrics = DS.get_name()+"_metrics_agg"
+
+        if automator_metrics in automator['r']:
+            metrics_on = automator['r'][automator_metrics].split(",")
 
         type_analysis = None
         if filter_ is not None:
@@ -279,6 +287,11 @@ class DataSource(object):
 
             # Tendencies
             metrics_trends = DS.get_metrics_core_trends()
+
+            automator_metrics = DS.get_name()+"_metrics_trends"
+            if automator_metrics in automator['r']:
+                metrics_trends = automator['r'][automator_metrics].split(",")
+
             for i in [7,30,365]:
                 for item in all_metrics:
                     if item.id not in metrics_trends: continue
