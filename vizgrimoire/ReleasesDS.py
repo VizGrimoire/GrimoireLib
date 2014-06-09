@@ -65,7 +65,7 @@ class ReleasesDS(DataSource):
             logging.warn("ReleasesDS does not support filters yet.")
             return data
 
-        metrics_on = ['modules','authors','releases']
+        metrics_on = ReleasesDS.get_metrics_core_ts()
         filter_ = MetricFilters(period, startdate, enddate, type_analysis)
         all_metrics = ReleasesDS.get_metrics_set(ReleasesDS)
 
@@ -95,7 +95,7 @@ class ReleasesDS(DataSource):
 
         filter_ = MetricFilters(period, startdate, enddate, type_analysis)
 
-        metrics_on = ['modules','authors','releases']
+        metrics_on = ReleasesDS.get_metrics_core_agg()
         all_metrics = ReleasesDS.get_metrics_set(ReleasesDS)
 
         for item in all_metrics:
@@ -105,7 +105,7 @@ class ReleasesDS(DataSource):
             data = dict(data.items() + mvalue.items())
 
         # Tendencies
-        metrics_trends = ['modules','authors','releases']
+        metrics_trends = ReleasesDS.get_metrics_core_trends()
 
         for i in [7,30,365]:
             for item in all_metrics:
@@ -219,3 +219,15 @@ class ReleasesDS(DataSource):
     def get_query_builder ():
         from query_builder import ReleasesDSQuery
         return ReleasesDSQuery
+
+    @staticmethod
+    def get_metrics_core_agg():
+        return ['modules','authors','releases']
+
+    @staticmethod
+    def get_metrics_core_ts():
+        return ['modules','authors','releases']
+
+    @staticmethod
+    def get_metrics_core_trends():
+        return ['modules','authors','releases']

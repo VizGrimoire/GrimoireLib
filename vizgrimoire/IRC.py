@@ -54,7 +54,7 @@ class IRC(DataSource):
     def get_evolutionary_data (period, startdate, enddate, identities_db, filter_ = None):
         evol = {}
 
-        metrics_on = ['sent', 'senders', 'repositories']
+        metrics_on = IRC.get_metrics_core_ts()
         type_analysis = None
         if filter_ is not None:
             type_analysis = [filter_.get_name(), filter_.get_item()]
@@ -80,7 +80,7 @@ class IRC(DataSource):
     def get_agg_data (period, startdate, enddate, identities_db, filter_ = None):
         agg = {}
 
-        metrics_on = ['sent', 'senders', 'repositories']
+        metrics_on = IRC.get_metrics_core_agg()
         type_analysis = None
         if filter_ is not None:
             type_analysis = [filter_.get_name(), filter_.get_item()]
@@ -98,7 +98,7 @@ class IRC(DataSource):
             agg = dict(agg.items() + mvalue.items() + init_date.items() + end_date.items())
 
         # Tendencies
-        metrics_trends = ['sent', 'senders']
+        metrics_trends = IRC.get_metrics_core_trends()
         for i in [7,30,365]:
             for item in all_metrics:
                 if item.id not in metrics_trends: continue
@@ -198,6 +198,18 @@ class IRC(DataSource):
     def get_query_builder():
         from query_builder import IRCQuery
         return IRCQuery
+
+    @staticmethod
+    def get_metrics_core_agg():
+        return ['sent', 'senders', 'repositories']
+
+    @staticmethod
+    def get_metrics_core_ts():
+        return ['sent', 'senders', 'repositories']
+
+    @staticmethod
+    def get_metrics_core_trends():
+        return ['sent', 'senders']
 
 
 def GetDate (startdate, enddate, identities_db, type_analysis, type):

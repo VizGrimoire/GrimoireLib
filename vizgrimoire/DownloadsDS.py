@@ -52,10 +52,13 @@ class DownloadsDS(DataSource):
         type_analysis = None
         if (filter_ is not None):
             type_analysis = [filter_.get_name(), filter_.get_item()]
-            logging.warn("DownloadsDS does not support filters.")
+            logging.warn(DownloadsDS.get_name() + " does not support filters.")
             return data
 
-        metrics_on = ['downloads','packages','protocols','ips']
+        if (evol):
+            metrics_on = DownloadsDS.get_metrics_core_ts()
+        else:
+            metrics_on = DownloadsDS.get_metrics_core_agg()
         mfilter = MetricFilters(period, startdate, enddate, type_analysis)
         all_metrics = DownloadsDS.get_metrics_set(DownloadsDS)
 
@@ -70,7 +73,7 @@ class DownloadsDS(DataSource):
 
             if evol is False:
                 # Tendencies
-                metrics_trends = ['downloads','packages']
+                metrics_trends = DownloadsDS.get_metrics_core_trends()
 
                 for i in [7,30,365]:
                     for item in all_metrics:
@@ -146,6 +149,18 @@ class DownloadsDS(DataSource):
     def get_query_builder ():
         from query_builder import DownloadsDSQuery
         return DownloadsDSQuery
+
+    @staticmethod
+    def get_metrics_core_agg():
+        return ['downloads','packages','protocols','ips']
+
+    @staticmethod
+    def get_metrics_core_ts():
+        return ['downloads','packages','protocols','ips']
+
+    @staticmethod
+    def get_metrics_core_trends():
+        return ['downloads','packages']
 
 def TopIPs(startdate, enddate, numTop):
     # Top IPs downloading packages in a given period

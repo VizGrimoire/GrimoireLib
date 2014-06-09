@@ -145,6 +145,18 @@ class Mediawiki(DataSource):
         from query_builder import MediawikiQuery
         return MediawikiQuery
 
+    @staticmethod
+    def get_metrics_core_agg():
+        return ['reviews','authors','pages']
+
+    @staticmethod
+    def get_metrics_core_ts():
+        return ['reviews','authors','pages']
+
+    @staticmethod
+    def get_metrics_core_trends():
+        return ['reviews','authors']
+
 # SQL Metaqueries
 
 def GetTablesOwnUniqueIdsMediaWiki () :
@@ -161,7 +173,10 @@ def GetFiltersOwnUniqueIdsMediaWiki () :
 
 def GetDataMediaWiki (period, startdate, enddate, i_db, type_analysis, evol = False):
     data = {}
-    metrics_on = ['reviews','authors','pages']
+    if evol:
+        metrics_on = Mediawiki.get_metrics_core_ts()
+    else:
+        metrics_on = Mediawiki.get_metrics_core_agg()
     filter_ = MetricFilters(period, startdate, enddate, type_analysis)
     all_metrics = Mediawiki.get_metrics_set(Mediawiki)
 
@@ -180,7 +195,7 @@ def GetDataMediaWiki (period, startdate, enddate, i_db, type_analysis, evol = Fa
         data = dict(data.items() + init_date.items() + end_date.items())
 
         # Tendencies
-        metrics_trends = ['reviews','authors']
+        metrics_trends = Mediawiki.get_metrics_core_trends()
 
         for i in [7,30,365]:
             for item in all_metrics:

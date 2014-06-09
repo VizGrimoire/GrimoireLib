@@ -350,6 +350,22 @@ class SCM(DataSource):
         from query_builder import SCMQuery
         return SCMQuery
 
+    @staticmethod
+    def get_metrics_core_agg():
+        m  = ['commits','authors','committers','branches','files','actions','lines','repositories']
+        m += ['avg_commits', 'avg_files', 'avg_commits_author', 'avg_files_author']
+        return m
+
+    @staticmethod
+    def get_metrics_core_ts():
+        m  = ['commits','authors','committers','branches','files','lines','repositories']
+        return m
+
+    @staticmethod
+    def get_metrics_core_trends():
+        return ['commits','authors','files','lines']
+
+
 
 ##########
 # Meta-functions to automatically call metrics functions and merge them
@@ -361,8 +377,8 @@ def GetSCMEvolutionaryData (period, startdate, enddate, i_db, type_analysis):
     # management system. Those are merged and returned.
 
     data = {}
-    metrics_on = ['commits','authors','committers','branches','files','lines']
-    metrics_reports = ['companies','countries','domains','repositories']
+    metrics_on = SCM.get_metrics_core_ts()
+    metrics_reports = SCM.get_metrics_core_reports()
 
     if type_analysis is None:
         from report import Report
@@ -386,9 +402,8 @@ def GetSCMStaticData (period, startdate, enddate, i_db, type_analysis):
     # management system. Those are merged and returned.
 
     data = {}
-    metrics_on = ['commits','authors','committers','branches','files','actions','lines']
-    metrics_on += ['avg_commits', 'avg_files', 'avg_commits_author', 'avg_files_author']
-    metrics_reports = ['companies','countries','domains','repositories']
+    metrics_on = SCM.get_metrics_core_agg()
+    metrics_reports = SCM.get_metrics_core_reports()
 
     if type_analysis is None:
         from report import Report
@@ -410,7 +425,7 @@ def GetSCMStaticData (period, startdate, enddate, i_db, type_analysis):
     data = dict(data.items() + init_date.items() + end_date.items())
 
     # Tendencies
-    metrics_trends = ['commits','authors','files','lines']
+    metrics_trends = SCM.get_metrics_core_trends()
 
     for i in [7,30,365]:
         for item in all_metrics:

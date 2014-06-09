@@ -256,6 +256,21 @@ class MLS(DataSource):
         from query_builder import MLSQuery
         return MLSQuery
 
+    @staticmethod
+    def get_metrics_core_agg():
+        m  = ['sent','senders','threads','sent_response','senders_response','senders_init','repositories']
+        return m
+
+
+    @staticmethod
+    def get_metrics_core_ts():
+        m  = ['sent','senders','threads','sent_response','senders_response','senders_init','repositories']
+        return m
+
+    @staticmethod
+    def get_metrics_core_trends():
+        return ['sent','senders']
+
 ##############
 # Specific FROM and WHERE clauses per type of report
 ##############
@@ -462,8 +477,11 @@ def GetMLSFiltersResponse () :
 def GetMLSInfo (period, startdate, enddate, identities_db, rfield, type_analysis, evolutionary):
 
     data = {}
-    metrics_on = ['sent','senders','threads','sent_response','senders_response','senders_init']
-    metrics_reports = ['companies','countries','domains','repositories']
+    if evolutionary:
+        metrics_on = MLS.get_metrics_core_ts()
+    else:
+        metrics_on = MLS.get_metrics_core_agg()
+    metrics_reports = MLS.get_metrics_core_reports()
 
     if type_analysis is None:
         from report import Report
@@ -489,7 +507,7 @@ def GetMLSInfo (period, startdate, enddate, identities_db, rfield, type_analysis
         data = dict(data.items() + init_date.items() + end_date.items())
 
         # Tendencies
-        metrics_trends = ['sent','senders']
+        metrics_trends = MLS.get_metrics_core_trends()
 
         for i in [7,30,365]:
             for item in all_metrics:

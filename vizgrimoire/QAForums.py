@@ -94,7 +94,11 @@ class QAForums(DataSource):
         if (filter_ is not None):
             type_analysis = [filter_.get_name(), filter_.get_item()]
 
-        metrics_on = ['qsent','asent','csent','qsenders','asenders','csenders']
+        if (evol):
+            metrics_on = QAForums.get_metrics_core_ts()
+        else:
+            metrics_on = QAForums.get_metrics_core_agg()
+
         mfilter = MetricFilters(period, startdate, enddate, type_analysis)
         all_metrics = QAForums.get_metrics_set(QAForums)
 
@@ -109,7 +113,7 @@ class QAForums(DataSource):
 
             if evol is False:
                 # Tendencies
-                metrics_trends = ['qsent','asent','csent','qsenders','asenders','csenders']
+                metrics_trends = QAForums.get_metrics_core_trends()
 
                 for i in [7,30,365]:
                     for item in all_metrics:
@@ -275,3 +279,15 @@ class QAForums(DataSource):
     def get_query_builder ():
         from query_builder import QAForumsQuery
         return QAForumsQuery
+
+    @staticmethod
+    def get_metrics_core_agg():
+        return ['qsent','asent','csent','qsenders','asenders','csenders']
+
+    @staticmethod
+    def get_metrics_core_ts():
+        return ['qsent','asent','csent','qsenders','asenders','csenders']
+
+    @staticmethod
+    def get_metrics_core_trends():
+        return ['qsent','asent','csent','qsenders','asenders','csenders']

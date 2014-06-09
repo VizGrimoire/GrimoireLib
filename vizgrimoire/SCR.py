@@ -53,25 +53,23 @@ class SCR(DataSource):
     def get_name(): return "scr"
 
     @staticmethod
+    def get_metrics_not_filters():
+        metrics_not_filters =  ['verified','codereview','sent','WaitingForReviewer','WaitingForSubmitter','approved']
+        return metrics_not_filters
+
+
+    @staticmethod
     def get_evolutionary_data (period, startdate, enddate, identities_db, filter_ = None):
         evol = {}
 
-        metrics_on = ['submitted','opened','closed','merged','abandoned','new','pending','review_time']
-
         # Get metrics using changes table for more precise results
-        metrics_on_changes = ['merged','abandoned','new']
-        metrics_patches = ['verified','codereview','sent','WaitingForReviewer','WaitingForSubmitter']
-        metrics_reports = ['countries','companies','repositories']
+        metrics_on = SCR.get_metrics_core_ts()
+        metrics_reports = SCR.get_metrics_core_reports()
         if filter_ is None:
-            # not for filters. SQL not tested. 
-            metrics_on += metrics_patches
-
             from report import Report
             reports_on = Report.get_config()['r']['reports'].split(",")
             for r in metrics_reports:
                 if r in reports_on: metrics_on += [r]
-        # people
-        metrics_on += ['submitters','reviewers']
 
         type_analysis = None
         if filter_ is not None:
@@ -79,15 +77,27 @@ class SCR(DataSource):
         mfilter = MetricFilters(period, startdate, enddate, type_analysis)
         all_metrics = SCR.get_metrics_set(SCR)
 
+        # SCR specific: remove some metrics from filters
+        if filter_ is not None:
+            metrics_not_filters =  SCR.get_metrics_not_filters()
+            metrics_on = list(set(metrics_on) - set(metrics_not_filters))
+            if filter_.get_name() == "repository": metrics_on += ['review_time','submitted']
+
         for item in all_metrics:
             if item.id not in metrics_on: continue
             item.filters = mfilter
             mvalue = item.get_ts()
             evol = dict(evol.items() + mvalue.items())
+
+        # SCR specific
+        metrics_on_changes = ['merged','abandoned','new']
+        for item in all_metrics:
             if item.id in metrics_on_changes and filter_ is None:
                 mvalue = item.get_ts_changes()
                 evol = dict(evol.items() + mvalue.items())
+
         return evol
+
 
 
     @staticmethod
@@ -103,24 +113,25 @@ class SCR(DataSource):
         type_analysis = None
         if filter_ is not None:
             type_analysis = [filter_.get_name(), filter_.get_item()]
-        metrics_on = ['submitted','opened','closed','merged','abandoned','new','inprogress','pending','review_time']
-        # patches metrics
-        metrics_patches = ['verified','approved','codereview','sent','WaitingForReviewer','WaitingForSubmitter']
-        metrics_reports = ['countries','companies','repositories']
+        metrics_on = SCR.get_metrics_core_agg()
+        metrics_reports = SCR.get_metrics_core_reports()
         if filter_ is None:
             # not for filters. SQL not tested. 
-            metrics_on += metrics_patches
+            # metrics_on += metrics_patches
 
             from report import Report
             reports_on = Report.get_config()['r']['reports'].split(",")
             for r in metrics_reports:
                 if r in reports_on: metrics_on += [r]
 
-        # people
-        metrics_on += ['submitters','reviewers']
-
         mfilter = MetricFilters(period, startdate, enddate, type_analysis)
         all_metrics = SCR.get_metrics_set(SCR)
+
+        # SCR specific: remove some metrics from filters
+        if filter_ is not None:
+            metrics_not_filters =  SCR.get_metrics_not_filters()
+            metrics_on = list(set(metrics_on) - set(metrics_not_filters))
+            if filter_.get_name() == "repository": metrics_on += ['review_time','submitted']
 
         for item in all_metrics:
             if item.id not in metrics_on: continue
@@ -129,7 +140,7 @@ class SCR(DataSource):
             agg = dict(agg.items() + mvalue.items())
 
         # Tendencies
-        metrics_trends = ['submitted','merged','pending','abandoned','closed','submitters']
+        metrics_trends = SCR.get_metrics_core_trends()
         for i in [7,30,365]:
             for item in all_metrics:
                 if item.id not in metrics_trends: continue
@@ -280,6 +291,29 @@ class SCR(DataSource):
     def get_query_builder():
         from query_builder import SCRQuery
         return SCRQuery
+
+    @staticmethod
+    def get_metrics_core_agg():
+        m =  ['submitted','opened','closed','merged','abandoned','new','inprogress','pending','review_time','repositories']
+        # patches metrics
+        m += ['verified','approved','codereview','sent','WaitingForReviewer','WaitingForSubmitter']
+        m += ['submitters','reviewers']
+
+        return m
+
+    @staticmethod
+    def get_metrics_core_ts():
+        m  = ['submitted','opened','closed','merged','abandoned','new','pending','review_time','repositories']
+        # Get metrics using changes table for more precise results
+        m += ['merged','abandoned','new']
+        m += ['verified','codereview','sent','WaitingForReviewer','WaitingForSubmitter']
+        m += ['submitters','reviewers']
+
+        return m
+
+    @staticmethod
+    def get_metrics_core_trends():
+        return ['submitted','merged','pending','abandoned','closed','submitters']
 
 ##########
 # Specific FROM and WHERE clauses per type of report

@@ -237,6 +237,26 @@ class DataSource(object):
         return metrics
 
     @staticmethod
+    def get_metrics_core_agg():
+        """ Aggregation metrics core """
+        raise NotImplementedError
+
+    @staticmethod
+    def get_metrics_core_ts():
+        """ Time series metrics core """
+        raise NotImplementedError
+
+    @staticmethod
+    def get_metrics_core_trends():
+        """ Trends metrics core """
+        raise NotImplementedError
+
+    @staticmethod
+    def get_metrics_core_reports():
+        """ Reports metrics core: Only available if activated in automator conf. """
+        return ["companies","countries","domains"]
+
+    @staticmethod
     def remove_filter_data():
         """Remove from the database all information about this filter (i.e. a repository)"""
         raise NotImplementedError

@@ -401,6 +401,22 @@ class ITS(DataSource):
         from query_builder import ITSQuery
         return ITSQuery
 
+    @staticmethod
+    def get_metrics_core_agg():
+        m = ['closed','closers','changed','changers',"opened",'openers','trackers']
+        m += ['allhistory_participants']
+        return m
+
+    @staticmethod
+    def get_metrics_core_ts():
+        m = ['closed','closers','changed','changers',"opened",'openers','trackers']
+        return m
+
+    @staticmethod
+    def get_metrics_core_trends():
+        return ['closed','closers','changed','changers',"opened",'openers']
+
+
 ##############
 # Specific FROM and WHERE clauses per type of report
 ##############
@@ -533,10 +549,13 @@ def GetITSInfo (period, startdate, enddate, identities_db, type_analysis, closed
     # aggregated functions
 
     data = {}
-    metrics_on = ['closed','closers','changed','changers',"opened",'openers','trackers']
-    metrics_reports = ['domains','countries','companies']
-    metrics_on_agg = ['allhistory_participants']
+    if (evolutionary):
+        metrics_on = ITS.get_metrics_core_ts()
+    else:
+        metrics_on = ITS.get_metrics_core_agg()
+    metrics_reports = ITS.get_metrics_core_reports()
     filter_ = MetricFilters(period, startdate, enddate, type_analysis)
+
     all_metrics = ITS.get_metrics_set(ITS)
 
     if type_analysis is None:
@@ -546,13 +565,11 @@ def GetITSInfo (period, startdate, enddate, identities_db, type_analysis, closed
             if r in reports_on: metrics_on += [r]
 
     for item in all_metrics:
-        if item.id not in metrics_on and item.id not in metrics_on_agg: continue
+        if item.id not in metrics_on: continue
         item.filters = filter_
         if (evolutionary):
-            if item.id not in metrics_on: continue
             mvalue = item.get_ts()
         else:
-            # print (item.__get_sql__(False))
             mvalue = item.get_agg()
         data = dict(data.items() + mvalue.items())
     logging.info (" End all metrics data")
@@ -564,7 +581,7 @@ def GetITSInfo (period, startdate, enddate, identities_db, type_analysis, closed
 
         # Tendencies
         # metrics_trends = ['closed','closers']
-        metrics_trends = ['closed','closers','changed','changers','openers','opened']
+        metrics_trends = ITS.get_metrics_core_trends()
         # debugging
         if (ITS.debug): metrics_trends = metrics_on
 
