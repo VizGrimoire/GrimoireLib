@@ -48,7 +48,7 @@ class SCM(DataSource):
         return "scm"
 
     @staticmethod
-    def get_date_init(startdate, enddate):
+    def get_date_init(startdate, enddate, identities_db = None, type_analysis = None):
         fields = "DATE_FORMAT (min(s.date), '%Y-%m-%d') as first_date"
         tables = "scmlog s"
         filters = ""
@@ -56,7 +56,7 @@ class SCM(DataSource):
         return ExecuteQuery(q)
 
     @staticmethod
-    def get_date_end(startdate, enddate):
+    def get_date_end(startdate, enddate, identities_db = None, type_analysis = None):
         fields = "DATE_FORMAT (max(s.date), '%Y-%m-%d') as last_date"
         tables = "scmlog s"
         filters = ""
@@ -371,69 +371,17 @@ class SCM(DataSource):
 # Meta-functions to automatically call metrics functions and merge them
 ##########
 
-
 def GetSCMEvolutionaryData (period, startdate, enddate, i_db, type_analysis):
-    # Meta function that includes basic evolutionary metrics from the source code
-    # management system. Those are merged and returned.
-
-    data = {}
-    metrics_on = SCM.get_metrics_core_ts()
-    metrics_reports = SCM.get_metrics_core_reports()
-
-    if type_analysis is None:
-        from report import Report
-        reports_on = Report.get_config()['r']['reports'].split(",")
-        for r in metrics_reports:
-            if r in reports_on: metrics_on += [r]
-    filter_ = MetricFilters(period, startdate, enddate, type_analysis)
-    all_metrics = SCM.get_metrics_set(SCM)
-
-    for item in all_metrics:
-        if item.id not in metrics_on: continue
-        item.filters = filter_
-        mvalue = item.get_ts()
-        data = dict(data.items() + mvalue.items())
-
-    return (data)
-
+    filter_ = None
+    if type_analysis is not None:
+        filter_ = Filter(type_analysis[0],type_analysis[1])
+    return DataSource.get_metrics_data(SCM, period, startdate, enddate, i_db, filter_, True)
 
 def GetSCMStaticData (period, startdate, enddate, i_db, type_analysis):
-    # Meta function that includes basic aggregated metrics from the source code
-    # management system. Those are merged and returned.
-
-    data = {}
-    metrics_on = SCM.get_metrics_core_agg()
-    metrics_reports = SCM.get_metrics_core_reports()
-
-    if type_analysis is None:
-        from report import Report
-        reports_on = Report.get_config()['r']['reports'].split(",")
-        for r in metrics_reports:
-            if r in reports_on: metrics_on += [r]
-
-    filter_ = MetricFilters(period, startdate, enddate, type_analysis)
-    all_metrics = SCM.get_metrics_set(SCM)
-
-    for item in all_metrics:
-        if item.id not in metrics_on: continue
-        item.filters = filter_
-        mvalue = item.get_agg()
-        data = dict(data.items() + mvalue.items())
-
-    init_date = SCM.get_date_init(startdate, enddate)
-    end_date = SCM.get_date_end(startdate, enddate)
-    data = dict(data.items() + init_date.items() + end_date.items())
-
-    # Tendencies
-    metrics_trends = SCM.get_metrics_core_trends()
-
-    for i in [7,30,365]:
-        for item in all_metrics:
-            if item.id not in metrics_trends: continue
-            period_data = item.get_agg_diff_days(enddate, i)
-            data = dict(data.items() +  period_data.items())
-
-    return (data)
+    filter_ = None
+    if type_analysis is not None:
+        filter_ = Filter(type_analysis[0],type_analysis[1])
+    return DataSource.get_metrics_data(SCM, period, startdate, enddate, i_db, filter_, False)
 
 ##########
 # Specific FROM and WHERE clauses per type of report

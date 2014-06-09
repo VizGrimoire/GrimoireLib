@@ -41,7 +41,7 @@ class Mediawiki(DataSource):
     def get_name(): return "mediawiki"
 
     @staticmethod
-    def get_date_init(startdate, enddate):
+    def get_date_init(startdate, enddate, identities_db, type_analysis):
         fields = "DATE_FORMAT(MIN(date),'%Y-%m-%d') AS first_date"
         tables = "wiki_pages_revs"
         filters = ""
@@ -49,7 +49,7 @@ class Mediawiki(DataSource):
         return ExecuteQuery(q)
 
     @staticmethod
-    def get_date_end(startdate, enddate):
+    def get_date_end(startdate, enddate, identities_db, type_analysis):
         fields = "DATE_FORMAT(MAX(date),'%Y-%m-%d') AS last_date"
         tables = "wiki_pages_revs"
         filters = ""
@@ -172,38 +172,10 @@ def GetFiltersOwnUniqueIdsMediaWiki () :
 # GLOBAL
 
 def GetDataMediaWiki (period, startdate, enddate, i_db, type_analysis, evol = False):
-    data = {}
-    if evol:
-        metrics_on = Mediawiki.get_metrics_core_ts()
-    else:
-        metrics_on = Mediawiki.get_metrics_core_agg()
-    filter_ = MetricFilters(period, startdate, enddate, type_analysis)
-    all_metrics = Mediawiki.get_metrics_set(Mediawiki)
-
-    for item in all_metrics:
-        if item.id not in metrics_on: continue
-        item.filters = filter_
-        if evol:
-            mvalue = item.get_ts()
-        else:
-            mvalue = item.get_agg()
-        data = dict(data.items() + mvalue.items())
-
-    if not evol:
-        init_date = Mediawiki.get_date_init(startdate, enddate)
-        end_date = Mediawiki.get_date_end(startdate, enddate)
-        data = dict(data.items() + init_date.items() + end_date.items())
-
-        # Tendencies
-        metrics_trends = Mediawiki.get_metrics_core_trends()
-
-        for i in [7,30,365]:
-            for item in all_metrics:
-                if item.id not in metrics_trends: continue
-                period_data = item.get_agg_diff_days(enddate, i)
-                data = dict(data.items() +  period_data.items())
-
-    return (data)
+    filter_ = None
+    if type_analysis is not None:
+        filter_ = Filter(type_analysis[0],type_analysis[1])
+    return DataSource.get_metrics_data(Mediawiki, period, startdate, enddate, i_db, filter_, evol)
 
 def GetTopAuthorsMediaWiki (days, startdate, enddate, identities_db, bots, limit) :
     date_limit = ""

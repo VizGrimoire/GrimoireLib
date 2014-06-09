@@ -41,41 +41,22 @@ class ReleasesDS(DataSource):
     def get_name(): return "releases"
 
     @staticmethod
-    def get_date_init():
+    def get_date_init(startdate = None, enddate = None, identities_db = None, type_analysis = None):
         """Get the date of the first activity in the data source"""
-        q = "SELECT MIN(created_on) AS date FROM projects"
+        q = "SELECT MIN(created_on) AS init_date FROM projects"
         return(ExecuteQuery(q))
 
     @staticmethod
-    def get_date_end():
+    def get_date_end(startdate = None, enddate = None, identities_db = None, type_analysis = None):
         """Get the date of the last activity in the data source"""
         q1 = "SELECT MAX(updated_on) as ru, MAX(created_on) as rc FROM releases"
         q2 = "SELECT MAX(updated_on) as pu, MAX(created_on) as pr FROM projects"
-        q = "SELECT GREATEST(ru, rc, pu, pr) AS date FROM (%s) r, (%s) p" % (q1, q2)
+        q = "SELECT GREATEST(ru, rc, pu, pr) AS last_date FROM (%s) r, (%s) p" % (q1, q2)
         return(ExecuteQuery(q))
-
 
     @staticmethod
     def get_evolutionary_data (period, startdate, enddate, i_db, filter_ = None):
-        data = {}
-
-        type_analysis = None
-        if filter_ is not None:
-            type_analysis = [filter_.get_name(), filter_.get_item()]
-            logging.warn("ReleasesDS does not support filters yet.")
-            return data
-
-        metrics_on = ReleasesDS.get_metrics_core_ts()
-        filter_ = MetricFilters(period, startdate, enddate, type_analysis)
-        all_metrics = ReleasesDS.get_metrics_set(ReleasesDS)
-
-        for item in all_metrics:
-            if item.id not in metrics_on: continue
-            item.filters = filter_
-            mvalue = item.get_ts()
-            data = dict(data.items() + mvalue.items())
-
-        return data
+        return DataSource.get_metrics_data(ReleasesDS, period, startdate, enddate, i_db, filter_, True)
  
     @staticmethod
     def create_evolutionary_report (period, startdate, enddate, destdir, i_db, type_analysis = None):
@@ -85,39 +66,7 @@ class ReleasesDS(DataSource):
 
     @staticmethod
     def get_agg_data (period, startdate, enddate, identities_db, filter_ = None):
-        data = {}
-
-        type_analysis = None
-        if filter_ is not None:
-            type_analysis = [filter_.get_name(), filter_.get_item()]
-            logging.warn("ReleasesDS does not support filters yet.")
-            return data
-
-        filter_ = MetricFilters(period, startdate, enddate, type_analysis)
-
-        metrics_on = ReleasesDS.get_metrics_core_agg()
-        all_metrics = ReleasesDS.get_metrics_set(ReleasesDS)
-
-        for item in all_metrics:
-            if item.id not in metrics_on: continue
-            item.filters = filter_
-            mvalue = item.get_agg()
-            data = dict(data.items() + mvalue.items())
-
-        # Tendencies
-        metrics_trends = ReleasesDS.get_metrics_core_trends()
-
-        for i in [7,30,365]:
-            for item in all_metrics:
-                if item.id not in metrics_trends: continue
-                period_data = item.get_agg_diff_days(enddate, i)
-                data = dict(data.items() +  period_data.items())
-
-        data["init_date"] = ReleasesDS.get_date_init()['date']
-        data["last_date"] = ReleasesDS.get_date_end()['date']
-        # data["url"] = ReleasesDS.get_url()
-
-        return data
+        return DataSource.get_metrics_data(ReleasesDS, period, startdate, enddate, identities_db, filter_, False)
 
     @staticmethod
     def create_agg_report (period, startdate, enddate, destdir, i_db, type_analysis = None):

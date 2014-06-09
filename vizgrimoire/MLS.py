@@ -53,7 +53,7 @@ class MLS(DataSource):
     def get_name(): return "mls"
 
     @staticmethod
-    def get_date_init(startdate, enddate):
+    def get_date_init(startdate, enddate, identities_db = None, type_analysis = None):
         fields = "DATE_FORMAT(MIN(m.first_date),'%Y-%m-%d') AS first_date"
         tables = "messages m"
         filters = ""
@@ -61,7 +61,7 @@ class MLS(DataSource):
         return ExecuteQuery(q)
 
     @staticmethod
-    def get_date_end(startdate, enddate):
+    def get_date_end(startdate, enddate,  identities_db = None, type_analysis = None):
         fields = "DATE_FORMAT(MAX(m.first_date),'%Y-%m-%d') AS last_date"
         tables = "messages m"
         filters = ""
@@ -475,48 +475,10 @@ def GetMLSFiltersResponse () :
 
 
 def GetMLSInfo (period, startdate, enddate, identities_db, rfield, type_analysis, evolutionary):
-
-    data = {}
-    if evolutionary:
-        metrics_on = MLS.get_metrics_core_ts()
-    else:
-        metrics_on = MLS.get_metrics_core_agg()
-    metrics_reports = MLS.get_metrics_core_reports()
-
-    if type_analysis is None:
-        from report import Report
-        reports_on = Report.get_config()['r']['reports'].split(",")
-        for r in metrics_reports:
-            if r in reports_on: metrics_on += [r]
-
-    filter_ = MetricFilters(period, startdate, enddate, type_analysis)
-    all_metrics = MLS.get_metrics_set(MLS)
-
-    for item in all_metrics:
-        if item.id not in metrics_on: continue
-        item.filters = filter_
-        if (evolutionary):
-            mvalue = item.get_ts()
-        else:
-            mvalue = item.get_agg()
-        data = dict(data.items() + mvalue.items())
-
-    if not evolutionary:
-        init_date = MLS.get_date_init(startdate, enddate)
-        end_date = MLS.get_date_end(startdate, enddate)
-        data = dict(data.items() + init_date.items() + end_date.items())
-
-        # Tendencies
-        metrics_trends = MLS.get_metrics_core_trends()
-
-        for i in [7,30,365]:
-            for item in all_metrics:
-                if item.id not in metrics_trends: continue
-                period_data = item.get_agg_diff_days(enddate, i)
-                data = dict(data.items() +  period_data.items())
-    agg = data
-
-    return (agg)
+    filter_ = None
+    if type_analysis is not None:
+        filter_ = Filter(type_analysis[0],type_analysis[1])
+    return DataSource.get_metrics_data(MLS, period, startdate, enddate, identities_db, filter_, evolutionary)
 
 def EvolMLSInfo (period, startdate, enddate, identities_db, rfield, type_analysis = []):
     #Evolutionary info all merged in a dataframe

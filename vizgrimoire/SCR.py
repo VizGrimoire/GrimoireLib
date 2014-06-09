@@ -60,6 +60,8 @@ class SCR(DataSource):
 
     @staticmethod
     def get_evolutionary_data (period, startdate, enddate, identities_db, filter_ = None):
+        return SCR.__get_data__ (period, startdate, enddate, identities_db, filter_, True)
+
         evol = {}
 
         # Get metrics using changes table for more precise results
@@ -108,7 +110,11 @@ class SCR(DataSource):
 
     @staticmethod
     def get_agg_data (period, startdate, enddate, identities_db, filter_ = None):
-        agg = {}
+        return SCR.__get_data__ (period, startdate, enddate, identities_db, filter_)
+
+    @staticmethod
+    def __get_data__ (period, startdate, enddate, identities_db, filter_ = None, evol = False):
+        data = {}
 
         type_analysis = None
         if filter_ is not None:
@@ -116,9 +122,6 @@ class SCR(DataSource):
         metrics_on = SCR.get_metrics_core_agg()
         metrics_reports = SCR.get_metrics_core_reports()
         if filter_ is None:
-            # not for filters. SQL not tested. 
-            # metrics_on += metrics_patches
-
             from report import Report
             reports_on = Report.get_config()['r']['reports'].split(",")
             for r in metrics_reports:
@@ -132,22 +135,35 @@ class SCR(DataSource):
             metrics_not_filters =  SCR.get_metrics_not_filters()
             metrics_on = list(set(metrics_on) - set(metrics_not_filters))
             if filter_.get_name() == "repository": metrics_on += ['review_time','submitted']
+        # END SCR specific
 
         for item in all_metrics:
             if item.id not in metrics_on: continue
             item.filters = mfilter
-            mvalue = item.get_agg()
-            agg = dict(agg.items() + mvalue.items())
+            if not evol: mvalue = item.get_agg()
+            else:        mvalue = item.get_ts()
+            data = dict(data.items() + mvalue.items())
 
-        # Tendencies
-        metrics_trends = SCR.get_metrics_core_trends()
-        for i in [7,30,365]:
+
+        # SCR SPECIFIC #
+        if evol:
+            metrics_on_changes = ['merged','abandoned','new']
             for item in all_metrics:
-                if item.id not in metrics_trends: continue
-                period_data = item.get_agg_diff_days(enddate, i)
-                agg = dict(agg.items() +  period_data.items())
+                if item.id in metrics_on_changes and filter_ is None:
+                    mvalue = item.get_ts_changes()
+                    data = dict(data.items() + mvalue.items())
+        # END SCR SPECIFIC #
 
-        return agg
+        if not evol:
+            # Tendencies
+            metrics_trends = SCR.get_metrics_core_trends()
+            for i in [7,30,365]:
+                for item in all_metrics:
+                    if item.id not in metrics_trends: continue
+                    period_data = item.get_agg_diff_days(enddate, i)
+                    data = dict(data.items() +  period_data.items())
+
+        return data
 
     @staticmethod
     def create_agg_report (period, startdate, enddate, destdir, i_db, filter_ = None):

@@ -48,18 +48,18 @@ class QAForums(DataSource):
         return "qaforums"
 
     @staticmethod
-    def get_date_init():
+    def get_date_init(startdate = None, enddate = None, identities_db = None, type_analysis = None):
         """Get the date of the first activity in the data source"""
-        q = "SELECT DATE_FORMAT (MIN(added_at), '%Y-%m-%d') AS date FROM questions"
+        q = "SELECT DATE_FORMAT (MIN(added_at), '%Y-%m-%d') AS init_date FROM questions"
         return(ExecuteQuery(q))
 
     @staticmethod
-    def get_date_end():
+    def get_date_end(startdate = None, enddate = None, identities_db = None, type_analysis = None):
         """Get the date of the last activity in the data source"""
         q1 = "SELECT MAX(added_at) AS aq FROM questions"
         q2 = "SELECT MAX(submitted_on) AS sc FROM comments"
         q3 = "SELECT MAX(submitted_on) AS sa FROM answers"
-        q = "SELECT DATE_FORMAT (GREATEST(aq, sc, sa), '%%Y-%%m-%%d') AS date FROM (%s) q, (%s) c, (%s) a" % (q1, q2, q3)
+        q = "SELECT DATE_FORMAT (GREATEST(aq, sc, sa), '%%Y-%%m-%%d') AS last_date FROM (%s) q, (%s) c, (%s) a" % (q1, q2, q3)
         return(ExecuteQuery(q))
 
     @staticmethod
@@ -88,44 +88,7 @@ class QAForums(DataSource):
 
     @staticmethod
     def __get_data (period, startdate, enddate, i_db, filter_, evol):
-        data = {}
-
-        type_analysis = None
-        if (filter_ is not None):
-            type_analysis = [filter_.get_name(), filter_.get_item()]
-
-        if (evol):
-            metrics_on = QAForums.get_metrics_core_ts()
-        else:
-            metrics_on = QAForums.get_metrics_core_agg()
-
-        mfilter = MetricFilters(period, startdate, enddate, type_analysis)
-        all_metrics = QAForums.get_metrics_set(QAForums)
-
-        for item in all_metrics:
-            if item.id not in metrics_on: continue
-            item.filters = mfilter
-            if evol is False:
-                mvalue = item.get_agg()
-            else:
-                mvalue = item.get_ts()
-            data = dict(data.items() + mvalue.items())
-
-            if evol is False:
-                # Tendencies
-                metrics_trends = QAForums.get_metrics_core_trends()
-
-                for i in [7,30,365]:
-                    for item in all_metrics:
-                        if item.id not in metrics_trends: continue
-                        period_data = item.get_agg_diff_days(enddate, i)
-                        data = dict(data.items() +  period_data.items())
-
-                if (filter_ is None):
-                    data["init_date"] = QAForums.get_date_init()['date']
-                    data["last_date"] = QAForums.get_date_end()['date']
-
-        return data
+        return DataSource.get_metrics_data(QAForums, period, startdate, enddate, i_db, filter_, evol)
 
     @staticmethod
     def get_top_senders(days, startdate, enddate, identities_db, bots, limit, type_post):
