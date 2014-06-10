@@ -93,7 +93,9 @@ def create_reports_r(enddate, destdir):
     for ds in Report.get_data_sources():
         automator = Report.get_config()
         db = automator['generic'][ds.get_db_name()]
-        vizr.SetDBChannel (database=db, user=opts.dbuser, password=opts.dbpassword)
+        dbuser = Report._automator['generic']['db_user']
+        dbpassword = Report._automator['generic']['db_password']
+        vizr.SetDBChannel (database=db, user=dbuser, password=dbpassword)
         logging.info("Creating R reports for " + ds.get_name())
         ds.create_r_reports(vizr, enddate, destdir)
 
@@ -127,13 +129,16 @@ def create_people_identifiers(startdate, enddate, destdir):
 def set_data_source(ds_name):
     ds_ok = False
     dss_active = Report.get_data_sources()
+    DS = None
     for ds in dss_active:
         if ds.get_name() == opts.data_source:
             ds_ok = True
-            Report.set_data_sources([ds])
+            DS = ds
+            Report.set_data_sources([DS])
     if not ds_ok:
         logging.error(opts.data_source + " data source not available")
         sys.exit(1)
+    return DS
 
 def set_filter(filter_name):
     filter_ok = False
@@ -146,6 +151,19 @@ def set_filter(filter_name):
         logging.error(opts.filter + " filter not available")
         sys.exit(1)
 
+def set_metric(metric_name, ds_name):
+    metric_ok = False
+    DS = set_data_source(ds_name)
+
+    metrics = DS.get_metrics_set(DS)
+    for metric in metrics:
+        if metric.id == metric_name:
+            metric_ok = True
+            DS.set_metrics_set(DS, [metric])
+    if not metric_ok:
+        logging.error(metric_name + " metric not available in " + DS.get_name())
+        sys.exit(1)
+
 if __name__ == '__main__':
 
     logging.basicConfig(level=logging.INFO,format='%(asctime)s %(message)s')
@@ -153,7 +171,7 @@ if __name__ == '__main__':
     opts = read_options()
     reports = opts.reports.split(",")
 
-    Report.init(opts.config_file, None)
+    Report.init(opts.config_file, opts.metrics_path)
 
     automator = read_main_conf(opts.config_file)
     if 'start_date' not in automator['r']:
@@ -181,6 +199,8 @@ if __name__ == '__main__':
         set_data_source(opts.data_source)
     if (opts.filter):
         set_filter(opts.filter)
+    if (opts.metric):
+        set_metric (opts.metric, opts.data_source)
 
     bots = []
 
@@ -191,11 +211,11 @@ if __name__ == '__main__':
         agg = create_agg_report(startdate, enddate, opts.destdir, identities_db, bots)
         logging.info("Creating global top metrics...")
         top = create_top_report(startdate, enddate, opts.destdir, opts.npeople, identities_db, bots)
+        if (automator['r']['reports'].find('people')>-1):
+            create_report_people(startdate, enddate, opts.destdir, opts.npeople, identities_db, bots)
+        create_reports_r(end_date, opts.destdir)
+        create_people_identifiers(startdate, enddate, opts.destdir)
 
     create_reports_filters(period, startdate, enddate, opts.destdir, opts.npeople, identities_db, bots)
-    if (automator['r']['reports'].find('people')>-1):
-        create_report_people(startdate, enddate, opts.destdir, opts.npeople, identities_db, bots)
-    create_reports_r(end_date, opts.destdir)
-    create_people_identifiers(startdate, enddate, opts.destdir)
 
     logging.info("Report data source analysis OK")

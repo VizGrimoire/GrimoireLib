@@ -50,36 +50,8 @@ def aggData(period, startdate, enddate, identities_db, destdir):
     static_url = SCM.StaticURL()
     agg = dict(agg.items() + static_url.items())
 
-    if ('companies' in reports):
-        data = SCM.evol_info_data_companies (startdate, enddate)
-        agg = dict(agg.items() + data.items())
-
-    if ('countries' in reports): 
-        data = SCM.evol_info_data_countries (startdate, enddate)
-        agg = dict(agg.items() + data.items())
-
-    if ('domains' in reports):
-        data = SCM.evol_info_data_domains (startdate, enddate)
-        agg = dict(agg.items() + data.items())
-
     data = SCM.GetCodeCommunityStructure(period, startdate, enddate, identities_db)
     agg = dict(agg.items() + data.items())
-
-    # Tendencies    
-    for i in [7,30,365]:
-        data = SCM.GetDiffCommitsDays(period, enddate, identities_db, i)
-        agg = dict(agg.items() + data.items())
-        data = SCM.GetDiffAuthorsDays(period, enddate, identities_db, i)
-        agg = dict(agg.items() + data.items())
-        data = SCM.GetDiffFilesDays(period, enddate, identities_db, i)
-        agg = dict(agg.items() + data.items())
-        data = SCM.GetDiffLinesDays(period, enddate, identities_db, i)
-        agg = dict(agg.items() + data.items())
-
-    # Last Activity: to be removed
-    for i in [7,14,30,60,90,180,365,730]:
-        data = SCM.last_activity(i)
-        agg = dict(agg.items() + data.items())
 
     createJSON (agg, destdir+"/scm-static.json")
 
@@ -87,18 +59,6 @@ def tsData(period, startdate, enddate, identities_db, destdir, granularity, conf
     data = SCM.GetSCMEvolutionaryData(period, startdate, enddate, identities_db, None)
     evol_data = completePeriodIds(data, period, startdate, enddate)
 
-    if ('companies' in reports) :
-        data = SCM.EvolCompanies(period, startdate, enddate)
-        evol_data = dict(evol_data.items() + completePeriodIds(data, period, startdate, enddate).items())
-
-    if ('countries' in reports) :
-        data = SCM.EvolCountries(period, startdate, enddate)
-        evol_data = dict(evol_data.items() + completePeriodIds(data, period, startdate, enddate).items())
-
-    if ('domains' in reports) :
-        data = SCM.EvolDomains(period, startdate, enddate)
-        evol_data = dict(evol_data.items() + completePeriodIds(data, period, startdate, enddate).items())
- 
     createJSON (evol_data, destdir+"/scm-evolutionary.json")
 
 def peopleData(period, startdate, enddate, identities_db, destdir, top_authors_data):

@@ -24,12 +24,13 @@
 """ DataSource offers the API to get aggregated, evolutionary and top data with filter 
     support for Grimoire supported data sources """ 
 
-import os
+import logging, os
 from GrimoireUtils import createJSON
+from metrics_filter import MetricFilters
 
 class DataSource(object):
     _bots = []
-    _metrics = []
+    _metrics_set = []
 
     @staticmethod
     def get_name():
@@ -47,9 +48,24 @@ class DataSource(object):
         DataSource._bots = ds_bots
 
     @staticmethod
-    def get_db_name(self):
+    def get_db_name():
         """Get the name of the database with the data"""
         raise NotImplementedError
+
+    @staticmethod
+    def get_date_init(startdate, enddate, identities_db, type_analysis):
+        """Get the date of the first activity in the data source in the window time analysis """
+        pass
+
+    @staticmethod
+    def get_date_end(startdate, enddate, identities_db, type_analysis):
+        """Get the date of the last activity in the data source in the window time analysis """
+        pass
+
+    @staticmethod
+    def get_url():
+        """Get the URL from which the data source was gathered"""
+        pass
 
     def get_evolutionary_filename (self, filter_ = None):
         """Get the filename used to store evolutionary data"""
@@ -179,21 +195,137 @@ class DataSource(object):
         raise NotImplementedError
 
     @staticmethod
-    def get_metrics_definition ():
+    def get_metrics_definition (DS):
         """Return all metrics definition available"""
+        mdef = {}
+        ds_name = DS.get_name()
+        all_metrics = DS.get_metrics_set(DS)
+        for item in all_metrics:
+            ds_metric_id = ds_name+"_"+item.id
+            mdef[ds_metric_id] = {
+                "divid" : ds_metric_id,
+                "column" : item.id,
+                "name" :   item.name,
+                "desc" : item.desc
+            }
+            # old params to be removed in sync with clients
+            if hasattr(item, 'envision'):
+                mdef[ds_metric_id]['envision'] = item.envision
+            if hasattr(item, 'action'):
+                mdef[ds_metric_id]['action'] = item.action
+        return mdef
+
+    @staticmethod
+    def get_metrics_set(ds):
+        """Return all metrics objects available"""
+        return ds._metrics_set
+
+    @staticmethod
+    def set_metrics_set(ds, metrics_set):
+        """Set all metrics objects available"""
+        ds._metrics_set = metrics_set
+
+    @staticmethod
+    def add_metrics(metrics, ds):
+        ds._metrics_set.append(metrics)
+
+    @staticmethod
+    def get_metrics(id, ds):
+        metrics = None
+        for item in ds._metrics_set:
+            if item.id == id:
+                metrics = item
+        return metrics
+
+    @staticmethod
+    def get_metrics_data(DS, period, startdate, enddate, identities_db, filter_ = None, evol = False):
+        """ Get basic data from all core metrics """
+        data = {}
+
+        from report import Report
+        automator = Report.get_config()
+
+        if evol:
+            metrics_on = DS.get_metrics_core_ts()
+            automator_metrics = DS.get_name()+"_metrics_ts"
+        else:
+            metrics_on = DS.get_metrics_core_agg()
+            automator_metrics = DS.get_name()+"_metrics_agg"
+
+        if automator_metrics in automator['r']:
+            metrics_on = automator['r'][automator_metrics].split(",")
+
+        type_analysis = None
+        if filter_ is not None:
+            type_analysis = [filter_.get_name(), filter_.get_item()]
+
+        mfilter = MetricFilters(period, startdate, enddate, type_analysis)
+        metrics_reports = DS.get_metrics_core_reports()
+        all_metrics = DS.get_metrics_set(DS)
+
+        # Reports = filters not available inside filters
+        if type_analysis is None:
+            from report import Report
+            reports_on = Report.get_config()['r']['reports'].split(",")
+            for r in metrics_reports:
+                if r in reports_on: metrics_on += [r]
+
+        for item in all_metrics:
+            if item.id not in metrics_on: continue
+            item.filters = mfilter
+
+            if evol: mvalue = item.get_ts()
+            else:    mvalue = item.get_agg()
+
+            data = dict(data.items() + mvalue.items())
+
+        if not evol:
+            init_date = DS.get_date_init(startdate, enddate, identities_db, type_analysis)
+            end_date = DS.get_date_end(startdate, enddate, identities_db, type_analysis)
+
+            data = dict(data.items() + init_date.items() + end_date.items())
+
+            # Tendencies
+            metrics_trends = DS.get_metrics_core_trends()
+
+            automator_metrics = DS.get_name()+"_metrics_trends"
+            if automator_metrics in automator['r']:
+                metrics_trends = automator['r'][automator_metrics].split(",")
+
+            for i in [7,30,365]:
+                for item in all_metrics:
+                    if item.id not in metrics_trends: continue
+                    period_data = item.get_agg_diff_days(enddate, i)
+                    data = dict(data.items() + period_data.items())
+
+        return data
+
+    @staticmethod
+    def get_metrics_core_agg():
+        """ Aggregation metrics core """
         raise NotImplementedError
 
     @staticmethod
-    def get_metrics():
-        """Return all metrics objects available"""
-        return DataSource._metrics
+    def get_metrics_core_ts():
+        """ Time series metrics core """
+        raise NotImplementedError
 
     @staticmethod
-    def add_metric(metric):
-        """Add new metric to the data source"""
-        DataSource._metrics.append(metric)
+    def get_metrics_core_trends():
+        """ Trends metrics core """
+        raise NotImplementedError
+
+    @staticmethod
+    def get_metrics_core_reports():
+        """ Reports metrics core: Only available if activated in automator conf. """
+        return ["companies","countries","domains"]
 
     @staticmethod
     def remove_filter_data():
         """Remove from the database all information about this filter (i.e. a repository)"""
+        raise NotImplementedError
+
+    @staticmethod
+    def get_query_builder():
+        """Class used to build queries to get metrics"""
         raise NotImplementedError

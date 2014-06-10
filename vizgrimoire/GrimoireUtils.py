@@ -16,12 +16,11 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #
-# This file is a part of the vizGrimoire.R package
 #
 # Authors:
 #     Alvaro del Castillo <acs@bitergia.com>
 
-# Misc utils to be distributed in specific modules
+# Misc utils
 
 import calendar
 from ConfigParser import SafeConfigParser
@@ -325,6 +324,9 @@ def compare_json_data(data1, data2, orig_file = "", new_file = "", skip_fields =
     if len(data1) > len(data2):
         logging.warn("More data in " + orig_file + " than in "+
                      new_file +": " + str(len(data1)) + " " + str(len (data2)))
+        for i in data1:
+            if not data2.has_key(i):
+                logging.warn(i)
         check = False
 
     elif isinstance(data1, list):
@@ -344,9 +346,14 @@ def compare_json_data(data1, data2, orig_file = "", new_file = "", skip_fields =
             if data2.has_key(name) is False:
                 logging.warn (name + " does not exists in " + new_file)
                 check = False
+                continue
             if isinstance(data1[name], float): data1[name] = round(data1[name],6)
             if isinstance(data2[name], float): data2[name] = round(data2[name],6)
-            if isinstance(data1[name], list) and isinstance(data2[name], list): 
+            if isinstance(data1[name], list) and isinstance(data2[name], list):
+                if len(data1[name]) != len(data2[name]):
+                    logging.warn("Different list size for " + name)
+                    check = False
+                    continue
                 for i in range(0, len(data1[name])): 
                     if isinstance(data1[name][i], float): data1[name][i] = round(data1[name][i],6)
                     if isinstance(data2[name][i], float): data2[name][i] = round(data2[name][i],6)
@@ -360,6 +367,9 @@ def compare_json_data(data1, data2, orig_file = "", new_file = "", skip_fields =
         for name in data2:
             if data1.has_key(name) is False:
                 logging.warn (name + " does not exists in " + orig_file)
+
+    if not check:
+        logging.warn("Failed check for " + orig_file + " and " + new_file)
 
     return check
 
@@ -422,19 +432,21 @@ def read_main_conf(config_file):
             options[s][o] = parser.get(s, o)
     return options
 
-def get_subprojects(project, identities_db):
+def get_subprojects(project, identities_db, dsquery = None):
     """ Return all subprojects ids for a project in a string join by comma """
 
     from GrimoireSQL import ExecuteQuery
+    query = ExecuteQuery
+    if dsquery is not None: query = dsquery.ExecuteQuery
 
     q = "SELECT project_id from %s.projects WHERE id='%s'" % (identities_db, project)
-    project_id = ExecuteQuery(q)['project_id']
+    project_id = query(q)['project_id']
 
     q = """
         SELECT subproject_id from %s.project_children pc where pc.project_id = '%s'
     """ % (identities_db, project_id)
 
-    subprojects = ExecuteQuery(q)
+    subprojects = query(q)
 
     if not isinstance(subprojects['subproject_id'], list):
         subprojects['subproject_id'] = [subprojects['subproject_id']]

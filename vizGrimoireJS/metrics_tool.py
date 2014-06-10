@@ -27,7 +27,6 @@
 import logging
 from optparse import OptionParser
 
-from commit_metric import Commit
 from metric import Metric
 from SCM import SCM
 from report import Report
@@ -45,7 +44,10 @@ def get_options():
                   action="store",
                   dest="metrics_path",
                   help="Path to the metrics modules to be loaded")
-
+    parser.add_option("--data-source",
+                      action="store",
+                      dest="data_source",
+                      help="data source to be generated")
 
     (opts, args) = parser.parse_args()
 
@@ -64,14 +66,25 @@ if __name__ == '__main__':
 
     Report.init(opts.automator_file, opts.metrics_path)
 
-    metrics = SCM.get_metrics_definition()
-    for name in metrics:
-        print name
+    # metrics = SCM.get_metrics_definition()
+    # for name in metrics:
+    #     print name
 
-    metrics = SCM.get_metrics()
-    for metric in metrics:
-        print metric.get_definition()['name']
-        agg = metric.get_aggregate()
-        if agg is not None: print(agg)
-        evol = metric.get_evolutionary()
-        if evol is not None: print(evol)
+    dss = Report.get_data_sources()
+
+    if (opts.data_source):
+        ds = Report.get_data_source(opts.data_source)
+        dss = [ds]
+        if ds is None:
+            logging.error("Data source not found " + opts.data_source)
+            dss = []
+
+    for ds in dss:
+        logging.info("Getting metrics for " + ds.get_name())
+        metrics_set = ds.get_metrics_set(ds)
+        for metrics in metrics_set:
+            print metrics.get_definition()['name']
+            agg = metrics.get_agg()
+            if agg is not None: print(agg)
+            evol = metrics.get_ts()
+            # if evol is not None: print(evol)

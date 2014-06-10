@@ -41,7 +41,7 @@ class DataSourceTest(unittest.TestCase):
     @staticmethod
     def init():
         opts = read_options()
-        Report.init(opts.config_file)
+        Report.init(opts.config_file, opts.metrics_path)
         logging.info("Init Data Source")
 
     @staticmethod
@@ -417,14 +417,18 @@ def read_options():
                       dest="destdir",
                       default="data/json",
                       help="Destination directory for JSON files")
+    parser.add_option("-m", "--metrics",
+                  action="store",
+                  dest="metrics_path",
+                  help="Path to the metrics modules to be loaded")
 
     (opts, args) = parser.parse_args()
 
     if len(args) != 0:
         parser.error("Wrong number of arguments")
 
-    if opts.config_file is None :
-        parser.error("Automator config file is needed.")
+    if opts.config_file is None or opts.metrics_path is None:
+        parser.error("Automator config file and metrics path are needed.")
     return opts
 
 if __name__ == '__main__':

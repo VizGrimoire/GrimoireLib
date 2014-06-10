@@ -14,12 +14,9 @@
 ## along with this program; if not, write to the Free Software
 ## Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 ##
-## This file is a part of the vizGrimoire R package
-##  (an R library for the MetricsGrimoire and vizGrimoire systems)
+## ITS.py
 ##
-## ITS.R
-##
-## Queries for ITS data analysis
+## Metrics for Issues Tracking System data source
 ##
 ## Authors:
 ##   Jesus M. Gonzalez-Barahona <jgb@bitergia.com>
@@ -33,12 +30,16 @@ from GrimoireSQL import GetSQLGlobal, GetSQLPeriod
 from GrimoireSQL import ExecuteQuery, BuildQuery
 from GrimoireUtils import GetPercentageDiff, GetDates, completePeriodIds, getPeriod
 from GrimoireUtils import createJSON, get_subprojects
+from metrics_filter import MetricFilters
 
 from data_source import DataSource
 from filter import Filter
 import report
 
 class ITS(DataSource):
+    _metrics_set = []
+    debug = False
+
 
     @staticmethod
     def get_db_name():
@@ -46,6 +47,22 @@ class ITS(DataSource):
 
     @staticmethod
     def get_name(): return "its"
+
+    @staticmethod
+    def get_date_init(startdate, enddate, identities_db, type_analysis):
+        """Get the date of the first activity in the data source"""
+        return GetInitDate (startdate, enddate, identities_db, type_analysis)
+
+    @staticmethod
+    def get_date_end(startdate, enddate, identities_db, type_analysis):
+        """Get the date of the last activity in the data source"""
+        return GetEndDate (startdate, enddate, identities_db, type_analysis)
+
+    @staticmethod
+    def get_url():
+        """Get the URL from which the data source was gathered"""
+        return TrackerURL()
+        pass
 
     @staticmethod
     def _get_backend():
@@ -97,18 +114,6 @@ class ITS(DataSource):
             data = EvolITSInfo(period, startdate, enddate, identities_db, None, closed_condition)
             evol = completePeriodIds(data, period, startdate, enddate)
 
-            data = EvolIssuesCompanies(period, startdate, enddate, identities_db)
-            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
-
-            data = EvolIssuesCountries(period, startdate, enddate, identities_db)
-            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
-
-            data = EvolIssuesRepositories(period, startdate, enddate, identities_db)
-            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
-
-            data = EvolIssuesDomains(period, startdate, enddate, identities_db)
-            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
-
             data = ITS.get_tickets_states(period, startdate, enddate, identities_db, ITS._get_backend())
             evol = dict(evol.items() + data.items())
 
@@ -131,35 +136,12 @@ class ITS(DataSource):
 
         else:
             agg = AggITSInfo(period, startdate, enddate, identities_db, None, closed_condition)
-            data = AggAllParticipants(startdate, enddate)
+            data = ITS.get_url()
             agg = dict(agg.items() +  data.items())
-            data = TrackerURL()
-            agg = dict(agg.items() +  data.items())
-
-            data = AggIssuesCompanies(period, startdate, enddate, identities_db)
-            agg = dict(agg.items() + data.items())
-
-            data = AggIssuesCountries(period, startdate, enddate, identities_db)
-            agg = dict(agg.items() + data.items())
-
-            data = AggIssuesDomains(period, startdate, enddate, identities_db)
-            agg = dict(agg.items() + data.items())
-
-            # Tendencies    
-            for i in [7,30,365]:
-                period_data = GetDiffClosedDays(period, identities_db, enddate, i, [], closed_condition)
-                agg = dict(agg.items() + period_data.items())
-                period_data = GetDiffOpenedDays(period, identities_db, enddate, i, [])
-                agg = dict(agg.items() + period_data.items())
-                period_data = GetDiffClosersDays(period, identities_db, enddate, i, [], closed_condition)
-                agg = dict(agg.items() + period_data.items())
-                period_data = GetDiffChangersDays(period, identities_db, enddate, i, [])
-                agg = dict(agg.items() + period_data.items())
-
-            # Last Activity: to be removed
-            for i in [7,14,30,60,90,180,365,730]:
-                period_activity = GetLastActivityITS(i, closed_condition)
-                agg = dict(agg.items() + period_activity.items())
+#            # Last Activity: to be removed
+#            for i in [7,14,30,60,90,180,365,730]:
+#                period_activity = GetLastActivityITS(i, closed_condition)
+#                agg = dict(agg.items() + period_activity.items())
 
         return agg
 
@@ -314,8 +296,10 @@ class ITS(DataSource):
 
     @staticmethod
     def create_r_reports(vizr, enddate, destdir):
-        # Time to Close: Other backends not yet supported
-        vizr.ReportTimeToCloseITS(ITS._get_backend().its_type, destdir)
+        backend = ITS._get_backend().its_type
+        # Change name for R code
+        if (backend == "bg"): backend = "bugzilla"
+        vizr.ReportTimeToCloseITS(backend, destdir)
         unique_ids = True
 
         # Demographics
@@ -413,92 +397,25 @@ class ITS(DataSource):
         ExecuteQuery(q)
 
     @staticmethod
-    def get_metrics_definition ():
-        mdef = {
-           "its_opened" : {
-                "divid" : "its_opened",
-                "column" : "opened",
-                "name" : "Opened tickets",
-                "desc" : "Number of opened tickets",
-                "envision" : {
-                    "y_labels" : "true",
-                    "show_markers" : "true"
-                }
-            },
-            "its_openers" : {
-                "divid" : "its_openers",
-                "column" : "openers",
-                "name" : "Ticket submitters",
-                "desc" : "Number of persons submitting new tickets",
-                "action" : "opened",
-                "envision" : {
-                    "gtype" : "whiskers"
-                }
-            },
-            "its_closed" : {
-                "divid" : "its_closed",
-                "column" : "closed",
-                "name" : "Closed tickets",
-                "desc" : "Number of closed tickets"
-            },
-            "its_closers" : {
-                "divid" : "its_closers",
-                "column" : "closers",
-                "name" : "Ticket closers",
-                "desc" : "Number of persons closing tickets",
-                "action" : "closed",
-                "envision" : {
-                    "gtype" : "whiskers"
-                }
-            },
-            "its_changed" : {
-                "divid" : "its_changed",
-                "column" : "changed",
-                "name" : "Changed tickets",
-                "desc" : "Number of changes to the state of tickets"
-            },
-            "its_changers" : {
-                "divid" : "its_changers",
-                "column" : "changers",
-                "name" : "Ticket state changers",
-                "desc" : "Number of persons changing the state of tickets",
-                "action" : "changed",
-                "envision" : {
-                    "gtype" : "whiskers"
-                }
-            },
-            "its_companies" : {
-                "divid" : "its_companies",
-                "column" : "companies",
-                "name" : "Organziations",
-                "desc" : "Number of organizations (companies, etc.) with persons active in the ticketing system"
-            }, 
-            "its_countries" : {
-                "divid" : "its_countries",
-                "column" : "countries",
-                "name" : "Countries",
-                "desc" : "Number of countries with persons active in the ticketing system"
-            },
-            "its_domains" : {
-                "divid" : "its_domains",
-                "column" : "domains",
-                "name" : "Domains",
-                "desc" : "Number of distinct domains with persons active in the ticketing system"
-            },
-            "its_repositories" : {
-                "divid" : "its_repositories",
-                "column" : "repositories",
-                "name" : "Trackers",
-                "desc" : "Number of active trackers"
-            },
-            "its_people" : {
-                "divid" : "its_people",
-                "column" : "people",
-                "name" : "Active persons",
-                "desc" : "Number of persons active in the ticketing system"
-            }
-        }
-        return mdef
+    def get_query_builder():
+        from query_builder import ITSQuery
+        return ITSQuery
+
+    @staticmethod
+    def get_metrics_core_agg():
+        m = ['closed','closers','changed','changers',"opened",'openers','trackers']
+        m += ['allhistory_participants']
+        return m
+
+    @staticmethod
+    def get_metrics_core_ts():
+        m = ['closed','closers','changed','changers',"opened",'openers','trackers']
+        return m
+
+    @staticmethod
+    def get_metrics_core_trends():
+        return ['closed','closers','changed','changers',"opened",'openers']
+
 
 ##############
 # Specific FROM and WHERE clauses per type of report
@@ -628,51 +545,10 @@ def GetITSSQLReportWhere (type_analysis, identities_db = None):
 ##########
 
 def GetITSInfo (period, startdate, enddate, identities_db, type_analysis, closed_condition, evolutionary):
-    # Meta function to aggregate all of the evolutionary or
-    # aggregated functions
-
-    data = {}
-
-    if (evolutionary):
-        closed = EvolIssuesClosed(period, startdate, enddate, identities_db, type_analysis, closed_condition)
-        closed = completePeriodIds(closed, period, startdate, enddate)
-        closers = EvolIssuesClosers(period, startdate, enddate, identities_db, type_analysis, closed_condition)
-        closers = completePeriodIds(closers, period, startdate, enddate)
-        changed = EvolIssuesChanged(period, startdate, enddate, identities_db, type_analysis)
-        changed = completePeriodIds(changed, period, startdate, enddate)
-        changers = EvolIssuesChangers(period, startdate, enddate, identities_db, type_analysis)
-        changers = completePeriodIds(changers, period, startdate, enddate)
-        open = EvolIssuesOpened(period, startdate, enddate, identities_db, type_analysis)
-        open = completePeriodIds(open, period, startdate, enddate)
-        openers = EvolIssuesOpeners(period, startdate, enddate, identities_db, type_analysis, closed_condition)
-        openers = completePeriodIds(openers, period, startdate, enddate)
-        repos = EvolIssuesRepositories(period, startdate, enddate, identities_db, type_analysis)
-        repos = completePeriodIds(repos, period, startdate, enddate)
-    else :
-        closed = AggIssuesClosed(period, startdate, enddate, identities_db, type_analysis, closed_condition)
-        closers = AggIssuesClosers(period, startdate, enddate, identities_db, type_analysis, closed_condition)
-        changed = AggIssuesChanged(period, startdate, enddate, identities_db, type_analysis)
-        changers = AggIssuesChangers(period, startdate, enddate, identities_db, type_analysis)
-        open = AggIssuesOpened(period, startdate, enddate, identities_db, type_analysis)
-        openers = AggIssuesOpeners(period, startdate, enddate, identities_db, type_analysis, closed_condition)
-        repos = AggIssuesRepositories(period, startdate, enddate, identities_db, type_analysis)
-        init_date = GetInitDate(startdate, enddate, identities_db, type_analysis)
-        end_date = GetEndDate(startdate, enddate, identities_db, type_analysis)
-
-        # Data from the last 365 days
-        fromdate = GetDates(enddate, 365)[1]
-        closed_365 = AggIssuesClosed(period, fromdate, enddate, identities_db, type_analysis, closed_condition)
-        closers_365 = AggIssuesClosers(period, fromdate, enddate, identities_db, type_analysis, closed_condition)
-        closed['closed_365'] = closed_365['closed']
-        closers['closers_365'] = closers_365['closers']
-
-    data = dict(closed.items() + closers.items()+ changed.items())
-    data = dict(data.items() + changers.items() + open.items())
-    data = dict(data.items() + openers.items() + repos.items())
-    if (not evolutionary):
-        data = dict(data.items() + init_date.items() + end_date.items())
-
-    return(data)
+    filter_ = None
+    if type_analysis is not None:
+        filter_ = Filter(type_analysis[0],type_analysis[1])
+    return DataSource.get_metrics_data(ITS, period, startdate, enddate, identities_db, filter_, evolutionary)
 
 def EvolITSInfo (period, startdate, enddate, identities_db, type_analysis, closed_condition):
     #Evolutionary info all merged in a dataframe
@@ -682,194 +558,10 @@ def AggITSInfo (period, startdate, enddate, identities_db, type_analysis, closed
     #Agg info all merged in a dataframe
     return(GetITSInfo(period, startdate, enddate, identities_db, type_analysis, closed_condition, False))
 
-#TODO: check the differences between function GetCurrentOpened and GetEvolClosed,
-# GetEvolOpened, etc... in some cases such as opened, openers, closed, closers, 
-# changed and changers is more than enough to just count changes in table changes
-# opened when the issue was submitted (and submitted by) and closers providing the
-# closed condition. Do we get whe same results if using the Backlog table?
 
-def GetOpened (period, startdate, enddate, identities_db, type_analysis, evolutionary):
-    #This function returns the evolution or agg number of opened issues
-    #This function can be also reproduced using the Backlog function.
-    #However this function is less time expensive.
-    fields = " count(distinct(i.id)) as opened "
-    tables = " issues i "+ GetITSSQLReportFrom(identities_db, type_analysis)
-    filters = GetITSSQLReportWhere(type_analysis, identities_db)
-    q = BuildQuery(period, startdate, enddate, " submitted_on ", fields, tables, filters, evolutionary)
-
-    data = ExecuteQuery(q)
-    return (data)
-
-def AggIssuesOpened (period, startdate, enddate, identities_db, type_analysis):
-    # Returns aggregated number of opened issues
-    return(GetOpened(period, startdate, enddate, identities_db, type_analysis, False))
-
-def EvolIssuesOpened (period, startdate, enddate, identities_db, type_analysis):
-    #return(GetEvolBacklogTickets(period, startdate, enddate, status, name.logtable, filter))
-    return(GetOpened(period, startdate, enddate, identities_db, type_analysis, True))
-
-def GetOpeners (period, startdate, enddate, identities_db, type_analysis, evolutionary, closed_condition):
-    #This function returns the evolution or agg number of people opening issues
-    fields = " count(distinct(pup.upeople_id)) as openers "
-    tables = " issues i " + GetITSSQLReportFrom(identities_db, type_analysis)
-    filters = GetITSSQLReportWhere(type_analysis, identities_db)
-
-    if (type_analysis is None or len (type_analysis) != 2) :
-        #Specific case for the basic option where people_upeople table is needed
-        #and not taken into account in the initial part of the query
-        tables += ", people_upeople pup"
-        filters += " and i.submitted_by = pup.people_id"
-    elif (type_analysis[0] == "repository" or type_analysis[0] == "project"):
-        #Adding people_upeople table
-        tables += ", people_upeople pup"
-        filters += " and i.submitted_by = pup.people_id "
-
-    q = BuildQuery(period, startdate, enddate, " submitted_on ", fields, tables, filters, evolutionary)
-
-    data = ExecuteQuery(q)
-    return (data)
-
-
-def AggIssuesOpeners (period, startdate, enddate, identities_db, type_analysis, closed_condition):
-    # Returns aggregated number of opened issues
-    return(GetOpeners(period, startdate, enddate, identities_db, type_analysis, False, closed_condition))
-
-def EvolIssuesOpeners (period, startdate, enddate, identities_db, type_analysis, closed_condition):
-    #return(GetEvolBacklogTickets(period, startdate, enddate, status, name.logtable, filter))
-    return(GetOpeners(period, startdate, enddate, identities_db, type_analysis, True, closed_condition))
-
-def GetClosed (period, startdate, enddate, identities_db, type_analysis, evolutionary, closed_condition):
-    #This function returns the evolution or agg number of closed issues
-    #This function can be also reproduced using the Backlog function.
-    #However this function is less time expensive.
-    fields = " count(distinct(i.id)) as closed "
-    tables = " issues i, changes ch " + GetITSSQLReportFrom(identities_db, type_analysis)
-
-    filters = " i.id = ch.issue_id and " + closed_condition 
-    filters_ext = GetITSSQLReportWhere(type_analysis, identities_db)
-    if (filters_ext != ""):
-        filters += " and " + filters_ext
-    #Action needed to replace issues filters by changes one
-    filters = filters.replace("i.submitted", "ch.changed")
-
-    q = BuildQuery(period, startdate, enddate, " ch.changed_on ", fields, tables, filters, evolutionary)
-
-    data = ExecuteQuery(q)
-    return (data)
-
-def AggIssuesClosed (period, startdate, enddate, identities_db, type_analysis, closed_condition):
-    # Returns aggregated number of closed issues
-    return(GetClosed(period, startdate, enddate, identities_db, type_analysis, False, closed_condition))
-
-def EvolIssuesClosed (period, startdate, enddate, identities_db, type_analysis, closed_condition):
-    #return(GetEvolBacklogTickets(period, startdate, enddate, status, name.logtable, filter))
-    return(GetClosed(period, startdate, enddate, identities_db, type_analysis, True, closed_condition))
-
-def GetClosers (period, startdate, enddate, identities_db, type_analysis, evolutionary, closed_condition):
-    #This function returns the evolution or agg number of closed issues
-    #This function can be also reproduced using the Backlog function.
-    #However this function is less time expensive.
-    fields = " count(distinct(pup.upeople_id)) as closers "
-    tables = " issues i, changes ch " + GetITSSQLReportFrom(identities_db, type_analysis)
-
-    #closed condition filters
-    filters = " i.id = ch.issue_id and " + closed_condition
-    filters_ext = GetITSSQLReportWhere(type_analysis, identities_db)
-    if (filters_ext != ""):
-        filters += " and " + filters_ext
-    #unique identities filters
-    if (type_analysis is None or len(type_analysis) != 2) :
-        #Specific case for the basic option where people_upeople table is needed
-        #and not taken into account in the initial part of the query
-        tables += ", people_upeople pup"
-        filters += " and i.submitted_by = pup.people_id"
-    elif (type_analysis[0] == "repository" or type_analysis[0] == "project"):
-        #Adding people_upeople table
-        tables += ", people_upeople pup"
-        filters += " and i.submitted_by = pup.people_id "
-
-    #Action needed to replace issues filters by changes one
-    filters = filters.replace("i.submitted", "ch.changed")
-
-    q = BuildQuery(period, startdate, enddate, " ch.changed_on ", fields, tables, filters, evolutionary)
-    data = ExecuteQuery(q)
-    return (data)
-
-def AggIssuesClosers (period, startdate, enddate, identities_db, type_analysis, closed_condition):
-    # Returns aggregated number of closed issues
-    return(GetClosers(period, startdate, enddate, identities_db, type_analysis, False, closed_condition))
-
-def EvolIssuesClosers (period, startdate, enddate, identities_db, type_analysis, closed_condition):
-    #return(GetEvolBacklogTickets(period, startdate, enddate, status, name.logtable, filter))
-    return(GetClosers(period, startdate, enddate, identities_db, type_analysis, True, closed_condition))
-
-def GetChanged (period, startdate, enddate, identities_db, type_analysis, evolutionary):
-    #This function returns the evolution or agg number of changed issues
-    #This function can be also reproduced using the Backlog function.
-    #However this function is less time expensive.
-    fields = " count(distinct(ch.issue_id)) as changed "
-    tables = " issues i, changes ch " + GetITSSQLReportFrom(identities_db, type_analysis)
-
-    filters = " i.id = ch.issue_id "
-    filters_ext = GetITSSQLReportWhere(type_analysis, identities_db)
-    if (filters_ext != ""):
-        filters += " and " + filters_ext
-
-    #Action needed to replace issues filters by changes one
-    filters = filters.replace("i.submitted", "ch.changed")
-
-    q = BuildQuery(period, startdate, enddate, " ch.changed_on ", fields, tables, filters, evolutionary)
-
-    data = ExecuteQuery(q)
-    return (data)
-
-
-def AggIssuesChanged (period, startdate, enddate, identities_db, type_analysis):
-    # Returns aggregated number of closed issues
-    return(GetChanged(period, startdate, enddate, identities_db, type_analysis, False))
-
-def EvolIssuesChanged (period, startdate, enddate, identities_db, type_analysis):
-    return(GetChanged(period, startdate, enddate, identities_db, type_analysis, True))
-
-
-def GetChangers (period, startdate, enddate, identities_db, type_analysis, evolutionary):
-    #This function returns the evolution or agg number of changed issues
-    #This function can be also reproduced using the Backlog function.
-    #However this function is less time expensive.
-    fields = " count(distinct(pup.upeople_id)) as changers "
-    tables = " issues i, changes ch " + GetITSSQLReportFrom(identities_db, type_analysis)
-
-    filters = " i.id = ch.issue_id "
-    filters_ext = GetITSSQLReportWhere(type_analysis, identities_db)
-    if (filters_ext != ""):
-        filters += " and " + filters_ext
-
-    #unique identities filters
-    if (type_analysis is None or len(type_analysis) != 2) :
-        #Specific case for the basic option where people_upeople table is needed
-        #and not taken into account in the initial part of the query
-        tables += ", people_upeople pup"
-        filters += " and i.submitted_by = pup.people_id"
-
-    elif (type_analysis[0] == "repository"or type_analysis[0] == "project"):
-        #Adding people_upeople table
-        tables += ", people_upeople pup"
-        filters += " and i.submitted_by = pup.people_id "
-
-    #Action needed to replace issues filters by changes one
-    filters = filters.replace("i.submitted", "ch.changed")
-
-    q = BuildQuery(period, startdate, enddate, " ch.changed_on ", fields, tables, filters, evolutionary)
-
-    data = ExecuteQuery(q)
-    return (data)
-
-def AggIssuesChangers (period, startdate, enddate, identities_db, type_analysis):
-    # Returns aggregated number of closed issues
-    return(GetChangers(period, startdate, enddate, identities_db, type_analysis, False))
-
-def EvolIssuesChangers (period, startdate, enddate, identities_db, type_analysis):
-    return(GetChangers(period, startdate, enddate, identities_db, type_analysis, True))
+####
+# DEPRECATED CODE only used in its-analysis.py
+##
 
 # Repositories
 def GetIssuesRepositories (period, startdate, enddate, identities_db, type_analysis, evolutionary):
@@ -938,6 +630,12 @@ def AggIssuesCompanies (period, startdate, enddate, identities_db):
     # Agg number of companies
     return(GetIssuesStudies(period, startdate, enddate, identities_db, ['company', ''], False, 'companies'))
 
+####
+# END DEPRECATED CODE only used in its-analysis.py
+####
+
+
+
 def GetDate (startdate, enddate, identities_db, type_analysis, type):
     # date of submmitted issues (type= max or min)
     if (type=="max"):
@@ -959,6 +657,38 @@ def GetInitDate (startdate, enddate, identities_db, type_analysis):
 def GetEndDate (startdate, enddate, identities_db, type_analysis):
     #End date of submitted issues
     return(GetDate(startdate, enddate, identities_db, type_analysis, "max"))
+
+##----------------------
+## Auxiliary functions querying the database
+##----------------------
+
+def get_timespan():
+    """Get timespan found in the ITS database.
+    
+    Returns
+    -------
+    startdate : datetime.datetime
+        Time of first activity in tickets
+    enddate : datetime.datetime
+        Time of last activity in tickets
+
+    Notes
+    -----
+
+    Looks for entries both in issues and changes tables.
+
+    """
+
+    q = """SELECT
+          DATE(MIN(DATE)) as startdate,
+          DATE(MAX(date)) as enddate
+      FROM
+          (SELECT submitted_on AS date FROM issues
+           UNION ALL
+           SELECT changed_on AS date FROM changes) AS dates"""
+    data = ExecuteQuery(q)
+    # Returns [first time, last_time]
+    return (data['startdate'], data['enddate'])
 
 ###############
 # Others
@@ -1001,6 +731,10 @@ def get_projects_name (startdate, enddate, identities_db, closed_condition) :
     # Projects activity needs to include subprojects also
     logging.info ("Getting projects list for ITS")
 
+    # debug
+    if ITS.debug:
+        return {"name":['eclipse']}
+
     # Get all projects list
     q = "SELECT p.id AS name FROM  %s.projects p" % (identities_db)
     projects = ExecuteQuery(q)
@@ -1009,9 +743,13 @@ def get_projects_name (startdate, enddate, identities_db, closed_condition) :
     # Loop all projects getting reviews
     for project in projects['name']:
         type_analysis = ['project', project]
+
         period = None
-        issues = AggIssuesClosed (period, startdate, enddate, identities_db,
-                                  type_analysis, closed_condition)
+        filter_com = MetricFilters(period, startdate, enddate, type_analysis)
+        mclosed = ITS.get_metrics("closed", ITS)
+        mclosed.filters = filter_com
+        issues = mclosed.get_agg()
+
         issues = issues['closed']
         if (issues > 0):
             data.append([issues,project])
@@ -1103,90 +841,6 @@ def GetCompaniesNameITS (startdate, enddate, identities_db, closed_condition, fi
         "      order by count(distinct(i.id)) desc"
 
     data = ExecuteQuery(q)
-    return (data)
-
-################
-# Last activity functions
-################
-
-
-##
-## GetDiffClosedDays
-##
-## Get differences in number of closed tickets between two periods.
-##  - date: final date of the two periods.
-##  - days: number of days for each period.
-##  - closed_condition: SQL string to define the condition of "closed"
-##     for a ticket
-## Example of parameters, for analizing the difference during the last
-##  two weeks for the day 2013-11-25:
-##  (date="2013-11-25", days=7, closed_condition=...)
-##
-def GetDiffClosedDays (period, identities_db, date, days, type_analysis, closed_condition):
-    chardates = GetDates(date, days)
-    last = AggIssuesClosed(period, chardates[1], chardates[0], identities_db, type_analysis, closed_condition)
-    last = int(last['closed'])
-    prev = AggIssuesClosed(period, chardates[2], chardates[1], identities_db, type_analysis, closed_condition)
-    prev = int(prev['closed'])
-
-    data = {}
-    data['diff_netclosed_'+str(days)] = last - prev
-    data['percentage_closed_'+str(days)] = GetPercentageDiff(prev, last)
-    # data['closed_'+str(days)] = last
-    return (data)
-
-##
-## GetDiffClosersDays
-##
-## Get differences in number of ticket closers between two periods.
-##  - date: final date of the two periods.
-##  - days: number of days for each period.
-##  - closed_condition: SQL string to define the condition of "closed"
-##     for a ticket
-## Example of parameters, for analizing the difference during the last
-##  two weeks for the day 2013-11-25:
-##  (date="2013-11-25", days=7, closed_condition=...)
-##
-def GetDiffClosersDays (period, identities_db, date, days, type_analysis, closed_condition):
-    # This function provides the percentage in activity between two periods
-    chardates = GetDates(date, days)
-    last = AggIssuesClosers(period, chardates[1], chardates[0], identities_db, type_analysis, closed_condition)
-    last = int(last['closers'])
-    prev = AggIssuesClosers(period, chardates[2], chardates[1], identities_db, type_analysis, closed_condition)
-    prev = int(prev['closers'])
-
-    data = {}
-    data['diff_netclosers_'+str(days)] = last - prev
-    data['percentage_closers_'+str(days)] = GetPercentageDiff(prev, last)
-    # data['closers_'+str(days)] = last
-    return (data)
-
-def GetDiffOpenedDays (period, identities_db, date, days, type_analysis):
-    # This function provides the percentage in activity between two periods
-    chardates = GetDates(date, days)
-    last = AggIssuesOpened(period, chardates[1], chardates[0], identities_db, type_analysis)
-    last = int(last['opened'])
-    prev = AggIssuesOpened(period, chardates[2], chardates[1], identities_db, type_analysis)
-    prev = int(prev['opened'])
-
-    data = {}
-    data['diff_netopened_'+str(days)] = last - prev
-    data['percentage_opened_'+str(days)] = GetPercentageDiff(prev, last)
-    #data['opened_'+str(days)] = last
-    return (data)
-
-def GetDiffChangersDays (period, identities_db, date, days, type_analysis):
-    # This function provides the percentage in activity between two periods
-    chardates = GetDates(date, days)
-    last = AggIssuesChangers(period, chardates[1], chardates[0], identities_db, type_analysis)
-    last = int(last['changers'])
-    prev = AggIssuesChangers(period, chardates[2], chardates[1], identities_db, type_analysis)
-    prev = int(prev['changers'])
-
-    data = {}
-    data['diff_netchangers_'+str(days)] = last - prev
-    data['percentage_changers_'+str(days)] = GetPercentageDiff(prev, last)
-    # data['changers_'+str(days)] = last
     return (data)
 
 def GetLastActivityITS (days, closed_condition):
@@ -1372,37 +1026,30 @@ def GetCompanyTopClosers (company_name, startdate, enddate,
     return (data)
 
 def GetTopClosers (days, startdate, enddate,
-        identities_db, filter, closed_condition, limit) :
+        identities_db, bots, closed_condition, limit) :
 
-    if not filter:
-        affiliations_from = GetTablesOwnUniqueIdsITS()
-        affiliations_where = GetFiltersOwnUniqueIdsITS ()
-    else:
-        affiliations = ""
-        for aff in filter:
-            affiliations += " com.name<>'"+ aff +"' and "
-        affiliations_from = GetTablesCompaniesITS(identities_db) + ", " + \
-            identities_db + ".companies com"
-        affiliations_where = GetFiltersCompaniesITS() + " and " + \
-            affiliations + \
-            " upc.company_id = com.id"
+    filter_bots = ''
+    for bot in bots:
+        filter_bots = filter_bots + " up.identifier<>'"+bot+"' and "
 
-    date_limit = ""
-    if (days != 0) :
-        sql = "SELECT @maxdate:=max(changed_on) from changes limit 1"
-        ExecuteQuery(sql)
-        date_limit = " AND DATEDIFF(@maxdate, changed_on)<"+str(days)
+    tables = GetTablesOwnUniqueIdsITS()
+    filters = GetFiltersOwnUniqueIdsITS ()
+
+    dtables = dfilters = ""
+    if (days > 0):
+        dtables = ", (SELECT MAX(changed_on) as last_date from changes) t "
+        dfilters = " AND DATEDIFF (last_date, changed_on) < %s " % (days)
 
     q = "SELECT up.id as id, up.identifier as closers, "+\
         "       count(distinct(c.id)) as closed "+\
-        "FROM  "+affiliations_from+\
-        ",     "+identities_db+".upeople up "+\
-        "WHERE "+affiliations_where+" and "+\
+        "FROM  "+tables+\
+        ",     "+identities_db+".upeople up "+ dtables +\
+        "WHERE "+filter_bots + filters + " and "+\
         "      c.changed_by = pup.people_id and "+\
         "      pup.upeople_id = up.id and "+\
         "      c.changed_on >= "+ startdate+ " and "+\
         "      c.changed_on < "+ enddate+ " and " +\
-        "      "+closed_condition+ " " + date_limit+ " "+\
+        "      "+closed_condition + " " + dfilters+ " "+\
         "GROUP BY up.identifier "+\
         "ORDER BY closed desc, closers "+\
         "LIMIT "+ limit
@@ -1439,36 +1086,29 @@ def GetDomainTopClosers (domain_name, startdate, enddate,
 
 
 def GetTopOpeners (days, startdate, enddate,
-        identities_db, filter, closed_condition, limit) :
+        identities_db, bots, closed_condition, limit) :
 
-    if not filter:
-        affiliations_from = GetTablesOwnUniqueIdsITS('issues')
-        affiliations_where = GetFiltersOwnUniqueIdsITS ('issues')
-    else:
-        affiliations = ""
-        for aff in filter:
-            affiliations += " com.name<>'"+ aff +"' and "
-        affiliations_from = GetTablesCompaniesITS(identities_db,'issues') + \
-            ", " + identities_db + ".companies com"
-        affiliations_where = GetFiltersCompaniesITS('issues') + " and " + \
-            affiliations + \
-            " upc.company_id = com.id"
+    filter_bots = ''
+    for bot in bots:
+        filter_bots = filter_bots + " up.identifier<>'"+bot+"' and "
 
-    date_limit = ""
-    if (days != 0 ) :
-        sql = "SELECT @maxdate:=max(submitted_on) from issues limit 1"
-        ExecuteQuery(sql)
-        date_limit = " AND DATEDIFF(@maxdate, submitted_on)<"+str(days)
+    tables = GetTablesOwnUniqueIdsITS("issues")
+    filters = GetFiltersOwnUniqueIdsITS ("issues")
+
+
+    dtables = dfilters = ""
+    if (days > 0):
+        dtables = ", (SELECT MAX(submitted_on) as last_date from issues) t "
+        dfilters = " AND DATEDIFF (last_date, submitted_on) < %s " % (days)
 
     q = "SELECT up.id as id, up.identifier as openers, "+\
         "    count(distinct(i.id)) as opened "+\
-        "FROM "+affiliations_from+\
-        " ,   "+identities_db+".upeople up "+\
-        "WHERE "+affiliations_where+" and "+\
+        "FROM " +tables +\
+        " ,   "+identities_db+".upeople up "+ dtables + \
+        "WHERE "+filter_bots + filters +" and "+\
         "    pup.upeople_id = up.id and "+\
         "    i.submitted_on >= "+ startdate+ " and "+\
-        "    i.submitted_on < "+ enddate+\
-            date_limit+ " "+\
+        "    i.submitted_on < "+ enddate + dfilters +\
         "    GROUP BY up.identifier "+\
         "    ORDER BY opened desc, openers "+\
         "    LIMIT " + limit
@@ -1538,7 +1178,7 @@ def EvolBMIIndex(period, startdate, enddate, identities_db, type_analysis, close
 
     evol_bmi = []
     for i in closed["closed"]:
-        
+
         index = closed["closed"].index(i)
         if opened["opened"][index] == 0:
             #div by 0
@@ -1559,8 +1199,10 @@ def GetClosedSummaryCompanies (period, startdate, enddate, identities_db, closed
 
     for company in companies:
         type_analysis = ["company", "'"+company+"'"]
-        closed = EvolIssuesClosed(period, startdate, enddate, identities_db, type_analysis, closed_condition)
-        closed = completePeriodIds(closed, period, startdate, enddate)
+        filter_com = MetricFilters(period, startdate, enddate, type_analysis)
+        mclosed = ITS.get_metrics("closed", ITS)
+        mclosed.filters = filter_com
+        closed = mclosed.get_ts()
         # Rename field closed to company name
         closed[company] = closed["closed"]
         del closed['closed']

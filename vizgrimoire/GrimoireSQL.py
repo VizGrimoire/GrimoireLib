@@ -16,8 +16,6 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #
-# This file is a part of the vizGrimoire.R package
-#
 # Authors:
 #     Alvaro del Castillo <acs@bitergia.com>
 
@@ -30,6 +28,8 @@ import re, sys
 
 # global vars to be moved to specific classes
 cursor = None
+# one connection per database
+dbpool = {}
 
 ##########
 #Generic functions to obtain FROM and WHERE clauses per type of report
@@ -215,11 +215,19 @@ def BuildQuery (period, startdate, enddate, date_field, fields, tables, filters,
 def SetDBChannel (user=None, password=None, database=None,
                   host="127.0.0.1", port=3306, group=None):
     global cursor
-    if (group == None):
-        db = MySQLdb.connect(user=user, passwd=password,
-                             db=database, host=host, port=port)
+    global dbpool
+
+    db = None
+
+    if database in dbpool:
+        db = dbpool[database]
     else:
-        db = MySQLdb.connect(read_default_group=group, db=database)
+        if (group == None):
+            db = MySQLdb.connect(user=user, passwd=password,
+                                 db=database, host=host, port=port)
+        else:
+            db = MySQLdb.connect(read_default_group=group, db=database)
+        dbpool[database] = db
 
     cursor = db.cursor()
     cursor.execute("SET NAMES 'utf8'")

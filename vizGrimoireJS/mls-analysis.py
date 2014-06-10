@@ -49,34 +49,7 @@ from GrimoireUtils import valRtoPython, getPeriod
 import MLS
 
 def aggData(period, startdate, enddate, identities_db, destdir):
-    data = MLS.StaticMLSInfo(period, startdate, enddate, identities_db, rfield)
-    agg = data
-
-
-    if ('companies' in reports):
-        data = MLS.AggMLSCompanies(period, startdate, enddate, identities_db)
-        agg = dict(agg.items() + data.items())
-
-    if ('countries' in reports):
-        data = MLS.AggMLSCountries(period, startdate, enddate, identities_db)
-        agg = dict(agg.items() + data.items())
-
-    if ('domains' in reports):
-        data = MLS.AggMLSDomains(period, startdate, enddate, identities_db)
-        agg = dict(agg.items() + data.items())
-
-    # Tendencies
-    for i in [7,30,365]:
-        period_data = MLS.GetDiffSentDays(period, enddate, i)
-        agg = dict(agg.items() + period_data.items())
-        period_data = MLS.GetDiffSendersDays(period, enddate, i)
-        agg = dict(agg.items() + period_data.items())
-
-    # Last Activity: to be removed
-    for i in [7,14,30,60,90,180,365,730]:
-        period_activity = MLS.lastActivity(i)
-        agg = dict(agg.items() + period_activity.items())
-
+    agg = MLS.StaticMLSInfo(period, startdate, enddate, identities_db, rfield)
     createJSON (agg, destdir+"/mls-static.json")
 
 def tsData(period, startdate, enddate, identities_db, destdir, granularity, conf):
@@ -85,21 +58,7 @@ def tsData(period, startdate, enddate, identities_db, destdir, granularity, conf
     data = MLS.EvolMLSInfo(period, startdate, enddate, identities_db, rfield)
     evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
 
-
-    if ('companies' in reports):
-        data  = MLS.EvolMLSCompanies(period, startdate, enddate, identities_db)
-        evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
-
-    if ('countries' in reports):
-        data = MLS.EvolMLSCountries(period, startdate, enddate, identities_db)
-        evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
-
-    if ('domains' in reports):
-        data = MLS.EvolMLSDomains(period, startdate, enddate, identities_db)
-        evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
-
     createJSON (evol, destdir+"/mls-evolutionary.json")
-
 
 def peopleData(period, startdate, enddate, identities_db, destdir, top_data):
     top = top_data['senders.']["id"]
@@ -223,6 +182,7 @@ def getLongestThreads(startdate, enddate, identities_db):
     l_threads['date'] = []
     l_threads['initiator_name'] = []
     l_threads['initiator_id'] = []
+    l_threads['url'] = []
     for email in longest_threads:
         l_threads['message_id'].append(email.message_id)
         l_threads['length'].append(main_topics.lenThread(email.message_id))
@@ -230,6 +190,7 @@ def getLongestThreads(startdate, enddate, identities_db):
         l_threads['date'].append(email.date.strftime("%Y-%m-%d"))
         l_threads['initiator_name'].append(email.initiator_name)
         l_threads['initiator_id'].append(email.initiator_id)
+        l_threads['url'].append(email.url)
 
     return l_threads
 

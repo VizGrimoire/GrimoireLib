@@ -16,7 +16,6 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #
-# This file is a part of the vizGrimoire.R package
 #
 # Authors:
 #     Alvaro del Castillo <acs@bitergia.com>
@@ -28,9 +27,11 @@ from GrimoireSQL import GetSQLGlobal, GetSQLPeriod, ExecuteQuery, BuildQuery
 from GrimoireUtils import GetPercentageDiff, GetDates, getPeriod, createJSON, completePeriodIds
 from data_source import DataSource
 from filter import Filter
+from metrics_filter import MetricFilters
 
 
 class IRC(DataSource):
+    _metrics_set = []
 
     @staticmethod
     def get_db_name():
@@ -40,20 +41,18 @@ class IRC(DataSource):
     def get_name(): return "irc"
 
     @staticmethod
+    def get_date_init(startdate, enddate, identities_db, type_analysis):
+        """Get the date of the first activity in the data source"""
+        return GetInitDate (startdate, enddate, identities_db, type_analysis)
+
+    @staticmethod
+    def get_date_end(startdate, enddate, identities_db, type_analysis):
+        """Get the date of the last activity in the data source"""
+        return GetEndDate (startdate, enddate, identities_db, type_analysis)
+
+    @staticmethod
     def get_evolutionary_data (period, startdate, enddate, identities_db, filter_ = None):
-        evol = {}
-        if filter_ is not None:
-            type_analysis = [filter_.get_name(), filter_.get_item()]
-
-            if (filter_ == "repository"):
-                # evol = GetRepoEvolSentSendersIRC(filter_.get_item(), period, startdate, enddate)
-                evol = GetEvolDataIRC (period, startdate, enddate, identities_db, type_analysis)
-                evol = completePeriodIds(evol, period, startdate, enddate)
-        else:
-            evol = GetEvolDataIRC (period, startdate, enddate, identities_db, None)
-            evol = completePeriodIds(evol, period, startdate, enddate)
-
-        return evol
+        return DataSource.get_metrics_data(IRC, period, startdate, enddate, identities_db, filter_, True)
 
     @staticmethod
     def create_evolutionary_report (period, startdate, enddate, destdir, identities_db, filter_ = None):
@@ -63,27 +62,7 @@ class IRC(DataSource):
 
     @staticmethod
     def get_agg_data (period, startdate, enddate, identities_db, filter_ = None):
-        agg_data = {}
-
-        if filter_ is not None:
-            filter_name = filter_.get_name()
-            item = filter_.get_item()
-
-            if (filter_name == "repository"):
-                agg_data = GetRepoStaticSentSendersIRC(item, startdate, enddate)
-
-        else:
-            # Tendencies
-            for i in [7,30,365]:
-                period_data = GetIRCDiffSentDays(period, enddate, i)
-                agg_data = dict(agg_data.items() + period_data.items())
-                period_data = GetIRCDiffSendersDays(period, enddate, identities_db, i)
-                agg_data = dict(agg_data.items() + period_data.items())
-
-            static_data = GetStaticDataIRC(period, startdate, enddate, identities_db, None)
-            agg_data = dict(agg_data.items() + static_data.items())
-
-        return agg_data
+        return DataSource.get_metrics_data(IRC, period, startdate, enddate, identities_db, filter_)
 
     @staticmethod
     def create_agg_report (period, startdate, enddate, destdir, i_db, filter_ = None):
@@ -173,8 +152,45 @@ class IRC(DataSource):
         pass
 
     @staticmethod
-    def get_metrics_definition ():
-        pass
+    def get_query_builder():
+        from query_builder import IRCQuery
+        return IRCQuery
+
+    @staticmethod
+    def get_metrics_core_agg():
+        return ['sent', 'senders', 'repositories']
+
+    @staticmethod
+    def get_metrics_core_ts():
+        return ['sent', 'senders', 'repositories']
+
+    @staticmethod
+    def get_metrics_core_trends():
+        return ['sent', 'senders']
+
+
+def GetDate (startdate, enddate, identities_db, type_analysis, type):
+    # date of submmitted issues (type= max or min)
+    if (type=="max"):
+        fields = " DATE_FORMAT (max(date), '%Y-%m-%d') as last_date"
+    else :
+        fields = " DATE_FORMAT (min(date), '%Y-%m-%d') as first_date"
+
+    tables = " irclog i " + GetIRCSQLReportFrom(identities_db, type_analysis)
+    filters = GetIRCSQLReportWhere(type_analysis)
+
+    q = BuildQuery(None, startdate, enddate, " i.date ", fields, tables, filters, False)
+    data = ExecuteQuery(q)
+    return(data)
+
+def GetInitDate (startdate, enddate, identities_db, type_analysis):
+    #Initial date of submitted issues
+    return(GetDate(startdate, enddate, identities_db, type_analysis, "min"))
+
+def GetEndDate (startdate, enddate, identities_db, type_analysis):
+    #End date of submitted issues
+    return(GetDate(startdate, enddate, identities_db, type_analysis, "max"))
+
 
 # SQL Metaqueries
 def GetIRCSQLRepositoriesFrom ():
@@ -182,9 +198,9 @@ def GetIRCSQLRepositoriesFrom ():
     return (", channels c")
 
 
-def GetIRCSQLRepositoriesWhere (repository):
+def GetIRCSQLRepositoriesWhere(repository):
     # filters necessaries for repositories
-    return (" i.channel_id = c.id and c.name="+repository+" ")
+    return (" i.channel_id = c.id and c.name='" + repository + "'")
 
 
 def GetIRCSQLCompaniesFrom (i_db):
@@ -194,14 +210,14 @@ def GetIRCSQLCompaniesFrom (i_db):
                    i_db+".upeople_companies upc")
 
 
-def GetIRCSQLCompaniesWhere (name):
+def GetIRCSQLCompaniesWhere(name):
     # filters necessary to companies analysis
     return(" i.nick = pup.people_id and "+\
            "pup.upeople_id = upc.upeople_id and "+\
            "upc.company_id = c.id and "+\
            "i.submitted_on >= upc.init and "+\
            "i.submitted_on < upc.end and "+\
-           "c.name = "+name)
+           "c.name = '" + name + "'")
 
 
 def GetIRCSQLCountriesFrom (i_db):
@@ -211,12 +227,12 @@ def GetIRCSQLCountriesFrom (i_db):
            i_db+".upeople_countries upc")
 
 
-def GetIRCSQLCountriesWhere (name):
+def GetIRCSQLCountriesWhere(name):
     # filters necessary to countries analysis
     return(" i.nick = pup.people_id and "+\
            "pup.upeople_id = upc.upeople_id and "+\
            "upc.country_id = c.id and "+\
-           "c.name = "+name)
+           "c.name = '" + name + "'")
 
 def GetIRCSQLDomainsFrom (i_db):
     # tables necessary to domains analysis
@@ -229,7 +245,7 @@ def GetIRCSQLDomainsWhere (name):
     return(" i.nick = pup.people_id and "+\
            "pup.upeople_id = upd.upeople_id and "+\
            "upd.domain_id = d.id and "+\
-           "d.name = "+name)
+           "d.name = '" + name + "'")
 
 def GetTablesOwnUniqueIdsIRC () :
     tables = 'irclog, people_upeople pup'
@@ -339,7 +355,7 @@ def StaticNumRepositoriesIRC (period, startdate, enddate, identities_db=None, ty
     q = fields + tables + filters
     return(ExecuteQuery(q))
 
-def GetSentIRC (period, startdate, enddate, identities_db, type_analysis, evolutionary):    
+def GetSentIRC (period, startdate, enddate, identities_db, type_analysis, evolutionary):
     fields = " count(distinct(message)) as sent " 
     tables = " irclog " + GetIRCSQLReportFrom(identities_db, type_analysis)
     filters = GetIRCSQLReportWhere(type_analysis)

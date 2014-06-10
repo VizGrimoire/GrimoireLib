@@ -36,6 +36,7 @@ class Email(object):
         self.subject = None # Email subject
         self.body = None # Email body
         self.date = None # Email sending date
+        self.url = None # Domain of the archive
         self._buildEmail() # Constructor
                
     def _buildEmail(self):
@@ -48,7 +49,8 @@ class Email(object):
                        m.message_body,
                        m.first_date,
                        u.identifier as initiator_name,
-                       u.id as initiator_id
+                       u.id as initiator_id,
+                       m.mailing_list_url as url
                 from messages m,
                      messages_people mp,
                      people_upeople pup,
@@ -58,7 +60,12 @@ class Email(object):
                       mp.type_of_recipient = 'From' and
                       mp.email_address = pup.people_id and
                       pup.upeople_id = u.id 
+                limit 1
                 """  % (self.i_db, self.message_id)
+        # WARNING: There may appear in some cases repeated emails.
+        # This may be because the same email was sent to different
+        # mailing lists. Forcing the query to 1 row, allows to 
+        # avoid this issue till we understand why this behaviour
         results = ExecuteQuery(query)
 
         self.subject = results["subject"]
@@ -66,6 +73,7 @@ class Email(object):
         self.date = results["first_date"]
         self.initiator_name = results["initiator_name"]
         self.initiator_id = results["initiator_id"]
+        self.url = results["url"]
 
 
 class Threads(object):

@@ -14,12 +14,7 @@
 ## along with this program; if not, write to the Free Software
 ## Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 ##
-## This file is a part of the vizGrimoire R package
-##  (an R library for the MetricsGrimoire and vizGrimoire systems)
-##
-## MediaWiki.R
-##
-## Queries for source code review data analysis
+## Queries for MediaWiki data analysis
 ##
 ## Authors:
 ##   Alvaro del Castillo <acs@bitergia.com>
@@ -29,11 +24,14 @@ import logging, os
 from GrimoireSQL import GetSQLGlobal, GetSQLPeriod, GetSQLReportFrom 
 from GrimoireSQL import GetSQLReportWhere, ExecuteQuery, BuildQuery
 from GrimoireUtils import GetPercentageDiff, GetDates, completePeriodIds, createJSON
+from metrics_filter import MetricFilters
+
 
 from data_source import DataSource
 
 
 class Mediawiki(DataSource):
+    _metrics_set = []
 
     @staticmethod
     def get_db_name():
@@ -43,8 +41,24 @@ class Mediawiki(DataSource):
     def get_name(): return "mediawiki"
 
     @staticmethod
+    def get_date_init(startdate, enddate, identities_db, type_analysis):
+        fields = "DATE_FORMAT(MIN(date),'%Y-%m-%d') AS first_date"
+        tables = "wiki_pages_revs"
+        filters = ""
+        q = GetSQLGlobal('date',fields, tables, filters, startdate, enddate)
+        return ExecuteQuery(q)
+
+    @staticmethod
+    def get_date_end(startdate, enddate, identities_db, type_analysis):
+        fields = "DATE_FORMAT(MAX(date),'%Y-%m-%d') AS last_date"
+        tables = "wiki_pages_revs"
+        filters = ""
+        q = GetSQLGlobal('date',fields, tables, filters, startdate, enddate)
+        return ExecuteQuery(q)
+
+    @staticmethod
     def get_evolutionary_data (period, startdate, enddate, i_db, type_analysis = None):
-        return GetEvolDataMediaWiki (period, startdate, enddate, i_db, type_analysis)
+        return GetDataMediaWiki (period, startdate, enddate, i_db, type_analysis, True)
 
     @staticmethod
     def create_evolutionary_report (period, startdate, enddate, destdir, i_db, type_analysis = None):
@@ -58,14 +72,7 @@ class Mediawiki(DataSource):
         agg = {}
 
         if (filter_ is None):
-            for i in [7,30,365]:
-                data = GetMediaWikiDiffReviewsDays(period, enddate, identities_db, i)
-                agg = dict(agg.items() + data.items())
-                data = GetMediaWikiDiffAuthorsDays(period, enddate, identities_db, i)
-                agg = dict(agg.items() + data.items())
-
-            data = GetStaticDataMediaWiki(period, startdate, enddate, identities_db, None)
-            agg = dict(agg.items() + data.items())
+            agg = GetDataMediaWiki(period, startdate, enddate, identities_db, None, False)
         else:
             logging.warn("Mediawiki does not support filters yet.")
 
@@ -134,8 +141,21 @@ class Mediawiki(DataSource):
         pass
 
     @staticmethod
-    def get_metrics_definition ():
-        pass
+    def get_query_builder():
+        from query_builder import MediawikiQuery
+        return MediawikiQuery
+
+    @staticmethod
+    def get_metrics_core_agg():
+        return ['reviews','authors','pages']
+
+    @staticmethod
+    def get_metrics_core_ts():
+        return ['reviews','authors','pages']
+
+    @staticmethod
+    def get_metrics_core_trends():
+        return ['reviews','authors']
 
 # SQL Metaqueries
 
@@ -151,99 +171,11 @@ def GetFiltersOwnUniqueIdsMediaWiki () :
 
 # GLOBAL
 
-def GetStaticDataMediaWiki (period, startdate, enddate, i_db, type_analysis):
-    reviews = StaticNumReviewsMediaWiki(period, startdate, enddate, i_db, type_analysis)
-    authors = StaticNumAuthorsMediaWiki(period, startdate, enddate, i_db, type_analysis)
-    pages = StaticPagesMediaWiki(period, startdate, enddate, i_db, type_analysis)
-
-    agg = dict(reviews.items() + authors.items() + pages.items())
-
-    return (agg)
-
-
-def GetEvolDataMediaWiki (period, startdate, enddate, i_db, type_analysis):
-
-    # 1- Retrieving information
-    reviews = completePeriodIds(EvolReviewsMediaWiki(period, startdate, enddate, i_db, type_analysis), period, startdate, enddate)
-    authors = completePeriodIds(EvolAuthorsMediaWiki(period, startdate, enddate, i_db, type_analysis), period, startdate, enddate)
-    pages = completePeriodIds(EvolPagesMediaWiki(period, startdate, enddate, i_db, type_analysis), period, startdate, enddate)
-
-    # 2- Merging information
-    evol_data = dict(reviews.items()+ authors.items() + pages.items())
-
-    return (evol_data)
-
-
-def StaticNumReviewsMediaWiki (period, startdate, enddate, identities_db, type_analysis) :    
-    select = "SELECT count(rev_id) as reviews, "+\
-               "DATE_FORMAT (min(date), '%Y-%m-%d') as first_date, "+\
-               "DATE_FORMAT (max(date), '%Y-%m-%d') as last_date "
-    tables = " FROM wiki_pages_revs "
-    where = " where date >=" + startdate + " and date < "+ enddate
-    q = select + tables + where
-    return(ExecuteQuery(q))
-
-
-def StaticNumAuthorsMediaWiki (period, startdate, enddate, identities_db, type_analysis) :    
-    select = "SELECT count(distinct(user)) as authors"
-    tables = " FROM wiki_pages_revs "
-    where = " where date >="+ startdate + " and date < "+ enddate
-    q = select + tables + where
-    return(ExecuteQuery(q))
-
-def GetQueryPagesMediaWiki (period, startdate, enddate, evol) :
-    fields = "COUNT(page_id) as pages"
-    tables = " ( "+\
-            "SELECT wiki_pages.page_id, MIN(date) as date FROM wiki_pages, wiki_pages_revs "+\
-            "WHERE wiki_pages.page_id=wiki_pages_revs.page_id  "+\
-            "GROUP BY wiki_pages.page_id) t "
-    filters = ''
-
-    if (evol) :
-            q = GetSQLPeriod(period,'date', fields, tables, filters,
-                            startdate, enddate)
-    else :
-            q = GetSQLGlobal('date', fields, tables, filters,
-                            startdate, enddate)
-    return(q)
-
-def StaticPagesMediaWiki (period, startdate, enddate, identities_db, type_analysis) :
-    q = GetQueryPagesMediaWiki(period, startdate, enddate, False)
-
-    data = ExecuteQuery(q)
-    return (data)
-
-
-def EvolPagesMediaWiki (period, startdate, enddate, identities_db, type_analysis) :
-    q = GetQueryPagesMediaWiki(period, startdate, enddate, True)
-
-    data = ExecuteQuery(q)
-    return (data)
-
-
-def GetReviewsMediaWiki (period, startdate, enddate, identities_db, type_analysis, evolutionary):    
-    fields = " count(distinct(rev_id)) as reviews "
-    tables = " wiki_pages_revs " + GetSQLReportFrom(identities_db, type_analysis)
-    filters = GetSQLReportWhere(type_analysis, "author")
-    q = BuildQuery(period, startdate, enddate, " date ", fields, tables, filters, evolutionary)    
-    return(ExecuteQuery(q))
-
-
-def EvolReviewsMediaWiki (period, startdate, enddate, identities_db, type_analysis):
-    return(GetReviewsMediaWiki(period, startdate, enddate, identities_db, type_analysis, True))
-
-
-def GetAuthorsMediaWiki (period, startdate, enddate, identities_db, type_analysis, evolutionary):
-    fields = " count(distinct(user)) as authors "
-    tables = " wiki_pages_revs " + GetSQLReportFrom(identities_db, type_analysis)
-    filters = GetSQLReportWhere(type_analysis, "author")
-    q = BuildQuery(period, startdate, enddate, " date ", fields, tables, filters, evolutionary)
-    return(ExecuteQuery(q))
-
-
-def EvolAuthorsMediaWiki (period, startdate, enddate, identities_db, type_analysis):
-    return(GetAuthorsMediaWiki(period, startdate, enddate, identities_db, type_analysis, True))
-
+def GetDataMediaWiki (period, startdate, enddate, i_db, type_analysis, evol = False):
+    filter_ = None
+    if type_analysis is not None:
+        filter_ = Filter(type_analysis[0],type_analysis[1])
+    return DataSource.get_metrics_data(Mediawiki, period, startdate, enddate, i_db, filter_, evol)
 
 def GetTopAuthorsMediaWiki (days, startdate, enddate, identities_db, bots, limit) :
     date_limit = ""
@@ -312,67 +244,4 @@ def GetStaticPeopleMediaWiki (developer_id, startdate, enddate) :
     q = GetQueryPeopleMediaWiki(developer_id, None, startdate, enddate, False)
 
     data = ExecuteQuery(q)
-    return (data)
-
-
-
-###############
-# Last Activity
-###############
-def lastActivityMediaWiki (init_date, days) :
-    #commits
-    days = str(days)
-    q = "select count(wiki_pages_revs.id) as reviews_"+days+" "+\
-        "from wiki_pages_revs "+\
-        "where date >= ("+ init_date+ " - INTERVAL "+days+" day)"
-
-
-    data1 = ExecuteQuery(q)
-    q = "select count(distinct(pup.upeople_id)) as authors_"+days+" "+\
-        "from wiki_pages_revs, people_upeople pup "+\
-        "where pup.people_id = user  and "+\
-        "  date >= ("+ init_date+ " - INTERVAL "+days+" day)"
-
-
-    data2 = ExecuteQuery(q)
-
-    agg_data = dict(data1.items() + data2.items())
-
-    return(agg_data)
-
-
-##############
-# Microstudies
-##############
-
-def GetMediaWikiDiffReviewsDays (period, date, identities_db, days):
-    # This function provides the percentage in activity between two periods.
-    #
-    # The netvalue indicates if this is an increment (positive value) or decrement (negative value)
-
-    chardates = GetDates(date, days)
-    last = StaticNumReviewsMediaWiki(period, chardates[1], chardates[0], identities_db, None)
-    last = int(last['reviews'])
-    prev = StaticNumReviewsMediaWiki(period, chardates[2], chardates[1], identities_db, None)
-    prev = int(prev['reviews'])
-
-    data = {}
-    data['diff_netreviews_'+str(days)] = last - prev
-    data['percentage_reviews_'+str(days)] = GetPercentageDiff(prev, last)
-    data['reviews_'+str(days)] = last
-
-    return (data)
-
-def GetMediaWikiDiffAuthorsDays (period, date, identities_db, days):
-    chardates = GetDates(date, days)
-    last = StaticNumAuthorsMediaWiki(period, chardates[1], chardates[0], identities_db, None)
-    last = int(last['authors'])
-    prev = StaticNumAuthorsMediaWiki(period, chardates[2], chardates[1], identities_db, None)
-    prev = int(prev['authors'])
-
-    data = {}
-    data['diff_netauthors_'+str(days)] = last - prev
-    data['percentage_authors_'+str(days)] = GetPercentageDiff(prev, last)
-    data['authors_'+str(days)] = last
-
     return (data)

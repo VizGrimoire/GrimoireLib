@@ -91,19 +91,29 @@ def read_options():
                       action="store",
                       dest="filter",
                       help="filter to be generated")
-    parser.add_option("-t", "--backend",
+    parser.add_option("-m", "--metrics",
+                      action="store",
+                      dest="metrics_path",
+                      help="Path to the metrics modules to be loaded")
+    parser.add_option("-t", "--type",
                       action="store",
                       dest="backend",
-                      help="bicho backend")
-
-
+                      default="bugzilla",
+                      help="Type of backend: bugzilla, allura, jira, github")
+    parser.add_option("--metric",
+                      action="store",
+                      dest="metric",
+                      help="Select metric from data source to be generated.")
     (opts, args) = parser.parse_args()
 
     if len(args) != 0:
         parser.error("Wrong number of arguments")
 
-    if opts.config_file is None :
+    if opts.config_file is None:
         if not(opts.dbname and opts.dbuser and opts.identities_db):
             parser.error("--database --db-user and --identities are needed")
+    if opts.metrics_path is None:
+        parser.error("--metrics path is needed.")
+    if opts.metric and opts.data_source is None:
+        parser.error("--metric need also --data-source.")
     return opts
-

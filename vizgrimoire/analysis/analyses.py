@@ -19,17 +19,20 @@
 ##
 ##
 ## Authors:
-##   Alvaro del Castillo <acs@bitergia.com>
+##   Daniel Izquierdo-Cortazar <dizquierdo@bitergia.com>
 
-""" Metric offers the API supported by all metrics """
 
-class Metric(object):
+class Analyses(object):
 
-    def __init__(self):
-        self.id = None
-        self.name = None
-        self.desc = None
-        self.data_source = None
+    id = None
+    name = None
+    desc = None
+
+    def __init__(self, dbcon = None, filters = None):
+        """db connection and filter to be used"""
+        self.db = dbcon
+        self.filters = filters
+
 
     def get_definition(self):
         def_ = {
@@ -39,11 +42,10 @@ class Metric(object):
         }
         return def_
 
-    def get_data_source(self):
-        return self.data_source
+    def __get_sql__(self, evolutionary):
+        """ Returns specific sql for the provided filters """
+        raise NotImplementedError
 
-    def get_aggregate(self, filter_ = None):
-        pass
-
-    def get_evolutionary(self, filter_ = None):
-        pass
+    def result(self):
+        """ Returns final result """
+        raise NotImplementedError

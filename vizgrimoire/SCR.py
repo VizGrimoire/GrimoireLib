@@ -35,12 +35,15 @@ from GrimoireSQL import ExecuteQuery
 from GrimoireUtils import GetPercentageDiff, GetDates, completePeriodIds
 from GrimoireUtils import checkListArray, removeDecimals, get_subprojects
 from GrimoireUtils import getPeriod, createJSON, checkFloatArray, medianAndAvgByPeriod
+from metrics_filter import MetricFilters
+
 
 from data_source import DataSource
 from filter import Filter
 
 
 class SCR(DataSource):
+    _metrics_set = []
 
     @staticmethod
     def get_db_name():
@@ -50,84 +53,14 @@ class SCR(DataSource):
     def get_name(): return "scr"
 
     @staticmethod
+    def get_metrics_not_filters():
+        metrics_not_filters =  ['verified','codereview','sent','WaitingForReviewer','WaitingForSubmitter','approved']
+        return metrics_not_filters
+
+
+    @staticmethod
     def get_evolutionary_data (period, startdate, enddate, identities_db, filter_ = None):
-        evol = {}
-
-        if (filter_ is not None):
-            type_analysis = [filter_.get_name(), filter_.get_item()]
-
-            data = EvolReviewsSubmitted(period, startdate, enddate, type_analysis, identities_db)
-            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
-            data = EvolReviewsMerged(period, startdate, enddate, type_analysis, identities_db)
-            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
-            data = EvolReviewsAbandoned(period, startdate, enddate, type_analysis, identities_db)
-            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
-            data = EvolReviewsPending(period, startdate, enddate, type_analysis, identities_db)
-            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
-            if (period == "month"):
-                data = EvolTimeToReviewSCR(period, startdate, enddate, identities_db, type_analysis)
-                data['review_time_days_avg'] = checkFloatArray(data['review_time_days_avg'])
-                data['review_time_days_median'] = checkFloatArray(data['review_time_days_median'])
-                evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
-            return evol
-
-        else:
-            data = EvolReviewsSubmitted(period, startdate, enddate)
-            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
-            data = EvolReviewsOpened(period, startdate, enddate)
-            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
-            data = EvolReviewsNew(period, startdate, enddate)
-            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
-            data = EvolReviewsNewChanges(period, startdate, enddate)
-            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
-            # data = EvolReviewsInProgress(period, startdate, enddate)
-            # evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
-            data = EvolReviewsClosed(period, startdate, enddate)
-            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
-            data = EvolReviewsMerged(period, startdate, enddate)
-            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
-            data = EvolReviewsMergedChanges(period, startdate, enddate)
-            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
-            data = EvolReviewsAbandoned(period, startdate, enddate)
-            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
-            data = EvolReviewsAbandonedChanges(period, startdate, enddate)
-            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
-            data = EvolReviewsPending(period, startdate, enddate, [])
-            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
-            #Patches info
-            data = EvolPatchesVerified(period, startdate, enddate)
-            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
-            # data = EvolPatchesApproved(period, startdate, enddate)
-            # evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
-            data = EvolPatchesCodeReview(period, startdate, enddate)
-            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
-            data = EvolPatchesSent(period, startdate, enddate)
-            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
-            #Waiting for actions info
-            data = EvolWaiting4Reviewer(period, startdate, enddate)
-            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
-            data = EvolWaiting4Submitter(period, startdate, enddate)
-            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
-            #Reviewers info
-            data = EvolReviewers(period, startdate, enddate)
-            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
-            # Time to Review info
-            if period == "month": # only month supported now
-                data = EvolTimeToReviewSCR (period, startdate, enddate)
-                for i in range(0,len(data['review_time_days_avg'])):
-                    val = data['review_time_days_avg'][i] 
-                    data['review_time_days_avg'][i] = float(val)
-                    if (val == 0): data['review_time_days_avg'][i] = 0
-                evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
-            # number of filter items evol in time
-            data = get_countries(period, startdate, enddate,identities_db)
-            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
-            data = get_companies(period, startdate, enddate,identities_db)
-            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
-            data = get_repositories(period, startdate, enddate,identities_db)
-            evol = dict(evol.items() + completePeriodIds(data, period, startdate, enddate).items())
-
-            return evol
+        return SCR.__get_data__ (period, startdate, enddate, identities_db, filter_, True)
 
     @staticmethod
     def create_evolutionary_report (period, startdate, enddate, destdir, i_db, filter_ = None):
@@ -137,84 +70,81 @@ class SCR(DataSource):
 
     @staticmethod
     def get_agg_data (period, startdate, enddate, identities_db, filter_ = None):
-        agg = {}
+        return SCR.__get_data__ (period, startdate, enddate, identities_db, filter_)
 
-        if (filter_ is not None):
+    @staticmethod
+    def __get_data__ (period, startdate, enddate, identities_db, filter_ = None, evol = False):
+        data = {}
+        DS = SCR
+
+        type_analysis = None
+        if filter_ is not None:
             type_analysis = [filter_.get_name(), filter_.get_item()]
-            data = StaticReviewsSubmitted(period, startdate, enddate, type_analysis, identities_db)
-            agg = dict(agg.items() + data.items())
-            data = StaticReviewsMerged(period, startdate, enddate, type_analysis, identities_db)
-            agg = dict(agg.items() + data.items())
-            data = StaticReviewsAbandoned(period, startdate, enddate, type_analysis, identities_db)
-            agg = dict(agg.items() + data.items())
-            data = StaticReviewsPending(period, startdate, enddate, type_analysis, identities_db)
-            agg = dict(agg.items() + data.items())
-            data = StaticTimeToReviewSCR(startdate, enddate, identities_db, type_analysis, identities_db)
-            val = data['review_time_days_avg']
-            if (not val or val == 0): data['review_time_days_avg'] = 0
-            else: data['review_time_days_avg'] = float(val)
-            val = data['review_time_days_median']
-            if (not val or val == 0): data['review_time_days_median'] = 0
-            else: data['review_time_days_median'] = float(val)
-            agg = dict(agg.items() + data.items())
 
+        from report import Report
+        automator = Report.get_config()
+
+        if evol:
+            metrics_on = DS.get_metrics_core_ts()
+            automator_metrics = DS.get_name()+"_metrics_ts"
         else:
-            agg = StaticReviewsSubmitted(period, startdate, enddate)
-            data = StaticReviewsOpened(period, startdate, enddate)
-            agg = dict(agg.items() + data.items())
-            data = StaticReviewsNew(period, startdate, enddate)
-            agg = dict(agg.items() + data.items())
-            data = StaticReviewsInProgress(period, startdate, enddate)
-            agg = dict(agg.items() + data.items())
-            data = StaticReviewsClosed(period, startdate, enddate)
-            agg = dict(agg.items() + data.items())
-            data = StaticReviewsMerged(period, startdate, enddate)
-            agg = dict(agg.items() + data.items())
-            data = StaticReviewsAbandoned(period, startdate, enddate)
-            agg = dict(agg.items() + data.items())
-            data = StaticReviewsPending(period, startdate, enddate)
-            agg = dict(agg.items() + data.items())
-            data = StaticPatchesVerified(period, startdate, enddate)
-            agg = dict(agg.items() + data.items())
-            data = StaticPatchesApproved(period, startdate, enddate)
-            agg = dict(agg.items() + data.items())
-            data = StaticPatchesCodeReview(period, startdate, enddate)
-            agg = dict(agg.items() + data.items())
-            data = StaticPatchesSent(period, startdate, enddate)
-            agg = dict(agg.items() + data.items())
-            data = StaticWaiting4Reviewer(period, startdate, enddate)
-            agg = dict(agg.items() + data.items())
-            data = StaticWaiting4Submitter(period, startdate, enddate)
-            agg = dict(agg.items() + data.items())
-            #Reviewers info
-            data = StaticReviewers(period, startdate, enddate)
-            agg = dict(agg.items() + data.items())
-            # Time to Review info
-            data = StaticTimeToReviewSCR(startdate, enddate)
-            data['review_time_days_avg'] = float(data['review_time_days_avg'])
-            data['review_time_days_median'] = float(data['review_time_days_median'])
-            agg = dict(agg.items() + data.items())
+            metrics_on = DS.get_metrics_core_agg()
+            automator_metrics = DS.get_name()+"_metrics_agg"
 
+        if automator_metrics in automator['r']:
+            metrics_on = automator['r'][automator_metrics].split(",")
+            logging.info(automator_metrics + " found ")
+            print(metrics_on)
+
+        metrics_reports = SCR.get_metrics_core_reports()
+        if filter_ is None:
+            from report import Report
+            reports_on = Report.get_config()['r']['reports'].split(",")
+            for r in metrics_reports:
+                if r in reports_on: metrics_on += [r]
+
+        mfilter = MetricFilters(period, startdate, enddate, type_analysis)
+        all_metrics = SCR.get_metrics_set(SCR)
+
+        # SCR specific: remove some metrics from filters
+        if filter_ is not None:
+            metrics_not_filters =  SCR.get_metrics_not_filters()
+            metrics_on = list(set(metrics_on) - set(metrics_not_filters))
+            if filter_.get_name() == "repository": metrics_on += ['review_time','submitted']
+        # END SCR specific
+
+        for item in all_metrics:
+            if item.id not in metrics_on: continue
+            item.filters = mfilter
+            if not evol: mvalue = item.get_agg()
+            else:        mvalue = item.get_ts()
+            data = dict(data.items() + mvalue.items())
+
+
+        # SCR SPECIFIC #
+        if evol:
+            metrics_on_changes = ['merged','abandoned','new']
+            for item in all_metrics:
+                if item.id in metrics_on_changes and filter_ is None:
+                    mvalue = item.get_ts_changes()
+                    data = dict(data.items() + mvalue.items())
+        # END SCR SPECIFIC #
+
+        if not evol:
             # Tendencies
+            metrics_trends = SCR.get_metrics_core_trends()
+
+            automator_metrics = DS.get_name()+"_metrics_trends"
+            if automator_metrics in automator['r']:
+                metrics_trends = automator['r'][automator_metrics].split(",")
+
             for i in [7,30,365]:
-                period_data = GetSCRDiffSubmittedDays(period, enddate, i, identities_db)
-                agg = dict(agg.items() + period_data.items())
-                period_data = GetSCRDiffMergedDays(period, enddate, i, identities_db)
-                agg = dict(agg.items() + period_data.items())
-                period_data = GetSCRDiffPendingDays(period, enddate, i, identities_db)
-                agg = dict(agg.items() + period_data.items())
-                period_data = GetSCRDiffAbandonedDays(period, enddate, i, identities_db)
-                agg = dict(agg.items() + period_data.items())
+                for item in all_metrics:
+                    if item.id not in metrics_trends: continue
+                    period_data = item.get_agg_diff_days(enddate, i)
+                    data = dict(data.items() +  period_data.items())
 
-            # number of filter items
-            data = get_countries(period, startdate, enddate,identities_db, False)
-            agg = dict(agg.items() + data.items())
-            data = get_companies(period, startdate, enddate,identities_db, False)
-            agg = dict(agg.items() + data.items())
-            data = get_repositories(period, startdate, enddate,identities_db, False)
-            agg = dict(agg.items() + data.items())
-
-        return agg
+        return data
 
     @staticmethod
     def create_agg_report (period, startdate, enddate, destdir, i_db, filter_ = None):
@@ -355,139 +285,32 @@ class SCR(DataSource):
         pass
 
     @staticmethod
-    def get_metrics_definition ():
-        mdef =  {
-            "scr_merged" : {
-                "divid" : "scr_merged",
-                "column" : "merged",
-                "name" : "Merged changes",
-                "desc" : "Number of changes merged into the source code"
-            },
-            "scr_mergers" : {
-                "divid" : "scr_mergers",
-                "column" : "mergers",
-                "name" : "Successful submitters",
-                "action" : "merged",
-                "desc" : "Number of persons submitting changes that got accepted"
-            },
-            "scr_opened" : {
-                "divid" : "scr_opened",
-                "column" : "opened",
-                "name" : "Opened reviews",
-                "desc" : "Number of review processes opened"
-            },
-            "scr_closed" : {
-                "divid" : "scr_closed",
-                "column" : "closed",
-                "name" : "Closed reviews",
-                "desc" : "Number of closed review processes (merged or abandoned)"
-            },
-            "scr_new" : {
-                "divid" : "scr_new",
-                "column" : "new",
-                "name" : "New reviews",
-                "desc" : "Number of new review processes"
-            },
-            "scr_abandoned" : {
-                "divid" : "scr_abandoned",
-                "column" : "abandoned",
-                "name" : "Abandoned",
-                "desc" : "Number of abandoned review processes"
-            },
-            "scr_verified" : {
-                "divid" : "scr_verified",
-                "column" : "verified",
-                "name" : "Verified",
-                "desc" : "Number of verified changes"
-            },
-            "scr_approved" : {
-                "divid" : "scr_approved",
-                "column" : "approved",
-                "name" : "Approved",
-                "desc" : "Number of code review processes in approved state"
-            },
-            "scr_codereview" : {
-                "divid" : "scr_codereview",
-                "column" : "codereview",
-                "name" : "Code review",
-                "desc" : "Number of code review processes in code review state"
-            },
-            "scr_WaitingForReviewer" : {
-                "divid" : "scr_WaitingForReviewer",
-                "column" : "WaitingForReviewer",
-                "name" : "Waiting for reviewer",
-                "desc" : "Number of code review processes waiting for reviewer"
-            },
-            "scr_WaitingForSubmitter" : {
-                "divid" : "scr_WaitingForSubmitter",
-                "column" : "WaitingForSubmitter",
-                "name" : "Waiting for submitter",
-                "desc" : "Number of code review processes waiting for submitter"
-            },
-            "scr_ReviewsWaitingForReviewer" : {
-                "divid" : "scr_ReviewsWaitingForReviewer",
-                "column" : "ReviewsWaitingForReviewer",
-                "name" : "Reviews waiting for reviewer",
-                "desc" : "Number of code reviews  waiting for reviewer"
-            },
-            "scr_ReviewsWaitingForSubmitter" : {
-                "divid" : "scr_ReviewsWaitingForSubmitter",
-                "column" : "ReviewsWaitingForSubmitter",
-                "name" : "Reviews Waiting for submitter",
-                "desc" : "Number of code reviews waiting for submitter"
-            },
-            "scr_submitted" : {
-                "divid" : "scr_submitted",
-                "column" : "submitted",
-                "name" : "submitted",
-                "desc" : "Number of submitted code review processes"
-            },
-            "scr_companies" : {
-                "divid" : "scr_companies",
-                "column" : "companies",
-                "name" : "Organizations",
-                "desc" : "Number of organizations (companies, etc.) with persons active in code review"
-            },
-            "scr_countries" : {
-                "divid" : "scr_countries",
-                "column" : "countries",
-                "name" : "Countries",
-                "desc" : "Number of countries with persons active in code review"
-            },
-            "scr_domains" : {
-                "divid" : "scr_domains",
-                "column" : "domains",
-                "name" : "Domains",
-                "desc" : "Number of domains with persons active in code review"
-            },
-            "scr_repositories" : {
-                "divid" : "scr_repositories",
-                "column" : "repositories",
-                "name" : "Repositories",
-                "desc" : "Number of respositories with active code review activities"
-            },
-            "scr_people" : {
-                "divid" : "scr_people",
-                "column" : "people",
-                "name" : "People",
-                "desc" : "Number of persons active in code review activities"
-            },
-            "scr_closers" : {
-                "divid" : "scr_closers",
-                "column" : "closers",
-                "name" : "Closers",
-                "desc" : "Number of persons closing code review processes",
-                "action" : "closed"
-            },
-            "scr_openers" : {
-                "divid" : "scr_openers",
-                "column" : "openers",
-                "name" : "Openers",
-                "desc" : "Number of persons closing code review processes",
-                "action" : "opened"
-            }
-        }
-        return mdef
+    def get_query_builder():
+        from query_builder import SCRQuery
+        return SCRQuery
+
+    @staticmethod
+    def get_metrics_core_agg():
+        m =  ['submitted','opened','closed','merged','abandoned','new','inprogress','pending','review_time','repositories']
+        # patches metrics
+        m += ['verified','approved','codereview','sent','WaitingForReviewer','WaitingForSubmitter']
+        m += ['submitters','reviewers']
+
+        return m
+
+    @staticmethod
+    def get_metrics_core_ts():
+        m  = ['submitted','opened','closed','merged','abandoned','new','pending','review_time','repositories']
+        # Get metrics using changes table for more precise results
+        m += ['merged','abandoned','new']
+        m += ['verified','codereview','sent','WaitingForReviewer','WaitingForSubmitter']
+        m += ['submitters','reviewers']
+
+        return m
+
+    @staticmethod
+    def get_metrics_core_trends():
+        return ['submitted','merged','pending','abandoned','closed','submitters']
 
 ##########
 # Specific FROM and WHERE clauses per type of report
@@ -655,46 +478,6 @@ def GetCountriesSCRName  (startdate, enddate, identities_db, limit = 0):
            "ORDER BY issues DESC "+limit_sql
     return(ExecuteQuery(q))
 
-def get_countries(period, startdate, enddate, identities_db, evol = True):
-    fields = "count(distinct(upc.country_id)) as countries"
-    tables = "issues i, people_upeople pup, %s.upeople_countries upc" % (identities_db)
-    filters = "i.submitted_by = pup.people_id and pup.upeople_id = upc.upeople_id"
-    if evol:
-        q = GetSQLPeriod(period,'i.submitted_on', fields, tables, filters,
-               startdate, enddate)
-    else:
-        q = GetSQLGlobal('i.submitted_on', fields, tables, filters,
-               startdate, enddate)
-
-    countries= ExecuteQuery(q)
-    return(countries)
-
-def get_companies(period, startdate, enddate, identities_db, evol = True):
-    fields = "count(distinct(upc.company_id)) as companies"
-    tables = "issues i, people_upeople pup, %s.upeople_companies upc" % (identities_db)
-    filters = "i.submitted_by = pup.people_id and pup.upeople_id = upc.upeople_id"
-    if evol:
-       q = GetSQLPeriod(period,'i.submitted_on', fields, tables, filters,
-               startdate, enddate)
-    else:
-        q = GetSQLGlobal('i.submitted_on', fields, tables, filters, startdate, enddate)
-
-    companies = ExecuteQuery(q)
-    return(companies)
-
-def get_repositories(period, startdate, enddate, identities_db = None, evol = True):
-    fields = "count(distinct(t.id)) as repositories"
-    tables = "issues i, trackers t"
-    filters = "i.tracker_id = t.id"
-    if evol:
-        q = GetSQLPeriod(period,'i.submitted_on', fields, tables, filters,
-               startdate, enddate)
-    else:
-        q = GetSQLGlobal('i.submitted_on', fields, tables, filters, startdate, enddate)
-
-    repositories = ExecuteQuery(q)
-    return(repositories)
-
 
 def get_projects_scr_name  (startdate, enddate, identities_db, limit = 0):
     # Projects activity needs to include subprojects also
@@ -710,8 +493,7 @@ def get_projects_scr_name  (startdate, enddate, identities_db, limit = 0):
         type_analysis = ['project', project]
         period = None
         evol = False
-        reviews = GetReviews (period, startdate, enddate, "submitted",
-                              type_analysis, evol, identities_db)
+        reviews = SCR.get_metrics("submitted", SCR).get_agg()
         reviews = reviews['submitted']
         if (reviews > 0):
             data.append([reviews,project])
@@ -723,319 +505,6 @@ def get_projects_scr_name  (startdate, enddate, identities_db, limit = 0):
 
     if (limit > 0): names = names[:limit]
     return({"name":names})
-
-#########
-#Functions about the status of the review
-#########
-
-# REVIEWS
-def GetReviews (period, startdate, enddate, type_, type_analysis, evolutionary, identities_db):
-    #Building the query
-    fields = " count(distinct(i.issue)) as " + type_
-    tables = "issues i" + GetSQLReportFromSCR(identities_db, type_analysis)
-    if type_ == "submitted": filters = ""
-    elif type_ == "opened": filters = " (i.status = 'NEW' or i.status = 'WORKINPROGRESS') "
-    elif type_ == "new": filters = " i.status = 'NEW' "
-    elif type_ == "inprogress": filters = " i.status = 'WORKINGPROGRESS' "
-    elif type_ == "closed": filters = " (i.status = 'MERGED' or i.status = 'ABANDONED') "
-    elif type_ == "merged": filters = " i.status = 'MERGED' "
-    elif type_ == "abandoned": filters = " i.status = 'ABANDONED' "
-    filters = filters + GetSQLReportWhereSCR(type_analysis, identities_db)
-
-    from Wikimedia import GetIssuesFiltered
-    if (GetIssuesFiltered() != ""): filters += " AND " + GetIssuesFiltered()
-
-    #Adding dates filters (and evolutionary or static analysis)
-    if (evolutionary):
-        q = GetSQLPeriod(period, "i.submitted_on", fields, tables, filters,
-                         startdate, enddate)
-    else:
-        q = GetSQLGlobal(" i.submitted_on ", fields, tables, filters, startdate, enddate)
-
-    return(ExecuteQuery(q))
-
-
-# Reviews status using changes table
-def GetReviewsChanges(period, startdate, enddate, type_, type_analysis, evolutionary, identities_db):
-    fields = "count(issue_id) as "+ type_+ "_changes"
-    tables = "changes c, issues i"
-    tables = tables + GetSQLReportFromSCR(identities_db, type_analysis)
-    filters = "c.issue_id = i.id AND new_value='"+type_+"'"
-    filters = filters + GetSQLReportWhereSCR(type_analysis, identities_db)
-
-    from Wikimedia import GetChangesFiltered
-    if (GetChangesFiltered() != ""): filters += " AND " + GetChangesFiltered()
-
-    #Adding dates filters (and evolutionary or static analysis)
-    if (evolutionary):
-        q = GetSQLPeriod(period, " changed_on", fields, tables, filters,
-                            startdate, enddate)
-    else:
-        q = GetSQLGlobal(" changed_on ", fields, tables, filters, startdate, enddate)
-
-    return(ExecuteQuery(q))
-
-
-# EVOLUTIONoneRY META FUNCTIONS BASED ON REVIEWS
-
-def EvolReviewsSubmitted (period, startdate, enddate, type_analysis = [], identities_db=None):
-    return (GetReviews(period, startdate, enddate, "submitted", type_analysis, True, identities_db))
-
-def EvolReviewsOpened (period, startdate, enddate, type_analysis = [], identities_db=None):
-    return (GetReviews(period, startdate, enddate, "opened", type_analysis, True, identities_db))
-
-def EvolReviewsNew(period, startdate, enddate, type_analysis = [], identities_db=None):
-    return (GetReviews(period, startdate, enddate, "new", type_analysis, True, identities_db))
-
-def GetEvolChanges(period, startdate, enddate, value):
-    fields = "count(issue_id) as "+ value+ "_changes"
-    tables = "changes"
-    filters = "new_value='"+value+"'"
-    q = GetSQLPeriod(period, " changed_on", fields, tables, filters,
-            startdate, enddate)
-    return(ExecuteQuery(q))
-
-def EvolReviewsNewChanges(period, startdate, enddate, type_analysis = [], identities_db=None):
-    return (GetReviewsChanges(period, startdate, enddate, "new", type_analysis, True, identities_db))
-
-def EvolReviewsInProgress(period, startdate, enddate, type_analysis = [], identities_db=None):
-    return (GetReviews(period, startdate, enddate, "inprogress", type_analysis, True, identities_db))
-
-def EvolReviewsClosed(period, startdate, enddate, type_analysis = [], identities_db=None):
-    return (GetReviews(period, startdate, enddate, "closed", type_analysis, True, identities_db))
-
-def EvolReviewsMerged(period, startdate, enddate, type_analysis = [], identities_db=None):
-    return (GetReviews(period, startdate, enddate, "merged", type_analysis, True, identities_db))
-
-def EvolReviewsMergedChanges(period, startdate, enddate, type_analysis = [], identities_db=None):
-    return (GetReviewsChanges(period, startdate, enddate, "merged", type_analysis, True, identities_db))
-
-def EvolReviewsAbandoned(period, startdate, enddate, type_analysis = [], identities_db=None):
-    return (GetReviews(period, startdate, enddate, "abandoned", type_analysis, True, identities_db))
-
-
-def EvolReviewsAbandonedChanges(period, startdate, enddate, type_analysis = [], identities_db=None):
-    return (GetReviewsChanges(period, startdate, enddate, "abandoned", type_analysis, True, identities_db))
-
-
-def EvolReviewsPending(period, startdate, enddate, type_analysis = [], identities_db=None):
-    data = EvolReviewsSubmitted(period, startdate, enddate, type_analysis, identities_db)
-    data = completePeriodIds(data, period, startdate, enddate)
-    data1 = EvolReviewsMerged(period, startdate, enddate, type_analysis, identities_db)
-    data1 = completePeriodIds(data1, period, startdate, enddate)
-    data2 = EvolReviewsAbandoned(period, startdate, enddate, type_analysis, identities_db)
-    data2 = completePeriodIds(data2, period, startdate, enddate)
-    evol = dict(data.items() + data1.items() + data2.items())
-    pending = {"pending":[]}
-    for i in range(0, len(data['submitted'])):
-        pending_val = evol["submitted"][i] - evol["merged"][i] - evol["abandoned"][i]
-        pending["pending"].append(pending_val)
-    pending[period] = evol[period]
-    pending = completePeriodIds(pending, period, startdate, enddate)
-    return pending
-
-# PENDING = SUBMITTED - MERGED - ABANDONED
-def EvolReviewsPendingChanges(period, startdate, enddate, type_analysis = [], identities_db=None):
-    data = EvolReviewsSubmitted(period, startdate, enddate, type_analysis, identities_db)
-    data = completePeriodIds(data, period, startdate, enddate)
-    data1 = EvolReviewsMergedChanges(period, startdate, enddate, type_analysis, identities_db)
-    data1 = completePeriodIds(data1, period, startdate, enddate)
-    data2 = EvolReviewsAbandonedChanges(period, startdate, enddate, type_analysis, identities_db)
-    data2 = completePeriodIds(data2, period, startdate, enddate)
-    evol = dict(data.items() + data1.items() + data2.items())
-    pending = {"pending":[]}
-
-    for i in range(0,len(evol['merged_changes'])):
-        pending_val = evol["submitted"][i] - evol["merged_changes"][i] - evol["abandoned_changes"][i]
-        pending["pending"].append(pending_val)
-
-    pending[period] = evol[period]
-    pending = completePeriodIds(pending, period, startdate, enddate)
-    return pending
-
-# STATIC META FUNCTIONS BASED ON REVIEWS
-
-def StaticReviewsSubmitted (period, startdate, enddate, type_analysis = [], identities_db=None):
-    return (GetReviews(period, startdate, enddate, "submitted", type_analysis, False, identities_db))
-
-
-def StaticReviewsOpened (period, startdate, enddate, type_analysis = [], identities_db=None):
-    return (GetReviews(period, startdate, enddate, "opened", type_analysis, False, identities_db))
-
-
-def StaticReviewsNew(period, startdate, enddate, type_analysis = [], identities_db=None):
-    return (GetReviews(period, startdate, enddate, "new", type_analysis, False, identities_db))
-
-
-def StaticReviewsNewChanges(period, startdate, enddate, type_analysis = [], identities_db=None):
-    return (GetReviewsChanges(period, startdate, enddate, "new", False))
-
-
-def StaticReviewsInProgress(period, startdate, enddate, type_analysis = [], identities_db=None):
-    return (GetReviews(period, startdate, enddate, "inprogress", type_analysis, False, identities_db))
-
-
-def StaticReviewsClosed(period, startdate, enddate, type_analysis = [], identities_db=None):
-    return (GetReviews(period, startdate, enddate, "closed", type_analysis, False, identities_db))
-
-
-def StaticReviewsMerged(period, startdate, enddate, type_analysis = [], identities_db=None):
-    return (GetReviews(period, startdate, enddate, "merged", type_analysis, False, identities_db))
-
-
-def StaticReviewsMergedChanges(period, startdate, enddate, type_analysis = [], identities_db=None):
-    return (GetReviewsChanges(period, startdate, enddate, "merged", False))
-
-
-def StaticReviewsAbandoned(period, startdate, enddate, type_analysis = [], identities_db=None):
-    return (GetReviews(period, startdate, enddate, "abandoned", type_analysis, False, identities_db))
-
-
-def StaticReviewsAbandonedChanges(period, startdate, enddate, type_analysis = [], identities_db=None):
-    return (GetReviewsChanges(period, startdate, enddate, "abandoned", False))
-
-
-# PENDING = SUBMITTED - MERGED - ABANDONED
-def StaticReviewsPending(period, startdate, enddate, type_analysis = [], identities_db=None):
-    submitted = StaticReviewsSubmitted(period, startdate, enddate, type_analysis, identities_db)
-    merged = StaticReviewsMerged(period, startdate, enddate, type_analysis, identities_db)
-    abandoned = StaticReviewsAbandoned(period, startdate, enddate, type_analysis, identities_db)
-    pending = submitted['submitted']-merged['merged']-abandoned['abandoned']
-    return ({"pending":pending})
-
-
-def StaticReviewsPendingChanges(period, startdate, enddate, type_analysis = [], identities_db=None):
-    submitted = StaticReviewsSubmitted(period, startdate, enddate, type_analysis, identities_db)
-    merged = StaticReviewsMergedChanges(period, startdate, enddate, type_analysis, identities_db)
-    abandoned = StaticReviewsAbandonedChanges(period, startdate, enddate, type_analysis, identities_db)
-    pending = submitted['submitted']-merged['merged']-abandoned['abandoned']
-    return ({"pending":pending})
-
-
-#WORK ON PATCHES: ANY REVIEW MAY HAVE MORE THAN ONE PATCH
-def GetEvaluations (period, startdate, enddate, type_, type_analysis, evolutionary, identities_db = None):
-    # verified - VRIF
-    # approved - APRV
-    # code review - CRVW
-    # submitted - SUBM
-
-    #Building the query
-    fields = " count(distinct(c.id)) as " + type_
-    tables = " changes c, issues i " + GetSQLReportFromSCR(None, type_analysis)
-    if type_ == "verified": filters =  " (c.field = 'VRIF' OR c.field = 'Verified') "
-    elif type_ == "approved": filters =  " c.field = 'APRV'  "
-    elif type_ == "codereview": filters =  "   (c.field = 'CRVW' OR c.field = 'Code-Review') "
-    elif type_ == "sent": filters =  " c.field = 'SUBM'  "
-    filters = filters + " and i.id = c.issue_id "
-    filters = filters + GetSQLReportWhereSCR(type_analysis, identities_db)
-
-    #Adding dates filters
-    if (evolutionary):
-        q = GetSQLPeriod(period, " c.changed_on", fields, tables, filters,
-                          startdate, enddate)
-    else:
-        q = GetSQLGlobal(" c.changed_on", fields, tables, filters,
-                      startdate, enddate)
-    return(ExecuteQuery(q))
-
-# EVOLUTIONoneRY METRICS
-def EvolPatchesVerified (period, startdate, enddate, type_analysis = []):
-    return (GetEvaluations (period, startdate, enddate, "verified", type_analysis, True))
-
-
-def EvolPatchesApproved (period, startdate, enddate, type_analysis = []):
-    return (GetEvaluations (period, startdate, enddate, "approved", type_analysis, True))
-
-
-def EvolPatchesCodeReview (period, startdate, enddate, type_analysis = []):
-    return (GetEvaluations (period, startdate, enddate, "codereview", type_analysis, True))
-
-
-def EvolPatchesSent (period, startdate, enddate, type_analysis = []):
-    return (GetEvaluations (period, startdate, enddate, "sent", type_analysis, True))
-
-
-#STATIC METRICS
-def StaticPatchesVerified  (period, startdate, enddate, type_analysis = []):
-    return (GetEvaluations (period, startdate, enddate, "verified", type_analysis, False))
-
-
-def StaticPatchesApproved (period, startdate, enddate, type_analysis = []):
-    return (GetEvaluations (period, startdate, enddate, "approved", type_analysis, False))
-
-
-def StaticPatchesCodeReview (period, startdate, enddate, type_analysis = []):
-    return (GetEvaluations (period, startdate, enddate, "codereview", type_analysis, False))
-
-
-def StaticPatchesSent (period, startdate, enddate, type_analysis = []):
-    return (GetEvaluations (period, startdate, enddate, "sent", type_analysis, False))
-
-def get_sql_last_change_for_issues_new():
-    # last changes for reviews. Removed added change status = NEW that is "artificial"
-    q_last_change = """
-        SELECT c.issue_id as issue_id,  max(c.id) as id
-        FROM changes c, issues i
-        WHERE c.issue_id = i.id and i.status='NEW' and field<>'status'
-        GROUP BY c.issue_id
-    """
-    return q_last_change
-
-# Reviews WAITING FOR REVIEW FROM Submitter
-def GetReviewsWaiting4Submitter (period, startdate, enddate, identities_db, type_analysis, evolutionary):
-    q_last_change = get_sql_last_change_for_issues_new()
-
-    fields = "COUNT(DISTINCT(i.id)) as ReviewsWaitingForSubmitter"
-    tables = "changes c, issues i, (%s) t1" % q_last_change
-    tables += GetSQLReportFromSCR(identities_db, type_analysis)
-    filters = """
-        i.id = c.issue_id  AND t1.id = c.id
-        AND (c.field='CRVW' or c.field='Code-Review' or c.field='Verified' or c.field='VRIF')
-        AND (c.new_value=-1 or c.new_value=-2)
-    """
-    filters = filters + GetSQLReportWhereSCR(type_analysis, identities_db)
-
-    if (evolutionary):
-        q = GetSQLPeriod(period, " c.changed_on", fields, tables, filters,
-                          startdate, enddate)
-    else:
-        q = GetSQLGlobal(" c.changed_on ", fields, tables, filters,
-                          startdate, enddate)
-    return(ExecuteQuery(q))
-
-def EvolReviewsWaiting4Submitter (period, startdate, enddate, identities_db=None, type_analysis = []):
-    return (GetReviewsWaiting4Submitter(period, startdate, enddate, identities_db, type_analysis, True))
-
-def StaticReviewsWaiting4Submitter (period, startdate, enddate, identities_db=None, type_analysis = []):
-    return (GetReviewsWaiting4Submitter(period, startdate, enddate, identities_db, type_analysis, False))
-
-# Reviews WAITING FOR REVIEW FROM Reviewer
-def GetReviewsWaiting4Reviewer (period, startdate, enddate, identities_db, type_analysis, evolutionary):
-    q_last_change = get_sql_last_change_for_issues_new()
-
-    fields = "COUNT(DISTINCT(i.id)) as ReviewsWaitingForReviewer"
-    tables = "changes c, issues i, (%s) t1" % q_last_change
-    tables += GetSQLReportFromSCR(identities_db, type_analysis)
-    filters = """
-        i.id = c.issue_id  AND t1.id = c.id
-        AND (c.field='CRVW' or c.field='Code-Review' or c.field='Verified' or c.field='VRIF')
-        AND (c.new_value=1 or c.new_value=2)
-    """
-    filters = filters + GetSQLReportWhereSCR(type_analysis, identities_db)
-
-    if (evolutionary):
-        q = GetSQLPeriod(period, " c.changed_on", fields, tables, filters,
-                          startdate, enddate)
-    else:
-        q = GetSQLGlobal(" c.changed_on ", fields, tables, filters,
-                          startdate, enddate)
-    return(ExecuteQuery(q))
-
-def EvolReviewsWaiting4Reviewer (period, startdate, enddate, identities_db=None, type_analysis = []):
-    return (GetReviewsWaiting4Reviewer(period, startdate, enddate, identities_db, type_analysis, True))
-
-def StaticReviewsWaiting4Reviewer (period, startdate, enddate, identities_db=None, type_analysis = []):
-    return (GetReviewsWaiting4Reviewer(period, startdate, enddate, identities_db, type_analysis, False))
 
 #PATCHES WAITING FOR REVIEW FROM REVIEWER
 def GetWaiting4Reviewer (period, startdate, enddate, identities_db, type_analysis, evolutionary):
@@ -1111,31 +580,6 @@ def EvolWaiting4Submitter (period, startdate, enddate, identities_db=None, type_
 def StaticWaiting4Submitter (period, startdate, enddate, identities_db=None, type_analysis = []):
     return (GetWaiting4Submitter(period, startdate, enddate, identities_db, type_analysis, False))
 
-
-#REVIEWERS
-
-def GetReviewers (period, startdate, enddate, identities_db, type_analysis, evolutionary):
-    # TODO: so far without unique identities
-
-    fields = " count(distinct(changed_by)) as reviewers "
-    tables = " changes c "
-    filters = ""
-
-    if (evolutionary):
-        q = GetSQLPeriod(period, " c.changed_on", fields, tables, filters,
-                          startdate, enddate)
-    else:
-        q = GetSQLGlobal(" c.changed_on ", fields, tables, filters,
-                          startdate, enddate)
-    return(ExecuteQuery(q))
-
-
-def EvolReviewers  (period, startdate, enddate, identities_db=None, type_analysis = []):
-    return (GetReviewers(period, startdate, enddate, identities_db, type_analysis, True))
-
-
-def StaticReviewers  (period, startdate, enddate, identities_db = None, type_analysis = []):
-    return (GetReviewers(period, startdate, enddate, identities_db, type_analysis, False))
 
 
 # Nobody is using it yet
@@ -1629,67 +1073,3 @@ def EvolTimeToReviewPendingSCR(period, startdate, enddate, identities_db = None,
         values = get_values_median(reviews['updatetime'])
         acc_pending_time_median['review_time_pending_update_ReviewsWaitingForReviewer_days_acc_median'].append(values)
     return acc_pending_time_median
-
-##############
-# Microstudies
-##############
-
-def GetSCRDiffSubmittedDays (period, init_date, days,
-        identities_db=None, type_analysis = []):
-    chardates = GetDates(init_date, days)
-    last = StaticReviewsSubmitted(period, chardates[1], chardates[0])
-    last = int(last['submitted'])
-    prev = StaticReviewsSubmitted(period, chardates[2], chardates[1])
-    prev = int(prev['submitted'])
-
-    data = {}
-    data['diff_netsubmitted_'+str(days)] = last - prev
-    data['percentage_submitted_'+str(days)] = GetPercentageDiff(prev, last)
-    data['submitted_'+str(days)] = last
-    return (data)
-
-def GetSCRDiffMergedDays (period, init_date, days,
-        identities_db=None, type_analysis = []):
-
-    chardates = GetDates(init_date, days)
-    last = StaticReviewsMerged(period, chardates[1], chardates[0])
-    last = int(last['merged'])
-    prev = StaticReviewsMerged(period, chardates[2], chardates[1])
-    prev = int(prev['merged'])
-
-    data = {}
-    data['diff_netmerged_'+str(days)] = last - prev
-    data['percentage_merged_'+str(days)] = GetPercentageDiff(prev, last)
-    data['merged_'+str(days)] = last
-    return (data)
-
-def GetSCRDiffAbandonedDays (period, init_date, days,
-        identities_db=None, type_analysis = []):
-
-    chardates = GetDates(init_date, days)
-    last = StaticReviewsAbandoned(period, chardates[1], chardates[0])
-    last = int(last['abandoned'])
-    prev = StaticReviewsAbandoned(period, chardates[2], chardates[1])
-    prev = int(prev['abandoned'])
-
-    data = {}
-    data['diff_netabandoned_'+str(days)] = last - prev
-    data['percentage_abandoned_'+str(days)] = GetPercentageDiff(prev, last)
-    data['abandoned_'+str(days)] = last
-    return (data)
-
-
-def GetSCRDiffPendingDays (period, init_date, days,
-        identities_db=None, type_analysis = []):
-
-    chardates = GetDates(init_date, days)
-    last = StaticReviewsPending(period, chardates[1], chardates[0])
-    last = int(last['pending'])
-    prev = StaticReviewsPending(period, chardates[2], chardates[1])
-    prev = int(prev['pending'])
-
-    data = {}
-    data['diff_netpending_'+str(days)] = last - prev
-    data['percentage_pending_'+str(days)] = GetPercentageDiff(prev, last)
-    data['pending_'+str(days)] = last
-    return (data)

@@ -43,6 +43,7 @@ from GrimoireUtils import dataFrame2Dict, createJSON, completePeriodIds, complet
 from GrimoireUtils import valRtoPython, getPeriod, medianAndAvgByPeriod, get_median, get_avg
 import ITS
 from ITS import Backend
+from report import Report
 from utils import read_options
 
 import Wikimedia
@@ -50,38 +51,13 @@ import Wikimedia
 def aggData(period, startdate, enddate, identities_db, destdir, closed_condition):
     data = ITS.AggITSInfo(period, startdate, enddate, identities_db, [], closed_condition)
     agg = data
-    data = ITS.AggAllParticipants(startdate, enddate)
-    agg = dict(agg.items() +  data.items())
     data = ITS.TrackerURL()
     agg = dict(agg.items() +  data.items())
 
-    if ('companies' in reports):
-        data = ITS.AggIssuesCompanies(period, startdate, enddate, identities_db)
-        agg = dict(agg.items() + data.items())
-
-    if ('countries' in reports):
-        data = ITS.AggIssuesCountries(period, startdate, enddate, identities_db)
-        agg = dict(agg.items() + data.items())
-
-    if ('domains' in reports):
-        data = ITS.AggIssuesDomains(period, startdate, enddate, identities_db)
-        agg = dict(agg.items() + data.items())
-
-    # Tendencies    
-    for i in [7,30,365]:
-        period_data = ITS.GetDiffClosedDays(period, identities_db, enddate, i, [], closed_condition)
-        agg = dict(agg.items() + period_data.items())
-        period_data = ITS.GetDiffOpenedDays(period, identities_db, enddate, i, [])
-        agg = dict(agg.items() + period_data.items())
-        period_data = ITS.GetDiffClosersDays(period, identities_db, enddate, i, [], closed_condition)
-        agg = dict(agg.items() + period_data.items())
-        period_data = ITS.GetDiffChangersDays(period, identities_db, enddate, i, [])
-        agg = dict(agg.items() + period_data.items())
-
     # Last Activity: to be removed
-    for i in [7,14,30,60,90,180,365,730]:
-        period_activity = ITS.GetLastActivityITS(i, closed_condition)
-        agg = dict(agg.items() + period_activity.items())
+    # for i in [7,14,30,60,90,180,365,730]:
+    #    period_activity = ITS.GetLastActivityITS(i, closed_condition)
+    #    agg = dict(agg.items() + period_activity.items())
 
     createJSON (agg, destdir+"/its-static.json")
 
@@ -435,6 +411,9 @@ if __name__ == '__main__':
     opts = read_options()
     period = getPeriod(opts.granularity)
     reports = opts.reports.split(",")
+
+    # Needed to start using metric classes
+    Report.init(opts.config_file, opts.metrics_path)
 
     # filtered bots
     bots = ['-Bot']

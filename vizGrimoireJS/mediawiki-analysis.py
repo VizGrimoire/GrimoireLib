@@ -37,20 +37,13 @@ from utils import read_options
 def aggData(period, startdate, enddate, identities_db, destdir):
     # Tendencies
     agg = {}
-    for i in [7,30,365]:
-        data = Mediawiki.GetMediaWikiDiffReviewsDays(period, enddate, identities_db, i)
-        agg = dict(agg.items() + data.items())
-        data = Mediawiki.GetMediaWikiDiffAuthorsDays(period, enddate, identities_db, i)
-        agg = dict(agg.items() + data.items())
-
-    data = Mediawiki.GetStaticDataMediaWiki(period, startdate, enddate, identities_db, None)
+    data = Mediawiki.GetDataMediaWiki(period, startdate, enddate, identities_db, None, False)
     agg = dict(agg.items() + data.items())
 
     createJSON (agg, destdir+"/mediawiki-static.json")
 
 def tsData(period, startdate, enddate, identities_db, destdir, granularity, conf):
-    evol_data = Mediawiki.GetEvolDataMediaWiki(period, startdate, enddate, identities_db, None)
-    evol_data = completePeriodIds(evol_data, period, startdate, enddate)
+    evol_data = Mediawiki.GetDataMediaWiki(period, startdate, enddate, identities_db, None, True)
     createJSON (evol_data, destdir+"/mediawiki-evolutionary.json")
 
 def peopleData(period, startdate, enddate, identities_db, destdir, top_data):

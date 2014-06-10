@@ -17,9 +17,6 @@
 ## This file is a part of the vizGrimoire R package
 ##  (an R library for the MetricsGrimoire and vizGrimoire systems)
 ##
-## AuxiliarySCM.R
-##
-## Queries for SCM data analysis
 ##
 ## Authors:
 ##   Alvaro del Castillo <acs@bitergia.com>
@@ -28,9 +25,9 @@ import logging
 
 class Filter(object):
 
-    _filters_data = [["repository","rep","repos"],["company","com","companies"],
-                    ["country","cou","countries"],["domain","dom","domains"],
-                    ["project","prj","projects"]]
+    _filters_data = [["repository","rep","repos"], ["company","com","companies"],
+                    ["country","cou","countries"], ["domain","dom","domains"],
+                    ["project","prj","projects"], ["tag", "tag", "tags"]]
 
     def __init__(self, name, item = None):
         self.name = name

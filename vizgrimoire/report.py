@@ -14,12 +14,6 @@
 ## along with this program; if not, write to the Free Software
 ## Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 ##
-## This file is a part of the vizGrimoire R package
-##  (an R library for the MetricsGrimoire and vizGrimoire systems)
-##
-## AuxiliarySCM.R
-##
-## Queries for SCM data analysis
 ##
 ## Authors:
 ##   Alvaro del Castillo <acs@bitergia.com>
@@ -28,18 +22,22 @@
 from GrimoireSQL import SetDBChannel
 from GrimoireUtils import read_main_conf
 import logging
-import SCM, ITS, MLS, SCR, Mediawiki, IRC, Downloads, Releases
+import SCM, ITS, MLS, SCR, Mediawiki, IRC, DownloadsDS, QAForums, ReleasesDS
 from filter import Filter
-from metric import Metric
+from metrics import Metrics
+from query_builder import DSQuery
 
 class Report(object):
+    """Basic class for a Grimoire automator based dashboard"""
 
     _filters = []
     _all_data_sources = []
     _automator = None
+    _automator_file = None
 
     @staticmethod
     def init(automator_file, metrics_path = None):
+        Report._automator_file = automator_file
         Report._automator = read_main_conf(automator_file)
         Report._init_filters()
         Report._init_data_sources()
@@ -59,13 +57,17 @@ class Report(object):
             if filter_ is not None:
                 Report._filters.append(filter_)
             else:
-                logging.error("Wrong filter " + name + ", review " + opts.config_file)
+                logging.error("Wrong filter " + name + ", review " + Report._automator_file)
 
     @staticmethod
     def _init_data_sources():
         Report._all_data_sources = [SCM.SCM, ITS.ITS, MLS.MLS, SCR.SCR, 
-                                    Mediawiki.Mediawiki, IRC.IRC, 
-                                    Downloads.Downloads, Releases.Releases]
+                                    Mediawiki.Mediawiki, IRC.IRC, DownloadsDS.DownloadsDS,
+                                    QAForums.QAForums, ReleasesDS.ReleasesDS]
+        if 'people_out' in Report.get_config()['r']:
+            bots = Report.get_config()['r']['people_out'].split(",")
+            for ds in Report._all_data_sources:
+                ds.set_bots(bots)
 
     @staticmethod
     def _init_metrics(metrics_path):
@@ -74,6 +76,11 @@ class Report(object):
         from os import listdir
         from os.path import isfile, join
         import imp, inspect
+
+        db_identities = Report._automator['generic']['db_identities']
+        dbuser = Report._automator['generic']['db_user']
+        dbpass = Report._automator['generic']['db_password']
+
         metrics_mod = [ f for f in listdir(metrics_path) 
                        if isfile(join(metrics_path,f)) and f.endswith("_metrics.py")]
 
@@ -82,11 +89,15 @@ class Report(object):
             mod = __import__(mod_name)
             # Support for having more than one metric per module
             metrics_classes = [c for c in mod.__dict__.values() 
-                               if inspect.isclass(c) and issubclass(c, Metric)]
-            for metric_class in metrics_classes:
-                metric = metric_class()
-                ds = metric.get_data_source()
-                if ds != None: ds.add_metric(metric)
+                               if inspect.isclass(c) and issubclass(c, Metrics)]
+            for metrics_class in metrics_classes:
+                ds = metrics_class.data_source
+                if ds is None: continue
+                if ds.get_db_name() not in Report._automator['generic']: continue
+                builder = ds.get_query_builder()
+                db = Report._automator['generic'][ds.get_db_name()]
+                metrics = metrics_class(builder(dbuser, dbpass, db, db_identities))
+                ds.add_metrics(metrics, ds)
 
     @staticmethod
     def get_config():
@@ -110,6 +121,14 @@ class Report(object):
         return data_sources
 
     @staticmethod
+    def get_data_source(name):
+        found = None
+        for ds in Report.get_data_sources():
+            if ds.get_name() == name:
+                found = ds
+        return found
+
+    @staticmethod
     def set_data_sources(dss):
         Report._all_data_sources = dss 
 
@@ -120,3 +139,11 @@ class Report(object):
     @staticmethod
     def set_filters(filters):
         Report._filters = filters 
+
+    @staticmethod
+    def get_filter(name):
+        found = None
+        for filter_ in Report.get_filters():
+            if filter_.get_name() == name:
+                found = filter_
+        return found
