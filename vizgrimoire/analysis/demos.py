@@ -24,7 +24,9 @@
 # developers still with activity, and so on.
 
 from analyses import Analyses
+from scm import PeriodCondition, NomergesCondition
 from demography import ActivityPersons, DurationPersons
+from datetime import datetime
 
 class Demography(Analyses):
 
@@ -42,10 +44,22 @@ class Demography(Analyses):
         database = 'mysql://' + self.db.user + ':' + \
             self.db.password + '@' + self.db.host + '/' + \
             self.db.database
-        print database
+        print self.filters.period
+        print self.filters.startdate
+        print self.filters.enddate
+        print self.filters.type_analysis
+        print self.filters.npeople
+        startdate = datetime.strptime(self.filters.startdate, "'%Y-%m-%d'")
+        enddate = datetime.strptime(self.filters.enddate, "'%Y-%m-%d'")
+        print startdate
+        print enddate
+        period = PeriodCondition (start = datetime(2014,1,1), end = None)
+        nomerges = NomergesCondition()
+
         data = ActivityPersons (
             database = database,
-            var = "list_authors")
+            var = "list_authors",
+            conditions = (period,nomerges))
         age = DurationPersons (var = "age",
                                activity = data.activity())
         return age.durations().json()
@@ -56,7 +70,7 @@ if __name__ == '__main__':
     from query_builder import DSQuery
     from metrics_filter import MetricFilters
 
-    filters = MetricFilters("week", "'2010-06-01'", "'2011-01-01'",
+    filters = MetricFilters("week", "'2013-06-01'", "'2014-01-01'",
                             ["repository", "'nova.git'"])
     dbcon = DSQuery(user = "jgb", password = "XXX", 
                     database = "openstack_cvsanaly_2014-06-06",
