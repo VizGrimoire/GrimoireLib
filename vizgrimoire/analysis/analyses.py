@@ -15,7 +15,7 @@
 ## Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 ##
 ## This file is a part of GrimoireLib
-##  (an Python library for the MetricsGrimoire and vizGrimoire systems)
+##  (a Python library for the MetricsGrimoire and vizGrimoire systems)
 ##
 ##
 ## Authors:
@@ -23,18 +23,44 @@
 
 
 class Analyses(object):
+    """Root class for GrimoireLib analysis.
+
+    An analysis, in this context, is the production of values for
+    several entities that are related (usually, a family of entities).
+
+    """
 
     id = None
     name = None
     desc = None
 
     def __init__(self, dbcon = None, filters = None):
-        """db connection and filter to be used"""
+        """Intialization of the object.
+
+        Parameters
+        ----------
+
+        dbcon: query_builder.DSQuery
+           Connection to the database
+        filters: metrics_filter.MetricsFilters
+           Fiters to be used
+
+        """
+
         self.db = dbcon
         self.filters = filters
 
 
     def get_definition(self):
+        """Get the identifier, name and description of entity.
+
+        Returns
+        -------
+
+        dictionary: fields "id", "name" and "desc".
+
+        """
+
         def_ = {
                "id":self.id,
                "name":self.name,
@@ -43,9 +69,21 @@ class Analyses(object):
         return def_
 
     def __get_sql__(self, evolutionary):
-        """ Returns specific sql for the provided filters """
+        """ Returns specific sql for the provided filters
+
+        Parameters
+        ----------
+
+        evolutionary: Boolean
+           We want the "evolutionary" (time series) version of the entity.
+
+        """
+
         raise NotImplementedError
 
     def result(self):
-        """ Returns final result """
+        """ Returns the value for the entity.
+
+        """
+
         raise NotImplementedError
