@@ -742,6 +742,7 @@ class SCRQuery(DSQuery):
                              fields, tables, filters, evolutionary)
         return q
 
+    # Real reviews spend >1h, are not autoreviews, and bots are filtered out.
     def GetTimeToReviewQuerySQL (self, startdate, enddate, identities_db = None, type_analysis = [], bots = []):
         filter_bots = ''
         for bot in bots:
@@ -763,6 +764,40 @@ class SCRQuery(DSQuery):
         # min_days_for_review = 0.042 # one hour
         # q = "SELECT revtime, changed_on FROM ("+q+") qrevs WHERE revtime>"+str(min_days_for_review)
         return (q)
+
+    # Time to review accumulated for pending submissions using submit date or update date
+    def GetTimeToReviewPendingQuerySQL (self, startdate, enddate, identities_db = None,
+                                        type_analysis = [], bots = [], updated = False, reviewers = False):
+
+        filter_bots = ''
+        for bot in bots:
+            filter_bots = filter_bots + " people.name<>'"+bot+"' AND "
+
+        fields = "TIMESTAMPDIFF(SECOND, submitted_on, NOW())/(24*3600) AS revtime, submitted_on "
+        if (updated):
+            fields = "TIMESTAMPDIFF(SECOND, mod_date, NOW())/(24*3600) AS revtime, submitted_on "
+        tables = "issues i, people, issues_ext_gerrit ie "
+        if reviewers:
+                q_last_change = self.get_sql_last_change_for_issues_new()
+                tables += ", changes ch, (%s) t1" % q_last_change
+        tables += self.GetSQLReportFrom(identities_db, type_analysis)
+        filters = filter_bots + " people.id = i.submitted_by "
+        filters += self.GetSQLReportWhere(type_analysis)
+        filters += " AND status<>'MERGED' AND status<>'ABANDONED' "
+        filters += " AND ie.issue_id  = i.id "
+        if reviewers:
+                filters += """
+                    AND i.id = ch.issue_id  AND t1.id = ch.id
+                    AND (ch.field='CRVW' or ch.field='Code-Review' or ch.field='Verified' or ch.field='VRIF')
+                    AND (ch.new_value=1 or ch.new_value=2)
+                """
+        # from Wikimedia import GetIssuesFiltered
+        # if (GetIssuesFiltered() != ""): filters += " AND " + GetIssuesFiltered()
+
+        filters += " ORDER BY  submitted_on"
+        q = self.GetSQLGlobal('submitted_on', fields, tables, filters,
+                              startdate, enddate)
+        return(q)
 
     def get_sql_last_change_for_issues_new(self):
         # last changes for reviews. Removed added change status = NEW that is "artificial"

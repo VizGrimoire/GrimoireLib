@@ -110,7 +110,9 @@ class SCR(DataSource):
         if filter_ is not None:
             metrics_not_filters =  SCR.get_metrics_not_filters()
             metrics_on = list(set(metrics_on) - set(metrics_not_filters))
-            if filter_.get_name() == "repository": metrics_on += ['review_time','submitted']
+            if filter_.get_name() == "repository": 
+                metrics_on += ['review_time','submitted']
+                metrics_on += ['review_time_pending_update_ReviewsWaitingForReviewer_days_median']
         # END SCR specific
 
         for item in all_metrics:
@@ -215,7 +217,8 @@ class SCR(DataSource):
 
         # For repos aggregated data. Include metrics to sort in javascript.
         if (filter_name == "repository"):
-            items_list = {"name":[],"review_time_days_median":[],"submitted":[]}
+            items_list = {"name":[],"review_time_days_median":[],"submitted":[],
+                          "review_time_pending_update_ReviewsWaitingForReviewer_days_median":[]}
         else:
             items_list = items
 
@@ -239,6 +242,7 @@ class SCR(DataSource):
             if (filter_name == "repository"):
                 items_list["submitted"].append(agg["submitted"])
                 items_list["review_time_days_median"].append(agg['review_time_days_median'])
+                items_list["review_time_pending_update_ReviewsWaitingForReviewer_days_median"].append(agg['review_time_pending_update_ReviewsWaitingForReviewer_days_median'])
 
         fn = os.path.join(destdir, filter_.get_filename(SCR()))
         createJSON(items_list, fn)
