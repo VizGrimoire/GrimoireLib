@@ -47,11 +47,11 @@ class TestActivityPersons (unittest.TestCase):
         birth = "openstack_2014-06-06_scm-demographics-birth.json"
         data = ActivityPersons (
             database = openstack_database,
-            var = "list_authors")
+            var = "list_uauthors")
         age = DurationPersons (var = "age",
                                conditions = (self.snapshot,),
                                activity = data.activity())
-        # write_JSON (tests_dir + '/' + "output.json", age.durations())
+        write_JSON (tests_dir + '/' + "scm-demographics-birth.json", age.durations())
         self.assertTrue(equal_JSON_file(age.durations().json(),
                                         tests_dir + '/' + birth,
                                         details = True))
@@ -62,11 +62,12 @@ class TestActivityPersons (unittest.TestCase):
         aging = "openstack_2014-06-06_scm-demographics-aging.json"
         data = ActivityPersons (
             database = openstack_database,
-            var = "list_authors")
+            var = "list_uauthors")
         age = DurationPersons (var = "age",
                                conditions = (self.snapshot,
                                              self.active_period),
                                activity = data.activity())
+        write_JSON (tests_dir + '/' + "scm-demographics-aging.json", age.durations())
         self.assertTrue(equal_JSON_file(age.durations().json(),
                                         tests_dir + '/' + aging,
                                         details = True))

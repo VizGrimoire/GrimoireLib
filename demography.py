@@ -262,7 +262,7 @@ class DurationPersons:
        """
 
        if self.snapshot is None:
-           snapshot = activity.maxend()
+           snapshot = self.activity.maxend()
        else:
            snapshot = self.snapshot
        if self.var == "age":
