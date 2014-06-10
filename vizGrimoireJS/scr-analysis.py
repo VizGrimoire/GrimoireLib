@@ -114,35 +114,6 @@ def topData(period, startdate, enddate, idb, destdir, bots, npeople):
 
     return (top_all)
 
-def quartersData(period, startdate, enddate, idb, destdir, bots):
-    # Needed files. Ugly hack for date format
-    people = SCR.GetPeopleListSCR("'"+startdate+"'", "'"+enddate+"'", bots)
-    createJSON(people, destdir+"/scr-people-all.json", False)
-    companies = SCR.GetCompaniesSCRName("'"+startdate+"'", "'"+enddate+"'", idb)
-    createJSON(companies, destdir+"/scr-companies-all.json", False)
-
-    start = datetime.strptime(startdate, "%Y-%m-%d")
-    start_quarter = (start.month-1)%3 + 1
-    end = datetime.strptime(enddate, "%Y-%m-%d")
-    end_quarter = (end.month-1)%3 + 1
-
-    companies_quarters = {}
-    people_quarters = {}
-
-    quarters = (end.year - start.year) * 4 + (end_quarter - start_quarter)
-
-    for i in range(0, quarters):
-        year = start.year
-        quarter = (i%4)+1
-        # logging.info("Analyzing companies and people quarter " + str(year) + " " +  str(quarter))
-        data = GetCompaniesQuartersSCR(year, quarter, idb)
-        companies_quarters[str(year)+" "+str(quarter)] = data
-        data_people = GetPeopleQuartersSCR(year, quarter, idb, 25, bots)
-        people_quarters[str(year)+" "+str(quarter)] = data_people
-        start = start + relativedelta(months=3)
-    createJSON(companies_quarters, destdir+"/scr-companies-quarters.json")
-    createJSON(people_quarters, destdir+"/scr-people-quarters.json")
-
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO,format='%(asctime)s %(message)s')
     logging.info("Starting SCR data source analysis")

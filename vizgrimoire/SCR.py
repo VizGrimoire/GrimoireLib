@@ -41,11 +41,6 @@ from data_source import DataSource
 from filter import Filter
 from query_builder import SCRQuery
 
-
-from contributors_new_gone import ContributorsNewGone
-
-
-
 class SCR(DataSource):
     _metrics_set = []
 
@@ -159,6 +154,8 @@ class SCR(DataSource):
 
         # Studies: create its own JSON files
         if filter_ is None:
+            from contributors_new_gone import ContributorsNewGone
+            from quarters_data import QuartersData
             from report import Report
             db_identities= Report.get_config()['generic']['db_identities']
             dbuser = Report.get_config()['generic']['db_user']
@@ -166,8 +163,8 @@ class SCR(DataSource):
             dbname = Report.get_config()['generic']['db_gerrit']
             dbcon = SCRQuery(dbuser, dbpass, dbname, db_identities)
             metric_filters = MetricFilters(period, startdate, enddate, [])
-            new_gone = ContributorsNewGone(dbcon, metric_filters)
-            study = new_gone.result(destdir)
+            ContributorsNewGone(dbcon, metric_filters).result(destdir)
+            QuartersData(dbcon, metric_filters).result(destdir)
 
     @staticmethod
     def get_top_data (startdate, enddate, identities_db, filter_, npeople):

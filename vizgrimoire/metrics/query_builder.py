@@ -867,8 +867,83 @@ class SCRQuery(DSQuery):
 
         return self.ExecuteQuery(q_people_num_evol)
 
+    # No use of generic query because changes table is not used
+    def GetCompaniesQuarters (self, year, quarter, identities_db, limit = 25):
+#        filters = GetIssuesFiltered()
+#        if (filters != ""): filters  += " AND "
+        filters = ""
+        q = """
+            SELECT COUNT(i.id) AS total, c.name, c.id, QUARTER(submitted_on) as quarter, YEAR(submitted_on) year
+            FROM issues i, people p , people_upeople pup, %s.upeople_companies upc,%s.companies c
+            WHERE %s i.submitted_by=p.id AND pup.people_id=p.id
+                AND pup.upeople_id = upc.upeople_id AND upc.company_id = c.id
+                AND status='merged'
+                AND QUARTER(submitted_on) = %s AND YEAR(submitted_on) = %s
+              GROUP BY year, quarter, c.id
+              ORDER BY year, quarter, total DESC, c.name
+              LIMIT %s
+            """ % (identities_db, identities_db, filters,  quarter, year, limit)
+
+        return (self.ExecuteQuery(q))
 
 
+    # PEOPLE
+    def GetPeopleQuarters (self, year, quarter, identities_db, limit = 25, bots = []) :
+        filter_bots = ''
+        for bot in bots:
+            filter_bots = filter_bots + " up.identifier<>'"+bot+"' AND "
+
+#        filters = GetIssuesFiltered()
+#        if (filters != ""): filters  = filter_bots + filters + " AND "
+#        else: filters = filter_bots
+
+        filters = filter_bots
+
+        q = """
+            SELECT COUNT(i.id) AS total, p.name, pup.upeople_id as id,
+                QUARTER(submitted_on) as quarter, YEAR(submitted_on) year
+            FROM issues i, people p , people_upeople pup, %s.upeople up
+            WHERE %s i.submitted_by=p.id AND pup.people_id=p.id AND pup.upeople_id = up.id
+                AND status='merged'
+                AND QUARTER(submitted_on) = %s AND YEAR(submitted_on) = %s
+           GROUP BY year, quarter, pup.upeople_id
+           ORDER BY year, quarter, total DESC, id
+           LIMIT %s
+           """ % (identities_db, filters, quarter, year, limit)
+        return (self.ExecuteQuery(q))
+
+    def GetPeopleList (self, startdate, enddate, bots):
+
+        filter_bots = ""
+        for bot in bots:
+            filter_bots += " name<>'"+bot+"' and "
+
+        fields = "DISTINCT(pup.upeople_id) as id, count(i.id) as total, name"
+        tables = self.GetTablesOwnUniqueIds('issues') + ", people"
+        filters = filter_bots
+        filters += self.GetFiltersOwnUniqueIds('issues')+ " and people.id = pup.people_id"
+        filters += " GROUP BY id ORDER BY total desc"
+        q = self.GetSQLGlobal('submitted_on', fields, tables, filters, startdate, enddate)
+        return(self.ExecuteQuery(q))
+
+    def GetCompaniesName  (self,startdate, enddate, identities_db, limit = 0):
+        limit_sql=""
+        if (limit > 0): limit_sql = " LIMIT " + str(limit)
+
+        q = "SELECT c.id as id, c.name as name, COUNT(DISTINCT(i.id)) AS total "+\
+                   "FROM  "+identities_db+".companies c, "+\
+                           identities_db+".upeople_companies upc, "+\
+                    "     people_upeople pup, "+\
+                    "     issues i "+\
+                   "WHERE i.submitted_by = pup.people_id AND "+\
+                   "  upc.upeople_id = pup.upeople_id AND "+\
+                   "  c.id = upc.company_id AND "+\
+                   "  i.status = 'merged' AND "+\
+                   "  i.submitted_on >="+  startdate+ " AND "+\
+                   "  i.submitted_on < "+ enddate+ " "+\
+                   "GROUP BY c.name "+\
+                   "ORDER BY total DESC " + limit_sql
+        return(self.ExecuteQuery(q))
 
 class IRCQuery(DSQuery):
 
