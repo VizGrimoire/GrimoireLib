@@ -37,9 +37,13 @@ from GrimoireUtils import checkListArray, removeDecimals, get_subprojects
 from GrimoireUtils import getPeriod, createJSON, checkFloatArray, medianAndAvgByPeriod
 from metrics_filter import MetricFilters
 
-
 from data_source import DataSource
 from filter import Filter
+from query_builder import SCRQuery
+
+
+from contributors_new_gone import ContributorsNewGone
+
 
 
 class SCR(DataSource):
@@ -145,7 +149,6 @@ class SCR(DataSource):
                     if item.id not in metrics_trends: continue
                     period_data = item.get_agg_diff_days(enddate, i)
                     data = dict(data.items() +  period_data.items())
-
         return data
 
     @staticmethod
@@ -153,6 +156,18 @@ class SCR(DataSource):
         data = SCR.get_agg_data (period, startdate, enddate, i_db, filter_)
         filename = SCR().get_agg_filename()
         createJSON (data, os.path.join(destdir, filename))
+
+        # Studies: create its own JSON files
+        if filter_ is None:
+            from report import Report
+            db_identities= Report.get_config()['generic']['db_identities']
+            dbuser = Report.get_config()['generic']['db_user']
+            dbpass = Report.get_config()['generic']['db_password']
+            dbname = Report.get_config()['generic']['db_gerrit']
+            dbcon = SCRQuery(dbuser, dbpass, dbname, db_identities)
+            metric_filters = MetricFilters(period, startdate, enddate, [])
+            new_gone = ContributorsNewGone(dbcon, metric_filters)
+            study = new_gone.result(destdir)
 
     @staticmethod
     def get_top_data (startdate, enddate, identities_db, filter_, npeople):
@@ -767,40 +782,12 @@ def GetPeopleQuerySCR (developer_id, period, startdate, enddate, evol):
                 startdate, enddate)
     return (q)
 
-def GetPeopleQuerySCRSubmissions (developer_id, period, startdate, enddate, evol):
-    fields = "COUNT(i.id) AS submissions"
-    tables = GetTablesOwnUniqueIdsSCR('issues')
-    filters = GetFiltersOwnUniqueIdsSCR('issues')+ " AND pup.upeople_id = "+ str(developer_id)
-
-    if (evol):
-        q = GetSQLPeriod(period,'submitted_on', fields, tables, filters,
-                startdate, enddate)
-    else:
-        fields = fields + \
-                ",DATE_FORMAT (min(submitted_on),'%Y-%m-%d') as first_date, "+\
-                "  DATE_FORMAT (max(submitted_on),'%Y-%m-%d') as last_date"
-        q = GetSQLGlobal('submitted_on', fields, tables, filters,
-                startdate, enddate)
-    return (q)
-
-
-
 def GetPeopleEvolSCR (developer_id, period, startdate, enddate):
-    # q = GetPeopleQuerySCRSubmissions(developer_id, period, startdate, enddate, True)
     q = GetPeopleQuerySCR(developer_id, period, startdate, enddate, True)
     return(ExecuteQuery(q))
 
 def GetPeopleStaticSCR (developer_id, startdate, enddate):
-    # q = GetPeopleQuerySCRSubmissions(developer_id, None, startdate, enddate, False)
     q = GetPeopleQuerySCR(developer_id, None, startdate, enddate, False)
-    return(ExecuteQuery(q))
-
-def GetPeopleEvolSubmissionsSCR (developer_id, period, startdate, enddate):
-    q = GetPeopleQuerySCRSubmissions(developer_id, period, startdate, enddate, True)
-    return(ExecuteQuery(q))
-
-def GetPeopleStaticSubmissionsSCR (developer_id, startdate, enddate):
-    q = GetPeopleQuerySCRSubmissions(developer_id, None, startdate, enddate, False)
     return(ExecuteQuery(q))
 
 ################
@@ -901,65 +888,6 @@ def StaticTimeToReviewSCR (startdate, enddate, identities_db = None, type_analys
         ttr_avg = average(removeDecimals(data))
     return {"review_time_days_median":ttr_median, "review_time_days_avg":ttr_avg}
 
-def StaticTimeToReviewPendingSCR (startdate, enddate, identities_db = None, type_analysis = [], bots = []):
-    # Show review and update time for all and just for reviews pending for reviewers
-    reviewers_pending = True
-    # Review time
-    data = ExecuteQuery(GetTimeToReviewPendingQuerySCR (startdate, enddate, identities_db, type_analysis, bots))
-    data = data['revtime']
-    if (isinstance(data, list) == False): data = [data]
-    if (len(data) == 0):
-        ttr_median = float("nan")
-        ttr_avg = float("nan")
-    else:
-        ttr_median = median(removeDecimals(data))
-        ttr_avg = average(removeDecimals(data))
-
-    data = ExecuteQuery(GetTimeToReviewPendingQuerySCR (startdate, enddate,identities_db,
-                                                        type_analysis, bots, False, reviewers_pending))
-    data = data['revtime']
-    if (isinstance(data, list) == False): data = [data]
-    if (len(data) == 0):
-        ttr_reviewers_median = float("nan")
-        ttr_reviewers_avg = float("nan")
-    else:
-        ttr_reviewers_median = median(removeDecimals(data))
-        ttr_reviewers_avg = average(removeDecimals(data))
-
-    # Update time
-    data = ExecuteQuery(GetTimeToReviewPendingQuerySCR (startdate, enddate,identities_db,
-                                                        type_analysis, bots, True))
-    data = data['revtime']
-    if (isinstance(data, list) == False): data = [data]
-    if (len(data) == 0):
-        ttr_median_update = float("nan")
-        ttr_avg_update = float("nan")
-    else:
-        ttr_median_update = median(removeDecimals(data))
-        ttr_avg_update = average(removeDecimals(data))
-
-    data = ExecuteQuery(GetTimeToReviewPendingQuerySCR (startdate, enddate, identities_db,
-                                                        type_analysis, bots, True, reviewers_pending))
-    data = data['revtime']
-    if (isinstance(data, list) == False): data = [data]
-    if (len(data) == 0):
-        ttr_reviewers_median_update = float("nan")
-        ttr_reviewers_avg_update = float("nan")
-    else:
-        ttr_reviewers_median_update = median(removeDecimals(data))
-        ttr_reviewers_avg_update = average(removeDecimals(data))
-
-    time_to = {"review_time_pending_days_median":ttr_median,
-               "review_time_pending_days_avg":ttr_avg,
-               "review_time_pending_ReviewsWaitingForReviewer_days_median":ttr_reviewers_median,
-               "review_time_pending_ReviewsWaitingForReviewer_days_avg":ttr_reviewers_avg,
-               "review_time_pending_update_days_median":ttr_median_update,
-               "review_time_pending_update_days_avg":ttr_avg_update,
-               "review_time_pending_update_ReviewsWaitingForReviewer_days_median":ttr_reviewers_median_update,
-               "review_time_pending_update_ReviewsWaitingForReviewer_days_avg":ttr_reviewers_avg_update
-               }
-    return time_to
-
 
 def EvolTimeToReviewSCR (period, startdate, enddate, identities_db = None, type_analysis = []):
 
@@ -980,100 +908,3 @@ def EvolTimeToReviewSCR (period, startdate, enddate, identities_db = None, type_
         metrics_list['review_time_days_avg'] = []
         metrics_list['month'] = []
     return metrics_list
-
-# Get all reviews pending time for each month and compute the median.
-# Return a list with all the medians for all months
-def EvolTimeToReviewPendingSCR(period, startdate, enddate, identities_db = None, type_analysis=[]):
-
-    def get_date_from_month(monthid):
-        # month format: year*12+month
-        year = (monthid-1) / 12
-        month = monthid - year*12
-        # We need the last day of the month
-        import calendar
-        last_day = calendar.monthrange(year, month)[1]
-        current = str(year)+"-"+str(month)+"-"+str(last_day)
-        return (current)
-
-    # SQL for all, for updated  or for waiting for reviewer reviews
-    def get_sql(month, updated=False, reviewers = False):
-        current = get_date_from_month(month)
-        # List of pending reviews before a date: time from new time and from last update
-        fields  = "TIMESTAMPDIFF(SECOND, submitted_on, '"+current+"')/(24*3600) AS newtime,"
-        if (updated):
-            fields = "TIMESTAMPDIFF(SECOND, mod_date, '"+current+"')/(24*3600) AS updatetime,"
-        fields += " YEAR(submitted_on)*12+MONTH(submitted_on) as month"
-        tables = "issues i, people, issues_ext_gerrit ie "
-        if reviewers:
-            q_last_change = get_sql_last_change_for_issues_new()
-            tables += ", changes ch, (%s) t1" % q_last_change
-        tables = tables + GetSQLReportFromSCR(identities_db, type_analysis)
-        filters = " people.id = i.submitted_by "
-        filters += GetSQLReportWhereSCR(type_analysis)
-        filters += " AND status<>'MERGED' AND status<>'ABANDONED' "
-        filters += " AND ie.issue_id  = i.id "
-        if reviewers:
-            filters += """
-                AND i.id = ch.issue_id  AND t1.id = ch.id
-                AND (ch.field='CRVW' or ch.field='Code-Review' or ch.field='Verified' or ch.field='VRIF')
-                AND (ch.new_value=1 or ch.new_value=2)
-            """
-
-        from Wikimedia import GetIssuesFiltered
-        if (GetIssuesFiltered() != ""): filters += " AND " + GetIssuesFiltered()
-
-        # All reviews before the month: accumulated key point
-        filters += " HAVING month<= " + str(month)
-        # Not include future submissions for current month analysis
-        if (updated):
-            filters += " AND updatetime >= 0"
-        else:
-            filters += " AND newtime >= 0"
-        filters += " ORDER BY  submitted_on"
-        q = GetSQLGlobal('submitted_on', fields, tables, filters,
-                    startdate,enddate)
-        return q
-
-    def get_values_median(values):
-        if not isinstance(values, list): values = [values]
-        values = removeDecimals(values)
-        if (len(values) == 0): values = float('nan')
-        else: values = median(values)
-        return values
-
-    start = datetime.strptime(startdate, "'%Y-%m-%d'")
-    end = datetime.strptime(enddate, "'%Y-%m-%d'")
-
-    if (period != "month"):
-        logging.error("Period not supported in accPendingReviewsByPeriod "+ period)
-        return None
-
-    start_month = start.year*12 + start.month
-    end_month = end.year*12 + end.month
-    months = end_month - start_month
-    acc_pending_time_median = {"month":[],
-                               "review_time_pending_days_acc_median":[],
-                               "review_time_pending_update_days_acc_median":[],
-                               "review_time_pending_ReviewsWaitingForReviewer_days_acc_median":[],
-                               "review_time_pending_update_ReviewsWaitingForReviewer_days_acc_median":[]}
-
-    for i in range(0, months+1):
-        acc_pending_time_median['month'].append(start_month+i)
-
-        reviews = ExecuteQuery(get_sql(start_month+i))
-        values = get_values_median(reviews['newtime'])
-        acc_pending_time_median['review_time_pending_days_acc_median'].append(values)
-
-        reviews = ExecuteQuery(get_sql(start_month+i, True))
-        values = get_values_median(reviews['updatetime'])
-        acc_pending_time_median['review_time_pending_update_days_acc_median'].append(values)
-
-        # Now just for reviews waiting for Reviewer
-        reviews = ExecuteQuery(get_sql(start_month+i, False, True))
-        values = get_values_median(reviews['newtime'])
-        acc_pending_time_median['review_time_pending_ReviewsWaitingForReviewer_days_acc_median'].append(values)
-
-        reviews = ExecuteQuery(get_sql(start_month+i, True, True))
-        values = get_values_median(reviews['updatetime'])
-        acc_pending_time_median['review_time_pending_update_ReviewsWaitingForReviewer_days_acc_median'].append(values)
-    return acc_pending_time_median

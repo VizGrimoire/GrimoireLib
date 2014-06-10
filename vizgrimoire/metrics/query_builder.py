@@ -557,6 +557,17 @@ class SCRQuery(DSQuery):
         #fields necessaries to match info among tables
         return (" and t.url ='"+ repository+ "' and t.id = i.tracker_id")
 
+    def GetTablesOwnUniqueIds (self, table=''):
+        tables = 'changes c, people_upeople pup'
+        if (table == "issues"): tables = 'issues i, people_upeople pup'
+        return (tables)
+
+
+    def GetFiltersOwnUniqueIds  (self, table=''):
+        filters = 'pup.people_id = c.changed_by'
+        if (table == "issues"): filters = 'pup.people_id = i.submitted_by'
+        return (filters)
+
     def GetSQLProjectFrom (self):
         # projects are mapped to repositories
         return (" , trackers t")
@@ -808,6 +819,56 @@ class SCRQuery(DSQuery):
             GROUP BY c.issue_id
         """
         return q_last_change
+
+    def GetPeopleQuerySubmissions (self, developer_id, period, startdate, enddate, evol):
+        fields = "COUNT(i.id) AS submissions"
+        tables = self.GetTablesOwnUniqueIds('issues')
+        filters = self.GetFiltersOwnUniqueIds('issues')+ " AND pup.upeople_id = "+ str(developer_id)
+
+        if (evol):
+            q = self.GetSQLPeriod(period,'submitted_on', fields, tables, filters,
+                    startdate, enddate)
+        else:
+            fields = fields + \
+                    ",DATE_FORMAT (min(submitted_on),'%Y-%m-%d') as first_date, "+\
+                    "  DATE_FORMAT (max(submitted_on),'%Y-%m-%d') as last_date"
+            q = self.GetSQLGlobal('submitted_on', fields, tables, filters,
+                    startdate, enddate)
+        return (q)
+
+    def GetPeopleEvolSubmissionsSCR (self, developer_id, period, startdate, enddate):
+        q = self.GetPeopleQuerySubmissions(developer_id, period, startdate, enddate, True)
+        return(self.ExecuteQuery(q))
+
+    def GetPeopleStaticSubmissionsSCR (self, developer_id, startdate, enddate):
+        q = self.GetPeopleQuerySubmissions(developer_id, None, startdate, enddate, False)
+        return(self.ExecuteQuery(q))
+
+    def GetPeopleIntake(self, min, max):
+#        filters = GetIssuesFiltered()
+#        if (filters != ""): filters  = " WHERE " + filters
+        filters = ""
+
+        q_people_num_submissions_evol = """
+            SELECT COUNT(*) AS total, submitted_by,
+                YEAR(submitted_on) as year, MONTH(submitted_on) as monthid
+            FROM issues
+            %s
+            GROUP BY submitted_by, year, monthid
+            HAVING total > %i AND total <= %i
+            ORDER BY submitted_on DESC
+            """ % (filters, min, max)
+
+        q_people_num_evol = """
+            SELECT COUNT(*) as people, year*12+monthid AS month
+            FROM (%s) t
+            GROUP BY year, monthid
+            """ % (q_people_num_submissions_evol)
+
+        return self.ExecuteQuery(q_people_num_evol)
+
+
+
 
 class IRCQuery(DSQuery):
 
