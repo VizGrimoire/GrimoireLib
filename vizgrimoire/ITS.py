@@ -34,7 +34,9 @@ from metrics_filter import MetricFilters
 
 from data_source import DataSource
 from filter import Filter
+from query_builder import ITSQuery
 import report
+
 
 class ITS(DataSource):
     _metrics_set = []
@@ -169,6 +171,18 @@ class ITS(DataSource):
             top_openers_data['openers.last month']=GetTopOpeners(31, startdate, enddate,identities_db, bots, closed_condition, npeople)
 
             top = dict(top_closers_data.items() + top_openers_data.items())
+
+            from top_issues import TopIssues
+            from report import Report
+            db_identities= Report.get_config()['generic']['db_identities']
+            dbuser = Report.get_config()['generic']['db_user']
+            dbpass = Report.get_config()['generic']['db_password']
+            dbname = Report.get_config()['generic']['db_bicho']
+            dbcon = ITSQuery(dbuser, dbpass, dbname, db_identities)
+            metric_filters = MetricFilters(None, startdate, enddate, [])
+            top_issues_data = TopIssues(dbcon, metric_filters).result()
+
+            top = dict(top.items() + top_issues_data.items())
 
         else:
             filter_name = filter_.get_name()

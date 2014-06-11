@@ -53,106 +53,11 @@ def GetChangesFiltered():
 # ITS
 #####
 
-def GetTopIssuesWithoutAction(startdate, enddate, closed_condition, limit):
-    CreateViewsITS()
-
-    q = "SELECT issue_id, TIMESTAMPDIFF(SECOND, date, NOW())/(24*3600) AS time " +\
-        "FROM ( " +\
-        "  SELECT issue AS issue_id, submitted_on AS date " +\
-        "  FROM issues " +\
-        "  WHERE id NOT IN ( " +\
-        "    SELECT issue_id " +\
-        "    FROM first_action_per_issue " +\
-        "  ) " +\
-        "  AND NOT ( " + closed_condition + ") " +\
-        "  AND submitted_on >= " + startdate + " AND submitted_on < " + enddate +\
-        ") no_actions " +\
-        "GROUP BY issue_id " +\
-        "ORDER BY time DESC " +\
-        "LIMIT " + limit
-    data = ExecuteQuery(q)
-    return (data)
-
-
-def GetTopIssuesWithoutComment(startdate, enddate, closed_condition, limit):
-    CreateViewsITS()
-
-    q = "SELECT issue_id, TIMESTAMPDIFF(SECOND, date, NOW())/(24*3600) AS time " +\
-        "FROM ( " +\
-        "  SELECT issue AS issue_id, submitted_on AS date " +\
-        "  FROM issues " +\
-        "  WHERE id NOT IN ( " +\
-        "    SELECT issue_id " +\
-        "    FROM last_comment_per_issue " +\
-        "  ) " +\
-        "  AND NOT ( " + closed_condition + ") " +\
-        "  AND submitted_on >= " + startdate + " AND submitted_on < " + enddate +\
-        ") no_comments " +\
-        "GROUP BY issue_id " +\
-        "ORDER BY time DESC " +\
-        "LIMIT " + limit
-    data = ExecuteQuery(q)
-    return (data)
-
-
-def GetTopIssuesWithoutResolution(startdate, enddate, closed_condition, limit):
-    q = "SELECT issue AS issue_id, TIMESTAMPDIFF(SECOND, submitted_on, NOW())/(24*3600) AS time " +\
-        "FROM issues " +\
-        "WHERE NOT ( " + closed_condition + ") " +\
-        "AND submitted_on >= " + startdate + " AND submitted_on < " + enddate +\
-        "GROUP BY issue_id " +\
-        "ORDER BY time DESC " +\
-        "LIMIT " + limit
-    data = ExecuteQuery(q)
-    return (data)
-
-
-def GetIssuesDetails():
-    q = "SELECT i.issue AS issue_id, i.summary AS summary, t.url AS tracker_url " +\
-        "FROM issues i, trackers t " +\
-        "WHERE i.tracker_id = t.id "
-    data = ExecuteQuery(q)
-
-    details = {}
-    i = 0
-    for issue_id in data['issue_id']:
-        details[issue_id] = (data['summary'][i], data['tracker_url'][i])
-        i += 1
-    return details
-
 #################
 # Views
 #################
 
 # Actions : changes or comments that were made by others than the reporter.
-
-def GetViewFirstChangeAndCommentQueryITS():
-    """Returns the first change and comment of each issue done by others
-    than the reporter"""
-
-    q = "CREATE OR REPLACE VIEW first_change_and_comment_issues AS " +\
-        "SELECT c.issue_id issue_id, MIN(c.changed_on) date " +\
-        "FROM changes c, issues i " +\
-        "WHERE changed_by <> submitted_by AND i.id = c.issue_id " +\
-        "GROUP BY c.issue_id " +\
-        "UNION " + \
-        "SELECT c.issue_id issue_id, MIN(c.submitted_on) date " +\
-        "FROM comments c, issues i " +\
-        "WHERE c.submitted_by <> i.submitted_by AND c.issue_id = i.id " +\
-        "GROUP BY c.issue_id"
-    return q
-
-
-def GetViewFirstActionPerIssueQueryITS():
-    """Returns the first action of each issue.
-       Actions means changes or comments that were made by others than
-       the reporter."""
-
-    q = "CREATE OR REPLACE VIEW first_action_per_issue AS " +\
-        "SELECT issue_id, MIN(date) date " +\
-        "FROM first_change_and_comment_issues " +\
-        "GROUP BY issue_id"
-    return q
 
 
 def GetViewFirstCommentPerIssueQueryITS():
@@ -168,20 +73,7 @@ def GetViewFirstCommentPerIssueQueryITS():
     return q
 
 
-def GetViewLastCommentPerIssueQueryITS():
-    """Returns those issues without changes, only comments made
-       but others than the reporter."""
-
-    q = "CREATE OR REPLACE VIEW last_comment_per_issue AS " +\
-        "SELECT c.issue_id issue_id, MAX(c.submitted_on) date " +\
-        "FROM comments c, issues i " +\
-        "WHERE c.submitted_by <> i.submitted_by " +\
-        "AND c.issue_id = i.id " +\
-        "GROUP BY c.issue_id"
-    return q
-
-
-
+# Is being used? - acs
 def GetViewNoActionIssuesQueryITS():
     """Returns those issues without actions.
        Actions means changes or comments that were made by others than
@@ -199,16 +91,7 @@ def GetViewNoActionIssuesQueryITS():
 
 def CreateViewsITS():
     #FIXME: views should be only created once
-    q = GetViewFirstChangeAndCommentQueryITS()
-    ExecuteViewQuery(q)
-
-    q = GetViewFirstActionPerIssueQueryITS()
-    ExecuteViewQuery(q)
-
     q = GetViewFirstCommentPerIssueQueryITS()
-    ExecuteViewQuery(q)
-
-    q = GetViewLastCommentPerIssueQueryITS()
     ExecuteViewQuery(q)
 
     q = GetViewNoActionIssuesQueryITS()

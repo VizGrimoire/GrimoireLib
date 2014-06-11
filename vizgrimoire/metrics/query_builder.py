@@ -148,6 +148,9 @@ class DSQuery(object):
                 result[columns[i][0]] = value[i]
         return result
 
+    def ExecuteViewQuery(self, sql):
+        self.cursor.execute(sql)
+
 class SCMQuery(DSQuery):
     """ Specific query builders for source code management system data source """
 
