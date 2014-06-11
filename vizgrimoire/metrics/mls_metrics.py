@@ -24,19 +24,16 @@
 
 
 import logging
-import MySQLdb
 
-import re, sys
+from datetime import datetime
 
 from GrimoireUtils import completePeriodIds, GetDates, GetPercentageDiff
+from GrimoireSQL import ExecuteQuery
 
 from metrics import Metrics
 
-from metrics_filter import MetricFilters
-
-from query_builder import MLSQuery
-
 from MLS import MLS
+
 
 class EmailsSent(Metrics):
     """ Emails metric class for mailing lists analysis """
@@ -264,3 +261,84 @@ class Countries(Metrics):
     def __get_sql__(self, evolutionary):
         return self.db.GetStudies(self.filters.period, self.filters.startdate,
                                   self.filters.enddate, ['country', ''], evolutionary, 'countries')
+
+
+class UnansweredPosts(Metrics):
+    """ Unanswered posts in mailing lists """
+
+    id = "unanswered_posts"
+    name = "Unanswered Posts"
+    desc = "Unanswered posts in mailing lists"""
+    data_source = MLS
+
+    def __get_date_from_month(self, monthid):
+        # month format: year*12+month
+        year = (monthid-1) / 12
+        month = monthid - year*12
+        day = 1
+        current = str(year) + "-" + str(month) + "-" + str(day)
+        return (current)
+
+    def __get_messages(self, from_date, to_date):
+        query = "SELECT message_ID, is_response_of "
+        query += "FROM messages m "
+        query += "WHERE m.first_date >= '" + str(from_date) + "' AND m.first_date < '" + str(to_date) + "' "
+        query += "AND m.first_date >= " + str(self.filters.startdate) + " AND m.first_date < " + str(self.filters.enddate) + " "
+        query += "ORDER BY m.first_date"
+
+        results = ExecuteQuery(query)
+
+        if isinstance(results['message_ID'], list):
+            return [(results['message_ID'][i], results['is_response_of'][i])\
+                    for i in range(len(results['message_ID']))]
+        else:
+            return [(results['message_ID'], results['is_response_of'])]
+
+    def get_agg(self):
+        return {}
+
+    def get_ts(self):
+        # Get all posts for each month and determine which from those
+        # are still unanswered. Returns the number of unanswered
+        # posts on each month.
+        period = self.filters.period
+
+        if (period != "month"):
+            logging.error("Period not supported in " + self.id + " " + period)
+            return None
+
+        startdate = self.filters.startdate
+        enddate = self.filters.enddate
+
+        start = datetime.strptime(startdate, "'%Y-%m-%d'")
+        end = datetime.strptime(enddate, "'%Y-%m-%d'")
+
+        start_month = (start.year * 12 + start.month) - 1
+        end_month = (end.year * 12 + end.month) - 1
+        months = end_month - start_month + 2
+        num_unanswered = {'month' : [],
+                          'unanswered_posts' : []}
+
+        for i in range(0, months):
+            unanswered = []
+            current_month = start_month + i
+            from_date = self.__get_date_from_month(current_month)
+            to_date = self.__get_date_from_month(current_month + 1)
+            messages = self.__get_messages(from_date, to_date)
+
+            for message in messages:
+                message_id = message[0]
+                response_of = message[1]
+
+                if response_of is None:
+                    unanswered.append(message_id)
+                    continue
+
+                if response_of in unanswered:
+                    unanswered.remove(response_of)
+
+            num_unanswered['month'].append(current_month)
+            num_unanswered['unanswered_posts'].append(len(unanswered))
+
+        return completePeriodIds(num_unanswered, self.filters.period,
+                                 self.filters.startdate, self.filters.enddate)
