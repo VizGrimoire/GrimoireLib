@@ -24,14 +24,9 @@
 
 """ Top issues by age  for different criteria """
 
-from datetime import datetime, timedelta
-from dateutil.relativedelta import relativedelta
-
-
 from analyses import Analyses
-from query_builder import DSQuery
 from metrics_filter import MetricFilters
-from GrimoireUtils import createJSON, completeTops
+from GrimoireUtils import completeTops
 
 class TopIssues(Analyses):
     id = "top_issues"
