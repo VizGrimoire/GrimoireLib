@@ -84,6 +84,53 @@ def create_report_people(startdate, enddate, destdir, npeople, identities_db, bo
         logging.info("Creating people for " + ds.get_name())
         ds().create_people_report(period, startdate, enddate, destdir, npeople, identities_db)
 
+# TODO: refactor to generalize it
+def create_top_people_report(startdate, enddate, destdir, idb, bots):
+    """Top people for all data sources."""
+    import GrimoireSQL, SCR, MLS, ITS, IRC, Mediawiki
+    npeople = "10000" # max limit, all people included
+    min_data_sources = 4 # min data sources to be in the list
+    tops = {}
+    all_top = {}
+    all_top_min_ds = {}
+    db = automator['generic']['db_gerrit']
+    GrimoireSQL.SetDBChannel (database=db, user=opts.dbuser, password=opts.dbpassword)
+    tops["scr"] = SCR.GetTopOpenersSCR(0, startdate, enddate, idb, bots, npeople)
+    db = automator['generic']['db_mlstats']
+    GrimoireSQL.SetDBChannel (database=db, user=opts.dbuser, password=opts.dbpassword)
+    tops["mls"] = MLS.top_senders(0, startdate, enddate, idb, bots, npeople)
+    db = automator['generic']['db_bicho']
+    GrimoireSQL.SetDBChannel (database=db, user=opts.dbuser, password=opts.dbpassword)
+    # Fixed for bugzilla, what Wikimedia uses
+    closed_condition = "(new_value='RESOLVED' OR new_value='CLOSED' OR new_value='Lowest')"
+    # TODO: include in "-Bot" company all the bots
+    tops["its"] = ITS.GetTopOpeners(0, startdate, enddate, idb, ["-Bot"], closed_condition, npeople)
+    db = automator['generic']['db_irc']
+    GrimoireSQL.SetDBChannel (database=db, user=opts.dbuser, password=opts.dbpassword)
+    tops["irc"] = IRC.GetTopSendersIRC(0, startdate, enddate, idb, bots, npeople)
+    db = automator['generic']['db_mediawiki']
+    GrimoireSQL.SetDBChannel (database=db, user=opts.dbuser, password=opts.dbpassword)
+    tops["mediawiki"] = Mediawiki.GetTopAuthorsMediaWiki(0, startdate, enddate, idb, bots, npeople)
+    # SCR and SCM are the same. Don't use both for Tops
+    # TODO: include in "-Bot" company all the bots
+    # db = automator['generic']['db_cvsanaly']
+    # GrimoireSQL.SetDBChannel (database=db, user=opts.dbuser, password=opts.dbpassword)
+    # tops["scm"] = SCM.top_people(0, startdate, enddate, "author" , ["-Bot"] , npeople)
+
+    # Build the consolidated top list using all data sources data
+    # Only people in all data sources is used
+    for ds in tops:
+        pos = 1;
+        for id in tops[ds]['id']:
+            if id not in all_top: all_top[id] = []
+            all_top[id].append({"ds":ds,"pos":pos})
+            pos += 1
+
+    for id in all_top:
+        if len(all_top[id])>=min_data_sources: all_top_min_ds[id] = all_top[id]
+
+    createJSON(all_top_min_ds, opts.destdir+"/all_top.json")
+
 def create_reports_r(enddate, destdir):
     from rpy2.robjects.packages import importr
     opts = read_options()
@@ -217,5 +264,7 @@ if __name__ == '__main__':
         create_people_identifiers(startdate, enddate, opts.destdir)
 
     create_reports_filters(period, startdate, enddate, opts.destdir, opts.npeople, identities_db, bots)
+    create_top_people_report(startdate, enddate, opts.destdir, identities_db, bots)
+
 
     logging.info("Report data source analysis OK")
