@@ -45,21 +45,6 @@ def GetChangesFiltered():
     return filters
 
 
-################
-# KPI queries
-################
-
-#####
-# ITS
-#####
-
-#################
-# Views
-#################
-
-# Actions : changes or comments that were made by others than the reporter.
-
-
 # Is being used? - acs
 def GetViewNoActionIssuesQueryITS():
     """Returns those issues without actions.
@@ -74,17 +59,3 @@ def GetViewNoActionIssuesQueryITS():
         "FROM issues i, changes c " +\
         "WHERE i.id = c.issue_id AND c.changed_by <> i.submitted_by)"
     return q
-
-
-def CreateViewsITS():
-    #FIXME: views should be only created once
-    q = GetViewFirstCommentPerIssueQueryITS()
-    ExecuteViewQuery(q)
-
-    q = GetViewNoActionIssuesQueryITS()
-    ExecuteViewQuery(q)
-
-#########################
-# Time to first response
-#########################
-
