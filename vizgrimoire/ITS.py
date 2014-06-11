@@ -1252,10 +1252,11 @@ class Backend(object):
             self.closed_condition = "field='closed'"
 
         if (its_type == 'jira'):
-            self.closed_condition = "new_value='CLOSED'"
+            self.closed_condition = "(new_value='Closed')"
             self.reopened_condition = "new_value='Reopened'"
             #self.new_condition = "status='Open'"
             #self.reopened_condition = "status='Reopened'"
+            self.statuses = ["Open", "In Progress", "Ready To Review", "Reviewable", "Closed", "Resolved", "Reopened"]
             self.open_status = 'Open'
             self.reopened_status = 'Reopened'
             self.name_log_table = 'issues_log_jira'
