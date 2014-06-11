@@ -119,6 +119,18 @@ class ITS(DataSource):
             data = ITS.get_tickets_states(period, startdate, enddate, identities_db, ITS._get_backend())
             evol = dict(evol.items() + data.items())
 
+            from times_tickets import TimesTickets
+            from report import Report
+            db_identities= Report.get_config()['generic']['db_identities']
+            dbuser = Report.get_config()['generic']['db_user']
+            dbpass = Report.get_config()['generic']['db_password']
+            dbname = Report.get_config()['generic']['db_bicho']
+            dbcon = ITSQuery(dbuser, dbpass, dbname, db_identities)
+            metric_filters = MetricFilters(period, startdate, enddate, [])
+            data = TimesTickets(dbcon, metric_filters).result()
+
+            evol = dict(evol.items() + data.items())
+
         return evol
 
     @staticmethod
@@ -140,10 +152,6 @@ class ITS(DataSource):
             agg = AggITSInfo(period, startdate, enddate, identities_db, None, closed_condition)
             data = ITS.get_url()
             agg = dict(agg.items() +  data.items())
-#            # Last Activity: to be removed
-#            for i in [7,14,30,60,90,180,365,730]:
-#                period_activity = GetLastActivityITS(i, closed_condition)
-#                agg = dict(agg.items() + period_activity.items())
 
         return agg
 

@@ -73,7 +73,7 @@ class TopIssues(Analyses):
             "GROUP BY c.issue_id"
         return q
 
-    def CreateViewsITS(self):
+    def CreateViews(self):
         q = self.GetViewFirstChangeAndCommentQueryITS()
         self.db.ExecuteViewQuery(q)
         q = self.GetViewLastCommentPerIssueQueryITS()
@@ -157,7 +157,7 @@ class TopIssues(Analyses):
         startdate = self.filters.startdate
         enddate = self.filters.enddate
 
-        self.CreateViewsITS()
+        self.CreateViews()
 
         issues_details = self.GetIssuesDetails()
 
