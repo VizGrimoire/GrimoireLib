@@ -309,7 +309,7 @@ class SCR(DataSource):
     def get_metrics_core_agg():
         m =  ['submitted','opened','closed','merged','abandoned','new','inprogress','pending','review_time','repositories']
         # patches metrics
-        m += ['verified','approved','codereview','sent','WaitingForReviewer','WaitingForSubmitter']
+        m += ['verified','approved','codereview','sent','WaitingForReviewer','WaitingForSubmitter','review_time_pending_total']
         m += ['submitters','reviewers']
 
         return m
