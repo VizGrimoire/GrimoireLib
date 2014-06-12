@@ -53,7 +53,7 @@ class SCR(DataSource):
 
     @staticmethod
     def get_metrics_not_filters():
-        metrics_not_filters =  ['verified','codereview','sent','WaitingForReviewer','WaitingForSubmitter','approved']
+        metrics_not_filters =  ['verified','codereview','sent','WaitingForReviewer','WaitingForSubmitter','approved','ReviewsWaitingForReviewer', 'ReviewsWaitingForSubmitter']
         return metrics_not_filters
 
 
