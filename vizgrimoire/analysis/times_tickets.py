@@ -18,6 +18,7 @@
 #
 #
 # Authors:
+#     Santiago Duenas <sduenas@bitergia.com>
 #     Alvaro del Castillor <acs@bitergia.com>
 #
 
