@@ -195,20 +195,22 @@ def create_reports_studies(period, startdate, enddate, destdir):
     dbpass = Report.get_config()['generic']['db_password']
 
     studies = Report.get_studies()
-    for study in studies:
-        for ds in Report.get_data_sources():
-            ds_dbname = ds.get_db_name()
-            dbname = Report.get_config()['generic'][ds_dbname]
-            dsquery = ds.get_query_builder()
-            dbcon = dsquery(dbuser, dbpass, dbname, db_identities)
-            metric_filters = MetricFilters(period, startdate, enddate, [])
-            logging.info("Creating report for " + study.id)
+
+    metric_filters = MetricFilters(period, startdate, enddate, [])
+
+    for ds in Report.get_data_sources():
+        ds_dbname = ds.get_db_name()
+        dbname = Report.get_config()['generic'][ds_dbname]
+        dsquery = ds.get_query_builder()
+        dbcon = dsquery(dbuser, dbpass, dbname, db_identities)
+        for study in studies:
+            logging.info("Creating report for " + study.id + " for " + ds.get_name())
             try:
                 obj = study(dbcon, metric_filters)
+                obj.create_report(ds, destdir)
             except TypeError:
                 logging.info(study.id + " does no support standard API. Not used.")
                 continue
-            obj.create_report(ds, destdir)
 
 def set_data_source(ds_name):
     ds_ok = False
@@ -287,6 +289,9 @@ if __name__ == '__main__':
         set_metric (opts.metric, opts.data_source)
 
     bots = []
+
+    create_reports_studies(period, startdate, enddate, opts.destdir)
+    sys.exit()
 
     if not opts.filter:
         logging.info("Creating global evolution metrics...")

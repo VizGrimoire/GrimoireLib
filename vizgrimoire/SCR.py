@@ -152,20 +152,6 @@ class SCR(DataSource):
         filename = SCR().get_agg_filename()
         createJSON (data, os.path.join(destdir, filename))
 
-        # Studies: create its own JSON files
-        if filter_ is None:
-            from contributors_new_gone import ContributorsNewGone
-            from quarters_data import QuartersData
-            from report import Report
-            db_identities= Report.get_config()['generic']['db_identities']
-            dbuser = Report.get_config()['generic']['db_user']
-            dbpass = Report.get_config()['generic']['db_password']
-            dbname = Report.get_config()['generic']['db_gerrit']
-            dbcon = SCRQuery(dbuser, dbpass, dbname, db_identities)
-            metric_filters = MetricFilters(period, startdate, enddate, [])
-            ContributorsNewGone(dbcon, metric_filters).result(destdir)
-            QuartersData(dbcon, metric_filters).result(destdir)
-
     @staticmethod
     def get_top_data (startdate, enddate, identities_db, filter_, npeople):
         bots = SCR.get_bots()

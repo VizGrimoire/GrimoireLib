@@ -31,15 +31,18 @@ from analyses import Analyses
 from query_builder import DSQuery
 from metrics_filter import MetricFilters
 from GrimoireUtils import createJSON
+from SCR import SCR
 
 class QuartersData(Analyses):
     id = "quarters_data"
     name = "Quarters Data"
     desc = "Metrics by Quarter"
 
-    def result(self, destdir):
-        from SCR import SCR
+    def create_report(self, data_source, destdir):
+        if data_source != SCR: return
+        self.result(destdir)
 
+    def result(self, destdir):
         period = self.filters.period
         startdate = self.filters.startdate
         enddate = self.filters.enddate

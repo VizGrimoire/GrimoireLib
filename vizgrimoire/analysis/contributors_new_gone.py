@@ -259,6 +259,11 @@ class ContributorsNewGone(Analyses):
 
         return data
 
+    def create_report(self, data_source, destdir):
+        from SCR import SCR
+        if data_source != SCR: return
+        self.result(destdir)
+
     def result(self, destdir):
         period = self.filters.period
         startdate = self.filters.startdate
