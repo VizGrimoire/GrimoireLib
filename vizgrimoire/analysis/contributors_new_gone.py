@@ -36,9 +36,9 @@ class ContributorsNewGone(Analyses):
 
     # People Code Contrib New and Gone KPI
     def GetNewPeopleListSQL(self, period):
-#        filters = GetIssuesFiltered()
-#        if (filters != ""): filters  = " WHERE " + filters
-        filters = ""
+        filters = self.db.GetIssuesFiltered()
+        if (filters != ""): filters  = " WHERE " + filters
+
         q_people = """
             SELECT submitted_by FROM (SELECT MIN(submitted_on) AS first, submitted_by
             FROM issues
@@ -48,9 +48,9 @@ class ContributorsNewGone(Analyses):
         return q_people
 
     def GetGonePeopleListSQL(self,period):
-#        filters = GetIssuesFiltered()
-#        if (filters != ""): filters  = " WHERE " + filters
-        filters = ""
+        filters = self.db.GetIssuesFiltered()
+        if (filters != ""): filters  = " WHERE " + filters
+
         q_people = """
             SELECT submitted_by FROM (SELECT MAX(submitted_on) AS last, submitted_by
             FROM issues
@@ -61,10 +61,10 @@ class ContributorsNewGone(Analyses):
 
     # Total submissions for people in period
     def GetNewPeopleTotalListSQL(self,period, filters=""):
-#        issues_filters = GetIssuesFiltered()
-#        if (filters != ""):
-#            if issues_filters != "": filters += " AND " + issues_filters
-#        else: filters = issues_filters
+        issues_filters = self.db.GetIssuesFiltered()
+        if (filters != ""):
+            if issues_filters != "": filters += " AND " + issues_filters
+        else: filters = issues_filters
 
         if (filters != ""): filters  = " WHERE " + filters
         q_total_period = """
@@ -79,10 +79,10 @@ class ContributorsNewGone(Analyses):
 
     # Total submissions for people in period
     def GetGonePeopleTotalListSQL(self,period, filters=""):
-#        issues_filters = GetIssuesFiltered()
-#        if (filters != ""):
-#            if issues_filters != "": filters += " AND " + issues_filters
-#        else: filters = issues_filters
+        issues_filters = self.db.GetIssuesFiltered()
+        if (filters != ""):
+            if issues_filters != "": filters += " AND " + issues_filters
+        else: filters = issues_filters
 
         if (filters != ""): filters  = " WHERE " + filters
         q_total_period = """
@@ -113,7 +113,7 @@ class ContributorsNewGone(Analyses):
 
         if (tables != ""): tables +=  ","
         if (filters != ""): filters  += " AND "
-        # if (GetIssuesFiltered() != ""): filters += GetIssuesFiltered() + " AND "
+        if (self.db.GetIssuesFiltered() != ""): filters += self.db.GetIssuesFiltered() + " AND "
         if (fields != ""): fields  += ","
         if (order_by != ""): order_by  += ","
 
@@ -209,9 +209,8 @@ class ContributorsNewGone(Analyses):
 
         q_people = self.GetNewPeopleListSQL(period)
 
-        # filters = self.GetIssuesFiltered()
-        # if (filters != ""): filters  += " AND "
-        filters = ""
+        filters = self.db.GetIssuesFiltered()
+        if (filters != ""): filters  += " AND "
 
         # Total submissions for new people in period
         q = """
@@ -245,10 +244,8 @@ class ContributorsNewGone(Analyses):
     #        ORDER BY submitted_on, total DESC
     #        """ % (q_all_people,date_leaving,date_gone)
 
-#        filters = GetIssuesFiltered()
-#        if (filters != ""): filters  += " AND "
-
-        filters = ""
+        filters = self.db.GetIssuesFiltered()
+        if (filters != ""): filters  += " AND "
 
         q_gone  = """
             SELECT total, name, email, submitted_on, people_upeople.upeople_id from

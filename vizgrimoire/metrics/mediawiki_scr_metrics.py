@@ -151,8 +151,7 @@ class TimeToReviewPendingSCR(Metrics):
                     AND (ch.new_value=1 or ch.new_value=2)
                 """
 
-            from Wikimedia import GetIssuesFiltered
-            if (GetIssuesFiltered() != ""): filters += " AND " + GetIssuesFiltered()
+            if (self.db.GetIssuesFiltered() != ""): filters += " AND " + self.db.GetIssuesFiltered()
 
             # All reviews before the month: accumulated key point
             filters += " HAVING month<= " + str(month)
