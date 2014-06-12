@@ -56,12 +56,12 @@ def create_agg_report(startdate, enddate, destdir, identities_db, bots):
         Report.connect_ds(ds)
         ds.create_agg_report (period, startdate, enddate, destdir, identities_db)
 
-def get_top_report(startdate, enddate, identities_db, bots):
+def get_top_report(startdate, enddate, identities_db, bots, npeople):
     all_ds_top = {}
 
     for ds in Report.get_data_sources():
         Report.connect_ds(ds)
-        top = ds.get_top_data (startdate, enddate, identities_db, opts.npeople)
+        top = ds.get_top_data (startdate, enddate, identities_db, npeople)
         all_ds_top[ds.get_name()] = top 
     return all_ds_top
 
@@ -188,6 +188,11 @@ if __name__ == '__main__':
     else:
         period = getPeriod(automator['r']['period'])
     logging.info("Period: " + period)
+
+    if 'people_number' in automator['generic']:
+	npeople = automator['generic']['people_number']
+    	logging.info("Number of people: " + npeople)
+	opts.npeople = npeople
 
     # TODO: hack because VizR library needs. Fix in lib in future
     startdate = "'"+start_date+"'"
