@@ -65,7 +65,6 @@ class TopQAForums(Analyses):
              group by p.username order by count(*) desc limit %s
              """ % (self.filters.startdate, self.filters.enddate, self.filters.npeople)
 
-        print query
         return query
 
     def result(self):
