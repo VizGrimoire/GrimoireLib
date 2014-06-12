@@ -126,6 +126,29 @@ def create_people_identifiers(startdate, enddate, destdir):
 
     createJSON(people_data, destdir+"/people.json")
 
+def create_reports_studies(period, startdate, enddate, destdir):
+    from metrics_filter import MetricFilters
+
+    db_identities= Report.get_config()['generic']['db_identities']
+    dbuser = Report.get_config()['generic']['db_user']
+    dbpass = Report.get_config()['generic']['db_password']
+
+    studies = Report.get_studies()
+    for study in studies:
+        for ds in Report.get_data_sources():
+            ds_dbname = ds.get_db_name()
+            dbname = Report.get_config()['generic'][ds_dbname]
+            dsquery = ds.get_query_builder()
+            dbcon = dsquery(dbuser, dbpass, dbname, db_identities)
+            metric_filters = MetricFilters(period, startdate, enddate, [])
+            logging.info("Creating report for " + study.id)
+            try:
+                obj = study(dbcon, metric_filters)
+            except TypeError:
+                logging.info(study.id + " does no support standard API. Not used.")
+                continue
+            obj.create_report(ds, destdir)
+
 def set_data_source(ds_name):
     ds_ok = False
     dss_active = Report.get_data_sources()
@@ -222,5 +245,7 @@ if __name__ == '__main__':
         create_people_identifiers(startdate, enddate, opts.destdir)
 
     create_reports_filters(period, startdate, enddate, opts.destdir, opts.npeople, identities_db, bots)
+    # create_top_people_report(startdate, enddate, opts.destdir, identities_db, bots)
+    create_reports_studies(period, startdate, enddate, opts.destdir)
 
     logging.info("Report data source analysis OK")
