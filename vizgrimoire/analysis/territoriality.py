@@ -50,7 +50,6 @@ class Territoriality(Analyses):
     desc = "Percentage of files 'touched' by just one developer"
 
     def __get_sql__(self):
-   
         repos_tables = ""
         repos_where  = ""
         if self.filters.type_analysis[0] == "repository":

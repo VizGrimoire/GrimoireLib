@@ -25,6 +25,7 @@ import logging
 import SCM, ITS, MLS, SCR, Mediawiki, IRC, DownloadsDS, QAForums, ReleasesDS
 from filter import Filter
 from metrics import Metrics
+from analyses import Analyses
 from query_builder import DSQuery
 
 class Report(object):
@@ -32,6 +33,7 @@ class Report(object):
 
     _filters = []
     _all_data_sources = []
+    _all_studies = []
     _automator = None
     _automator_file = None
 
@@ -43,6 +45,8 @@ class Report(object):
         Report._init_data_sources()
         if metrics_path is not None:
             Report._init_metrics(metrics_path)
+            studies_path = metrics_path.replace("metrics","analysis")
+            Report._init_studies(studies_path)
 
     @staticmethod
     def _init_filters():
@@ -98,6 +102,34 @@ class Report(object):
                 db = Report._automator['generic'][ds.get_db_name()]
                 metrics = metrics_class(builder(dbuser, dbpass, db, db_identities))
                 ds.add_metrics(metrics, ds)
+
+    @staticmethod
+    def _init_studies(studies_path):
+        """Register all available studies"""
+        logging.info("Loading studies modules from %s" % (studies_path))
+        from os import listdir
+        from os.path import isfile, join
+        import imp, inspect
+
+        db_identities = Report._automator['generic']['db_identities']
+        dbuser = Report._automator['generic']['db_user']
+        dbpass = Report._automator['generic']['db_password']
+
+        studies_mod = [ f for f in listdir(studies_path)
+                       if isfile(join(studies_path,f)) and f.endswith(".py")]
+
+        for study_mod in studies_mod:
+            mod_name = study_mod.split(".py")[0]
+            mod = __import__(mod_name)
+            # Support for having more than one study per module
+            studies_classes = [c for c in mod.__dict__.values()
+                               if inspect.isclass(c) and issubclass(c, Analyses)]
+            for study_class in studies_classes:
+                if study_class.id is None: continue
+                logging.info("Adding new study: ")
+                logging.info(study_class)
+                Report._all_studies.append(study_class)
+
 
     @staticmethod
     def get_config():

@@ -805,8 +805,8 @@ class SCRQuery(DSQuery):
                     AND (ch.field='CRVW' or ch.field='Code-Review' or ch.field='Verified' or ch.field='VRIF')
                     AND (ch.new_value=1 or ch.new_value=2)
                 """
-        # from Wikimedia import GetIssuesFiltered
-        # if (GetIssuesFiltered() != ""): filters += " AND " + GetIssuesFiltered()
+
+        if (self.GetIssuesFiltered() != ""): filters += " AND " + self.GetIssuesFiltered()
 
         filters += " ORDER BY  submitted_on"
         q = self.GetSQLGlobal('submitted_on', fields, tables, filters,
@@ -848,8 +848,8 @@ class SCRQuery(DSQuery):
         return(self.ExecuteQuery(q))
 
     def GetPeopleIntake(self, min, max):
-#        filters = GetIssuesFiltered()
-#        if (filters != ""): filters  = " WHERE " + filters
+        filters = self.GetIssuesFiltered()
+        if (filters != ""): filters  = " WHERE " + filters
         filters = ""
 
         q_people_num_submissions_evol = """
@@ -872,8 +872,8 @@ class SCRQuery(DSQuery):
 
     # No use of generic query because changes table is not used
     def GetCompaniesQuarters (self, year, quarter, identities_db, limit = 25):
-#        filters = GetIssuesFiltered()
-#        if (filters != ""): filters  += " AND "
+        filters = self.GetIssuesFiltered()
+        if (filters != ""): filters  += " AND "
         filters = ""
         q = """
             SELECT COUNT(i.id) AS total, c.name, c.id, QUARTER(submitted_on) as quarter, YEAR(submitted_on) year
@@ -896,9 +896,9 @@ class SCRQuery(DSQuery):
         for bot in bots:
             filter_bots = filter_bots + " up.identifier<>'"+bot+"' AND "
 
-#        filters = GetIssuesFiltered()
-#        if (filters != ""): filters  = filter_bots + filters + " AND "
-#        else: filters = filter_bots
+        filters = self.GetIssuesFiltered()
+        if (filters != ""): filters  = filter_bots + filters + " AND "
+        else: filters = filter_bots
 
         filters = filter_bots
 
@@ -947,6 +947,24 @@ class SCRQuery(DSQuery):
                    "GROUP BY c.name "+\
                    "ORDER BY total DESC " + limit_sql
         return(self.ExecuteQuery(q))
+
+    # Global filter to remove all results from Wikimedia KPIs from SCR
+    def __init__(self, user, password, database, identities_db = None, host="127.0.0.1", port=3306, group=None):
+        super(SCRQuery, self).__init__(user, password, database, identities_db, host, port, group)
+        # _filter_submitter_id as a static global var to avoid SQL re-execute
+        people_userid = 'l10n-bot'
+        q = "SELECT id FROM people WHERE user_id = '%s'" % (people_userid)
+        self._filter_submitter_id = self.ExecuteQuery(q)['id']
+
+    # To be used for issues table
+    def GetIssuesFiltered(self):
+        filters = " submitted_by <> %s" % (self._filter_submitter_id)
+        return filters
+
+    # To be used for changes table
+    def GetChangesFiltered(self):
+        filters = " changed_by <> %s" % (self._filter_submitter_id)
+        return filters
 
 class IRCQuery(DSQuery):
 
