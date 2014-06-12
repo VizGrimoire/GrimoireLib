@@ -50,7 +50,7 @@ class Analyses(object):
         """ Returns aggregated data for a data source. """
         return {}
 
-    def create_report (self, destdir):
+    def create_report (self, data_source, destdir):
         """ Create a report in destdir for the study. """
         return None
 

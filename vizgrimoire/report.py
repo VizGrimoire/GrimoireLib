@@ -114,6 +114,10 @@ class Report(object):
         db_identities = Report._automator['generic']['db_identities']
         dbuser = Report._automator['generic']['db_user']
         dbpass = Report._automator['generic']['db_password']
+        if 'studies' not in Report._automator['r']:
+            logging.info("No studies configured.")
+            return
+        studies_on = Report._automator['r']['studies'].split(",")
 
         studies_mod = [ f for f in listdir(studies_path)
                        if isfile(join(studies_path,f)) and f.endswith(".py")]
@@ -125,10 +129,10 @@ class Report(object):
             studies_classes = [c for c in mod.__dict__.values()
                                if inspect.isclass(c) and issubclass(c, Analyses)]
             for study_class in studies_classes:
-                if study_class.id is None: continue
-                logging.info("Adding new study: ")
-                logging.info(study_class)
+                if study_class.id is None or study_class.id not in studies_on: continue
+                logging.info("Adding new study: " + study_class.id)
                 Report._all_studies.append(study_class)
+        logging.info("Total studies: " + str(len(Report._all_studies)))
 
 
     @staticmethod
@@ -178,4 +182,18 @@ class Report(object):
         for filter_ in Report.get_filters():
             if filter_.get_name() == name:
                 found = filter_
+                break
+        return found
+
+    @staticmethod
+    def get_studies():
+        return Report._all_studies
+
+    @staticmethod
+    def get_study_by_id(sid):
+        found = None
+        for study in Report.get_studies():
+            if study.id == sid:
+                found = study
+                break
         return found
