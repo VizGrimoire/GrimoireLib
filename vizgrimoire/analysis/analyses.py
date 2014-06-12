@@ -68,6 +68,18 @@ class Analyses(object):
         }
         return def_
 
+    def get_ts (self, data_source):
+        """ Returns time series data for a data source. """
+        return {}
+
+    def get_agg (self, data_source):
+        """ Returns aggregated data for a data source. """
+        return {}
+
+    def create_report (self, destdir):
+        """ Create a report in destdir for the study. """
+        return None
+
     def __get_sql__(self, evolutionary):
         """ Returns specific sql for the provided filters
 
