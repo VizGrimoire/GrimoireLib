@@ -375,13 +375,21 @@ def GetSCMEvolutionaryData (period, startdate, enddate, i_db, type_analysis):
     filter_ = None
     if type_analysis is not None:
         filter_ = Filter(type_analysis[0],type_analysis[1])
-    return DataSource.get_metrics_data(SCM, period, startdate, enddate, i_db, filter_, True)
+    metrics = DataSource.get_metrics_data(SCM, period, startdate, enddate, i_db, filter_, True)
+    if filter_ is not None: studies = {}
+    else:
+        studies = DataSource.get_studies_data(SCM, period, startdate, enddate, True)
+    return dict(metrics.items()+studies.items())
 
 def GetSCMStaticData (period, startdate, enddate, i_db, type_analysis):
     filter_ = None
     if type_analysis is not None:
         filter_ = Filter(type_analysis[0],type_analysis[1])
-    return DataSource.get_metrics_data(SCM, period, startdate, enddate, i_db, filter_, False)
+    metrics = DataSource.get_metrics_data(SCM, period, startdate, enddate, i_db, filter_, False)
+    if filter_ is not None: studies = {}
+    else:
+        studies = DataSource.get_studies_data(SCM, period, startdate, enddate, False)
+    return dict(metrics.items()+studies.items())
 
 ##########
 # Specific FROM and WHERE clauses per type of report

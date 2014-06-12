@@ -238,6 +238,41 @@ class DataSource(object):
         return metrics
 
     @staticmethod
+    def get_studies_data(ds, period, startdate, enddate, evol):
+        """ Get data from studies to be included in agg and evol global JSONs  """
+        from report import Report
+        data = {}
+
+        db_identities = Report.get_config()['generic']['db_identities']
+        dbuser = Report.get_config()['generic']['db_user']
+        dbpass = Report.get_config()['generic']['db_password']
+
+        studies = Report.get_studies()
+
+        metric_filters = MetricFilters(period, startdate, enddate, [])
+
+        ds_dbname = ds.get_db_name()
+        dbname = Report.get_config()['generic'][ds_dbname]
+        dsquery = ds.get_query_builder()
+        dbcon = dsquery(dbuser, dbpass, dbname, db_identities)
+        evol_txt = "evol"
+        if not evol: evol_txt = "agg"
+        logging.info("Creating studies for " + ds.get_name() + " " + evol_txt)
+        for study in studies:
+            logging.info(study.id)
+            try:
+                obj = study(dbcon, metric_filters)
+                if evol:
+                    res = obj.get_ts(ds)
+                else:
+                    res = obj.get_agg(ds)
+                data = dict(res.items() + data.items())
+            except TypeError:
+                logging.info(study.id + " does no support standard API. Not used.")
+
+        return data
+
+    @staticmethod
     def get_metrics_data(DS, period, startdate, enddate, identities_db, filter_ = None, evol = False):
         """ Get basic data from all core metrics """
         data = {}
