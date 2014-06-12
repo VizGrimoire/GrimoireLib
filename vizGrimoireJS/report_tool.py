@@ -26,6 +26,8 @@ import logging, sys, time
 
 from GrimoireUtils import getPeriod, read_main_conf, createJSON
 
+import GrimoireSQL
+
 from report import Report
 
 from utils import read_options
@@ -85,7 +87,7 @@ def create_report_people(startdate, enddate, destdir, npeople, identities_db, bo
         ds().create_people_report(period, startdate, enddate, destdir, npeople, identities_db)
 
 # TODO: refactor to generalize it
-def get_top_people (startdate, enddate, destdir, idb, bots):
+def get_top_people (startdate, enddate, idb, bots):
     """Top people for all data sources."""
     import GrimoireSQL, SCR, MLS, ITS, IRC, Mediawiki
     npeople = "10000" # max limit, all people included
@@ -132,7 +134,7 @@ def get_top_people (startdate, enddate, destdir, idb, bots):
 
 def create_top_people_report(startdate, enddate, destdir, idb, bots):
     """Top people for all data sources."""
-    all_top_min_ds = get_top_people (startdate, enddate, destdir, idb, bots)
+    all_top_min_ds = get_top_people (startdate, enddate, idb, bots)
     createJSON(all_top_min_ds, opts.destdir+"/all_top.json")
 
 
