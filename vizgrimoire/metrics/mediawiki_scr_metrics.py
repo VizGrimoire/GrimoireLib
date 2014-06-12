@@ -141,7 +141,7 @@ class TimeToReviewPendingSCR(Metrics):
                 tables += ", changes ch, (%s) t1" % q_last_change
             tables = tables + self.db.GetSQLReportFrom(identities_db, type_analysis)
             filters = " people.id = i.submitted_by "
-            filters += self.db.GetSQLReportWhere(type_analysis)
+            filters += self.db.GetSQLReportWhere(type_analysis, self.db.identities_db)
             filters += " AND status<>'MERGED' AND status<>'ABANDONED' "
             filters += " AND ie.issue_id  = i.id "
             if reviewers:
