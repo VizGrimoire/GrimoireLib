@@ -570,7 +570,11 @@ def GetITSInfo (period, startdate, enddate, identities_db, type_analysis, closed
     filter_ = None
     if type_analysis is not None:
         filter_ = Filter(type_analysis[0],type_analysis[1])
-    return DataSource.get_metrics_data(ITS, period, startdate, enddate, identities_db, filter_, evolutionary)
+    metrics = DataSource.get_metrics_data(ITS, period, startdate, enddate, identities_db, filter_, evolutionary)
+    if filter_ is not None: studies = {}
+    else:
+        studies = DataSource.get_studies_data(ITS, period, startdate, enddate, evolutionary)
+    return dict(metrics.items()+studies.items())
 
 def EvolITSInfo (period, startdate, enddate, identities_db, type_analysis, closed_condition):
     #Evolutionary info all merged in a dataframe

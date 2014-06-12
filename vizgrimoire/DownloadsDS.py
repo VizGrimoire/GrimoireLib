@@ -45,6 +45,7 @@ class DownloadsDS(DataSource):
     @staticmethod
     def get_name(): return "downloads"
 
+    # TODO: convert to use get_metrics_data from data_source
     @staticmethod
     def _get_data (period, startdate, enddate, i_db, filter_, evol):
         data = {}
@@ -80,7 +81,11 @@ class DownloadsDS(DataSource):
                         if item.id not in metrics_trends: continue
                         period_data = item.get_agg_diff_days(enddate, i)
                         data = dict(data.items() +  period_data.items())
-        return data
+
+        if filter_ is not None: studies = {}
+        else:
+            studies = DataSource.get_studies_data(DownloadsDS, period, startdate, enddate, evol)
+        return dict(data.items()+studies.items())
 
     @staticmethod
     def get_evolutionary_data (period, startdate, enddate, i_db, filter_ = None):

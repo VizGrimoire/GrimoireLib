@@ -56,7 +56,11 @@ class ReleasesDS(DataSource):
 
     @staticmethod
     def get_evolutionary_data (period, startdate, enddate, i_db, filter_ = None):
-        return DataSource.get_metrics_data(ReleasesDS, period, startdate, enddate, i_db, filter_, True)
+        metrics =  DataSource.get_metrics_data(ReleasesDS, period, startdate, enddate, i_db, filter_, True)
+        if filter_ is not None: studies = {}
+        else:
+            studies =  DataSource.get_metrics_data(ReleasesDS, period, startdate, enddate, True)
+        return dict(metrics.items()+studies.items())
  
     @staticmethod
     def create_evolutionary_report (period, startdate, enddate, destdir, i_db, type_analysis = None):
@@ -65,8 +69,12 @@ class ReleasesDS(DataSource):
         createJSON (data, os.path.join(destdir, filename))
 
     @staticmethod
-    def get_agg_data (period, startdate, enddate, identities_db, filter_ = None):
-        return DataSource.get_metrics_data(ReleasesDS, period, startdate, enddate, identities_db, filter_, False)
+    def get_agg_data (period, startdate, enddate, i_db, filter_ = None):
+        metrics =  DataSource.get_metrics_data(ReleasesDS, period, startdate, enddate, i_db, filter_, False)
+        if filter_ is not None: studies = {}
+        else:
+            studies =  DataSource.get_metrics_data(ReleasesDS, period, startdate, enddate, False)
+        return dict(metrics.items()+studies.items())
 
     @staticmethod
     def create_agg_report (period, startdate, enddate, destdir, i_db, type_analysis = None):

@@ -144,6 +144,12 @@ class SCR(DataSource):
                     if item.id not in metrics_trends: continue
                     period_data = item.get_agg_diff_days(enddate, i)
                     data = dict(data.items() +  period_data.items())
+
+        if filter_ is not None: studies_data = {}
+        else: 
+            studies_data = DataSource.get_studies_data(SCR, period, startdate, enddate, evol)
+        data = dict(data.items() +  studies_data.items())
+
         return data
 
     @staticmethod

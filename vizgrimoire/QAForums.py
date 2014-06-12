@@ -88,7 +88,11 @@ class QAForums(DataSource):
 
     @staticmethod
     def __get_data (period, startdate, enddate, i_db, filter_, evol):
-        return DataSource.get_metrics_data(QAForums, period, startdate, enddate, i_db, filter_, evol)
+        metrics =  DataSource.get_metrics_data(QAForums, period, startdate, enddate, i_db, filter_, evol)
+        if filter_ is not None: studies = {}
+        else:
+            studies =  DataSource.get_studies_data(QAForums, period, startdate, enddate, evol)
+        return dict(metrics.items()+studies.items())
 
     @staticmethod
     def get_top_senders(days, startdate, enddate, identities_db, bots, limit, type_post):
