@@ -796,7 +796,7 @@ class SCRQuery(DSQuery):
                 tables += ", changes ch, (%s) t1" % q_last_change
         tables += self.GetSQLReportFrom(identities_db, type_analysis)
         filters = filter_bots + " people.id = i.submitted_by "
-        filters += self.GetSQLReportWhere(type_analysis)
+        filters += self.GetSQLReportWhere(type_analysis,identities_db)
         filters += " AND status<>'MERGED' AND status<>'ABANDONED' "
         filters += " AND ie.issue_id  = i.id "
         if reviewers:
