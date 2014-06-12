@@ -24,6 +24,7 @@
 
 
 import logging
+
 import MySQLdb
 
 import re, sys
@@ -115,4 +116,41 @@ class CommentSenders(Metrics):
     def __get_sql__(self, evolutionary):
         return self.db.get_senders(self.filters.period, self.filters.startdate, self.filters.enddate,
                                  self.filters.type_analysis, evolutionary, "comments")
+
+
+class Participants(Metrics):
+    """All participants included in this metric, those commenting, asking and answering"""
+
+    id = "participants"
+    name = "Participants"
+    desc = "All participants included in this metric, those commenting, asking and answering"
+    data_source = QAForums
+
+    def __get_sql__(self, evolutionary):
+        fields = " count(distinct(t.identifier)) as participants"
+        tables = """
+                  (
+                     (select p.identifier as identifier, 
+                             q.added_at as date 
+                      from questions q, 
+                           people p 
+                      where q.author_identifier=p.identifier) 
+                     union 
+                     (select p.identifier as identifier, 
+                             a.submitted_on as date  
+                      from answers a, 
+                           people p 
+                      where a.user_identifier=p.identifier) 
+                     union 
+                     (select p.identifier as identifier, 
+                             c.submitted_on as date 
+                      from comments c, 
+                           people p 
+                      where c.user_identifier=p.identifier)) t
+                 """
+        filters = ""
+        query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
+                                   self.filters.enddate, " t.date ", fields,
+                                   tables, filters, evolutionary)
+        return query
 
