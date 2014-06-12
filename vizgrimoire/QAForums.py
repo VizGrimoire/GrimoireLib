@@ -164,7 +164,21 @@ class QAForums(DataSource):
         top_senders['asenders.last month'] = \
             QAForums.get_top_senders(31, startdate, enddate, identities_db, bots, npeople, "answers")
 
-        return(top_senders)
+	# Top for messages: Using new studies approach. To be refactored.
+	from top_qaforums import TopQAForums
+        from report import Report
+        db_identities= Report.get_config()['generic']['db_identities']
+        dbuser = Report.get_config()['generic']['db_user']
+        dbpass = Report.get_config()['generic']['db_password']
+        dbname = Report.get_config()['generic']['db_qaforums']
+	dbquery = QAForums.get_query_builder()
+        dbcon = dbquery(dbuser, dbpass, dbname, db_identities)
+        metric_filters = MetricFilters(None, startdate, enddate, [])
+        top = TopQAForums(dbcon, metric_filters)
+        data = top.result()
+        top = dict(top_senders.items() + data.items())				
+
+        return(top)
 
     @staticmethod
     def create_top_report(startdate, enddate, destdir, npeople, i_db):
@@ -245,12 +259,12 @@ class QAForums(DataSource):
 
     @staticmethod
     def get_metrics_core_agg():
-        return ['qsent','asent','csent','qsenders','asenders','csenders']
+        return ['qsent','asent','csent','qsenders','asenders','csenders','participants']
 
     @staticmethod
     def get_metrics_core_ts():
-        return ['qsent','asent','csent','qsenders','asenders','csenders']
+        return ['qsent','asent','csent','qsenders','asenders','csenders','participants']
 
     @staticmethod
     def get_metrics_core_trends():
-        return ['qsent','asent','csent','qsenders','asenders','csenders']
+        return ['qsent','asent','csent','qsenders','asenders','csenders','participants']
