@@ -85,7 +85,7 @@ def create_report_people(startdate, enddate, destdir, npeople, identities_db, bo
         ds().create_people_report(period, startdate, enddate, destdir, npeople, identities_db)
 
 # TODO: refactor to generalize it
-def create_top_people_report(startdate, enddate, destdir, idb, bots):
+def get_top_people (startdate, enddate, destdir, idb, bots):
     """Top people for all data sources."""
     import GrimoireSQL, SCR, MLS, ITS, IRC, Mediawiki
     npeople = "10000" # max limit, all people included
@@ -128,8 +128,13 @@ def create_top_people_report(startdate, enddate, destdir, idb, bots):
 
     for id in all_top:
         if len(all_top[id])>=min_data_sources: all_top_min_ds[id] = all_top[id]
+    return all_top_min_ds
 
+def create_top_people_report(startdate, enddate, destdir, idb, bots):
+    """Top people for all data sources."""
+    all_top_min_ds = get_top_people (startdate, enddate, destdir, idb, bots)
     createJSON(all_top_min_ds, opts.destdir+"/all_top.json")
+
 
 def create_reports_r(enddate, destdir):
     from rpy2.robjects.packages import importr
@@ -146,7 +151,7 @@ def create_reports_r(enddate, destdir):
         logging.info("Creating R reports for " + ds.get_name())
         ds.create_r_reports(vizr, enddate, destdir)
 
-def create_people_identifiers(startdate, enddate, destdir):
+def create_people_identifiers(startdate, enddate, destdir, idb, bots):
     logging.info("Generating people identifiers")
 
     from SCM import GetPeopleListSCM
@@ -169,6 +174,15 @@ def create_people_identifiers(startdate, enddate, destdir):
     people = people[0:limit]
 
     for upeople_id in people:
+        people_data[upeople_id] = People.GetPersonIdentifiers(upeople_id)
+
+    all_top_min_ds = get_top_people(startdate, enddate, idb, bots)
+    print(all_top_min_ds)
+
+    db = automator['generic']['db_cvsanaly']
+    GrimoireSQL.SetDBChannel (database=db, user=opts.dbuser, password=opts.dbpassword)
+
+    for upeople_id in all_top_min_ds:
         people_data[upeople_id] = People.GetPersonIdentifiers(upeople_id)
 
     createJSON(people_data, destdir+"/people.json")
@@ -261,7 +275,7 @@ if __name__ == '__main__':
         if (automator['r']['reports'].find('people')>-1):
             create_report_people(startdate, enddate, opts.destdir, opts.npeople, identities_db, bots)
         create_reports_r(end_date, opts.destdir)
-        create_people_identifiers(startdate, enddate, opts.destdir)
+        create_people_identifiers(startdate, enddate, opts.destdir, identities_db, bots)
 
     create_reports_filters(period, startdate, enddate, opts.destdir, opts.npeople, identities_db, bots)
     create_top_people_report(startdate, enddate, opts.destdir, identities_db, bots)
