@@ -110,7 +110,7 @@ class SCR(DataSource):
             metrics_not_filters =  SCR.get_metrics_not_filters()
             metrics_on = list(set(metrics_on) - set(metrics_not_filters))
             if filter_.get_name() == "repository": 
-                metrics_on += ['review_time','submitted']
+                metrics_on += ['review_time','submitted','ReviewsWaitingForReviewer', 'ReviewsWaitingForSubmitter']
                 metrics_on += ['review_time_pending_update_ReviewsWaitingForReviewer_days_median']
         # END SCR specific
 
@@ -142,6 +142,7 @@ class SCR(DataSource):
             for i in [7,30,365]:
                 for item in all_metrics:
                     if item.id not in metrics_trends: continue
+                    item.filters = mfilter
                     period_data = item.get_agg_diff_days(enddate, i)
                     data = dict(data.items() +  period_data.items())
 
