@@ -25,6 +25,8 @@ import logging
 
 import os
 
+import datetime
+
 from GrimoireSQL import GetSQLGlobal, GetSQLPeriod, ExecuteQuery, BuildQuery
 
 from GrimoireUtils import GetPercentageDiff, GetDates, getPeriod, createJSON, completePeriodIds
@@ -177,12 +179,26 @@ class QAForums(DataSource):
         dbname = Report.get_config()['generic']['db_qaforums']
         dbquery = QAForums.get_query_builder()
         dbcon = dbquery(dbuser, dbpass, dbname, db_identities)
+
         metric_filters = MetricFilters(None, startdate, enddate, [])
         top = TopQAForums(dbcon, metric_filters)
-        data = top.result()
-        top = dict(top_senders.items() + data.items())				
+        top_senders['participants.'] = top.result()
 
-        return(top)
+        finaldate = enddate.replace("'", "")
+        finaldate = datetime.datetime.strptime(finaldate, "%Y-%m-%d")
+        initdate = finaldate - datetime.timedelta(days=30)
+        startdate = "'" + str(initdate) + "'"
+        enddate = "'" + str(finaldate)+ "'"
+        metric_filters = MetricFilters(None, startdate, enddate, [])
+        top = TopQAForums(dbcon, metric_filters)
+        top_senders['participants.last month'] = top.result()
+      
+        initdate = finaldate - datetime.timedelta(days=365)
+        startdate = "'" + str(initdate) + "'"
+        top = TopQAForums(dbcon, metric_filters)
+        top_senders['participants.last year'] = top.result()
+        
+        return top_senders
 
     @staticmethod
     def create_top_report(startdate, enddate, destdir, npeople, i_db):
