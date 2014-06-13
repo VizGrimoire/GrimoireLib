@@ -175,7 +175,7 @@ class QAForums(DataSource):
         dbuser = Report.get_config()['generic']['db_user']
         dbpass = Report.get_config()['generic']['db_password']
         dbname = Report.get_config()['generic']['db_qaforums']
-	dbquery = QAForums.get_query_builder()
+        dbquery = QAForums.get_query_builder()
         dbcon = dbquery(dbuser, dbpass, dbname, db_identities)
         metric_filters = MetricFilters(None, startdate, enddate, [])
         top = TopQAForums(dbcon, metric_filters)
