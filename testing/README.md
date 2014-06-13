@@ -40,4 +40,4 @@ Install R environment in root dir:
     R CMD INSTALL -l r-lib vizgrimoire
 
 Then execute in testing dir:
-    LANG= R_LIBS=../r-lib PYTHONPATH=../vizgrimoire:../vizgrimoire/analysis/:../vizgrimoire/metrics/:../vizGrimoireJS/ ./test_data_source_api.py -s 2010-01-01 -e 2014-03-22 -c automator.conf -m ../vizgrimoire/metrics
+    LANG= R_LIBS=../r-lib PYTHONPATH=../grimoirelib_alch/:../vizgrimoire:../vizgrimoire/analysis/:../vizgrimoire/metrics/:../vizGrimoireJS/ ./test_data_source_api.py -s 2010-01-01 -e 2014-03-22 -c automator.conf -m ../vizgrimoire/metrics
