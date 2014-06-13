@@ -234,9 +234,6 @@ if __name__ == '__main__':
 
     bots = []
 
-    create_reports_studies(period, startdate, enddate, opts.destdir)
-    sys.exit()
-
     if not opts.filter:
         logging.info("Creating global evolution metrics...")
         evol = create_evol_report(startdate, enddate, opts.destdir, identities_db, bots)
