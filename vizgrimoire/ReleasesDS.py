@@ -59,7 +59,7 @@ class ReleasesDS(DataSource):
         metrics =  DataSource.get_metrics_data(ReleasesDS, period, startdate, enddate, i_db, filter_, True)
         if filter_ is not None: studies = {}
         else:
-            studies =  DataSource.get_metrics_data(ReleasesDS, period, startdate, enddate, True)
+            studies =  DataSource.get_studies_data(ReleasesDS, period, startdate, enddate, True)
         return dict(metrics.items()+studies.items())
  
     @staticmethod
