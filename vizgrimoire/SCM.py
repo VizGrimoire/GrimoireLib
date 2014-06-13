@@ -69,14 +69,11 @@ class SCM(DataSource):
 
     @staticmethod
     def get_evolutionary_data (period, startdate, enddate, identities_db, filter_ = None):
+        type_analysis = None
         if filter_ is not None:
             type_analysis = [filter_.get_name(), "'"+filter_.get_item()+"'"]
-            evol_data = GetSCMEvolutionaryData(period, startdate, enddate, 
-                                               identities_db, type_analysis)
-
-        else:
-            data = GetSCMEvolutionaryData(period, startdate, enddate, identities_db, None)
-            evol_data = completePeriodIds(data, period, startdate, enddate)
+        evol_data = GetSCMEvolutionaryData(period, startdate, enddate, 
+                                           identities_db, type_analysis)
 
         return evol_data
 
