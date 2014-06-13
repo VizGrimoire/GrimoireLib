@@ -34,7 +34,6 @@ from data_source import DataSource
 from filter import Filter
 from metrics_filter import MetricFilters
 from query_builder import DSQuery
-from onion_model import CommunityStructure
 
 class SCM(DataSource):
     _metrics_set = []
@@ -96,21 +95,6 @@ class SCM(DataSource):
 
             static_url = SCM.get_url()
             agg = dict(agg.items() + static_url.items())
-
-            # Init analysis section
-            # print "Analysis section"
-            from report import Report
-            db_identities= Report.get_config()['generic']['db_identities']
-            dbuser = Report.get_config()['generic']['db_user']
-            dbpass = Report.get_config()['generic']['db_password']
-            dbname = Report.get_config()['generic']['db_cvsanaly']
-            dbcon = DSQuery(dbuser, dbpass, dbname, db_identities)
-            metric_filters = MetricFilters(period, startdate, enddate, [])
-            onion = CommunityStructure(dbcon, metric_filters)
-            data = onion.result()
-            # print data
-            #data = GetCodeCommunityStructure(period, startdate, enddate, identities_db)
-            agg = dict(agg.items() + data.items())
         else:
             type_analysis = [filter_.get_name(), "'"+filter_.get_item()+"'"]
 
