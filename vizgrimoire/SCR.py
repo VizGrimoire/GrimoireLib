@@ -103,6 +103,11 @@ class SCR(DataSource):
             for r in metrics_reports:
                 if r in reports_on: metrics_on += [r]
 
+        if DS.get_name()+"_start_date" in Report.get_config()['r']:
+            startdate = "'"+Report.get_config()['r'][DS.get_name()+"_start_date"]+"'"
+        if DS.get_name()+"_end_date" in Report.get_config()['r']:
+            enddate = "'"+Report.get_config()['r'][DS.get_name()+"_end_date"]+"'"
+
         mfilter = MetricFilters(period, startdate, enddate, type_analysis)
         all_metrics = SCR.get_metrics_set(SCR)
 

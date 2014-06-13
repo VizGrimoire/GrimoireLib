@@ -249,6 +249,10 @@ class DataSource(object):
 
         studies = Report.get_studies()
 
+        if ds.get_name()+"_start_date" in Report.get_config()['r']:
+            startdate = "'"+Report.get_config()['r'][ds.get_name()+"_start_date"]+"'"
+        if ds.get_name()+"_end_date" in Report.get_config()['r']:
+            enddate = "'"+Report.get_config()['r'][ds.get_name()+"_end_date"]+"'"
         metric_filters = MetricFilters(period, startdate, enddate, [])
 
         ds_dbname = ds.get_db_name()
@@ -294,6 +298,10 @@ class DataSource(object):
         if filter_ is not None:
             type_analysis = [filter_.get_name(), filter_.get_item()]
 
+        if DS.get_name()+"_startdate" in Report.get_config()['r']:
+            startdate = Report.get_config()['r'][DS.get_name()+"_startdate"]
+        if DS.get_name()+"_enddate" in Report.get_config()['r']:
+            enddate = Report.get_config()['r'][DS.get_name()+"_enddate"]
         mfilter = MetricFilters(period, startdate, enddate, type_analysis)
         metrics_reports = DS.get_metrics_core_reports()
         all_metrics = DS.get_metrics_set(DS)
