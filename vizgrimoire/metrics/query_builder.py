@@ -674,6 +674,8 @@ class SCRQuery(DSQuery):
         elif type_ == "abandoned": filters = " i.status = 'ABANDONED' "
         filters += self.GetSQLReportWhere(type_analysis, identities_db)
 
+        if (self.GetIssuesFiltered() != ""): filters += " AND " + self.GetIssuesFiltered()
+
         q = self.BuildQuery (period, startdate, enddate, "i.submitted_on", fields, tables, filters, evolutionary)
 
         return q
@@ -687,6 +689,8 @@ class SCRQuery(DSQuery):
         filters += self.GetSQLReportWhere(type_analysis, identities_db)
 
         q = self.BuildQuery (period, startdate, enddate, "changed_on", fields, tables, filters, evolutionary)
+
+        if (self.GetChangesFiltered() != ""): filters += " AND " + self.GetChangesFiltered()
 
         return q
 
