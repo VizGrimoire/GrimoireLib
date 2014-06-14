@@ -190,6 +190,10 @@ class Report(object):
         return Report._all_studies
 
     @staticmethod
+    def set_studies(studies):
+        Report._all_studies = studies
+
+    @staticmethod
     def get_study_by_id(sid):
         found = None
         for study in Report.get_studies():
