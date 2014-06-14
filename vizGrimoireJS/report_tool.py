@@ -264,7 +264,6 @@ if __name__ == '__main__':
         create_reports_filters(period, startdate, enddate, opts.destdir, opts.npeople, identities_db, bots)
     if not opts.filter:
         create_reports_studies(period, startdate, enddate, opts.destdir)
-    create_top_people_report(startdate, enddate, opts.destdir, identities_db, bots)
     create_people_identifiers(startdate, enddate, opts.destdir, identities_db, bots)
 
 
