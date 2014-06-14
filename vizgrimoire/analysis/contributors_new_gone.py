@@ -265,6 +265,7 @@ class ContributorsNewGone(Analyses):
         self.result(destdir)
 
     def result(self, destdir):
+        return # not working yet outside Wikimedia
         period = self.filters.period
         startdate = self.filters.startdate
         enddate = self.filters.enddate

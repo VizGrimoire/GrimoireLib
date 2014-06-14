@@ -43,6 +43,7 @@ class QuartersData(Analyses):
         self.result(destdir)
 
     def result(self, destdir):
+        return {} # Not working yet outside Wikimedia
         period = self.filters.period
         startdate = self.filters.startdate
         enddate = self.filters.enddate
