@@ -252,6 +252,18 @@ def set_metric(metric_name, ds_name):
         logging.error(metric_name + " metric not available in " + DS.get_name())
         sys.exit(1)
 
+def set_study(study_id):
+    study_ok = False
+
+    studies = Report.get_studies()
+    for study in studies:
+        if study.id == study_id:
+            study_ok = True
+            Report.set_studies([study])
+    if not study_ok:
+        logging.error(study_id + " study not available ")
+        sys.exit(1)
+
 if __name__ == '__main__':
 
     logging.basicConfig(level=logging.INFO,format='%(asctime)s %(message)s')
@@ -288,11 +300,13 @@ if __name__ == '__main__':
     if (opts.filter):
         set_filter(opts.filter)
     if (opts.metric):
-        set_metric (opts.metric, opts.data_source)
+        set_metric(opts.metric, opts.data_source)
+    if (opts.study):
+        set_study(opts.study)
 
     bots = []
 
-    if not opts.filter:
+    if not opts.filter and not opts.study:
         logging.info("Creating global evolution metrics...")
         evol = create_evol_report(startdate, enddate, opts.destdir, identities_db, bots)
         logging.info("Creating global aggregated metrics...")
@@ -304,9 +318,10 @@ if __name__ == '__main__':
         create_reports_r(end_date, opts.destdir)
         create_people_identifiers(startdate, enddate, opts.destdir, identities_db, bots)
 
-    if not opts.no_filters:
+    if not opts.study and not opts.no_filters:
         create_reports_filters(period, startdate, enddate, opts.destdir, opts.npeople, identities_db, bots)
+    if not opts.filter:
+        create_reports_studies(period, startdate, enddate, opts.destdir)
     create_top_people_report(startdate, enddate, opts.destdir, identities_db, bots)
-    create_reports_studies(period, startdate, enddate, opts.destdir)
 
     logging.info("Report data source analysis OK")

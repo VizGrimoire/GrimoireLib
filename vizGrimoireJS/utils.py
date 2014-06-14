@@ -87,6 +87,10 @@ def read_options():
                       action="store",
                       dest="data_source",
                       help="data source to be generated")
+    parser.add_option("--study",
+                      action="store",
+                      dest="study",
+                      help="study to be generated")
     parser.add_option("--filter",
                       action="store",
                       dest="filter",
