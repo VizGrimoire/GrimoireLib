@@ -114,8 +114,11 @@ class SCR(DataSource):
         # SCR specific: remove some metrics from filters
         if filter_ is not None:
             metrics_not_filters =  SCR.get_metrics_not_filters()
-            metrics_on = list(set(metrics_on) - set(metrics_not_filters))
-            if filter_.get_name() == "repository": metrics_on += ['review_time','submitted']
+            metrics_on_filters = list(set(metrics_on) - set(metrics_not_filters))
+            if filter_.get_name() == "repository": 
+                if 'review_time' in metrics_on: metrics_on_filters+= ['review_time']
+                if 'submitted' in metrics_on: metrics_on_filters+= ['submitted']
+            metrics_on = metrics_on_filters
         # END SCR specific
 
         for item in all_metrics:
@@ -247,8 +250,12 @@ class SCR(DataSource):
             fn = os.path.join(destdir, filter_item.get_static_filename(SCR()))
             createJSON(agg, fn)
             if (filter_name == "repository"):
-                items_list["submitted"].append(agg["submitted"])
-                items_list["review_time_days_median"].append(agg['review_time_days_median'])
+                if 'submitted' in agg: 
+                    items_list["submitted"].append(agg["submitted"])
+                else: items_list["submitted"].append("NA")
+                if 'review_time_days_median' in agg: 
+                    items_list["review_time_days_median"].append(agg['review_time_days_median'])
+                else: items_list["submitted"].append("NA")
 
         fn = os.path.join(destdir, filter_.get_filename(SCR()))
         createJSON(items_list, fn)
