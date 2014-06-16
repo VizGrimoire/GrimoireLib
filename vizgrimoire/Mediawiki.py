@@ -178,7 +178,7 @@ def GetDataMediaWiki (period, startdate, enddate, i_db, type_analysis, evol = Fa
     metrics =  DataSource.get_metrics_data(Mediawiki, period, startdate, enddate, i_db, filter_, evol)
     if filter_ is not None: studies = {}
     else:
-        studies =  DataSource.get_metrics_data(Mediawiki, period, startdate, enddate, evol)
+        studies =  DataSource.get_studies_data(Mediawiki, period, startdate, enddate, evol)
     return dict(metrics.items()+studies.items())
 
 def GetTopAuthorsMediaWiki (days, startdate, enddate, identities_db, bots, limit) :
