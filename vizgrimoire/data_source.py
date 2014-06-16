@@ -130,6 +130,18 @@ class DataSource(object):
         raise NotImplementedError
 
     @staticmethod
+    def get_filter_bots(filter_):
+        from report import Report
+        bots = []
+
+        if filter_.get_name_plural()+'_out' in Report.get_config()['r']:
+            fbots = Report.get_config()['r'][filter_.get_name_plural()+'_out']
+            bots = fbots.split(",")
+            logging.info("BOTS for " + filter_.get_name_plural())
+            logging.info(bots)
+        return bots
+
+    @staticmethod
     def get_filter_summary(filter_, period, startdate, enddate, identities_db, limit):
         """Get items with a summary for the data source available for the filter"""
         raise NotImplementedError
@@ -263,7 +275,6 @@ class DataSource(object):
         if not evol: evol_txt = "agg"
         logging.info("Creating studies for " + ds.get_name() + " " + evol_txt)
         for study in studies:
-            logging.info(study.id)
             try:
                 obj = study(dbcon, metric_filters)
                 if evol:
@@ -272,7 +283,8 @@ class DataSource(object):
                     res = obj.get_agg(ds)
                 data = dict(res.items() + data.items())
             except TypeError:
-                logging.info(study.id + " does no support standard API. Not used.")
+                # logging.info(study.id + " does no support standard API. Not used.")
+                pass
 
         return data
 

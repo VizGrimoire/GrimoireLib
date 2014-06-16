@@ -30,7 +30,7 @@ from report import Report
 
 from utils import read_options
 
-def get_evol_report(startdate, enddate, identities_db, bots):
+def get_evol_report(startdate, enddate, identities_db):
     all_ds = {}
 
     for ds in Report.get_data_sources():
@@ -38,12 +38,12 @@ def get_evol_report(startdate, enddate, identities_db, bots):
         all_ds[ds.get_name()] = ds.get_evolutionary_data (period, startdate, enddate, identities_db)
     return all_ds
 
-def create_evol_report(startdate, enddate, destdir, identities_db, bots):
+def create_evol_report(startdate, enddate, destdir, identities_db):
     for ds in Report.get_data_sources():
         Report.connect_ds(ds)
         ds.create_evolutionary_report (period, startdate, enddate, destdir, identities_db)
 
-def get_agg_report(startdate, enddate, identities_db, bots):
+def get_agg_report(startdate, enddate, identities_db):
     all_ds = {}
 
     for ds in Report.get_data_sources():
@@ -51,12 +51,12 @@ def get_agg_report(startdate, enddate, identities_db, bots):
         all_ds[ds.get_name()] = ds.get_agg_data (period, startdate, enddate, identities_db)
     return all_ds
 
-def create_agg_report(startdate, enddate, destdir, identities_db, bots):
+def create_agg_report(startdate, enddate, destdir, identities_db):
     for ds in Report.get_data_sources():
         Report.connect_ds(ds)
         ds.create_agg_report (period, startdate, enddate, destdir, identities_db)
 
-def get_top_report(startdate, enddate, identities_db, bots, npeople):
+def get_top_report(startdate, enddate, identities_db, npeople):
     all_ds_top = {}
 
     for ds in Report.get_data_sources():
@@ -65,20 +65,21 @@ def get_top_report(startdate, enddate, identities_db, bots, npeople):
         all_ds_top[ds.get_name()] = top 
     return all_ds_top
 
-def create_top_report(startdate, enddate, destdir, npeople, identities_db, bots):
+def create_top_report(startdate, enddate, destdir, npeople, identities_db):
     for ds in Report.get_data_sources():
         Report.connect_ds(ds)
         ds.create_top_report (startdate, enddate, destdir, npeople, identities_db)
 
-def create_reports_filters(period, startdate, enddate, destdir, npeople, identities_db, bots):
+def create_reports_filters(period, startdate, enddate, destdir, npeople, identities_db):
     for ds in Report.get_data_sources():
         Report.connect_ds(ds)
         logging.info("Creating filter reports for " + ds.get_name())
         for filter_ in Report.get_filters():
             logging.info("-> " + filter_.get_name())
+            bots = ds.get_filter_bots(filter_)
             ds.create_filter_report(filter_, period, startdate, enddate, destdir, npeople, identities_db, bots)
 
-def create_report_people(startdate, enddate, destdir, npeople, identities_db, bots):
+def create_report_people(startdate, enddate, destdir, npeople, identities_db):
     for ds in Report.get_data_sources():
         Report.connect_ds(ds)
         logging.info("Creating people for " + ds.get_name())
@@ -142,8 +143,9 @@ def create_reports_studies(period, startdate, enddate, destdir):
         dbname = Report.get_config()['generic'][ds_dbname]
         dsquery = ds.get_query_builder()
         dbcon = dsquery(dbuser, dbpass, dbname, db_identities)
+        logging.info("Studies active " + str(studies))
         for study in studies:
-            logging.info("Creating report for " + study.id + " for " + ds.get_name())
+            # logging.info("Creating report for " + study.id + " for " + ds.get_name())
             try:
                 obj = study(dbcon, metric_filters)
                 obj.create_report(ds, destdir)
@@ -246,22 +248,20 @@ if __name__ == '__main__':
     if (opts.study):
         set_study(opts.study)
 
-    bots = []
-
     if not opts.filter and not opts.study:
         logging.info("Creating global evolution metrics...")
-        evol = create_evol_report(startdate, enddate, opts.destdir, identities_db, bots)
+        evol = create_evol_report(startdate, enddate, opts.destdir, identities_db)
         logging.info("Creating global aggregated metrics...")
-        agg = create_agg_report(startdate, enddate, opts.destdir, identities_db, bots)
+        agg = create_agg_report(startdate, enddate, opts.destdir, identities_db)
         logging.info("Creating global top metrics...")
-        top = create_top_report(startdate, enddate, opts.destdir, opts.npeople, identities_db, bots)
+        top = create_top_report(startdate, enddate, opts.destdir, opts.npeople, identities_db)
         if (automator['r']['reports'].find('people')>-1):
-            create_report_people(startdate, enddate, opts.destdir, opts.npeople, identities_db, bots)
+            create_report_people(startdate, enddate, opts.destdir, opts.npeople, identities_db)
         create_reports_r(end_date, opts.destdir)
         create_people_identifiers(startdate, enddate, opts.destdir)
 
     if not opts.study and not opts.no_filters:
-        create_reports_filters(period, startdate, enddate, opts.destdir, opts.npeople, identities_db, bots)
+        create_reports_filters(period, startdate, enddate, opts.destdir, opts.npeople, identities_db)
     if not opts.filter:
         create_reports_studies(period, startdate, enddate, opts.destdir)
     create_people_identifiers(startdate, enddate, opts.destdir)
