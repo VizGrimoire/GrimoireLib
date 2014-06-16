@@ -55,7 +55,8 @@ class CommunityStructure(Analyses):
             data = self.result()
         return data
 
-    def result(self):
+    def result(self, data_source):
+        if data_source.get_name() != "scm": return
 
         # Init of structure to be returned
         community = {}
