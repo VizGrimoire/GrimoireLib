@@ -130,9 +130,9 @@ class Report(object):
                                if inspect.isclass(c) and issubclass(c, Analyses)]
             for study_class in studies_classes:
                 if study_class.id is None or study_class.id not in studies_on: continue
-                logging.info("Adding new study: " + study_class.id)
+                # logging.info("Adding new study: " + study_class.id)
                 Report._all_studies.append(study_class)
-        logging.info("Total studies: " + str(len(Report._all_studies)))
+        #  logging.info("Total studies: " + str(len(Report._all_studies)))
 
 
     @staticmethod
