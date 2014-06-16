@@ -190,7 +190,6 @@ class DataSourceTest(unittest.TestCase):
 
         automator = read_main_conf(opts.config_file)
         identities_db = automator['generic']['db_identities']
-        bots = []
 
         # Test for all filters
         for ds in Report.get_data_sources():
@@ -198,6 +197,7 @@ class DataSourceTest(unittest.TestCase):
             for filter_ in Report.get_filters():
                 filter_name = filter_.get_name()
                 filter_name_short = filter_.get_name_short()
+                bots = ds.get_filter_bots(filter_)
                 items = ds.get_filter_items(filter_, startdate, enddate, identities_db, bots)
                 if items is None: continue
                 if (isinstance(items, dict)): items = items['name']
@@ -235,11 +235,11 @@ class DataSourceTest(unittest.TestCase):
 
         automator = read_main_conf(opts.config_file)
         identities_db = automator['generic']['db_identities']
-        bots = []
 
         for ds in Report.get_data_sources():
             Report.connect_ds(ds)
             for filter_ in Report.get_filters():
+                bots = ds.get_filter_bots(filter_)
                 items = ds.get_filter_items(filter_, startdate, enddate, identities_db, bots)
                 if items is None: continue
                 if (isinstance(items, dict)): items = items['name']
