@@ -39,7 +39,9 @@ class TopQAForums(Analyses):
     def __get_sql__(self):
    
         query = """
-             select p.username as name, count(*) as messages_sent from 
+             select pup.upeople_id as id, 
+                    p.username as name, 
+                    count(*) as messages_sent from 
               (
                  (select p.identifier as identifier, 
                          q.added_at as date 
@@ -58,13 +60,14 @@ class TopQAForums(Analyses):
                   from comments c, 
                        people p 
                   where c.user_identifier=p.identifier)) t,
-              people p
+              people p,
+              people_upeople pup
              where p.identifier = t.identifier and
+                   p.id = pup.people_id and 
                    t.date >= %s and
                    t.date < %s
              group by p.username order by count(*) desc limit %s
              """ % (self.filters.startdate, self.filters.enddate, self.filters.npeople)
-
         return query
 
     def result(self):
