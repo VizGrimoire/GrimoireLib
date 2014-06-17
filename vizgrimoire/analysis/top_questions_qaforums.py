@@ -76,7 +76,7 @@ class TopQuestions(object):
                        view_count as visits 
                 from questions 
                 where questions.added_at >= %s and
-                      q.added_at < %s
+                      questions.added_at < %s
                 order by view_count desc limit %s
                 """ % (self.filters.startdate, self.filters.enddate, self.filters.npeople)
         return self.db.ExecuteQuery(query)
@@ -118,6 +118,15 @@ class TopQuestions(object):
                 group by q.question_identifier
                 order by people desc limit %s
                 """ % (self.filters.startdate, self.filters.enddate, self.filters.npeople)
+        return self.db.ExecuteQuery(query)
 
 
+# Examples of use
+if __name__ == '__main__':
+    filters = MetricFilters("week", "'2010-01-01'", "'2013-06-01'", ["company", "'Red Hat'"])
+    dbcon = DSQuery("root", "", "sibyl_openstack_20120412_updated", "sibyl_openstack_20120412_updated",)
+    questions = TopQuestions(dbcon, filters)
+    print questions.top_commented()
+    print questions.top_visited()
+    print questions.top_crowded()
 
