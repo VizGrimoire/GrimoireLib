@@ -48,15 +48,15 @@ class CommunityStructure(Analyses):
     name = "Onion Model"
     desc = "Community structure of developers: core, regular and occasional"
 
-    def get_agg (self, data_source):
+    def get_agg (self, data_source = None):
         """ Returns aggregated data for a data source. """
         data = {}
-        if data_source.get_name() == "scm":
-            data = self.result()
+        if data_source is None or data_source.get_name() == "scm":
+            data = self.result(data_source)
         return data
 
-    def result(self, data_source):
-        if data_source.get_name() != "scm": return
+    def result(self, data_source = None):
+        if data_source is not None and data_source.get_name() != "scm": return
 
         # Init of structure to be returned
         community = {}
