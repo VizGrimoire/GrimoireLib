@@ -321,22 +321,18 @@ class TestSCMQuery (unittest.TestCase):
             .filter_period(start=datetime(2013,12,1),
                            end=datetime(2014,2,1)) \
                            .group_by_person()
-        print res
-
         res = self.session.query().select_nscmlog(["commits",]) \
             .select_personsdata_uid("authors") \
             .select_commitsperiod() \
             .group_by_person() \
             .order_by("nocommits desc") \
             .limit(10)
-        print res
         res = self.session.query().select_nscmlog(["commits",]) \
             .select_personsdata_uid("authors") \
             .select_commitsperiod() \
             .group_by_person() \
             .order_by("nocommits desc") \
             .limit(10).all()
-        print res
 
 if __name__ == "__main__":
     unittest.main()
