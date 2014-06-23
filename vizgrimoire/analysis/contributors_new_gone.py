@@ -264,7 +264,10 @@ class ContributorsNewGone(Analyses):
         if data_source != SCR: return
         self.result(destdir)
 
-    def result(self, destdir):
+    def result(self, data_source, destdir):
+        from SCR import SCR
+        if data_source != SCR: return
+
         period = self.filters.period
         startdate = self.filters.startdate
         enddate = self.filters.enddate
@@ -279,7 +282,7 @@ class ContributorsNewGone(Analyses):
         code_contrib["submitters"] = self.GetGoneSubmitters()
         code_contrib["mergers"] = self.GetGoneMergers()
         code_contrib["abandoners"] = self.GetGoneAbandoners()
-        createJSON(code_contrib, destdir+"/scr-code-contrib-gone.json")
+        createJSON(code_cdestdir+"/scr-code-contrib-gone.json")
 
 
         data = self.GetNewSubmittersActivity()
@@ -320,3 +323,10 @@ class ContributorsNewGone(Analyses):
         evol['num_people_1_5'] = completePeriodIds(self.db.GetPeopleIntake(1,5),period, startdate, enddate)['people']
         evol['num_people_5_10'] = completePeriodIds(self.db.GetPeopleIntake(5,10), period, startdate, enddate)['people']
         createJSON(evol, destdir+"/scr-people-intake-evolutionary.json")
+
+    def get_report_files(self, destdir):
+        return ["scr-people-intake-evolutionary.json",
+                "gone-people-activity-scr-evolutionary.json",
+                "new-people-activity-scr-evolutionary.json",
+                "scr-code-contrib-gone.json",
+                "scr-code-contrib-new.json"]

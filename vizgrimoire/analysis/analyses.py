@@ -99,3 +99,7 @@ class Analyses(object):
         """
 
         raise NotImplementedError
+
+    def get_report_files(self, destdir):
+        """ Returns a list with the files created for the report. """
+        return []

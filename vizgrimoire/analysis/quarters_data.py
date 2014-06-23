@@ -42,8 +42,10 @@ class QuartersData(Analyses):
         if data_source != SCR: return
         self.result(destdir)
 
-    def result(self, destdir):
-        return {} # Not working yet outside Wikimedia
+    def result(self, data_source, destdir):
+        from SCR import SCR
+        if data_source != SCR: return
+
         period = self.filters.period
         startdate = self.filters.startdate
         enddate = self.filters.enddate
@@ -77,3 +79,9 @@ class QuartersData(Analyses):
             start = start + relativedelta(months=3)
         createJSON(companies_quarters, destdir+"/scr-companies-quarters.json")
         createJSON(people_quarters, destdir+"/scr-people-quarters.json")
+
+    def get_report_files(self, destdir):
+        return ["scr-people-all.json",
+                "scr-companies-all.json",
+                "scr-companies-quarters.json",
+                "scr-people-quarters.json"]
