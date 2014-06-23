@@ -180,7 +180,7 @@ class QAForums(DataSource):
         dbquery = QAForums.get_query_builder()
         dbcon = dbquery(dbuser, dbpass, dbname, db_identities)
 
-        metric_filters = MetricFilters(None, startdate, enddate, [])
+        metric_filters = MetricFilters(None, startdate, enddate, [], npeople)
         top = TopQAForums(dbcon, metric_filters)
         top_senders['participants.'] = top.result()
 
@@ -189,12 +189,13 @@ class QAForums(DataSource):
         initdate = finaldate - datetime.timedelta(days=30)
         startdate = "'" + str(initdate) + "'"
         enddate = "'" + str(finaldate)+ "'"
-        metric_filters = MetricFilters(None, startdate, enddate, [])
+        metric_filters = MetricFilters(None, startdate, enddate, [], npeople)
         top = TopQAForums(dbcon, metric_filters)
         top_senders['participants.last month'] = top.result()
       
         initdate = finaldate - datetime.timedelta(days=365)
         startdate = "'" + str(initdate) + "'"
+        metric_filters = MetricFilters(None, startdate, enddate, [], npeople)
         top = TopQAForums(dbcon, metric_filters)
         top_senders['participants.last year'] = top.result()
         
