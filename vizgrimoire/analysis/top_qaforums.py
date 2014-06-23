@@ -70,7 +70,7 @@ class TopQAForums(Analyses):
              """ % (self.filters.startdate, self.filters.enddate, self.filters.npeople)
         return query
 
-    def result(self):
+    def result(self, data_source = None):
         return self.db.ExecuteQuery(self.__get_sql__())
 
 

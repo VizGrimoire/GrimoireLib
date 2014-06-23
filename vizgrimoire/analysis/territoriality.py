@@ -90,7 +90,10 @@ class Territoriality(Analyses):
         print query
         return query
 
-    def result(self):
+    def result(self, data_source = None):
+        if data_source is not None and data_source.get_name() != "scm": return {}
+        if len(self.filters.type_analysis) == 0: return {}
+        if self.filters.type_analysis[0] != "repository": return {}
         return self.db.ExecuteQuery(self.__get_sql__())
 
 

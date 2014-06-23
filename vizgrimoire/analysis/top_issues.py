@@ -144,8 +144,10 @@ class TopIssues(Analyses):
 
 
 
-    def result(self):
+    def result(self, data_source = None):
         """ Returns a JSON to be included in top file """
+        from ITS import ITS
+        if data_source != ITS: return {}
 
         # Closed condition for MediaWiki
         top_close_condition_mediawiki = """

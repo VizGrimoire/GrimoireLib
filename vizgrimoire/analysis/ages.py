@@ -40,7 +40,7 @@ class Demography(Analyses):
         raise NotImplementedError
 
 
-    def result(self):
+    def result(self, data_source = None):
 
         # Prepare the SQLAlchemy database url
         database = 'mysql://' + self.db.user + ':' + \

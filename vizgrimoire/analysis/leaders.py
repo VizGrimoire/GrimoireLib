@@ -52,7 +52,7 @@ class SCMLeaders(Leaders):
     name = "Code Main Actors"
     desc = "Code main actors"
 
-    def __init__(self, dbcon, filters, typeof_leader, repository=None, length=365):
+    def __init__(self, dbcon, filters, typeof_leader = None, repository=None, length=365):
         # dbcon: connection to the database
         # filters: specific filters
         #          type_analysis does not make sense in this case 
@@ -160,7 +160,8 @@ class SCMLeaders(Leaders):
         return actors
 
             
-    def result(self): 
+    def result(self, data_source = None, destdir = None): 
+        if self.typeof_leader is None: return {}
         return self._top_actors()
 
 
