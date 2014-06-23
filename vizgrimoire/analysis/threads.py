@@ -155,7 +155,48 @@ class Threads(object):
         if self.crowded == None:
             # variable was not initialize
             pass
+       
+    def topCrowdedThread(self, numTop):
+        # Returns list ordered by the longest thread
+
+        top_threads = [] # [(message_id, number of different upeople_id), (...,...), ...]
+
+        for thread in self.threads.values():
+            # this loop counts number of different people
+            # in each of the threads and provides a 
+            # dictionary with root message_id as each of the keys
+            # and a list of upeople_id as the value.
+            # Sets were considered as an option, but it implies that
+            # we may find with a higher probability equal sets, what
+            # would provide incorrect sets to their correspondant message_id
+            # when ordering them (at least using this algorithm).
+            # So, not using sets, and manual order of the lists is done 
+            people = set([])
+            for message in thread:
+                query = """
+                        select pup.upeople_id as upeople_id
+                        from messages m,
+                             messages_people mp,
+                             people_upeople pup
+                        where m.message_ID = '%s' and
+                              m.message_ID = mp.message_id and 
+                              mp.email_address = pup.people_id
+                        """ % (message)
+                result = ExecuteQuery(query)
+                upeople_id = int(result["upeople_id"])       
+                people.add(upeople_id)
+            top_threads.append((message, len(people)))
+
+        sorted_threads = sorted(top_threads, key=lambda thread: thread[1], reverse = True)
         
+        top_threads_emails = []
+        for top in sorted_threads[:numTop]:
+            # Create a list of emails
+            message_id = top[0]
+            email = Email(message_id, self.i_db)
+            top_threads_emails.append((email, top[1]))
+        return top_threads_emails
+
 
     def longestThread (self):
         # Returns the longest thread
@@ -241,4 +282,9 @@ class Threads(object):
         # Each thread is identified by the message_id of the 
         # root message
         return len(self.threads[message_id])
+
+if __name__ == '__main__':
+    GrimoireSQL.SetDBChannel (database = "openstack_mls", user="root", password="")
+    main_topics = Threads("'2012-01-01'", "'2014-01-01'", "openstack_scm")
+    print main_topics.topCrowdedThread(10)
 
