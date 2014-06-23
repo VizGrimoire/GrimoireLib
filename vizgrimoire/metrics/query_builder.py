@@ -148,6 +148,9 @@ class DSQuery(object):
                 result[columns[i][0]] = value[i]
         return result
 
+    def ExecuteViewQuery(self, sql):
+        self.cursor.execute(sql)
+
 class SCMQuery(DSQuery):
     """ Specific query builders for source code management system data source """
 
@@ -557,6 +560,17 @@ class SCRQuery(DSQuery):
         #fields necessaries to match info among tables
         return (" and t.url ='"+ repository+ "' and t.id = i.tracker_id")
 
+    def GetTablesOwnUniqueIds (self, table=''):
+        tables = 'changes c, people_upeople pup'
+        if (table == "issues"): tables = 'issues i, people_upeople pup'
+        return (tables)
+
+
+    def GetFiltersOwnUniqueIds  (self, table=''):
+        filters = 'pup.people_id = c.changed_by'
+        if (table == "issues"): filters = 'pup.people_id = i.submitted_by'
+        return (filters)
+
     def GetSQLProjectFrom (self):
         # projects are mapped to repositories
         return (" , trackers t")
@@ -660,6 +674,8 @@ class SCRQuery(DSQuery):
         elif type_ == "abandoned": filters = " i.status = 'ABANDONED' "
         filters += self.GetSQLReportWhere(type_analysis, identities_db)
 
+        if (self.GetIssuesFiltered() != ""): filters += " AND " + self.GetIssuesFiltered()
+
         q = self.BuildQuery (period, startdate, enddate, "i.submitted_on", fields, tables, filters, evolutionary)
 
         return q
@@ -673,6 +689,8 @@ class SCRQuery(DSQuery):
         filters += self.GetSQLReportWhere(type_analysis, identities_db)
 
         q = self.BuildQuery (period, startdate, enddate, "changed_on", fields, tables, filters, evolutionary)
+
+        if (self.GetChangesFiltered() != ""): filters += " AND " + self.GetChangesFiltered()
 
         return q
 
@@ -742,6 +760,7 @@ class SCRQuery(DSQuery):
                              fields, tables, filters, evolutionary)
         return q
 
+    # Real reviews spend >1h, are not autoreviews, and bots are filtered out.
     def GetTimeToReviewQuerySQL (self, startdate, enddate, identities_db = None, type_analysis = [], bots = []):
         filter_bots = ''
         for bot in bots:
@@ -764,6 +783,40 @@ class SCRQuery(DSQuery):
         # q = "SELECT revtime, changed_on FROM ("+q+") qrevs WHERE revtime>"+str(min_days_for_review)
         return (q)
 
+    # Time to review accumulated for pending submissions using submit date or update date
+    def GetTimeToReviewPendingQuerySQL (self, startdate, enddate, identities_db = None,
+                                        type_analysis = [], bots = [], updated = False, reviewers = False):
+
+        filter_bots = ''
+        for bot in bots:
+            filter_bots = filter_bots + " people.name<>'"+bot+"' AND "
+
+        fields = "TIMESTAMPDIFF(SECOND, submitted_on, NOW())/(24*3600) AS revtime, submitted_on "
+        if (updated):
+            fields = "TIMESTAMPDIFF(SECOND, mod_date, NOW())/(24*3600) AS revtime, submitted_on "
+        tables = "issues i, people, issues_ext_gerrit ie "
+        if reviewers:
+                q_last_change = self.get_sql_last_change_for_issues_new()
+                tables += ", changes ch, (%s) t1" % q_last_change
+        tables += self.GetSQLReportFrom(identities_db, type_analysis)
+        filters = filter_bots + " people.id = i.submitted_by "
+        filters += self.GetSQLReportWhere(type_analysis,identities_db)
+        filters += " AND status<>'MERGED' AND status<>'ABANDONED' "
+        filters += " AND ie.issue_id  = i.id "
+        if reviewers:
+                filters += """
+                    AND i.id = ch.issue_id  AND t1.id = ch.id
+                    AND (ch.field='CRVW' or ch.field='Code-Review' or ch.field='Verified' or ch.field='VRIF')
+                    AND (ch.new_value=1 or ch.new_value=2)
+                """
+
+        if (self.GetIssuesFiltered() != ""): filters += " AND " + self.GetIssuesFiltered()
+
+        filters += " ORDER BY  submitted_on"
+        q = self.GetSQLGlobal('submitted_on', fields, tables, filters,
+                              startdate, enddate)
+        return(q)
+
     def get_sql_last_change_for_issues_new(self):
         # last changes for reviews. Removed added change status = NEW that is "artificial"
         q_last_change = """
@@ -773,6 +826,154 @@ class SCRQuery(DSQuery):
             GROUP BY c.issue_id
         """
         return q_last_change
+
+    def GetPeopleQuerySubmissions (self, developer_id, period, startdate, enddate, evol):
+        fields = "COUNT(i.id) AS submissions"
+        tables = self.GetTablesOwnUniqueIds('issues')
+        filters = self.GetFiltersOwnUniqueIds('issues')+ " AND pup.upeople_id = "+ str(developer_id)
+
+        if (evol):
+            q = self.GetSQLPeriod(period,'submitted_on', fields, tables, filters,
+                    startdate, enddate)
+        else:
+            fields = fields + \
+                    ",DATE_FORMAT (min(submitted_on),'%Y-%m-%d') as first_date, "+\
+                    "  DATE_FORMAT (max(submitted_on),'%Y-%m-%d') as last_date"
+            q = self.GetSQLGlobal('submitted_on', fields, tables, filters,
+                    startdate, enddate)
+        return (q)
+
+    def GetPeopleEvolSubmissionsSCR (self, developer_id, period, startdate, enddate):
+        q = self.GetPeopleQuerySubmissions(developer_id, period, startdate, enddate, True)
+        return(self.ExecuteQuery(q))
+
+    def GetPeopleStaticSubmissionsSCR (self, developer_id, startdate, enddate):
+        q = self.GetPeopleQuerySubmissions(developer_id, None, startdate, enddate, False)
+        return(self.ExecuteQuery(q))
+
+    def GetPeopleIntake(self, min, max):
+        filters = self.GetIssuesFiltered()
+        if (filters != ""): filters  = " WHERE " + filters
+        filters = ""
+
+        q_people_num_submissions_evol = """
+            SELECT COUNT(*) AS total, submitted_by,
+                YEAR(submitted_on) as year, MONTH(submitted_on) as monthid
+            FROM issues
+            %s
+            GROUP BY submitted_by, year, monthid
+            HAVING total > %i AND total <= %i
+            ORDER BY submitted_on DESC
+            """ % (filters, min, max)
+
+        q_people_num_evol = """
+            SELECT COUNT(*) as people, year*12+monthid AS month
+            FROM (%s) t
+            GROUP BY year, monthid
+            """ % (q_people_num_submissions_evol)
+
+        return self.ExecuteQuery(q_people_num_evol)
+
+    # No use of generic query because changes table is not used
+    def GetCompaniesQuarters (self, year, quarter, identities_db, limit = 25):
+        filters = self.GetIssuesFiltered()
+        if (filters != ""): filters  += " AND "
+        filters = ""
+        q = """
+            SELECT COUNT(i.id) AS total, c.name, c.id, QUARTER(submitted_on) as quarter, YEAR(submitted_on) year
+            FROM issues i, people p , people_upeople pup, %s.upeople_companies upc,%s.companies c
+            WHERE %s i.submitted_by=p.id AND pup.people_id=p.id
+                AND pup.upeople_id = upc.upeople_id AND upc.company_id = c.id
+                AND status='merged'
+                AND QUARTER(submitted_on) = %s AND YEAR(submitted_on) = %s
+              GROUP BY year, quarter, c.id
+              ORDER BY year, quarter, total DESC, c.name
+              LIMIT %s
+            """ % (identities_db, identities_db, filters,  quarter, year, limit)
+
+        return (self.ExecuteQuery(q))
+
+
+    # PEOPLE
+    def GetPeopleQuarters (self, year, quarter, identities_db, limit = 25, bots = []) :
+        filter_bots = ''
+        for bot in bots:
+            filter_bots = filter_bots + " up.identifier<>'"+bot+"' AND "
+
+        filters = self.GetIssuesFiltered()
+        if (filters != ""): filters  = filter_bots + filters + " AND "
+        else: filters = filter_bots
+
+        filters = filter_bots
+
+        q = """
+            SELECT COUNT(i.id) AS total, p.name, pup.upeople_id as id,
+                QUARTER(submitted_on) as quarter, YEAR(submitted_on) year
+            FROM issues i, people p , people_upeople pup, %s.upeople up
+            WHERE %s i.submitted_by=p.id AND pup.people_id=p.id AND pup.upeople_id = up.id
+                AND status='merged'
+                AND QUARTER(submitted_on) = %s AND YEAR(submitted_on) = %s
+           GROUP BY year, quarter, pup.upeople_id
+           ORDER BY year, quarter, total DESC, id
+           LIMIT %s
+           """ % (identities_db, filters, quarter, year, limit)
+        return (self.ExecuteQuery(q))
+
+    def GetPeopleList (self, startdate, enddate, bots):
+
+        filter_bots = ""
+        for bot in bots:
+            filter_bots += " name<>'"+bot+"' and "
+
+        fields = "DISTINCT(pup.upeople_id) as id, count(i.id) as total, name"
+        tables = self.GetTablesOwnUniqueIds('issues') + ", people"
+        filters = filter_bots
+        filters += self.GetFiltersOwnUniqueIds('issues')+ " and people.id = pup.people_id"
+        filters += " GROUP BY id ORDER BY total desc"
+        q = self.GetSQLGlobal('submitted_on', fields, tables, filters, startdate, enddate)
+        return(self.ExecuteQuery(q))
+
+    def GetCompaniesName  (self,startdate, enddate, identities_db, limit = 0):
+        limit_sql=""
+        if (limit > 0): limit_sql = " LIMIT " + str(limit)
+
+        q = "SELECT c.id as id, c.name as name, COUNT(DISTINCT(i.id)) AS total "+\
+                   "FROM  "+identities_db+".companies c, "+\
+                           identities_db+".upeople_companies upc, "+\
+                    "     people_upeople pup, "+\
+                    "     issues i "+\
+                   "WHERE i.submitted_by = pup.people_id AND "+\
+                   "  upc.upeople_id = pup.upeople_id AND "+\
+                   "  c.id = upc.company_id AND "+\
+                   "  i.status = 'merged' AND "+\
+                   "  i.submitted_on >="+  startdate+ " AND "+\
+                   "  i.submitted_on < "+ enddate+ " "+\
+                   "GROUP BY c.name "+\
+                   "ORDER BY total DESC " + limit_sql
+        return(self.ExecuteQuery(q))
+
+    # Global filter to remove all results from Wikimedia KPIs from SCR
+    def __init__(self, user, password, database, identities_db = None, host="127.0.0.1", port=3306, group=None):
+        super(SCRQuery, self).__init__(user, password, database, identities_db, host, port, group)
+        # _filter_submitter_id as a static global var to avoid SQL re-execute
+        people_userid = 'l10n-bot'
+        q = "SELECT id FROM people WHERE user_id = '%s'" % (people_userid)
+        self._filter_submitter_id = self.ExecuteQuery(q)['id']
+        self._filter_submitter_id = None # don't filter in general
+
+    # To be used for issues table
+    def GetIssuesFiltered(self):
+        filters = ""
+        if self._filter_submitter_id is not None:
+            filters = " submitted_by <> %s" % (self._filter_submitter_id)
+        return filters
+
+    # To be used for changes table
+    def GetChangesFiltered(self):
+        filters = ""
+        if self._filter_submitter_id is not None:
+            filters = " changed_by <> %s" % (self._filter_submitter_id)
+        return filters
 
 class IRCQuery(DSQuery):
 
