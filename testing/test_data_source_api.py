@@ -384,6 +384,39 @@ class DataSourceTest(unittest.TestCase):
         # R black box generated reports. Can not test
         pass
 
+    def test_create_reports_studies(self):
+        # period, startdate, enddate, destdir
+        opts = read_options()
+        startdate = "'"+opts.startdate+"'"
+        enddate = "'"+opts.enddate+"'"
+        period = getPeriod(opts.granularity)
+        destdir = os.path.join("data","json")
+
+
+        from metrics_filter import MetricFilters
+
+        db_identities= Report.get_config()['generic']['db_identities']
+        dbuser = Report.get_config()['generic']['db_user']
+        dbpass = Report.get_config()['generic']['db_password']
+
+        studies = Report.get_studies()
+
+        metric_filters = MetricFilters(period, startdate, enddate, [])
+
+        for ds in Report.get_data_sources():
+            ds_dbname = ds.get_db_name()
+            dbname = Report.get_config()['generic'][ds_dbname]
+            dsquery = ds.get_query_builder()
+            dbcon = dsquery(dbuser, dbpass, dbname, db_identities)
+            logging.info("Studies active " + str(studies))
+            for study in studies:
+                # logging.info("Creating report for " + study.id + " for " + ds.get_name())
+                try:
+                    obj = study(dbcon, metric_filters)
+                    obj.create_report(ds, destdir)
+                except TypeError:
+                    logging.info(study.id + " does no support standard API. Not used.")
+                    continue
 
 def read_options():
     parser = OptionParser(usage="usage: %prog [options]",
