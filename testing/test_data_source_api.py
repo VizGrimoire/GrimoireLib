@@ -48,34 +48,34 @@ class DataSourceTest(unittest.TestCase):
     def close():
         logging.info("End Data Source")
 
-    def atest_get_bots(self):
+    def test_get_bots(self):
         for ds in Report.get_data_sources():
             bots = ds.get_bots()
             self.assertTrue(isinstance(bots, list))
 
-    def atest_set_bots(self):
+    def test_set_bots(self):
         bots = ['test']
         for ds in Report.get_data_sources():
             ds.set_bots(bots)
             ds_bots = ds.get_bots()
             self.assertEqual(ds_bots[0], bots[0])
 
-    def atest_get_name(self):
+    def test_get_name(self):
         for ds in Report.get_data_sources():
             ds_name = ds.get_name()
             self.assertNotEqual(ds_name, "")
 
-    def atest_get_db_name(self):
+    def test_get_db_name(self):
         for ds in Report.get_data_sources():
             ds_db_name = ds.get_db_name()
             self.assertNotEqual(ds_db_name, "")
 
-    def atest_get_evolutionary_filename(self):
+    def test_get_evolutionary_filename(self):
         for ds in Report.get_data_sources():
             f_evol = ds().get_evolutionary_filename()
             self.assertNotEqual(f_evol, "")
 
-    def atest_get_evolutionary_data(self):
+    def test_get_evolutionary_data(self):
         opts = read_options()
         period = getPeriod(opts.granularity)
         startdate = "'"+opts.startdate+"'"
@@ -97,7 +97,7 @@ class DataSourceTest(unittest.TestCase):
 
             self.assertTrue(DataSourceTest._compare_data(ds_data, f_test_json))
 
-    def atest_create_evolutionary_report(self):
+    def test_create_evolutionary_report(self):
         opts = read_options()
         period = getPeriod(opts.granularity)
         startdate = "'"+opts.startdate+"'"
@@ -133,12 +133,12 @@ class DataSourceTest(unittest.TestCase):
         if check: os.remove(data_file_name)
         return check
 
-    def atest_get_agg_filename(self):
+    def test_get_agg_filename(self):
         for ds in Report.get_data_sources():
             f_agg = ds().get_agg_filename()
             self.assertNotEqual(f_agg, "")
 
-    def atest_get_agg_data(self):
+    def test_get_agg_data(self):
         opts = read_options()
         period = getPeriod(opts.granularity)
         startdate = "'"+opts.startdate+"'"
@@ -159,7 +159,7 @@ class DataSourceTest(unittest.TestCase):
 
             self.assertTrue(DataSourceTest._compare_data(ds_data, test_json))
 
-    def atest_create_agg_report(self):
+    def test_create_agg_report(self):
         opts = read_options()
         period = getPeriod(opts.granularity)
         startdate = "'"+opts.startdate+"'"
@@ -183,7 +183,7 @@ class DataSourceTest(unittest.TestCase):
             self.assertTrue(compareJSON(f_test_json, f_report_json))
 
 
-    def atest_get_agg_evol_filters_data(self):
+    def test_get_agg_evol_filters_data(self):
         opts = read_options()
         startdate = "'"+opts.startdate+"'"
         enddate = "'"+opts.enddate+"'"
@@ -230,7 +230,7 @@ class DataSourceTest(unittest.TestCase):
                     test_json = os.path.join("json",fn)
                     self.assertTrue(DataSourceTest._compare_data(evol, test_json))
 
-    def atest_get_filter_items(self):
+    def test_get_filter_items(self):
         opts = read_options()
         startdate = "'"+opts.startdate+"'"
         enddate = "'"+opts.enddate+"'"
@@ -264,7 +264,7 @@ class DataSourceTest(unittest.TestCase):
                     # is checked already in test_get_agg_evol_filters_data 
                     self.assertTrue(compareJSON(test_json, new_json))
 
-    def atest_get_top_data (self):
+    def test_get_top_data (self):
         opts = read_options()
         startdate = "'"+opts.startdate+"'"
         enddate = "'"+opts.enddate+"'"
@@ -279,7 +279,7 @@ class DataSourceTest(unittest.TestCase):
             test_json = os.path.join("json",ds.get_name()+"-top.json")
             self.assertTrue(DataSourceTest._compare_data(top, test_json))
 
-    def atest_create_top_report (self):
+    def test_create_top_report (self):
         opts = read_options()
         startdate = "'"+opts.startdate+"'"
         enddate = "'"+opts.enddate+"'"
@@ -297,7 +297,7 @@ class DataSourceTest(unittest.TestCase):
 
             self.assertTrue(compareJSON(test_json, top_json))
 
-    def atest_get_filter_summary (self):
+    def test_get_filter_summary (self):
         opts = read_options()
         startdate = "'"+opts.startdate+"'"
         enddate = "'"+opts.enddate+"'"
@@ -318,7 +318,7 @@ class DataSourceTest(unittest.TestCase):
                     test_json = os.path.join("json",filter_.get_summary_filename(ds))
                     self.assertTrue(DataSourceTest._compare_data(summary, test_json))
 
-    def atest_get_filter_item_top (self):
+    def test_get_filter_item_top (self):
         opts = read_options()
         startdate = "'"+opts.startdate+"'"
         enddate = "'"+opts.enddate+"'"
@@ -348,7 +348,7 @@ class DataSourceTest(unittest.TestCase):
                     self.assertTrue(DataSourceTest._compare_data(top, test_json))
 
     # get_top_people, get_person_evol, get_person_agg tests included
-    def atest_create_people_report(self):
+    def test_create_people_report(self):
         #period, startdate, enddate, identities_db):
         opts = read_options()
         startdate = "'"+opts.startdate+"'"
@@ -382,7 +382,7 @@ class DataSourceTest(unittest.TestCase):
                 test_json = os.path.join("json",fperson)
                 self.assertTrue(DataSourceTest._compare_data(agg, test_json))
 
-    def atest_create_r_reports(self):
+    def test_create_r_reports(self):
         # R black box generated reports. Can not test
         pass
 
