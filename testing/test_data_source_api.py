@@ -414,7 +414,7 @@ class DataSourceTest(unittest.TestCase):
                 try:
                     obj = study(dbcon, metric_filters)
                     obj.create_report(ds, destdir)
-                    files = obj.get_report_files(destdir)
+                    files = obj.get_report_files(ds, destdir)
                     if len(files) > 0:
                         for file in files:
                             f_test_json = os.path.join("json", file)
