@@ -150,7 +150,9 @@ def create_reports_studies(period, startdate, enddate, destdir):
                 obj = study(dbcon, metric_filters)
                 obj.create_report(ds, destdir)
             except TypeError:
+                import traceback
                 logging.info(study.id + " does no support standard API. Not used.")
+                traceback.print_exc(file=sys.stdout)
                 continue
 
 def set_data_source(ds_name):
