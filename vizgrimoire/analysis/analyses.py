@@ -96,7 +96,7 @@ class Analyses(object):
         """ Returns the value for the entity.
 
         """
-        return {}
+        return None
         # raise NotImplementedError
 
     def get_report_files(self, data_source = None):

@@ -161,7 +161,7 @@ class SCMLeaders(Leaders):
 
             
     def result(self, data_source = None, destdir = None): 
-        if self.typeof_leader is None: return {}
+        if self.typeof_leader is None: return None
         return self._top_actors()
 
 

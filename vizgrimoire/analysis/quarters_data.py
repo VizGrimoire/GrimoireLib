@@ -44,7 +44,7 @@ class QuartersData(Analyses):
 
     def result(self, data_source, destdir = None):
         from SCR import SCR
-        if data_source != SCR or destdir is None: return {}
+        if data_source != SCR or destdir is None: return None
 
         period = self.filters.period
         startdate = self.filters.startdate

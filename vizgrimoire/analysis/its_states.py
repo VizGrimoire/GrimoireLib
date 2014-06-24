@@ -161,7 +161,7 @@ class TicketsStates(Analyses):
         # states available on the tracker. This should be moved
         # to configuration file to let the user choose among states.
         from ITS import ITS
-        if data_source is not None and data_source != ITS: return {}
+        if data_source is not None and data_source != ITS: return None
         backend = ITS._get_backend()
 
         if backend.its_type == 'bg':

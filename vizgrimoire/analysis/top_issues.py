@@ -94,7 +94,7 @@ class TopIssues(Analyses):
             "  AND submitted_on >= " + startdate + " AND submitted_on < " + enddate +\
             ") no_actions " +\
             "GROUP BY issue_id " +\
-            "ORDER BY time DESC " +\
+            "ORDER BY time DESC,issue_id " +\
             "LIMIT " + limit
         data = self.db.ExecuteQuery(q)
         return (data)
@@ -113,7 +113,7 @@ class TopIssues(Analyses):
             "  AND submitted_on >= " + startdate + " AND submitted_on < " + enddate +\
             ") no_comments " +\
             "GROUP BY issue_id " +\
-            "ORDER BY time DESC " +\
+            "ORDER BY time DESC, issue_id " +\
             "LIMIT " + limit
         data = self.db.ExecuteQuery(q)
         return (data)
@@ -124,7 +124,7 @@ class TopIssues(Analyses):
             "WHERE NOT ( " + closed_condition + ") " +\
             "AND submitted_on >= " + startdate + " AND submitted_on < " + enddate +\
             "GROUP BY issue_id " +\
-            "ORDER BY time DESC " +\
+            "ORDER BY time DESC, issue_id " +\
             "LIMIT " + limit
         data = self.db.ExecuteQuery(q)
         return (data)
@@ -147,7 +147,7 @@ class TopIssues(Analyses):
     def result(self, data_source = None):
         """ Returns a JSON to be included in top file """
         from ITS import ITS
-        if data_source != ITS: return {}
+        if data_source != ITS: return None
 
         # Closed condition for MediaWiki
         top_close_condition_mediawiki = """
