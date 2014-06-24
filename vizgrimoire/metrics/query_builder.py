@@ -264,6 +264,62 @@ class SCMQuery(DSQuery):
 
         return (where)
 
+    # To be used in the future for apply a generic filter to all queries
+    def GetCommitsFiltered(self):
+        filters = ""
+        return filters
+
+    def GetPeopleQuerySCM (self, developer_id, period, startdate, enddate, evol) :
+        fields ='COUNT(s.id) AS commits'
+        tables = "scmlog s, people_upeople pup "
+        filters = "pup.people_id = s.author_id "
+        filters +=" AND pup.upeople_id="+str(developer_id)
+        if (evol) :
+            q = self.GetSQLPeriod(period,'s.date', fields, tables, filters,
+                    startdate, enddate)
+        else :
+            fields += ",DATE_FORMAT (min(s.date),'%Y-%m-%d') as first_date, "+\
+                      "DATE_FORMAT (max(s.date),'%Y-%m-%d') as last_date"
+            q = self.GetSQLGlobal('s.date', fields, tables, filters, 
+                    startdate, enddate)
+
+        return (q)
+
+    def GetEvolPeopleSCM (self, developer_id, period, startdate, enddate) :
+        q = self.GetPeopleQuerySCM (developer_id, period, startdate, enddate, True)
+
+        data = self.ExecuteQuery(q)
+        return (data)
+
+    def GetStaticPeopleSCM (self, developer_id, startdate, enddate) :
+        q = self.GetPeopleQuerySCM (developer_id, None, startdate, enddate, False)
+
+        data = self.ExecuteQuery(q)
+        return (data)
+
+    def GetPeopleIntake(self, min, max):
+        filters = self.GetCommitsFiltered()
+        if (filters != ""): filters  = " WHERE " + filters
+        filters = ""
+
+        q_people_num_commits_evol = """
+            SELECT COUNT(*) AS total, author_id,
+                YEAR(date) as year, MONTH(date) as monthid
+            FROM scmlog
+            %s
+            GROUP BY author_id, year, monthid
+            HAVING total > %i AND total <= %i
+            ORDER BY date DESC
+            """ % (filters, min, max)
+
+        q_people_num_evol = """
+            SELECT COUNT(*) as people, year*12+monthid AS month
+            FROM (%s) t
+            GROUP BY year, monthid
+            """ % (q_people_num_commits_evol)
+
+        return self.ExecuteQuery(q_people_num_evol)
+
 class ITSQuery(DSQuery):
     """ Specific query builders for issue tracking system data source """
     def GetSQLRepositoriesFrom (self):
