@@ -80,7 +80,7 @@ class QuartersData(Analyses):
         createJSON(companies_quarters, destdir+"/scr-companies-quarters.json")
         createJSON(people_quarters, destdir+"/scr-people-quarters.json")
 
-    def get_report_files(self, destdir):
+    def get_report_files(self, data_source = None):
         return ["scr-people-all.json",
                 "scr-companies-all.json",
                 "scr-companies-quarters.json",
