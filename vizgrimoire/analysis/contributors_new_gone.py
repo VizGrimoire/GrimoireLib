@@ -35,14 +35,24 @@ class ContributorsNewGone(Analyses):
 
     def create_report(self, data_source, destdir):
         ds = data_source.get_name()
-        if ds not in ['scm','scr']: return []
+        if ds not in ['scm','scr']: return None
 
         if data_source.get_name() == "scr":
             study = ContributorsNewGoneSCR(self.db, self.filters)
         elif data_source.get_name() == "scm":
             study = ContributorsNewGoneSCM(self.db, self.filters)
+        study.create_report(data_source, destdir)
 
-        study.result(destdir)
+    def result(self, data_source):
+        ds = data_source.get_name()
+        if ds not in ['scm','scr']: return None
+
+        if data_source.get_name() == "scr":
+            study = ContributorsNewGoneSCR(self.db, self.filters)
+        elif data_source.get_name() == "scm":
+            study = ContributorsNewGoneSCM(self.db, self.filters)
+        return study.result(data_source)
+
 
     def get_report_files(self, data_source = None):
         if data_source is None: return []
@@ -304,10 +314,10 @@ class ContributorsNewGoneSCM(ContributorsNewGone):
         evol['num_people_5_10'] = completePeriodIds(self.db.GetPeopleIntake(5,10), period, startdate, enddate)['people']
         createJSON(evol, destdir+"/scm-people-intake-evolutionary.json")
 
-class ContributorsNewGoneSCR(Analyses):
+class ContributorsNewGoneSCR(ContributorsNewGone):
 
-    id = "contributors_new_gone"
-    name = "ContributorsNewGone"
+    id = "contributors_new_gone_Scr"
+    name = "ContributorsNewGoneSCR"
     desc = "Number of contributors new and gone in a project in the code revision system."
 
     # People Code Contrib New and Gone KPI
