@@ -32,7 +32,7 @@ class ContributorsNewGone(Analyses):
 
     id = "contributors_new_gone"
     name = "ContributorsNewGone"
-    desc = "Number of contributors new and gone in a project"
+    desc = "Number of contributors new and gone in a project in the code revision system."
 
     # People Code Contrib New and Gone KPI
     def GetNewPeopleListSQL(self, period):
