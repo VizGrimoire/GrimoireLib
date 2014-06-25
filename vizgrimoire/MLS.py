@@ -27,6 +27,7 @@ import logging
 import os
 import re
 import sys
+import datetime
 
 from GrimoireSQL import GetSQLGlobal, GetSQLPeriod
 from GrimoireSQL import ExecuteQuery, BuildQuery
@@ -106,6 +107,36 @@ class MLS(DataSource):
         createJSON (data, os.path.join(destdir, filename))
 
     @staticmethod
+    def getLongestThreads(startdate, enddate, identities_db, npeople):
+        # This function builds a coherent data structure according
+        # to other simila structures. The Class Threads only returns
+        # the head of the threads (the first message) and the message_id
+        # of each of its children.
+
+        main_topics = Threads(startdate, enddate, identities_db)
+
+        longest_threads = main_topics.topLongestThread(npeople)
+        l_threads = {}
+        l_threads['message_id'] = []
+        l_threads['length'] = []
+        l_threads['subject'] = []
+        l_threads['date'] = []
+        l_threads['initiator_name'] = []
+        l_threads['initiator_id'] = []
+        l_threads['url'] = []
+        for email in longest_threads:
+            l_threads['message_id'].append(email.message_id)
+            l_threads['length'].append(main_topics.lenThread(email.message_id))
+            l_threads['subject'].append(email.subject)
+            l_threads['date'].append(email.date.strftime("%Y-%m-%d"))
+            l_threads['initiator_name'].append(email.initiator_name)
+            l_threads['initiator_id'].append(email.initiator_id)
+            l_threads['url'].append(email.url)
+
+        return l_threads
+
+
+    @staticmethod
     def get_top_data (startdate, enddate, identities_db, filter_, npeople):
         bots = MLS.get_bots()
         if filter_ is None:
@@ -113,6 +144,15 @@ class MLS(DataSource):
             top['senders.']=top_senders(0, startdate, enddate,identities_db,bots, npeople)
             top['senders.last year']=top_senders(365, startdate, enddate,identities_db, bots, npeople)
             top['senders.last month']=top_senders(31, startdate, enddate,identities_db,bots, npeople)
+
+            top_senders_data['threads.'] = MLS.getLongestThreads(startdate, enddate, identities_db, npeople)
+            startdate = datetime.date.today() - datetime.timedelta(days=365)
+            startdate =  "'" + str(startdate) + "'"
+            top_senders_data['threads.last year'] = MLS.getLongestThreads(startdate, enddate, identities_db, npeople)
+            startdate = datetime.date.today() - datetime.timedelta(days=30)
+            startdate =  "'" + str(startdate) + "'"
+            top_senders_data['threads.last month'] = MLS.getLongestThreads(startdate, enddate, identities_db, npeople) 
+
         else:
             filter_name = filter_.get_name()
             item = filter_.get_item()
