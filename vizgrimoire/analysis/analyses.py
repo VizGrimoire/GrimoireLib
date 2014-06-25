@@ -90,12 +90,15 @@ class Analyses(object):
            We want the "evolutionary" (time series) version of the entity.
 
         """
-
         raise NotImplementedError
 
-    def result(self):
+    def result(self, data_source = None):
         """ Returns the value for the entity.
 
         """
+        return None
+        # raise NotImplementedError
 
-        raise NotImplementedError
+    def get_report_files(self, data_source = None):
+        """ Returns a list with the files created for the report. """
+        return []

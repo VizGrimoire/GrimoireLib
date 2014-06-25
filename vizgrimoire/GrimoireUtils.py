@@ -305,12 +305,17 @@ def createJSON(data, filepath, check=False, skip_fields = []):
         os.rename(filepath_py, filepath)
 
 def compareJSON(orig_file, new_file, skip_fields = []):
-    f1 = open(orig_file)
-    f2 = open(new_file)
-    data1 = json.load(f1)
-    data2 = json.load(f2)
-    f1.close()
-    f2.close()
+    try:
+        f1 = open(orig_file)
+        f2 = open(new_file)
+        data1 = json.load(f1)
+        data2 = json.load(f2)
+        f1.close()
+        f2.close()
+    except IOError, e:
+        print("Fail comparing JSON files:", orig_file, new_file)
+        raise e
+
 
     return compare_json_data(data1, data2, orig_file, new_file, skip_fields)
 
@@ -360,7 +365,7 @@ def compare_json_data(data1, data2, orig_file = "", new_file = "", skip_fields =
             elif data1[name] != data2[name]:
                 if (data1[name] == "NA" and data2[name] == 0): continue
                 elif name in skip_fields:
-                    logging.warn ("'"+name + "' (skipped) different in dicts\n" + str(data1[name]) + "\n" + str(data2[name])) 
+                    logging.warn ("'"+name + "' (skipped) different in dicts\n") # str(data1[name]) + "\n" + str(data2[name]))
                     continue
                 logging.warn ("'"+name + "' different in dicts\n" + str(data1[name]) + "\n" + str(data2[name]))
                 check = False

@@ -129,7 +129,9 @@ class DataSourceTest(unittest.TestCase):
         data_file.close()
         createJSON(data, data_file_name, check=False, skip_fields = [])
 
-        return compareJSON(data_file_name, json_file)
+        check = compareJSON(data_file_name, json_file)
+        if check: os.remove(data_file_name)
+        return check
 
     def test_get_agg_filename(self):
         for ds in Report.get_data_sources():
@@ -384,6 +386,56 @@ class DataSourceTest(unittest.TestCase):
         # R black box generated reports. Can not test
         pass
 
+    def test_create_reports_studies(self):
+        opts = read_options()
+        startdate = "'"+opts.startdate+"'"
+        enddate = "'"+opts.enddate+"'"
+        period = getPeriod(opts.granularity)
+        destdir = os.path.join("data","json")
+
+
+        from metrics_filter import MetricFilters
+
+        db_identities= Report.get_config()['generic']['db_identities']
+        dbuser = Report.get_config()['generic']['db_user']
+        dbpass = Report.get_config()['generic']['db_password']
+
+        studies = Report.get_studies()
+
+        metric_filters = MetricFilters(period, startdate, enddate, [])
+
+        for ds in Report.get_data_sources():
+            ds_dbname = ds.get_db_name()
+            dbname = Report.get_config()['generic'][ds_dbname]
+            dsquery = ds.get_query_builder()
+            dbcon = dsquery(dbuser, dbpass, dbname, db_identities)
+            for study in studies:
+                # logging.info("Creating report for " + study.id + " for " + ds.get_name())
+                try:
+                    obj = study(dbcon, metric_filters)
+                    obj.create_report(ds, destdir)
+                    files = obj.get_report_files(ds)
+                    if len(files) > 0:
+                        for file in files:
+                            f_test_json = os.path.join("json", file)
+                            f_report_json = os.path.join(destdir, file)
+                            if obj.get_definition()['id'] == "contributors_new_gone":
+                                # authors is a dict with revtime which changes every execution
+                                pass
+                            else:
+                                self.assertTrue(compareJSON(f_test_json, f_report_json))
+                    data = obj.result(ds)
+                    if data is None: continue
+                    test_json = os.path.join("json",ds.get_name()+"_"+obj.get_definition()['id']+".json")
+                    if obj.get_definition()['id'] == "top_issues":
+                        # Include time field which changes every execution
+                        continue
+                    else: self.assertTrue(DataSourceTest._compare_data(data, test_json))
+                except TypeError:
+                    import traceback, sys
+                    traceback.print_exc(file=sys.stdout)
+                    logging.info(study.id + " does no support complete standard API. Not used when no available.")
+                    continue
 
 def read_options():
     parser = OptionParser(usage="usage: %prog [options]",

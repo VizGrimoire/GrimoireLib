@@ -76,32 +76,6 @@ class ITS(DataSource):
         return ITS._get_backend().closed_condition
 
     @staticmethod
-    def get_tickets_states(period, startdate, enddate, identities_db, backend):
-
-        from rpy2.robjects.packages import importr
-        from GrimoireUtils import dataFrame2Dict
-
-        vizr = importr("vizgrimoire")
-
-        evol = {}
-        return evol
-
-        for status in backend.statuses:
-            logging.info ("Working with ticket status: " + status)
-            #Evolution of the backlog
-            tickets_status = vizr.GetEvolBacklogTickets(period, startdate, enddate, status, backend.name_log_table)
-            tickets_status = dataFrame2Dict(tickets_status)
-            tickets_status = completePeriodIds(tickets_status, period, startdate, enddate)
-            # rename key
-            tickets_status[status] = tickets_status.pop("pending_tickets")
-            #Issues per status
-            current_status = vizr.GetCurrentStatus(period, startdate, enddate, identities_db, status)
-            current_status = completePeriodIds(dataFrame2Dict(current_status), period, startdate, enddate)
-            #Merging data
-            evol = dict(evol.items() + current_status.items() + tickets_status.items())
-        return evol
-
-    @staticmethod
     def get_evolutionary_data (period, startdate, enddate, identities_db, filter_ = None):
         closed_condition = ITS._get_closed_condition()
 
@@ -113,9 +87,6 @@ class ITS(DataSource):
         else:
             data = EvolITSInfo(period, startdate, enddate, identities_db, None, closed_condition)
             evol = completePeriodIds(data, period, startdate, enddate)
-
-            data = ITS.get_tickets_states(period, startdate, enddate, identities_db, ITS._get_backend())
-            evol = dict(evol.items() + data.items())
 
         return evol
 

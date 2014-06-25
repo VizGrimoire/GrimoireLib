@@ -56,7 +56,7 @@ class CommunityStructure(Analyses):
         return data
 
     def result(self, data_source = None):
-        if data_source is not None and data_source.get_name() != "scm": return
+        if data_source is not None and data_source.get_name() != "scm": return None
 
         # Init of structure to be returned
         community = {}
