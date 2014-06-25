@@ -37,6 +37,7 @@ class TimesTickets(Analyses):
     def getMedianAndAvg(self, period, alias, dates, values):
         data = medianAndAvgByPeriod(period, dates, values)
         result = {period : data[period],
+                  'size_' + alias : data['size'],
                   'median_' + alias : data['median'],
                   'avg_' + alias : data['avg']}
         return result
@@ -309,6 +310,7 @@ class TimesTickets(Analyses):
 
     def getTicketsTimeOpened(self, period, dates, closed_condition, result_type, alias, field_condition=None):
         period_dates = []
+        size_values = []
         median_values = []
         avg_values = []
         current_period = dates[0]  # The first month there aren't remaining issues opened
@@ -340,11 +342,13 @@ class TimesTickets(Analyses):
             avg = get_avg(open_issues)
 
             period_dates.append(current_period)
+            size_values.append(len(open_issues))
             median_values.append(m)
             avg_values.append(avg)
             current_period = dt
 
         time_opened = {period : period_dates,
+                       'size_' + alias : size_values,
                        'median_' + alias : median_values,
                        'avg_' + alias : avg_values}
         return time_opened

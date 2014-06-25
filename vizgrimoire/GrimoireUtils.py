@@ -507,6 +507,7 @@ def medianAndAvgByPeriod(period, dates, values):
     if len(dates) != len(values): return None
 
     result = {period  : [],
+              'size' : [],
               'median' : [],
               'avg'    : []}
 
@@ -521,6 +522,7 @@ def medianAndAvgByPeriod(period, dates, values):
         # Change of period
         if date_period != current_period:
             result[period].append(current_period)
+            result['size'].append(len(period_values))
             result['median'].append(get_median(period_values))
             result['avg'].append(get_avg(period_values))
 
@@ -532,6 +534,7 @@ def medianAndAvgByPeriod(period, dates, values):
         # End of the list
         if i == ndates - 1:
             result[period].append(current_period)
+            result['size'].append(len(period_values))
             result['median'].append(get_median(period_values))
             result['avg'].append(get_avg(period_values))                        # Accumulated values
     return result
