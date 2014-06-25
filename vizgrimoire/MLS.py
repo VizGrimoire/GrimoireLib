@@ -33,6 +33,7 @@ from GrimoireSQL import GetSQLGlobal, GetSQLPeriod
 from GrimoireSQL import ExecuteQuery, BuildQuery
 from GrimoireUtils import GetPercentageDiff, GetDates, completePeriodIds, getPeriod, createJSON, get_subprojects
 from metrics_filter import MetricFilters
+from threads import Threads
 
 from data_source import DataSource
 import report
@@ -145,13 +146,13 @@ class MLS(DataSource):
             top['senders.last year']=top_senders(365, startdate, enddate,identities_db, bots, npeople)
             top['senders.last month']=top_senders(31, startdate, enddate,identities_db,bots, npeople)
 
-            top_senders_data['threads.'] = MLS.getLongestThreads(startdate, enddate, identities_db, npeople)
+            top['threads.'] = MLS.getLongestThreads(startdate, enddate, identities_db, npeople)
             startdate = datetime.date.today() - datetime.timedelta(days=365)
             startdate =  "'" + str(startdate) + "'"
-            top_senders_data['threads.last year'] = MLS.getLongestThreads(startdate, enddate, identities_db, npeople)
+            top['threads.last year'] = MLS.getLongestThreads(startdate, enddate, identities_db, npeople)
             startdate = datetime.date.today() - datetime.timedelta(days=30)
             startdate =  "'" + str(startdate) + "'"
-            top_senders_data['threads.last month'] = MLS.getLongestThreads(startdate, enddate, identities_db, npeople) 
+            top['threads.last month'] = MLS.getLongestThreads(startdate, enddate, identities_db, npeople) 
 
         else:
             filter_name = filter_.get_name()
