@@ -143,6 +143,8 @@ class TimeToReviewPendingSCR(Metrics):
             filters = " people.id = i.submitted_by "
             filters += self.db.GetSQLReportWhere(type_analysis, self.db.identities_db)
             filters += " AND status<>'MERGED' AND status<>'ABANDONED' "
+            # https://bugzilla.wikimedia.org/show_bug.cgi?id=66283
+            filters += " AND summary not like '%WIP%' "
             filters += " AND ie.issue_id  = i.id "
             if reviewers:
                 filters += """
