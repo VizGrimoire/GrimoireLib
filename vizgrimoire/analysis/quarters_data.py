@@ -40,10 +40,9 @@ class QuartersData(Analyses):
 
     def create_report(self, data_source, destdir):
         if data_source != SCR: return
-        self.result(destdir)
+        self.result(data_source, destdir)
 
     def result(self, data_source, destdir = None):
-        from SCR import SCR
         if data_source != SCR or destdir is None: return None
 
         period = self.filters.period
