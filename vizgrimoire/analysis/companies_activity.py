@@ -81,7 +81,6 @@ class CompaniesActivity(Analyses):
                 new_activity.append(0)
 
         activity[field] = new_activity
-        print(activity)
         return activity
 
     def result(self, data_source, destdir = None):
