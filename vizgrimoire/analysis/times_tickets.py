@@ -341,8 +341,16 @@ class TimesTickets(Analyses):
             m = get_median(open_issues)
             avg = get_avg(open_issues)
 
+            # set size of the tickets population
+            if not open_issues:
+                size = 0
+            elif not isinstance(open_issues, list):
+                size = 1
+            else:
+                size = len(open_issues)
+
             period_dates.append(current_period)
-            size_values.append(len(open_issues))
+            size_values.append(size)
             median_values.append(m)
             avg_values.append(avg)
             current_period = dt
