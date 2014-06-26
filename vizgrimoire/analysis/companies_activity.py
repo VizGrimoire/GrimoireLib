@@ -23,6 +23,8 @@
 
 """ Companies activity  """
 
+import time
+
 from analyses import Analyses
 from query_builder import DSQuery
 from metrics_filter import MetricFilters
