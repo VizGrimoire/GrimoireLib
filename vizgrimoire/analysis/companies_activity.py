@@ -102,9 +102,8 @@ class CompaniesActivity(Analyses):
             data = self.db.ExecuteQuery(self.get_sql(i))
             activity = self.add_companies_data (activity, data)
 
-
         # activity = dict (activity.keys() + data.keys())
-        createJSON(data, destdir+"/scm-companies-activity.json")
+        createJSON(activity, destdir+"/scm-companies-activity.json")
 
     def get_report_files(self, data_source = None):
         return ["scm-companies-activity.json"]
