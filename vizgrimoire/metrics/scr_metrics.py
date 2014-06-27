@@ -504,6 +504,7 @@ class TimeToReview(Metrics):
         from GrimoireUtils import removeDecimals
 
         q = self.__get_sql__()
+        if q is None: return {}
         data = self.db.ExecuteQuery(q)
         data = data['revtime']
         if (isinstance(data, list) == False): data = [data]
@@ -518,6 +519,7 @@ class TimeToReview(Metrics):
 
     def get_ts(self):
         q = self.__get_sql__()
+        if q is None: return {}
         review_list = self.db.ExecuteQuery(q)
         checkListArray(review_list)
         metrics_list = {}
