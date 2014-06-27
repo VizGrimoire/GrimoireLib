@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
 ## Copyright (C) 2014 Bitergia
 ##
 ## This program is free software; you can redistribute it and/or modify
@@ -229,16 +232,16 @@ if __name__ == '__main__':
         startdate = "'" + release[0] + "'"
         enddate = "'" + release[1] + "'"
         filters = MetricFilters("month", startdate, enddate, []) 
-        scm_dbcon = SCMQuery(opts.dbuser, "", opts.dbcvsanaly, opts.dbidentities)      
+        scm_dbcon = SCMQuery(opts.dbuser, opts.dbpassword, opts.dbcvsanaly, opts.dbidentities)
         #SCM report
         scm_report(scm_dbcon, filters)
 
         #QAForums report
-        qa_dbcon = QAForumsQuery(opts.dbuser, "", opts.dbqaforums, opts.dbidentities)
+        qa_dbcon = QAForumsQuery(opts.dbuser, opts.dbpassword, opts.dbqaforums, opts.dbidentities)
         qaforums_report(qa_dbcon, filters)
 
         #MLS Report
-        mls_dbcon = MLSQuery(opts.dbuser, "", opts.dbmlstats, opts.dbidentities)
+        mls_dbcon = MLSQuery(opts.dbuser, opts.dbpassword, opts.dbmlstats, opts.dbidentities)
         mls_report(mls_dbcon, filters)
 
 
