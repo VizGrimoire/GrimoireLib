@@ -25,17 +25,9 @@
 # import MySQLdb, os, random, string, sys
 # import data_source
 
-import json, os, unittest
+import json, os, sys, time, unittest
 import logging
 from optparse import OptionParser
-
-
-from filter import Filter
-from GrimoireUtils import getPeriod, read_main_conf
-from GrimoireUtils import compare_json_data, completePeriodIds
-from GrimoireUtils import createJSON, compareJSON
-from report import Report
-
 
 class DataSourceTest(unittest.TestCase):
     @staticmethod
@@ -78,8 +70,6 @@ class DataSourceTest(unittest.TestCase):
     def test_get_evolutionary_data(self):
         opts = read_options()
         period = getPeriod(opts.granularity)
-        startdate = "'"+opts.startdate+"'"
-        enddate = "'"+opts.enddate+"'"
 
         automator = read_main_conf(opts.config_file)
         identities_db = automator['generic']['db_identities']
@@ -100,8 +90,6 @@ class DataSourceTest(unittest.TestCase):
     def test_create_evolutionary_report(self):
         opts = read_options()
         period = getPeriod(opts.granularity)
-        startdate = "'"+opts.startdate+"'"
-        enddate = "'"+opts.enddate+"'"
 
         automator = read_main_conf(opts.config_file)
         identities_db = automator['generic']['db_identities']
@@ -141,8 +129,6 @@ class DataSourceTest(unittest.TestCase):
     def test_get_agg_data(self):
         opts = read_options()
         period = getPeriod(opts.granularity)
-        startdate = "'"+opts.startdate+"'"
-        enddate = "'"+opts.enddate+"'"
 
         automator = read_main_conf(opts.config_file)
         identities_db = automator['generic']['db_identities']
@@ -162,8 +148,6 @@ class DataSourceTest(unittest.TestCase):
     def test_create_agg_report(self):
         opts = read_options()
         period = getPeriod(opts.granularity)
-        startdate = "'"+opts.startdate+"'"
-        enddate = "'"+opts.enddate+"'"
 
         automator = read_main_conf(opts.config_file)
         identities_db = automator['generic']['db_identities']
@@ -185,8 +169,6 @@ class DataSourceTest(unittest.TestCase):
 
     def test_get_agg_evol_filters_data(self):
         opts = read_options()
-        startdate = "'"+opts.startdate+"'"
-        enddate = "'"+opts.enddate+"'"
         period = getPeriod(opts.granularity)
 
 
@@ -232,8 +214,6 @@ class DataSourceTest(unittest.TestCase):
 
     def test_get_filter_items(self):
         opts = read_options()
-        startdate = "'"+opts.startdate+"'"
-        enddate = "'"+opts.enddate+"'"
 
         automator = read_main_conf(opts.config_file)
         identities_db = automator['generic']['db_identities']
@@ -266,8 +246,6 @@ class DataSourceTest(unittest.TestCase):
 
     def test_get_top_data (self):
         opts = read_options()
-        startdate = "'"+opts.startdate+"'"
-        enddate = "'"+opts.enddate+"'"
         npeople = opts.npeople
 
         automator = read_main_conf(opts.config_file)
@@ -281,8 +259,6 @@ class DataSourceTest(unittest.TestCase):
 
     def test_create_top_report (self):
         opts = read_options()
-        startdate = "'"+opts.startdate+"'"
-        enddate = "'"+opts.enddate+"'"
 
         automator = read_main_conf(opts.config_file)
         identities_db = automator['generic']['db_identities']
@@ -299,8 +275,6 @@ class DataSourceTest(unittest.TestCase):
 
     def test_get_filter_summary (self):
         opts = read_options()
-        startdate = "'"+opts.startdate+"'"
-        enddate = "'"+opts.enddate+"'"
         period = getPeriod(opts.granularity)
 
 
@@ -320,8 +294,6 @@ class DataSourceTest(unittest.TestCase):
 
     def test_get_filter_item_top (self):
         opts = read_options()
-        startdate = "'"+opts.startdate+"'"
-        enddate = "'"+opts.enddate+"'"
         npeople = opts.npeople
 
         automator = read_main_conf(opts.config_file)
@@ -351,8 +323,6 @@ class DataSourceTest(unittest.TestCase):
     def test_create_people_report(self):
         #period, startdate, enddate, identities_db):
         opts = read_options()
-        startdate = "'"+opts.startdate+"'"
-        enddate = "'"+opts.enddate+"'"
         period = getPeriod(opts.granularity)
 
         automator = read_main_conf(opts.config_file)
@@ -388,8 +358,6 @@ class DataSourceTest(unittest.TestCase):
 
     def test_create_reports_studies(self):
         opts = read_options()
-        startdate = "'"+opts.startdate+"'"
-        enddate = "'"+opts.enddate+"'"
         period = getPeriod(opts.granularity)
         destdir = os.path.join("data","json")
 
@@ -453,6 +421,7 @@ def read_options():
     parser.add_option("-c", "--config-file",
                       action="store",
                       dest="config_file",
+                      default = "automator.conf",
                       help="Automator config file")
     parser.add_option("--npeople",
                       action="store",
@@ -472,6 +441,7 @@ def read_options():
     parser.add_option("-m", "--metrics",
                   action="store",
                   dest="metrics_path",
+                  default = "../vizgrimoire/metrics",
                   help="Path to the metrics modules to be loaded")
 
     (opts, args) = parser.parse_args()
@@ -483,8 +453,56 @@ def read_options():
         parser.error("Automator config file and metrics path are needed.")
     return opts
 
+def init_env():
+    grimoirelib = os.path.join("..","vizgrimoire")
+    metricslib = os.path.join("..","vizgrimoire","metrics")
+    studieslib = os.path.join("..","vizgrimoire","analysis")
+    alchemy = os.path.join("..","grimoirelib_alch")
+    for dir in [grimoirelib,metricslib,studieslib,alchemy]:
+        sys.path.append(dir)
+
+    # env vars for R
+    os.environ["LANG"] = ""
+    os.environ["R_LIBS"] = "../../r-lib"
+
 if __name__ == '__main__':
     logging.basicConfig(level=logging.WARN,format='%(asctime)s %(message)s')
+
+
+    init_env()
+
+    from filter import Filter
+    from GrimoireUtils import getPeriod, read_main_conf
+    from GrimoireUtils import compare_json_data, completePeriodIds
+    from GrimoireUtils import createJSON, compareJSON
+    from report import Report
+
+    opts = read_options()
+
+    automator = read_main_conf(opts.config_file)
+    if 'start_date' not in automator['r']:
+        logging.error("start_date (yyyy-mm-dd) not found in " + opts.config_file)
+        sys.exit()
+    start_date = automator['r']['start_date']
+    if 'end_date' not in automator['r']:
+        end_date = time.strftime('%Y-%m-%d')
+    else:
+        end_date = automator['r']['end_date']
+
+    if 'period' not in automator['r']:
+        period = getPeriod("months")
+    else:
+        period = getPeriod(automator['r']['period'])
+    logging.info("Period: " + period)
+
+    if 'people_number' in automator['generic']:
+        npeople = automator['generic']['people_number']
+        logging.info("Number of people: " + npeople)
+        opts.npeople = npeople
+
+    # Global vars used in all code
+    startdate = "'"+start_date+"'"
+    enddate = "'"+end_date+"'"
 
     DataSourceTest.init()
     suite = unittest.TestLoader().loadTestsFromTestCase(DataSourceTest)
