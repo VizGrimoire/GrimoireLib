@@ -141,7 +141,7 @@ def scm_report(dbcon, filters):
     top_authors = {}
     bots = SCM.get_bots() 
     SetDBChannel(dbcon.user, dbcon.password, dbcon.database)
-    top_authors["authors"] =  top_people(90, filters.startdate, filters.enddate, "author", bots, str(filters.npeople))
+    top_authors["authors"] =  top_people(0, filters.startdate, filters.enddate, "author", bots, str(filters.npeople))
     createJSON(top_authors, "./release/scm_top_authors.json")
 
     from SCM import repos_name
