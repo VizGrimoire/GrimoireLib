@@ -153,6 +153,7 @@ def scm_report(dbcon, filters):
     from SCM import repos_name
     top_repos = repos_name(filters.startdate, filters.enddate)
     createJSON(top_repos, "./release/scm_top_repositories.json")
+    createCSV(top_repos, "./release/scm_top_repositories.csv")
 
 def qaforums_report(dbcon, filters):
     questions = qa.Questions(dbcon, filters)
@@ -183,11 +184,12 @@ def qaforums_report(dbcon, filters):
 
     top_crowded_questions = top_questions.top_crowded()
     createCSV(top_crowded_questions, "./release/qaforums_top_crowded_questions.csv")
-    createJSON(top_crowded_questions, "./release/qaforums_top_crowded_questions.json")
+    createJSON(top_crowded_questions, "./release/qaforums_top_crowded_questions.json",['question_identifier'])
 
     from top_qaforums import TopQAForums
     top_participants = TopQAForums(dbcon, filters)
     createJSON(top_participants.result(), "./release/qaforums_top_participants.json")
+    createCSV(top_participants.result(), "./release/qaforums_top_participants.csv",['id'])
 
 def mls_report(dbcon, filters):
 
@@ -213,7 +215,7 @@ def mls_report(dbcon, filters):
     top_threads = {}
     top_threads['threads'] = MLS.getLongestThreads(filters.startdate, filters.enddate, dbcon.identities_db, str(filters.npeople))
     createJSON(top_threads, "./release/mls_top_longest_threads.json")
-    createCSV(top_threads["threads"], "./release/mls_top_longest_threads.csv")
+    #createCSV(top_threads["threads"], "./release/mls_top_longest_threads.csv")
 
     main_topics= Threads(filters.startdate, filters.enddate, dbcon.identities_db)
     top_crowded = main_topics.topCrowdedThread(filters.npeople)
