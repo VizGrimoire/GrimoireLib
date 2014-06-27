@@ -127,12 +127,13 @@ def build_releases(releases_dates):
 
 
 def scm_report(dbcon, filters):
-
     commits = scm.Commits(dbcon, filters)
     createJSON(commits.get_agg(), "./release/scm_commits.json")
+    print(commits.get_agg())
 
     authors = scm.Authors(dbcon, filters)
     createJSON(authors.get_agg(), "./release/scm_authors.json")
+    print(authors.get_agg())
 
     from contributors_new_gone import ContributorsNewGoneSCM
     from SCM import SCM
@@ -145,6 +146,7 @@ def scm_report(dbcon, filters):
     SetDBChannel(dbcon.user, dbcon.password, dbcon.database)
     top_authors["authors"] =  top_people(90, filters.startdate, filters.enddate, "author", bots, str(filters.npeople))
     createJSON(top_authors, "./release/scm_top_authors.json")
+    createCSV(top_authors["authors"], "./release/scm_top_authors.csv")
 
 def qaforums_report(dbcon, filters):
     questions = qa.Questions(dbcon, filters)
@@ -166,22 +168,27 @@ def qaforums_report(dbcon, filters):
     top_questions = TopQuestions(dbcon, filters)
 
     top_visited_questions = top_questions.top_visited()
+    createCSV(top_visited_questions, "./release/qaforums_top_visited_questions.csv", ['question_identifier'])
     createJSON(top_visited_questions, "./release/qaforums_top_visited_questions.json")    
     
     top_commented_questions = top_questions.top_commented()
+    createCSV(top_commented_questions, "./release/qaforums_top_commented_questions.csv", ['question_identifier'])
     createJSON(top_commented_questions, "./release/qaforums_top_commented_questions.json")
 
     top_crowded_questions = top_questions.top_crowded()
+    createCSV(top_crowded_questions, "./release/qaforums_top_crowded_questions.csv")
     createJSON(top_crowded_questions, "./release/qaforums_top_crowded_questions.json")
 
 
 def mls_report(dbcon, filters):
 
     emails_sent = mls.EmailsSent(dbcon, filters)
-    createJSON(emails_sent.get_agg(), "./release/mls_emailsent.json")    
+    createJSON(emails_sent.get_agg(), "./release/mls_emailsent.json")
+    print(emails_sent.get_agg())
 
     emails_senders = mls.EmailsSenders(dbcon, filters)
     createJSON(emails_senders.get_agg(), "./release/mls_emailsenders.json")
+    print(emails_senders.get_agg())
 
     from MLS import MLS
     from MLS import top_senders
@@ -190,12 +197,14 @@ def mls_report(dbcon, filters):
     top = {}
     top["EmailSenders"] = top_senders(90, filters.startdate, filters.enddate, dbcon.identities_db,bots, str(filters.npeople))
     createJSON(top, "./release/mls_top_email_senders.json")
+    createCSV(top["EmailSenders"], "./release/mls_top_email_senders.csv")
 
     from threads import Threads
     SetDBChannel(dbcon.user, dbcon.password, dbcon.database)
     top_threads = {}
     top_threads['threads'] = MLS.getLongestThreads(filters.startdate, filters.enddate, dbcon.identities_db, str(filters.npeople))
     createJSON(top_threads, "./release/mls_top_longest_threads.json")
+    createCSV(top_threads["threads"], "./release/mls_top_longest_threads.csv")
 
     main_topics= Threads(filters.startdate, filters.enddate, dbcon.identities_db)
     top_crowded = main_topics.topCrowdedThread(filters.npeople)
@@ -217,7 +226,33 @@ def mls_report(dbcon, filters):
         l_threads['initiator_id'].append(email.initiator_id)
         l_threads['url'].append(email.url)
     createJSON(l_threads, "./release/mls_top_crowded_threads.json")
-
+    createCSV(l_threads, "./release/mls_top_crowded_threads.csv")
+   
+# Until we use VizPy we will create JSON python files with _py
+def createCSV(data, filepath, skip_fields = []):
+    fd = open(filepath, "w")
+    keys = list(set(data.keys()) - set(skip_fields))
+    
+    header = u''
+    for k in keys:
+        header += unicode(k)
+        header += u','        
+    header = header[:-1]
+    body = ''
+    length = len(data[keys[0]]) # the length should be the same for all
+    cont = 0
+    while (cont < length):
+        for k in keys:
+            body += unicode(data[k][cont])
+            body += u','
+        body = body[:-1]
+        body += u'\n'
+        cont += 1
+    fd.write(header.encode('utf-8'))
+    fd.write('\n')
+    fd.write(body.encode('utf-8'))
+    fd.close()
+    print "CSV file generated at: %s" % (filepath)
 
 
 if __name__ == '__main__':
