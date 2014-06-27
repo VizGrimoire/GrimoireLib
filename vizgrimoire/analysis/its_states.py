@@ -43,6 +43,8 @@ class TicketsStates(Analyses):
     def __get_sql_issues_states__(self, backend_type):
         """Returns the log of states"""
 
+        if backend_type == "lp": backend_type = "launchpad" # openstack
+
         q = """SELECT issue_id, status, UNIX_TIMESTAMP(date) udate
                FROM issues_log_%s
                WHERE date >= %s AND date < %s
