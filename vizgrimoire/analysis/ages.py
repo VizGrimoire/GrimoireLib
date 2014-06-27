@@ -57,7 +57,7 @@ class Demography(Analyses):
         nomerges = NomergesCondition()
         data = ActivityPersons (
             database = database,
-            var = "list_authors",
+            var = "list_uauthors",
             conditions = (period,nomerges))
         # Birth has the ages of all actors, consiering enddate as
         # current (snapshot) time
