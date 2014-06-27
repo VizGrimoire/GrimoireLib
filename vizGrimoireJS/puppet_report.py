@@ -144,6 +144,10 @@ def scm_report(dbcon, filters):
     top_authors["authors"] =  top_people(90, filters.startdate, filters.enddate, "author", bots, str(filters.npeople))
     createJSON(top_authors, "./release/scm_top_authors.json")
 
+    from SCM import repos_name
+    top_repos = repos_name(filters.startdate, filters.enddate)
+    createJSON(top_repos, "./release/scm_top_repositories.json")
+
 def qaforums_report(dbcon, filters):
     questions = qa.Questions(dbcon, filters)
     createJSON(questions.get_agg(), "./release/qaforums_questions.json")
