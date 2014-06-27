@@ -53,7 +53,7 @@ def read_options():
     parser.add_option("-o", "--destination",
                       action="store",
                       dest="destdir",
-                      default="data/json",
+                      default="../../../json",
                       help="Destination directory for JSON files")
     parser.add_option("-r", "--reports",
                       action="store",
@@ -82,6 +82,7 @@ def read_options():
     parser.add_option("-c", "--config-file",
                       action="store",
                       dest="config_file",
+                      default = "../../../conf/main.conf",
                       help="Automator config file")
     parser.add_option("--data-source",
                       action="store",
@@ -102,6 +103,7 @@ def read_options():
     parser.add_option("-m", "--metrics",
                       action="store",
                       dest="metrics_path",
+                      default = "../vizgrimoire/metrics",
                       help="Path to the metrics modules to be loaded")
     parser.add_option("-t", "--type",
                       action="store",
