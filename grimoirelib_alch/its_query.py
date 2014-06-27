@@ -199,6 +199,28 @@ class ITSQuery (Query):
         return query
 
 
+    def group_by_person (self):
+        """Group by person
+
+        Uses person_id field in the query to do the grouping.
+        That field should be added by some other method.
+
+        Parameters
+        ----------
+
+        None
+
+        Returns
+        -------
+
+        SCMQuery object, with a new field (person_id)
+        and a "group by" clause for grouping the results.
+
+        """
+
+        return self.group_by("person_id")
+
+
 if __name__ == "__main__":
 
     import sys
@@ -216,9 +238,10 @@ if __name__ == "__main__":
         echo=False)
 
     #---------------------------------
-    print_banner ("Number of commits")
+    print_banner ("List of developers")
     res = session.query() \
-        .select_personsdata("openers")
+        .select_personsdata("openers") \
+        .group_by_person()
     print res
     for row in res.limit(10).all():
         print row.person_id, row.user, row.email
