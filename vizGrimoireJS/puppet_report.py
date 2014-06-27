@@ -223,14 +223,14 @@ def mls_report(dbcon, filters):
     top = {}
     top["EmailSenders"] = top_senders(90, filters.startdate, filters.enddate, dbcon.identities_db,bots, str(filters.npeople))
     createJSON(top, "./release/mls_top_email_senders.json")
-    createCSV(top["EmailSenders"], "./release/mls_top_email_senders.csv")
+    createCSV(top["EmailSenders"], "./release/mls_top_email_senders.csv", ['id'])
 
     from threads import Threads
     SetDBChannel(dbcon.user, dbcon.password, dbcon.database)
     top_threads = {}
     top_threads['threads'] = MLS.getLongestThreads(filters.startdate, filters.enddate, dbcon.identities_db, str(filters.npeople))
     createJSON(top_threads, "./release/mls_top_longest_threads.json")
-    createCSV(top_threads["threads"], "./release/mls_top_longest_threads.csv")
+    createCSV(top_threads["threads"], "./release/mls_top_longest_threads.csv", ['initiator_id','message_id'])
 
     main_topics= Threads(filters.startdate, filters.enddate, dbcon.identities_db)
     top_crowded = main_topics.topCrowdedThread(filters.npeople)
@@ -252,7 +252,7 @@ def mls_report(dbcon, filters):
         l_threads['initiator_id'].append(email.initiator_id)
         l_threads['url'].append(email.url)
     createJSON(l_threads, "./release/mls_top_crowded_threads.json")
-    createCSV(l_threads, "./release/mls_top_crowded_threads.csv")
+    createCSV(l_threads, "./release/mls_top_crowded_threads.csv", ['initiator_id','message_id'])
    
 # Until we use VizPy we will create JSON python files with _py
 def createCSV(data, filepath, skip_fields = []):
