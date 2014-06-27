@@ -22,11 +22,7 @@
 #   Alvaro del Castillo <acs@bitergia.com>
 #
 
-import logging, sys, time
-
-from GrimoireUtils import getPeriod, read_main_conf, createJSON
-
-from report import Report
+import logging, os, sys, time
 
 from utils import read_options
 
@@ -205,7 +201,23 @@ def set_study(study_id):
         logging.error(study_id + " study not available ")
         sys.exit(1)
 
+def init_env():
+    grimoirelib = os.path.join("..","vizgrimoire")
+    metricslib = os.path.join("..","vizgrimoire","metrics")
+    studieslib = os.path.join("..","vizgrimoire","analysis")
+    alchemy = os.path.join("..","grimoirelib_alch")
+    for dir in [grimoirelib,metricslib,studieslib,alchemy]:
+        sys.path.append(dir)
+
+    # env vars for R
+    os.environ["LANG"] = ""
+    os.environ["R_LIBS"] = "../../r-lib"
+
 if __name__ == '__main__':
+
+    init_env()
+    from GrimoireUtils import getPeriod, read_main_conf, createJSON
+    from report import Report
 
     logging.basicConfig(level=logging.INFO,format='%(asctime)s %(message)s')
     logging.info("Starting Report analysis")
