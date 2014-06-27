@@ -25,6 +25,7 @@
 
 from analyses import Analyses
 from scm import PeriodCondition, NomergesCondition
+import its_conditions
 from demography import ActivityPersons, ActivityPersonsITS, DurationPersons, \
     SnapshotCondition, ActiveCondition
 from datetime import datetime, timedelta
@@ -100,15 +101,13 @@ class AgesITS(Ages):
         # all the actors, considering only actiivty during
         # the startdate..enddate period (merges are not considered
         # as activity)
-        # period = PeriodCondition (start = startdate, end = enddate)
-        # data = ActivityPersons (
-        #     database = database,
-        #     var = "list_changers",
-        #     conditions = (period))
+        period = its_conditions.PeriodCondition (start = startdate,
+                                                 end = enddate)
         data = ActivityPersonsITS (
             database = database,
             id_database = id_database,
-            var = "list_changers")
+            var = "list_changers",
+            conditions = (period,))
         # Birth has the ages of all actors, consiering enddate as
         # current (snapshot) time
         snapshot = SnapshotCondition (date = enddate)
