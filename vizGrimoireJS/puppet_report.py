@@ -158,18 +158,23 @@ def scm_report(dbcon, filters):
 def qaforums_report(dbcon, filters):
     questions = qa.Questions(dbcon, filters)
     createJSON(questions.get_agg(), "./release/qaforums_questions.json")
+    print(questions.agg())
 
     answers = qa.Answers(dbcon, filters)
     createJSON(answers.get_agg(), "./release/qaforums_answers.json")
+    print(answers.get_agg())
 
     comments = qa.Comments(dbcon, filters)
     createJSON(comments.get_agg(), "./release/qaforums_answers.json")
+    print(comments.get_agg())
 
     senders = qa.QuestionSenders(dbcon, filters)
     createJSON(senders.get_agg(), "./release/qaforums_people_posting_questions.json")
+    print(senders.get_agg())
 
     people_replying = qa.AnswerSenders(dbcon, filters)
     createJSON(people_replying.get_agg(), "./release/qaforums_people_posting_answers.json")
+    print(people_replying.get_agg())
 
     from top_questions_qaforums import TopQuestions
     top_questions = TopQuestions(dbcon, filters)
