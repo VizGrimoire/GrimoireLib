@@ -25,7 +25,7 @@
 
 from analyses import Analyses
 from scm import PeriodCondition, NomergesCondition
-from demography import ActivityPersons, DurationPersons, \
+from demography import ActivityPersons, ActivityPersonsITS, DurationPersons, \
     SnapshotCondition, ActiveCondition
 from datetime import datetime, timedelta
 
@@ -78,6 +78,56 @@ class Demography(Analyses):
         return demos
 
 
+class AgesITS(Ages):
+
+    id = "ages_its"
+    name = "Ages ITS"
+    desc = "Age of developers in ITS repositories"
+
+    def result(self, data_source = None):
+
+        # Prepare the SQLAlchemy database url
+        database = 'mysql://' + self.db.user + ':' + \
+            self.db.password + '@' + self.db.host + '/' + \
+            self.db.database
+        id_database = 'mysql://' + self.db.user + ':' + \
+            self.db.password + '@' + self.db.host + '/' + \
+            self.db.identities_db
+        # Get startdate, endate as datetime objects
+        startdate = datetime.strptime(self.filters.startdate, "'%Y-%m-%d'")
+        enddate = datetime.strptime(self.filters.enddate, "'%Y-%m-%d'")
+        # Activity data (start time, end time for contributions) for
+        # all the actors, considering only actiivty during
+        # the startdate..enddate period (merges are not considered
+        # as activity)
+        # period = PeriodCondition (start = startdate, end = enddate)
+        # data = ActivityPersons (
+        #     database = database,
+        #     var = "list_changers",
+        #     conditions = (period))
+        data = ActivityPersonsITS (
+            database = database,
+            id_database = id_database,
+            var = "list_changers")
+        # Birth has the ages of all actors, consiering enddate as
+        # current (snapshot) time
+        snapshot = SnapshotCondition (date = enddate)
+        birth = DurationPersons (var = "age",
+                                 conditions = (snapshot,),
+                                 activity = data.activity())
+        # "Aging" has the ages of those actors active during the 
+        # last half year (that is, the period from enddate - half year
+        # to enddate)
+        active_period = ActiveCondition (after = enddate - \
+                                             timedelta(days=182))
+        aging = DurationPersons (var = "age",
+                                 conditions = (snapshot, active_period),
+                                 activity = data.activity())
+        demos = {"birth": birth.durations(),
+                 "aging": aging.durations()}
+        return demos
+
+
 if __name__ == '__main__':
 
     from query_builder import DSQuery
@@ -104,3 +154,13 @@ if __name__ == '__main__':
                         encoding="utf8")
     print encode(dem.result(), unpicklable=False)
 
+    dbcon = DSQuery(user = "jgb", password = "XXX", 
+                    database = "vizgrimoire_bicho",
+                    identities_db = "vizgrimoire_cvsanaly")
+    ages = AgesITS(dbcon, filters)
+    # Produce pretty JSON output
+    set_encoder_options('json', sort_keys=True, indent=4,
+                        separators=(',', ': '),
+                        ensure_ascii=False,
+                        encoding="utf8")
+    print encode(ages.result(), unpicklable=False)
