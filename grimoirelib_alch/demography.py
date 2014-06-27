@@ -25,6 +25,7 @@
 ##
 
 from scm_query import buildSession, SCMQuery
+import its_query
 from scm import PeriodCondition, NomergesCondition
 from sqlalchemy.orm.session import Session
 
@@ -42,7 +43,9 @@ class ActivityPersons:
     """
 
     def __init__ (self, var, conditions = (), 
-                  session = None, database = None, echo = False):
+                  session = None,
+                  database = None, id_database = None,
+                  echo = False):
         """Instantiation of the object.
 
         Instantiation can be specified with an SQLAlchemy url or
@@ -60,6 +63,8 @@ class ActivityPersons:
            SQLAlchemy session
         database: string
            SQLAlchemy url of the database to work with (default: "")
+        id_database: string
+           SQLAlchemy url of the identities database (default: same as database)
         echo: boolean
            Write SQL queries to output stream
         """
@@ -68,7 +73,7 @@ class ActivityPersons:
             self.session = session
         elif database is not None:
             self.session = buildSession(
-                database=database,
+                database=database, id_database=id_database,
                 echo=echo)
         else:
             raise Exception ("ActivityPersons: Either a session or a " + \
@@ -106,6 +111,73 @@ class ActivityPersons:
         """
 
         return self.query.activity()
+
+class ActivityPersonsITS (ActivityPersons):
+    """Interface to variables related to activity of persons in ITS
+    
+    Objects of this class are instantiated with a SQLAlchemy url
+    (or a SQLAlchemy session), a variable to be obtained from it,
+    and a list of conditions.
+    
+    Objects of this class provide the function activity() to
+    obtain an ActivityList object. From this ActivityList, ages or
+    idle period for actors can be obtained.
+
+    """
+
+    def __init__ (self, var, conditions = (), 
+                  session = None,
+                  database = None, id_database = None,
+                  echo = False):
+        """Instantiation of the object.
+
+        Instantiation can be specified with an SQLAlchemy url or
+        with an SQLAlchemy session.
+
+        Parameters
+        ----------
+        
+        var: {"list_authors" | "list_committers" |
+           "list_uauthors" | "list_ucommitters"}
+           Variable
+        conditions: list of Condition objects
+           Conditions to be applied to get the values
+        session: sqlalchemy.orm.session.Session
+           SQLAlchemy session
+        database: string
+           SQLAlchemy url of the database to work with (default: "")
+        id_database: string
+           SQLAlchemy url of the identities database (default: same as database)
+        echo: boolean
+           Write SQL queries to output stream
+        """
+
+        if session is not None:
+            self.session = session
+        elif database is not None:
+            self.session = its_query.buildSession(
+                database=database, id_database=id_database,
+                echo=echo)
+        else:
+            raise Exception ("ActivityPersons: Either a session or a " + \
+                                 "database must be specified")
+        if var in ("list_changers"):
+            persons = "changers"
+        else:
+            raise Exception ("ActivityPersons: Unknown variable %s." % var)
+        self.query = self.session.query()
+        if var in ("list_changers"):
+            self.query = self.query.select_personsdata(persons)
+        elif var in ("list_uchangers", "list_ucommitters"):
+            self.query = self.query.select_personsdata_uid(persons)
+        else:
+            raise Exception ("ActivityPersons: Unknown variable %s." % var)
+        self.query = self.query \
+            .select_changesperiod() \
+            .group_by_person()
+        for condition in conditions:
+            self.query = condition.filter(self.query)
+
 
 class DurationCondition ():
     """Root of all conditions for DurationPersons objects
@@ -346,6 +418,15 @@ if __name__ == "__main__":
                            activity = data.activity())
     print age.durations().json()
     
+    #---------------------------------
+    print_banner("List of activity for each changer")
+    data = ActivityPersonsITS (
+        database = 'mysql://jgb:XXX@localhost/vizgrimoire_bicho',
+        id_database = 'mysql://jgb:XXX@localhost/vizgrimoire_cvsanaly',
+        var = "list_changers")
+    activity = data.activity()
+    print activity
+
     #---------------------------------
     # print_banner("List of activity for each committer (OpenStack)")
     # session = buildSession(

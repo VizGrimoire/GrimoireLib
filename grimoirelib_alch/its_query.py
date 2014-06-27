@@ -180,24 +180,48 @@ class ITSQuery (Query):
         """
 
         query = self.add_columns (label("person_id", People.id),
-                                  label("user", People.user_id),
+                                  label("name", People.user_id),
                                   label('email', People.email))
         if kind == "openers":
             person = Issues.submitted_by
+            if Issues in self.joined:
+                query = query.filter (People.id == person)
+            else:
+                self.joined.append (Issues)
+                query = query.join (Issues, People.id == person)
         elif kind == "changers":
-            raise Exception ("select_personsdata: Not yet implemented")
+            person = Changes.changed_by
+            if Changes in self.joined:
+                query = query.filter (People.id == person)
+            else:
+                self.joined.append (Changes)
+                query = query.join (Changes, People.id == person)
         elif kind == "closers":
             raise Exception ("select_personsdata: Not yet implemented")
         else:
             raise Exception ("select_personsdata: Unknown kind %s." \
                              % kind)
-        if Issues in self.joined:
-            query = query.filter (People.id == person)
-        else:
-            self.joined.append (Issues)
-            query = query.join (Issues, People.id == person)
         return query
 
+
+    def select_changesperiod(self):
+        """Add to select the period of the changed tickets.
+
+        Adds min(changes.changed_on) and max(changes.changed_on)
+        for selected commits.
+        
+        Returns
+        -------
+
+        SCMObject: Result query, with two new fields: firstdate, lastdate
+
+        """
+
+        query = self.add_columns (label('firstdate',
+                                        func.min(Changes.changed_on)),
+                                  label('lastdate',
+                                        func.max(Changes.changed_on)))
+        return query
 
     def group_by_person (self):
         """Group by person
@@ -221,6 +245,17 @@ class ITSQuery (Query):
         return self.group_by("person_id")
 
 
+    def activity (self):
+        """Return an ActivityList object.
+
+        The query has to produce rows with the following fields:
+        id (string),  name (string), start (datetime), end (datetime)
+
+        """
+
+        list = self.all()
+        return ActivityList(list)
+
 if __name__ == "__main__":
 
     import sys
@@ -238,10 +273,20 @@ if __name__ == "__main__":
         echo=False)
 
     #---------------------------------
-    print_banner ("List of developers")
+    print_banner ("List of openers")
     res = session.query() \
         .select_personsdata("openers") \
         .group_by_person()
     print res
     for row in res.limit(10).all():
-        print row.person_id, row.user, row.email
+        print row.person_id, row.name, row.email
+
+    #---------------------------------
+    print_banner ("Activity period for changers")
+    res = session.query() \
+        .select_personsdata("changers") \
+        .select_changesperiod() \
+        .group_by_person()
+    print res
+    for row in res.limit(10).all():
+        print row.person_id, row.name, row.email, row.firstdate, row.lastdate
