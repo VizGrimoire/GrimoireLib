@@ -190,6 +190,16 @@ def qaforums_report(dbcon, filters):
     top_participants = TopQAForums(dbcon, filters)
     createJSON(top_participants.result(), "./release/qaforums_top_participants.json")
     createCSV(top_participants.result(), "./release/qaforums_top_participants.csv",['id'])
+    
+    filters_ext = filters
+    filters_ext.npeople = 10000
+    top_participants = TopQAForums(dbcon, filters_ext)
+    data = top_participants.result()
+    names = data["name"]
+    num_participants = {}
+    num_participants["nparticipants"] = len(names)
+    createJSON(num_participants, "./release/qaforums_participants.json")
+    print(num_participants)
 
 def mls_report(dbcon, filters):
 
