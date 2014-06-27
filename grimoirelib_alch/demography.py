@@ -27,6 +27,7 @@
 from scm_query import buildSession, SCMQuery
 import its_query
 from scm import PeriodCondition, NomergesCondition
+import its_conditions
 from sqlalchemy.orm.session import Session
 
 class ActivityPersons:
@@ -424,6 +425,18 @@ if __name__ == "__main__":
         database = 'mysql://jgb:XXX@localhost/vizgrimoire_bicho',
         id_database = 'mysql://jgb:XXX@localhost/vizgrimoire_cvsanaly',
         var = "list_changers")
+    activity = data.activity()
+    print activity
+
+    #---------------------------------
+    print_banner("List of activity for each changer, with period condition")
+    period = its_conditions.PeriodCondition (start = datetime(2014,1,1),
+                                             end = None)
+    data = ActivityPersonsITS (
+        database = 'mysql://jgb:XXX@localhost/vizgrimoire_bicho',
+        id_database = 'mysql://jgb:XXX@localhost/vizgrimoire_cvsanaly',
+        var = "list_changers",
+        conditions = (period,))
     activity = data.activity()
     print activity
 

@@ -223,6 +223,34 @@ class ITSQuery (Query):
                                         func.max(Changes.changed_on)))
         return query
 
+
+    def filter_period(self, start = None, end = None, date = "change"):
+        """Filter variable for a period
+
+        - start: datetime, starting date
+        - end: datetime, end date
+        - date: "change"
+
+        Commits considered are between starting date and end date
+        (exactly: start <= date < end)
+        """
+
+        query = self
+        if date == "change":
+            date_field = Changes.changed_on
+        else:
+            raise Exception ("filter_period: Unknown kind of date: %s." \
+                                 % date)
+
+        if start is not None:
+            self.start = start
+            query = query.filter(date_field >= start.isoformat())
+        if end is not None:
+            self.end = end
+            query = query.filter(date_field < end.isoformat())
+        return query
+
+
     def group_by_person (self):
         """Group by person
 
