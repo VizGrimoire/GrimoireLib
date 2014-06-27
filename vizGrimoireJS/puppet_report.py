@@ -269,7 +269,10 @@ def createCSV(data, filepath, skip_fields = []):
     cont = 0
     while (cont < length):
         for k in keys:
-            body += unicode(data[k][cont])
+            try:
+                body += unicode(data[k][cont])
+            except UnicodeDecodeError:
+                body += u'ERROR'
             body += u','
         body = body[:-1]
         body += u'\n'
