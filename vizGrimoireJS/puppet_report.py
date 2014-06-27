@@ -21,6 +21,8 @@
 ## Authors:
 ##   Daniel Izquierdo-Cortazar <dizquierdo@bitergia.com>
 ##   Luis Cañas-Díaz <lcanas@bitergia.com>
+##
+## example: PYTHONPATH=./:../vizgrimoire/metrics/:../vizgrimoire/analysis/:../vizgrimoire/ python puppet_report.py  -a lcanas_cvsanaly_puppetlabs_copy -i lcanas_cvsanaly_puppetlabs_copy -f acs_sibyl_puppetlabs_copy -b lcanas_mlstats_puppetlabs_copy -u root --dbpassword="" -r 2014-04-01,2014-07-01 -g week
 
 from optparse import OptionParser
 from os import listdir
@@ -179,6 +181,9 @@ def qaforums_report(dbcon, filters):
     createCSV(top_crowded_questions, "./release/qaforums_top_crowded_questions.csv")
     createJSON(top_crowded_questions, "./release/qaforums_top_crowded_questions.json")
 
+    from top_qaforums import TopQAForums
+    top_participants = TopQAForums(dbcon, filters)
+    createJSON(top_participants.result(), "./release/qaforums_top_participants.json")
 
 def mls_report(dbcon, filters):
 
