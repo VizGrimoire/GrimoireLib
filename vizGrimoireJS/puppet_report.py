@@ -131,7 +131,10 @@ def scm_report(dbcon, filters):
     from contributors_new_gone import ContributorsNewGoneSCM
     from SCM import SCM
     newcommers_leavers = ContributorsNewGoneSCM(dbcon, filters)
-    newcommers_leavers.result(SCM, "./release/")
+    newcommers_leavers_dict = newcommers_leavers.result(SCM, "./release/")
+    # createJSON(newcommers_leavers_dict, "./release/scm_newcommers_leavers.json")
+    createCSV(newcommers_leavers_dict['people_new']["authors"], "./release/scm_top_authors_new.csv")
+    createCSV(newcommers_leavers_dict['people_gone']["authors"], "./release/scm_top_authors_gone.csv")
 
     from SCM import top_people
     top_authors = {}
