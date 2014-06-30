@@ -263,18 +263,21 @@ class ContributorsNewGoneSCM(ContributorsNewGone):
         from SCM import SCM
         if data_source != SCM or destdir is None: return
 
+        result_dict = {}
+
         period = self.filters.period
         startdate = self.filters.startdate
         enddate = self.filters.enddate
 
         code_contrib = {}
         code_contrib["authors"] = self.GetNewAuthors()
+        result_dict['people_new'] = code_contrib
         createJSON(code_contrib, destdir+"/scm-code-contrib-new.json")
 
         code_contrib = {}
         code_contrib["authors"] = self.GetGoneAuthors()
+        result_dict['people_gone'] = code_contrib
         createJSON(code_contrib, destdir+"/scm-code-contrib-gone.json")
-
 
         data = self.GetNewAuthorsActivity()
 
@@ -286,6 +289,8 @@ class ContributorsNewGoneSCM(ContributorsNewGone):
             evol['people'][upeople_id] = {"commits":pdata['commits']}
             # Just to have the time series data
             evol = dict(evol.items() + pdata.items())
+
+        result_dict['people_new_ts'] = evol
         createJSON(evol, destdir+"/new-people-activity-scm-evolutionary.json")
 
         data = self.GetGoneAuthorsActivity()
@@ -299,6 +304,7 @@ class ContributorsNewGoneSCM(ContributorsNewGone):
             evol = dict(evol.items() + pdata.items())
         if 'changes' in evol:
             del evol['changes'] # closed (metrics) is included in people
+        result_dict['people_gone_ts'] = evol
         createJSON(evol, destdir+"/gone-people-activity-scm-evolutionary.json")
 
         # data = GetPeopleLeaving()
@@ -312,7 +318,10 @@ class ContributorsNewGoneSCM(ContributorsNewGone):
         evol['num_people_1'] = data['people']
         evol['num_people_1_5'] = completePeriodIds(self.db.GetPeopleIntake(1,5),period, startdate, enddate)['people']
         evol['num_people_5_10'] = completePeriodIds(self.db.GetPeopleIntake(5,10), period, startdate, enddate)['people']
+        result_dict['people_intake_ts'] = evol
         createJSON(evol, destdir+"/scm-people-intake-evolutionary.json")
+
+        return result_dict
 
 class ContributorsNewGoneSCR(ContributorsNewGone):
 
