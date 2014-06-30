@@ -189,11 +189,27 @@ def qaforums_report(dbcon, filters):
     createCSV(top_tags_questions, "./release/qaforums_top_tags_questions.csv")
     createJSON(top_tags_questions, "./release/qaforums_top_tags_questions.json")
 
+    # Top participants
     from top_qaforums import TopQAForums
+    from QAForums import QAForums
     top_participants = TopQAForums(dbcon, filters)
     createJSON(top_participants.result(), "./release/qaforums_top_participants.json")
     createCSV(top_participants.result(), "./release/qaforums_top_participants.csv",['id'])
-    
+
+    SetDBChannel(dbcon.user, dbcon.password, dbcon.database)
+    bots = QAForums.get_bots()
+    QAForums.get_top_senders(90, filters.startdate, filters.enddate, dbcon.identities_db, bots, str(filters.npeople), "comments")
+    createJSON(top_participants.result(), "./release/qaforums_top_csenders.json")
+    createCSV(top_participants.result(), "./release/qaforums_top_csenders.csv",['id'])
+
+    QAForums.get_top_senders(90, filters.startdate, filters.enddate, dbcon.identities_db, bots, str(filters.npeople), "questions")
+    createJSON(top_participants.result(), "./release/qaforums_top_qsenders.json")
+    createCSV(top_participants.result(), "./release/qaforums_top_qsenders.csv",['id'])
+
+    QAForums.get_top_senders(90, filters.startdate, filters.enddate, dbcon.identities_db, bots, str(filters.npeople), "answers")
+    createJSON(top_participants.result(), "./release/qaforums_top_asenders.json")
+    createCSV(top_participants.result(), "./release/qaforums_top_asenders.csv",['id'])
+
     filters_ext = filters
     filters_ext.npeople = 10000
     top_participants = TopQAForums(dbcon, filters_ext)
