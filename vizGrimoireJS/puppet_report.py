@@ -198,8 +198,8 @@ def qaforums_report(dbcon, filters):
     createJSON(top_commented_questions, "./release/qaforums_top_commented_questions.json")
 
     top_crowded_questions = top_questions.top_crowded()
-    createCSV(top_crowded_questions, "./release/qaforums_top_crowded_questions.csv")
-    createJSON(top_crowded_questions, "./release/qaforums_top_crowded_questions.json",['question_identifier'])
+    createCSV(top_crowded_questions, "./release/qaforums_top_crowded_questions.csv",['question_identifier'])
+    createJSON(top_crowded_questions, "./release/qaforums_top_crowded_questions.json")
 
     from top_qaforums import TopQAForums
     top_participants = TopQAForums(dbcon, filters)
