@@ -311,7 +311,7 @@ if __name__ == '__main__':
     for release in releases:
         startdate = "'" + release[0] + "'"
         enddate = "'" + release[1] + "'"
-        filters = MetricFilters("month", startdate, enddate, []) 
+        filters = MetricFilters("month", startdate, enddate, [], opts.npeople)
         scm_dbcon = SCMQuery(opts.dbuser, opts.dbpassword, opts.dbcvsanaly, opts.dbidentities)
         #SCM report
         print("\n* SCM summary")
