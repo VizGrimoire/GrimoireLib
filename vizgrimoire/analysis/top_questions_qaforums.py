@@ -1,5 +1,6 @@
 #!/usr/bin/env python
-
+# -*- coding: utf-8 -*-
+#
 # Copyright (C) 2014 Bitergia
 # 
 # This program is free software; you can redistribute it and/or modify
@@ -19,11 +20,13 @@
 #
 # Authors:
 #     Daniel Izquierdo Cortazar <dizquierdo@bitergia.com>
+#     Santiago Dueñas <sduenas@bitergia.com>
 #
 
 from query_builder import DSQuery
 
 from metrics_filter import MetricFilters
+
 
 class TopQuestions(object):
     # this class provides a list of top questions filtered by 
@@ -36,11 +39,10 @@ class TopQuestions(object):
     # Based on the QAForums data source
     # This class is a general class and not specific studies. 
 
-
     def __init__(self, dbcon, filters):
         self.db = dbcon
         self.filters = filters
-        
+
     def top_commented(self):
         # The top commented questions are those with the highets
         # number of comments in the question and ignoring the comments
@@ -80,7 +82,6 @@ class TopQuestions(object):
                 order by view_count desc limit %s
                 """ % (self.filters.startdate, self.filters.enddate, self.filters.npeople)
         return self.db.ExecuteQuery(query)
-        
 
     def top_crowded(self):
         # The top crowded questions are those with the highest number
@@ -117,6 +118,22 @@ class TopQuestions(object):
                       q.added_at < %s
                 group by q.question_identifier
                 order by people desc limit %s
+                """ % (self.filters.startdate, self.filters.enddate, self.filters.npeople)
+        return self.db.ExecuteQuery(query)
+
+    def top_tags(self):
+        # The top tags are those with the highest number
+        # of occurrences in questions.
+
+        query = """
+                SELECT t.tag AS tag, count(t.tag) AS occurrences
+                FROM tags t, questions q, questionstags qt
+                WHERE t.id = qt.tag_id AND
+                      q.question_identifier = qt.question_identifier AND
+                      q.added_at >= %s AND
+                      q.added_at < %s
+                GROUP BY (t.tag)
+                ORDER BY occurrences DESC limit %s
                 """ % (self.filters.startdate, self.filters.enddate, self.filters.npeople)
         return self.db.ExecuteQuery(query)
 
