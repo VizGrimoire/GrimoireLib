@@ -23,7 +23,7 @@
 
 """ Companies activity  """
 
-import time
+import logging, time
 
 from analyses import Analyses
 from query_builder import DSQuery
@@ -35,28 +35,71 @@ from report import Report
 class CompaniesActivity(Analyses):
     id = "companies_activity"
     name = "Companies Activity"
-    desc = "Companies activity for different periods."
+    desc = "Companies activity for different periods: commits, authors, actions ..."
 
-    def get_sql(self, year = None):
+    def get_from_companies(self):
+        from_ = """
+            FROM scmlog s 
+              JOIN people_upeople pup ON s.author_id = pup.people_id 
+              JOIN upeople_companies upc ON upc.upeople_id = pup.upeople_id 
+              JOIN companies c ON c.id = upc.company_id 
+              JOIN people p ON p.id = s.author_id
+        """
+        return from_
+
+    def get_sql_commits(self, year = None):
         where = ""
         field = "commits"
+        from_ =  self.get_from_companies()
 
         if year is not None:
             where = " WHERE YEAR(s.date) = " + str(year)
             field = field + "_" + str(year)
         sql = """
             select c.name, count(c.id) as %s
-            from scmlog s 
-              join people_upeople pup ON s.author_id = pup.people_id 
-              JOIN upeople_companies upc ON upc.upeople_id = pup.upeople_id 
-              JOIN companies c ON c.id = upc.company_id 
-              JOIN people p ON p.id = s.author_id
+            %s %s
+            group by c.id
+            order by %s desc
+        """ % (field, from_, where, field)
+
+        return (sql)
+
+    def get_sql_authors(self, year = None):
+        where = ""
+        field = "authors"
+        from_ =  self.get_from_companies()
+
+        if year is not None:
+            where = " WHERE YEAR(s.date) = " + str(year)
+            field = field + "_" + str(year)
+        sql = """
+            select c.name, count(distinct(s.author_id)) as %s
+            %s %s
+            group by c.id
+            order by %s desc
+        """ % (field, from_, where, field)
+
+        return (sql)
+
+    def get_sql_actions(self, year = None):
+        where = ""
+        field = "actions"
+        from_ =  self.get_from_companies()
+
+        if year is not None:
+            where = " WHERE YEAR(s.date) = " + str(year)
+            field = field + "_" + str(year)
+        sql = """
+            select c.name, count(a.id) as %s
+            %s
+              JOIN actions a ON a.commit_id = s.id 
             %s
             group by c.id
             order by %s desc
-        """ % (field, where, field)
+        """ % (field, from_, where, field)
 
         return (sql)
+
 
     def create_report(self, data_source, destdir):
         if data_source != SCM: return
@@ -71,7 +114,6 @@ class CompaniesActivity(Analyses):
             if key != "name": 
                 field = key
                 break
-
         for company in activity['name']:
             if company in data['name']:
                 index = data['name'].index(company)
@@ -82,6 +124,25 @@ class CompaniesActivity(Analyses):
 
         activity[field] = new_activity
         return activity
+
+    def check_array_values(self, data):
+        for item in data: 
+            if not isinstance(data[item], list): data[item] = [data[item]]
+
+    def add_metric_years(self, metric, activity, start, end):
+        metrics = ['commits','authors','actions']
+        if metric not in metrics:
+            logging.error(metric + " not supported in companies activity.")
+            return
+        for i in range(start, end+1):
+            if metric == "commits":
+                data = self.db.ExecuteQuery(self.get_sql_commits(i))
+            elif metric == "authors":
+                data = self.db.ExecuteQuery(self.get_sql_authors(i))
+            elif metric == "actions":
+                data = self.db.ExecuteQuery(self.get_sql_actions(i))
+            self.check_array_values(data)
+            activity = self.add_companies_data (activity, data)
 
     def result(self, data_source, destdir = None):
         if data_source != SCM or destdir is None: return None
@@ -97,10 +158,17 @@ class CompaniesActivity(Analyses):
         end_year = int(end_date.split("-")[0])
 
         # First activity should include all companies name
-        activity = self.db.ExecuteQuery(self.get_sql())
-        for i in range(start_year, end_year+1):
-            data = self.db.ExecuteQuery(self.get_sql(i))
-            activity = self.add_companies_data (activity, data)
+        activity = self.db.ExecuteQuery(self.get_sql_commits())
+        self.add_metric_years("commits",activity,start_year,end_year)
+        # Authors
+        data = self.db.ExecuteQuery(self.get_sql_authors())
+        activity = self.add_companies_data (activity, data)
+        self.add_metric_years("authors",activity,start_year,end_year)
+
+        # Actions
+        data = self.db.ExecuteQuery(self.get_sql_actions())
+        activity = self.add_companies_data (activity, data)
+        self.add_metric_years("actions",activity,start_year,end_year)
 
         # activity = dict (activity.keys() + data.keys())
         createJSON(activity, destdir+"/scm-companies-activity.json")
