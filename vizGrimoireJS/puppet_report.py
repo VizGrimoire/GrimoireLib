@@ -24,20 +24,11 @@
 ##
 ## example: PYTHONPATH=./:../vizgrimoire/metrics/:../vizgrimoire/analysis/:../vizgrimoire/ python puppet_report.py  -a lcanas_cvsanaly_puppetlabs_copy -i lcanas_cvsanaly_puppetlabs_copy -f acs_sibyl_puppetlabs_copy -b lcanas_mlstats_puppetlabs_copy -u root --dbpassword="" -r 2014-04-01,2014-07-01 -g week
 
-from optparse import OptionParser
-from os import listdir
-from os.path import isfile, join
 import imp, inspect
-
-from metrics import Metrics
-from query_builder import DSQuery, SCMQuery, QAForumsQuery, MLSQuery
-from metrics_filter import MetricFilters
-import scm_metrics as scm
-import qaforums_metrics as qa
-import mls_metrics as mls
-from GrimoireUtils import createJSON
-from GrimoireSQL import SetDBChannel
-
+from optparse import OptionParser
+from os import listdir, path, environ
+from os.path import isfile, join
+import sys
 
 def read_options():
 
@@ -283,8 +274,30 @@ def createCSV(data, filepath, skip_fields = []):
     fd.close()
     print "CSV file generated at: %s" % (filepath)
 
+def init_env():
+    grimoirelib = path.join("..","vizgrimoire")
+    metricslib = path.join("..","vizgrimoire","metrics")
+    studieslib = path.join("..","vizgrimoire","analysis")
+    alchemy = path.join("..","grimoirelib_alch")
+    for dir in [grimoirelib,metricslib,studieslib,alchemy]:
+        sys.path.append(dir)
+
+    # env vars for R
+    environ["LANG"] = ""
+    environ["R_LIBS"] = "../../r-lib"
 
 if __name__ == '__main__':
+
+    init_env()
+
+    from metrics import Metrics
+    from query_builder import DSQuery, SCMQuery, QAForumsQuery, MLSQuery
+    from metrics_filter import MetricFilters
+    import scm_metrics as scm
+    import qaforums_metrics as qa
+    import mls_metrics as mls
+    from GrimoireUtils import createJSON
+    from GrimoireSQL import SetDBChannel
 
     # parse options
     opts = read_options()    
