@@ -24,20 +24,11 @@
 ##
 ## example: PYTHONPATH=./:../vizgrimoire/metrics/:../vizgrimoire/analysis/:../vizgrimoire/ python puppet_report.py  -a lcanas_cvsanaly_puppetlabs_copy -i lcanas_cvsanaly_puppetlabs_copy -f acs_sibyl_puppetlabs_copy -b lcanas_mlstats_puppetlabs_copy -u root --dbpassword="" -r 2014-04-01,2014-07-01 -g week
 
-from optparse import OptionParser
-from os import listdir
-from os.path import isfile, join
 import imp, inspect
-
-from metrics import Metrics
-from query_builder import DSQuery, SCMQuery, QAForumsQuery, MLSQuery
-from metrics_filter import MetricFilters
-import scm_metrics as scm
-import qaforums_metrics as qa
-import mls_metrics as mls
-from GrimoireUtils import createJSON
-from GrimoireSQL import SetDBChannel
-
+from optparse import OptionParser
+from os import listdir, path, environ
+from os.path import isfile, join
+import sys
 
 def read_options():
 
@@ -140,7 +131,10 @@ def scm_report(dbcon, filters):
     from contributors_new_gone import ContributorsNewGoneSCM
     from SCM import SCM
     newcommers_leavers = ContributorsNewGoneSCM(dbcon, filters)
-    newcommers_leavers.result(SCM, "./release/")
+    newcommers_leavers_dict = newcommers_leavers.result(SCM, "./release/")
+    # createJSON(newcommers_leavers_dict, "./release/scm_newcommers_leavers.json")
+    createCSV(newcommers_leavers_dict['people_new']["authors"], "./release/scm_top_authors_new.csv")
+    createCSV(newcommers_leavers_dict['people_gone']["authors"], "./release/scm_top_authors_gone.csv")
 
     from SCM import top_people
     top_authors = {}
@@ -192,7 +186,7 @@ def qaforums_report(dbcon, filters):
     top_visited_questions = top_questions.top_visited()
     createCSV(top_visited_questions, "./release/qaforums_top_visited_questions.csv", ['question_identifier'])
     createJSON(top_visited_questions, "./release/qaforums_top_visited_questions.json")    
-    
+
     top_commented_questions = top_questions.top_commented()
     createCSV(top_commented_questions, "./release/qaforums_top_commented_questions.csv", ['question_identifier'])
     createJSON(top_commented_questions, "./release/qaforums_top_commented_questions.json")
@@ -201,11 +195,31 @@ def qaforums_report(dbcon, filters):
     createCSV(top_crowded_questions, "./release/qaforums_top_crowded_questions.csv",['question_identifier'])
     createJSON(top_crowded_questions, "./release/qaforums_top_crowded_questions.json")
 
+    top_tags_questions = top_questions.top_tags()
+    createCSV(top_tags_questions, "./release/qaforums_top_tags_questions.csv")
+    createJSON(top_tags_questions, "./release/qaforums_top_tags_questions.json")
+
+    # Top participants
     from top_qaforums import TopQAForums
+    from QAForums import QAForums
     top_participants = TopQAForums(dbcon, filters)
     createJSON(top_participants.result(), "./release/qaforums_top_participants.json")
     createCSV(top_participants.result(), "./release/qaforums_top_participants.csv",['id'])
-    
+
+    SetDBChannel(dbcon.user, dbcon.password, dbcon.database)
+    bots = QAForums.get_bots()
+    QAForums.get_top_senders(90, filters.startdate, filters.enddate, dbcon.identities_db, bots, str(filters.npeople), "comments")
+    createJSON(top_participants.result(), "./release/qaforums_top_csenders.json")
+    createCSV(top_participants.result(), "./release/qaforums_top_csenders.csv",['id'])
+
+    QAForums.get_top_senders(90, filters.startdate, filters.enddate, dbcon.identities_db, bots, str(filters.npeople), "questions")
+    createJSON(top_participants.result(), "./release/qaforums_top_qsenders.json")
+    createCSV(top_participants.result(), "./release/qaforums_top_qsenders.csv",['id'])
+
+    QAForums.get_top_senders(90, filters.startdate, filters.enddate, dbcon.identities_db, bots, str(filters.npeople), "answers")
+    createJSON(top_participants.result(), "./release/qaforums_top_asenders.json")
+    createCSV(top_participants.result(), "./release/qaforums_top_asenders.csv",['id'])
+
     filters_ext = filters
     filters_ext.npeople = 10000
     top_participants = TopQAForums(dbcon, filters_ext)
@@ -293,8 +307,30 @@ def createCSV(data, filepath, skip_fields = []):
     fd.close()
     print "CSV file generated at: %s" % (filepath)
 
+def init_env():
+    grimoirelib = path.join("..","vizgrimoire")
+    metricslib = path.join("..","vizgrimoire","metrics")
+    studieslib = path.join("..","vizgrimoire","analysis")
+    alchemy = path.join("..","grimoirelib_alch")
+    for dir in [grimoirelib,metricslib,studieslib,alchemy]:
+        sys.path.append(dir)
+
+    # env vars for R
+    environ["LANG"] = ""
+    environ["R_LIBS"] = "../../r-lib"
 
 if __name__ == '__main__':
+
+    init_env()
+
+    from metrics import Metrics
+    from query_builder import DSQuery, SCMQuery, QAForumsQuery, MLSQuery
+    from metrics_filter import MetricFilters
+    import scm_metrics as scm
+    import qaforums_metrics as qa
+    import mls_metrics as mls
+    from GrimoireUtils import createJSON
+    from GrimoireSQL import SetDBChannel
 
     # parse options
     opts = read_options()    
@@ -305,7 +341,7 @@ if __name__ == '__main__':
     for release in releases:
         startdate = "'" + release[0] + "'"
         enddate = "'" + release[1] + "'"
-        filters = MetricFilters("month", startdate, enddate, []) 
+        filters = MetricFilters("month", startdate, enddate, [], opts.npeople)
         scm_dbcon = SCMQuery(opts.dbuser, opts.dbpassword, opts.dbcvsanaly, opts.dbidentities)
         #SCM report
         print("\n* SCM summary")
