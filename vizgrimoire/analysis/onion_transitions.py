@@ -56,6 +56,9 @@ class OnionTransitions(Analyses):
         return data
 
     def _get_person_info(self, upeople_id, from_date, to_date, data_source = None):
+        # gets the person info in two queries, first it obtains the name and later
+        # the number of ocurrences if any. If not, it sets ocurrences = 0
+        person_data = {}
         if (data_source.get_name() == "scm"):
             logging.info("Warning: current queries are counting merges")
             # q = " select pup.upeople_id as uid, p.name, p.email, "+\
@@ -74,7 +77,11 @@ class OnionTransitions(Analyses):
             #     "       pup.upeople_id = " + str(upeople_id) +\
             #     " group by pup.upeople_id "+\
             #     " order by commits desc; "
-            q = " select pup.upeople_id as uid, p.name, p.email, "+\
+            q0 = "select name, email from people, people_upeople pup "+\
+                "where people.id = pup.people_id and pup.upeople_id = " + str(upeople_id) + " "+\
+                " LIMIT 1"
+            
+            q1 = " select pup.upeople_id as uid, p.name, p.email, "+\
                 "        (count(distinct(s.id))) as commits "+\
                 " from scmlog s, "+\
                 "      people_upeople pup, "+\
@@ -89,10 +96,21 @@ class OnionTransitions(Analyses):
                 " group by pup.upeople_id "+\
                 " order by commits desc; "
 
-            #print(q)
+            aux = self.db.ExecuteQuery(q0)
+            person_data["name"] = aux["name"]
+            person_data["email"] = aux["email"]
+            aux = self.db.ExecuteQuery(q1)
+            if (type(aux["commits"]) == list):
+                person_data["commits"] = 0
+            else:
+                person_data["commits"] = aux["commits"]
+
         elif (data_source.get_name() == "qaforums"):
             logging.info("Warning: qaforums is not using matched identities")
-            q = "SELECT identifier, username as name, COUNT(*) as messages from ("+\
+            q0 = "SELECT username as name from people where identifier = " + str(upeople_id)+ " "+\
+                " LIMIT 1"
+            
+            q1 = "SELECT identifier, username as name, COUNT(*) as messages from ("+\
                 "(select p.identifier as identifier, p.username, q.added_at as date"+\
                 "  from questions q, people p"+\
                 "  where q.author_identifier=p.identifier)"+\
@@ -107,9 +125,14 @@ class OnionTransitions(Analyses):
                 "WHERE date>="+ from_date +" AND date<=" + to_date +" "+\
                 " AND identifier = "+ str(upeople_id) + " "+\
                 "group by identifier"
-        #end if                
-        people_data = self.db.ExecuteQuery(q)
-        return(people_data)
+            aux = self.db.ExecuteQuery(q0)
+            person_data["name"] = aux["name"]
+            aux = self.db.ExecuteQuery(q1)
+            if (type(aux["messages"]) == list):
+                person_data["messages"] = 0
+            else:
+                person_data["messages"] = aux["messages"]
+        return(person_data)
 
     def result(self, data_source = None, offset_days = None):
         if data_source.get_name() != "scm" \
@@ -152,14 +175,16 @@ class OnionTransitions(Analyses):
         past_occasional = past_groups["occasional"]
 
         # going up
-        up_core = past_regular.intersection(cur_core)
-        up_reg = past_occasional.intersection(cur_regular)
-
+        up_core = cur_core - past_core
+        # we substract past_core cause we want people going up!
+        up_reg = cur_regular - past_core - past_regular
+        
         # going down
         down_reg = past_core.intersection(cur_regular)
-        down_occ = past_regular.intersection(cur_occasional)
+        down_occ = past_regular.intersection(cur_occasional) | past_core.intersection(cur_occasional)
 
-        groups = {"up_core":up_core, "up_reg":up_reg, "down_reg":down_reg, "down_occ":down_occ}        
+        groups = {"core":cur_core, "up_core":up_core, "up_reg":up_reg,
+                  "down_reg":down_reg, "down_occ":down_occ}
 
         result = {}
         for g in groups:
@@ -171,7 +196,6 @@ class OnionTransitions(Analyses):
 
             # and .. we get the data
             for person in groups[g]:
-                #print(person)
                 user_data = self._get_person_info(person, self.filters.startdate, self.filters.enddate, data_source)
                 result[g]["name"].append(user_data["name"])
                 if (data_source.get_name() == "scm"):
@@ -179,33 +203,41 @@ class OnionTransitions(Analyses):
                     result[g]["commits"].append(user_data["commits"])
                 elif (data_source.get_name() == "qaforums"):
                     #print(user_data)
-                    result[g]["messages"].append(user_data["messages"])                
+                    result[g]["messages"].append(user_data["messages"])
+                #print user_data
+                #print " --> "+ str(person)
                 #result[g]["uid"].append(user_data["uid"])
-        
-        # for r in result:            
-        #     print(r)
-        #     for k in result[r]:
-        #         print k
-
-        # ## below the print
-        
-        # ##
-
         
         # print("core VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV")
         # c_set = []
         # a_set = []
         # for c in cur_core:
-        #      aux = self._get_person_info(c, self.filters.startdate, self.filters.enddate, data_source)
-        #      c_set.append(aux["messages"])
+        #      aux = self._get_person_info(c, cur_from_date, cur_to_date, data_source)
+        #      c_set.append(aux["commits"])
         # c_set.sort()
         # print c_set
         # print("regular ***********************************************")
         # for a in cur_regular:
-        #      aux2 = self._get_person_info(a, self.filters.startdate, self.filters.enddate, data_source)
-        #      a_set.append(aux2["messages"])
+        #      aux2 = self._get_person_info(a, cur_from_date, cur_to_date, data_source)
+        #      a_set.append(aux2["commits"])
         # a_set.sort()
         # print a_set
+
+        # print("core 22222222222222 VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV")
+        # c_set = []
+        # a_set = []
+        # for c in cur_core:
+        #      aux = self._get_person_info(c, self.filters.startdate, self.filters.enddate, data_source)
+        #      c_set.append(aux["commits"])
+        # c_set.sort()
+        # print c_set
+        # print("regular 2222222222222 ***********************************************")
+        # for a in cur_regular:
+        #      aux2 = self._get_person_info(a, self.filters.startdate, self.filters.enddate, data_source)
+        #      a_set.append(aux2["commits"])
+        # a_set.sort()
+        # print a_set
+        
 
         return (result)
 
