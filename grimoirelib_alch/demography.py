@@ -138,8 +138,7 @@ class ActivityPersonsITS (ActivityPersons):
         Parameters
         ----------
         
-        var: {"list_authors" | "list_committers" |
-           "list_uauthors" | "list_ucommitters"}
+        var: {"list_changers"}
            Variable
         conditions: list of Condition objects
            Conditions to be applied to get the values
