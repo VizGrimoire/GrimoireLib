@@ -246,7 +246,6 @@ class OnionTransitions(Analyses):
             people['commits'] = [people['commits']]
         # this is a list. Operate over the list
         people['commits'] = [((commits / total_commits) * 100) for commits in people['commits']]
-        # people['commits'] = (people['commits'] / total_commits) * 100
 
         #print(people)
 
@@ -282,14 +281,6 @@ class OnionTransitions(Analyses):
             else:
                 occ_group.add(dev_email)
                 
-            # ## this part triggers the change of the boolean
-            # if (core_f and cont >= 80):
-            #     #core developers number reached
-            #     core = devs
-            #     core_f = False                
-            # elif (regular_f and cont >= 95):
-            #     regular = devs
-            #     regular_f = False
 
             array_cont += 1
 
@@ -299,7 +290,6 @@ class OnionTransitions(Analyses):
         # print("core_group len = %s" % len(core_group))
         # print("reg_group len = %s" % len(reg_group))
         # print("occ_group len = %s" % len(occ_group))
-        # #print(core_group)
 
         # inserting values in variable
         community['core'] = ncore
@@ -312,84 +302,3 @@ class OnionTransitions(Analyses):
         groups["regular"]=reg_group
         groups["occasional"]=occ_group
         return(groups)
-            
-
-    def old_result(self, data_source = None):
-        if data_source is not None and data_source.get_name() != "scm": return None
-
-        # Init of structure to be returned
-        community = {}
-        community['core'] = None
-        community['regular'] = None
-        community['occasional'] = None
-
-        q = "select count(distinct(s.id)) as total "+\
-             "from scmlog s, people p, actions a "+\
-             "where s.author_id = p.id and "+\
-             "      p.email <> '%gerrit@%' and "+\
-             "      p.email <> '%jenkins@%' and "+\
-             "      s.id = a.commit_id and "+\
-             "      s.date>="+self.filters.startdate+" and "+\
-             "      s.date<="+self.filters.enddate+";"
-
-        total = self.db.ExecuteQuery(q)
-        total_commits = float(total['total'])
-
-        # Database access: developer, %commits
-        q = " select pup.upeople_id, "+\
-            "        (count(distinct(s.id))) as commits "+\
-            " from scmlog s, "+\
-            "      actions a, "+\
-            "      people_upeople pup, "+\
-            "      people p "+\
-            " where s.id = a.commit_id and "+\
-            "       s.date>="+self.filters.startdate+" and "+\
-            "       s.date<="+self.filters.enddate+" and "+\
-            "       s.author_id = pup.people_id and "+\
-            "       s.author_id = p.id and "+\
-            "       p.email <> '%gerrit@%' and "+\
-            "       p.email <> '%jenkins@%' "+\
-            " group by pup.upeople_id "+\
-            " order by commits desc; "
-
-        people = self.db.ExecuteQuery(q)
-        if not isinstance(people['commits'], list):
-            people['commits'] = [people['commits']]
-        # this is a list. Operate over the list
-        people['commits'] = [((commits / total_commits) * 100) for commits in people['commits']]
-        # people['commits'] = (people['commits'] / total_commits) * 100
-
-
-        # Calculating number of core, regular and occasional developers
-        cont = 0
-        core = 0
-        core_f = True # flag
-        regular = 0
-        regular_f = True  # flag
-        occasional = 0
-        devs = 0
-
-        for value in people['commits']:
-            cont = cont + value
-            devs = devs + 1
-
-            if (core_f and cont >= 80):
-                #core developers number reached
-                core = devs
-                core_f = False
-
-            if (regular_f and cont >= 95):
-                regular = devs
-                regular_f = False
-
-        occasional = devs - regular
-        regular = regular - core
-
-        # inserting values in variable
-        community['core'] = core
-        community['regular'] = regular
-        community['occasional'] = occasional
-
-        return(community)
-
-
