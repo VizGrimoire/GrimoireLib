@@ -150,8 +150,9 @@ def scm_report(dbcon, filters):
     createCSV(top_repos, "./release/scm_top_repositories.csv")
 
     from onion_transitions import OnionTransitions
+    scm_ds = SCM()
     ot = OnionTransitions(scm_dbcon, filters)
-    ot_data = ot.result()
+    ot_data = ot.result(scm_ds)
     #= {"up_core":up_core, "up_reg":up_reg, "down_reg":down_reg, "down_occ":down_occ}
     createCSV(ot_data["up_reg"], "./release/scm_occasional_to_regular.csv")
     createCSV(ot_data["up_core"], "./release/scm_regular_to_core.csv")

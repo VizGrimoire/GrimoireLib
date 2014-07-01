@@ -52,12 +52,12 @@ class OnionTransitions(Analyses):
     def get_agg (self, data_source = None):
         """ Returns aggregated data for a data source. """
         data = {}
-        if data_source is None or data_source.get_name() == "scm":
+        if data_source.get_name() == "scm":
             data = self.result(data_source)
         return data
 
     def get_person_info(self, upeople_id, from_date, to_date, data_source = None):
-        if (data_source == None) or (data_source.get_name() == "scm"):
+        if (data_source.get_name() == "scm"):
             # q = " select pup.upeople_id as uid, p.name, p.email, "+\
             #     "        (count(distinct(s.id))) as commits "+\
             #     " from scmlog s, "+\
@@ -95,10 +95,8 @@ class OnionTransitions(Analyses):
             return(people_data)
 
     def result(self, data_source = None):
-        if data_source is not None \
-            and data_source.get_name() != "scm" \
+        if data_source.get_name() != "scm" \
             and data_source.get_name() != "qaforums": return None
-        # to be done
 
         current_groups = self.activity_groups(self.filters.startdate, self.filters.enddate, data_source)
         cur_core = current_groups["core"]        
@@ -182,7 +180,7 @@ class OnionTransitions(Analyses):
 
 
     def activity_groups(self, from_date, to_date, data_source = None):
-        if data_source is not None and data_source.get_name() != "scm": return None
+        if data_source.get_name() != "scm": return None
 
         groups = {}
 
