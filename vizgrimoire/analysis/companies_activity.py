@@ -185,6 +185,15 @@ class CompaniesActivity(Analyses):
         """ Add companies data in an already existing complete companies activity dictionary """
         new_activity = []
         field = None
+
+        # Check all data names are already in activity. If not add it with zero value.
+        for item in data['name']:
+            if item not in activity['name']:
+                activity['name'].append(item)
+                for metric in activity:
+                    if metric == "name": continue
+                    activity[metric].append(0)
+
         # Find the name of the field to be uses to get values
         for key in data.keys():
             if key != "name": 
@@ -243,9 +252,11 @@ class CompaniesActivity(Analyses):
         start_year = int(start_date.split("-")[0])
         end_year = int(end_date.split("-")[0])
 
-        # First activity should include all companies name
-        activity = self.db.ExecuteQuery(self.get_sql_commits())
+        activity = {}
+        activity['name'] = []
         # Commits
+        data = self.db.ExecuteQuery(self.get_sql_commits())
+        activity = self.add_companies_data (activity, data)
         self.add_metric_years("commits",activity,start_year,end_year)
         # Authors
         data = self.db.ExecuteQuery(self.get_sql_authors())
@@ -280,8 +291,7 @@ class CompaniesActivity(Analyses):
         activity = self.add_companies_data (activity, data)
         self.add_metric_years("sent",activity,start_year,end_year)
 
-
-        # activity = dict (activity.keys() + data.keys())
+        print(activity)
         createJSON(activity, destdir+"/companies-activity.json")
 
     def get_report_files(self, data_source = None):
