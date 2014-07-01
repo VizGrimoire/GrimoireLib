@@ -133,8 +133,8 @@ def scm_report(dbcon, filters):
     newcommers_leavers = ContributorsNewGoneSCM(dbcon, filters)
     newcommers_leavers_dict = newcommers_leavers.result(SCM, "./release/")
     # createJSON(newcommers_leavers_dict, "./release/scm_newcommers_leavers.json")
-    createCSV(newcommers_leavers_dict['people_new']["authors"], "./release/scm_top_authors_new.csv")
-    createCSV(newcommers_leavers_dict['people_gone']["authors"], "./release/scm_top_authors_gone.csv")
+    createCSV(newcommers_leavers_dict['people_new']["authors"], "./release/scm_top_authors_new.csv", ['revtime','author_id','upeople_id'])
+    createCSV(newcommers_leavers_dict['people_gone']["authors"], "./release/scm_top_authors_gone.csv", ['revtime','author_id','upeople_id'])
 
     from SCM import top_people
     top_authors = {}
@@ -142,7 +142,7 @@ def scm_report(dbcon, filters):
     SetDBChannel(dbcon.user, dbcon.password, dbcon.database)
     top_authors["authors"] =  top_people(0, filters.startdate, filters.enddate, "author", bots, str(filters.npeople))
     createJSON(top_authors, "./release/scm_top_authors.json")
-    createCSV(top_authors["authors"], "./release/scm_top_authors.csv")
+    createCSV(top_authors["authors"], "./release/scm_top_authors.csv",['id'])
 
     from SCM import repos_name
     top_repos = repos_name(filters.startdate, filters.enddate)
