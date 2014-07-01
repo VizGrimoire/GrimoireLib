@@ -32,10 +32,9 @@
 # http://firstmonday.org/ojs/index.php/fm/rt/printerFriendly/1207/1127
 
 
+import logging
 from analyses import Analyses
-
 from query_builder import DSQuery
-
 from metrics_filter import MetricFilters
 
 class OnionTransitions(Analyses):
@@ -58,6 +57,7 @@ class OnionTransitions(Analyses):
 
     def _get_person_info(self, upeople_id, from_date, to_date, data_source = None):
         if (data_source.get_name() == "scm"):
+            logging.info("Warning: current queries are counting merges")
             # q = " select pup.upeople_id as uid, p.name, p.email, "+\
             #     "        (count(distinct(s.id))) as commits "+\
             #     " from scmlog s, "+\
@@ -90,28 +90,63 @@ class OnionTransitions(Analyses):
                 " order by commits desc; "
 
             #print(q)
-                
-            people_data = self.db.ExecuteQuery(q)
-            return(people_data)
+        elif (data_source.get_name() == "qaforums"):
+            logging.info("Warning: qaforums is not using matched identities")
+            q = "SELECT identifier, username as name, COUNT(*) as messages from ("+\
+                "(select p.identifier as identifier, p.username, q.added_at as date"+\
+                "  from questions q, people p"+\
+                "  where q.author_identifier=p.identifier)"+\
+                "union"+\
+                "(select p.identifier as identifier, p.username, a.submitted_on as date"+\
+                "  from answers a, people p"+\
+                "  where a.user_identifier=p.identifier)"+\
+                "union"+\
+                "(select p.identifier as identifier, p.username, c.submitted_on as date"+\
+                "  from comments c, people p"+\
+                "  where c.user_identifier=p.identifier)) t "+\
+                "WHERE date>="+ from_date +" AND date<=" + to_date +" "+\
+                " AND identifier = "+ str(upeople_id) + " "+\
+                "group by identifier"
+        #end if                
+        people_data = self.db.ExecuteQuery(q)
+        return(people_data)
 
-    def result(self, data_source = None):
+    def result(self, data_source = None, offset_days = None):
         if data_source.get_name() != "scm" \
             and data_source.get_name() != "qaforums": return None
 
-        current_groups = self._activity_groups(self.filters.startdate, self.filters.enddate, data_source)
+        from dateutil import parser
+        import datetime
+            
+        # calculation of the date ranges
+        cur_to_date = self.filters.enddate
+        if offset_days:
+            dt_end = parser.parse(self.filters.enddate)
+            aux = dt_end - datetime.timedelta(offset_days)
+            cur_from_date = "'" + aux.strftime("%Y-%m-%d") + "'"
+        else:
+            cur_from_date = self.filters.startdate
+
+        past_to_date = self.filters.startdate
+        if offset_days:
+            dt_end = parser.parse(self.filters.startdate)
+            aux = dt_end - datetime.timedelta(offset_days)
+            past_from_date = "'" + aux.strftime("%Y-%m-%d") + "'"
+        else:
+            dt_start = parser.parse(self.filters.startdate)
+            dt_end = parser.parse(self.filters.enddate)
+            timedelta = dt_end - dt_start
+            new_startdate = dt_start - timedelta
+            past_from_date = "'" + new_startdate.strftime("%Y-%m-%d") + "'"
+        
+        # getting the data
+        #print("current %s - %s" % (cur_from_date, cur_to_date))
+        current_groups = self._activity_groups(cur_from_date, cur_to_date, data_source)
         cur_core = current_groups["core"]        
         cur_regular = current_groups["regular"]
         cur_occasional = current_groups["occasional"]
-
-        from dateutil import parser
-        dt_start = parser.parse(self.filters.startdate)
-        dt_end = parser.parse(self.filters.enddate)
-        timedelta = dt_end - dt_start
-
-        new_startdate = dt_start - timedelta
-        new_startdate = "'" + new_startdate.strftime("%Y-%m-%d") + "'"
-        
-        past_groups = self._activity_groups(new_startdate, self.filters.startdate, data_source)
+        #print("past %s - %s" % (past_from_date, past_to_date))
+        past_groups = self._activity_groups(past_from_date, past_to_date, data_source)
         past_core = past_groups["core"]
         past_regular = past_groups["regular"]
         past_occasional = past_groups["occasional"]
@@ -128,15 +163,25 @@ class OnionTransitions(Analyses):
 
         result = {}
         for g in groups:
-            result[g] = {"name":[],"email":[],"commits":[]}
+            #here we define what we export in each group
+            if (data_source.get_name() == "scm"):
+                result[g] = {"name":[],"email":[],"commits":[]}
+            elif (data_source.get_name() == "qaforums"):
+                result[g] = {"name":[],"messages":[]}
+
+            # and .. we get the data
             for person in groups[g]:
                 #print(person)
                 user_data = self._get_person_info(person, self.filters.startdate, self.filters.enddate, data_source)
                 result[g]["name"].append(user_data["name"])
-                result[g]["email"].append(user_data["email"])
-                result[g]["commits"].append(user_data["commits"])
+                if (data_source.get_name() == "scm"):
+                    result[g]["email"].append(user_data["email"])
+                    result[g]["commits"].append(user_data["commits"])
+                elif (data_source.get_name() == "qaforums"):
+                    #print(user_data)
+                    result[g]["messages"].append(user_data["messages"])                
                 #result[g]["uid"].append(user_data["uid"])
-        return (result)
+        
         # for r in result:            
         #     print(r)
         #     for k in result[r]:
@@ -145,21 +190,24 @@ class OnionTransitions(Analyses):
         # ## below the print
         
         # ##
+
+        
         # print("core VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV")
         # c_set = []
         # a_set = []
         # for c in cur_core:
-        #     aux = self.get_person_info(c, self.filters.startdate, self.filters.enddate, data_source)
-        #     c_set.append(aux["commits"])
+        #      aux = self._get_person_info(c, self.filters.startdate, self.filters.enddate, data_source)
+        #      c_set.append(aux["messages"])
         # c_set.sort()
         # print c_set
         # print("regular ***********************************************")
         # for a in cur_regular:
-        #     aux2 = self.get_person_info(a, self.filters.startdate, self.filters.enddate, data_source)
-        #     a_set.append(aux2["commits"])
+        #      aux2 = self._get_person_info(a, self.filters.startdate, self.filters.enddate, data_source)
+        #      a_set.append(aux2["messages"])
         # a_set.sort()
         # print a_set
 
+        return (result)
 
         # print("PAST core VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV")
         # c_set = []
@@ -176,20 +224,37 @@ class OnionTransitions(Analyses):
         # a_set.sort()
         # print a_set
 
-
-
-
-    def _activity_groups(self, from_date, to_date, data_source = None):
-        if data_source.get_name() != "scm": return None
-
-        groups = {}
-
-        # Init of structure to be returned
-        community = {}
-        community['core'] = None
-        community['regular'] = None
-        community['occasional'] = None
-
+    def _get_total_messages_query(self, from_date, to_date):
+        q = "SELECT "+\
+        "(select COUNT(*) from questions WHERE "+\
+        " added_at>="+ from_date +" AND added_at<=" + to_date + ") + "+\
+        "(select COUNT(*) from comments WHERE "+\
+        " submitted_on>="+ from_date +" AND submitted_on<=" + to_date + ") + "+\
+        "(SELECT COUNT(*) FROM answers WHERE "+\
+        " submitted_on>="+ from_date +" AND submitted_on<=" + to_date + ")"+\
+        "as total;"
+        return(q)
+        
+    def _get_personal_messages_query(self, from_date, to_date):
+        q = "SELECT identifier, COUNT(*) as messages from ("+\
+        "(select p.identifier as identifier, q.added_at as date"+\
+        "  from questions q, people p"+\
+        "  where q.author_identifier=p.identifier)"+\
+        "union"+\
+        "(select p.identifier as identifier, a.submitted_on as date"+\
+        "  from answers a, people p"+\
+        "  where a.user_identifier=p.identifier)"+\
+        "union"+\
+        "(select p.identifier as identifier, c.submitted_on as date"+\
+        "  from comments c, people p"+\
+        "  where c.user_identifier=p.identifier)) t "+\
+        "WHERE date>="+ from_date +" AND date<=" + to_date +" "+\
+        "group by identifier order by messages desc"
+        return(q)
+    
+    def _get_total_commits_query(self, from_date, to_date):
+        logging.info("Warning: current queries are counting merges")
+        # uncomment this query in order to remove the queries
         # q = "select count(distinct(s.id)) as total "+\
         #      "from scmlog s, people p, actions a "+\
         #      "where s.author_id = p.id and "+\
@@ -198,7 +263,6 @@ class OnionTransitions(Analyses):
         #      "      s.id = a.commit_id and "+\
         #      "      s.date>="+ from_date +" and "+\
         #      "      s.date<="+ to_date+";"
-
         q = "select count(distinct(s.id)) as total "+\
              "from scmlog s, people p "+\
              "where s.author_id = p.id and "+\
@@ -206,11 +270,11 @@ class OnionTransitions(Analyses):
              "      p.email <> '%jenkins@%' and "+\
              "      s.date>="+ from_date +" and "+\
              "      s.date<="+ to_date+";"
+        return(q)
 
-        total = self.db.ExecuteQuery(q)
-        total_commits = float(total['total'])
-
-        # # Database access: developer, %commits
+    def _get_personal_commits_query(self, from_date, to_date):
+        logging.info("Warning: current queries are counting merges")
+        # uncomment this query in order to remove the queries
         # q = " select pup.upeople_id as uid, p.name, p.email, "+\
         #     "        (count(distinct(s.id))) as commits "+\
         #     " from scmlog s, "+\
@@ -240,12 +304,40 @@ class OnionTransitions(Analyses):
             "       p.email <> '%jenkins@%' "+\
             " group by pup.upeople_id "+\
             " order by commits desc; "
+        return(q)
 
-        people = self.db.ExecuteQuery(q)
-        if not isinstance(people['commits'], list):
-            people['commits'] = [people['commits']]
-        # this is a list. Operate over the list
-        people['commits'] = [((commits / total_commits) * 100) for commits in people['commits']]
+    def _activity_groups(self, from_date, to_date, data_source = None):
+        if data_source.get_name() != "scm" and \
+          data_source.get_name() != "qaforums": return None
+
+        groups = {}
+
+        # Init of structure to be returned
+        community = {}
+        community['core'] = None
+        community['regular'] = None
+        community['occasional'] = None
+
+        if data_source.get_name() == "scm":        
+            q = self._get_total_commits_query(from_date, to_date)
+            total = self.db.ExecuteQuery(q)
+            total_commits = float(total['total'])
+            q = self._get_personal_commits_query(from_date, to_date)
+            people = self.db.ExecuteQuery(q)
+            if not isinstance(people['commits'], list):
+                people['commits'] = [people['commits']]
+            # this is a list. Operate over the list
+            people['commits'] = [((commits / total_commits) * 100) for commits in people['commits']]
+        elif data_source.get_name() == "qaforums":
+            q = self._get_total_messages_query(from_date, to_date)
+            total = self.db.ExecuteQuery(q)
+            total_messages = float(total['total'])
+            q = self._get_personal_messages_query(from_date, to_date)
+            people = self.db.ExecuteQuery(q)
+            if not isinstance(people['messages'], list):
+                people['messages'] = [people['messages']]
+            # this is a list. Operate over the list
+            people['messages'] = [((messages / total_messages) * 100) for messages in people['messages']]
 
         #print(people)
 
@@ -262,11 +354,19 @@ class OnionTransitions(Analyses):
         occ_group = set()
         array_cont = 0        
 
+        # field used to browse people dict()
+        if data_source.get_name() == "scm":
+            field = 'commits'
+            ident = 'uid'
+        elif data_source.get_name() == "qaforums":
+            field = 'messages'
+            ident = 'identifier'
+        
         #for p in people:
-        for value in people['commits']:
+        for value in people[field]:
             cont = cont + value
             ndevs = ndevs + 1
-            dev_email = people['uid'][array_cont]
+            dev_email = people[ident][array_cont]
 
             if (core_f):
                 core_group.add(dev_email)
