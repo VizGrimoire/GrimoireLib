@@ -217,6 +217,18 @@ def qaforums_report(dbcon, filters):
     createJSON(top_participants.result(), "./release/qaforums_top_participants.json")
     createCSV(top_participants.result(), "./release/qaforums_top_participants.csv",['id'])
 
+    from onion_transitions import OnionTransitions
+    qa_ds = QAForums()
+    ot = OnionTransitions(dbcon, filters)
+    ot_data = ot.result(qa_ds, 365)
+    #= {"up_core":up_core, "up_reg":up_reg, "down_reg":down_reg, "down_occ":down_occ}
+    #print(ot_data["up_reg"])
+    createCSV(ot_data["core"], "./release/qaforums_core-longterm.csv")
+    createCSV(ot_data["up_reg"], "./release/qaforums_occasional_to_regular-longterm.csv")
+    createCSV(ot_data["up_core"], "./release/qaforums_regular_to_core-longterm.csv")
+    createCSV(ot_data["down_occ"], "./release/qaforums_regular_to_occasional-longterm.csv")
+    createCSV(ot_data["down_reg"], "./release/qaforums_core_to_regular-longterm.csv")
+
     SetDBChannel(dbcon.user, dbcon.password, dbcon.database)
     bots = QAForums.get_bots()
     QAForums.get_top_senders(90, filters.startdate, filters.enddate, dbcon.identities_db, bots, str(filters.npeople), "comments")
@@ -240,6 +252,7 @@ def qaforums_report(dbcon, filters):
     num_participants["nparticipants"] = len(names)
     createJSON(num_participants, "./release/qaforums_participants.json")
     print(num_participants)
+
 
 def mls_report(dbcon, filters):
 
