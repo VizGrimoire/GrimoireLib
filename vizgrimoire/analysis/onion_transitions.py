@@ -56,7 +56,7 @@ class OnionTransitions(Analyses):
             data = self.result(data_source)
         return data
 
-    def get_person_info(self, upeople_id, from_date, to_date, data_source = None):
+    def _get_person_info(self, upeople_id, from_date, to_date, data_source = None):
         if (data_source.get_name() == "scm"):
             # q = " select pup.upeople_id as uid, p.name, p.email, "+\
             #     "        (count(distinct(s.id))) as commits "+\
@@ -98,7 +98,7 @@ class OnionTransitions(Analyses):
         if data_source.get_name() != "scm" \
             and data_source.get_name() != "qaforums": return None
 
-        current_groups = self.activity_groups(self.filters.startdate, self.filters.enddate, data_source)
+        current_groups = self._activity_groups(self.filters.startdate, self.filters.enddate, data_source)
         cur_core = current_groups["core"]        
         cur_regular = current_groups["regular"]
         cur_occasional = current_groups["occasional"]
@@ -111,7 +111,7 @@ class OnionTransitions(Analyses):
         new_startdate = dt_start - timedelta
         new_startdate = "'" + new_startdate.strftime("%Y-%m-%d") + "'"
         
-        past_groups = self.activity_groups(new_startdate, self.filters.startdate, data_source)
+        past_groups = self._activity_groups(new_startdate, self.filters.startdate, data_source)
         past_core = past_groups["core"]
         past_regular = past_groups["regular"]
         past_occasional = past_groups["occasional"]
@@ -131,7 +131,7 @@ class OnionTransitions(Analyses):
             result[g] = {"name":[],"email":[],"commits":[]}
             for person in groups[g]:
                 #print(person)
-                user_data = self.get_person_info(person, self.filters.startdate, self.filters.enddate, data_source)
+                user_data = self._get_person_info(person, self.filters.startdate, self.filters.enddate, data_source)
                 result[g]["name"].append(user_data["name"])
                 result[g]["email"].append(user_data["email"])
                 result[g]["commits"].append(user_data["commits"])
@@ -179,7 +179,7 @@ class OnionTransitions(Analyses):
 
 
 
-    def activity_groups(self, from_date, to_date, data_source = None):
+    def _activity_groups(self, from_date, to_date, data_source = None):
         if data_source.get_name() != "scm": return None
 
         groups = {}
