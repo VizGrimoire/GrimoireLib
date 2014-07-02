@@ -53,7 +53,6 @@ class ReleasesDS(DataSource):
         q2 = "SELECT MAX(updated_on) as pu, MAX(created_on) as pr FROM projects"
         q  = "SELECT DATE_FORMAT (last_date,'%Y-%m-%d') as last_date FROM " 
         q += "(SELECT GREATEST(ru, rc, pu, pr) AS last_date FROM (%s) r, (%s) p) t" % (q1, q2)
-        print (q)
         return(ExecuteQuery(q))
 
     @staticmethod
