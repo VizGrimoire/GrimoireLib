@@ -47,9 +47,9 @@ def get_options():
                       dest="data_source",
                       help="data source to be generated")
     parser.add_option("-l", "--list",
-                      action="store",
+                      action="store_true",
                       dest="list",
-                      help="Only list metrics, don't compute them.")
+                      help="Only list metrics, don't compute them. Default true.")
 
     (opts, args) = parser.parse_args()
 
@@ -98,13 +98,20 @@ if __name__ == '__main__':
             logging.error("Data source not found " + opts.data_source)
             dss = []
 
+    total_metrics = 0
+    total_studies = 0
+
     for ds in dss:
-        logging.info("Getting metrics for " + ds.get_name())
+        print("\nGetting metrics for " + ds.get_name())
         metrics_set = ds.get_metrics_set(ds)
         for metrics in metrics_set:
-            print metrics.get_definition()['name']
-            if not "list" in opts:
+            print "->" + metrics.get_definition()['name']
+            total_metrics += 1
+            if opts.list is None:
                 agg = metrics.get_agg()
                 if agg is not None: print(agg)
                 evol = metrics.get_ts()
                 # if evol is not None: print(evol)
+
+    print("\nTotal metrics: " + str(total_metrics))
+    print("Total studies: " + str(total_studies))
