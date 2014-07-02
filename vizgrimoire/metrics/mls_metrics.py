@@ -286,7 +286,7 @@ class UnansweredPosts(Metrics):
         query += "AND m.first_date >= " + str(self.filters.startdate) + " AND m.first_date < " + str(self.filters.enddate) + " "
         query += "ORDER BY m.first_date"
 
-        results = ExecuteQuery(query)
+        results = self.db.ExecuteQuery(query)
 
         if isinstance(results['message_ID'], list):
             return [(results['message_ID'][i], results['is_response_of'][i])\
