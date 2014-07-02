@@ -155,20 +155,18 @@ def scm_report(dbcon, filters):
     ot_data = ot.result(scm_ds)
     #= {"up_core":up_core, "up_reg":up_reg, "down_reg":down_reg, "down_occ":down_occ}
     createCSV(ot_data["core"], "./release/scm_core-shortterm.csv")
-    createCSV(ot_data["up_reg"], "./release/scm_occasional_to_regular-shortterm.csv")
-    createCSV(ot_data["up_core"], "./release/scm_regular_to_core-shortterm.csv")
-    createCSV(ot_data["down_occ"], "./release/scm_regular_to_occasional-shortterm.csv")
-    createCSV(ot_data["down_reg"], "./release/scm_core_to_regular-shortterm.csv")
+    createCSV(ot_data["up_reg"], "./release/scm_promoted_to_regular-shortterm.csv")
+    createCSV(ot_data["up_core"], "./release/scm_promoted_to_core-shortterm.csv")
+    createCSV(ot_data["down_occ"], "./release/scm_relegated_to_occasional-shortterm.csv")
+    createCSV(ot_data["down_reg"], "./release/scm_relegated_to_regular-shortterm.csv")
 
     ot_data = ot.result(scm_ds, 365)
     #= {"up_core":up_core, "up_reg":up_reg, "down_reg":down_reg, "down_occ":down_occ}
     createCSV(ot_data["core"], "./release/scm_core-longterm.csv")
-    createCSV(ot_data["up_reg"], "./release/scm_occasional_to_regular-longterm.csv")
-    createCSV(ot_data["up_core"], "./release/scm_regular_to_core-longterm.csv")
-    createCSV(ot_data["down_occ"], "./release/scm_regular_to_occasional-longterm.csv")
-    createCSV(ot_data["down_reg"], "./release/scm_core_to_regular-longterm.csv")
-
-
+    createCSV(ot_data["up_reg"], "./release/scm_promoted_to_regular-longterm.csv")
+    createCSV(ot_data["up_core"], "./release/scm_promoted_to_core-longterm.csv")
+    createCSV(ot_data["down_occ"], "./release/scm_relegated_to_occasional-longterm.csv")
+    createCSV(ot_data["down_reg"], "./release/scm_relegated_to_regular-longterm.csv")
 
 def qaforums_report(dbcon, filters):
     questions = qa.Questions(dbcon, filters)
@@ -224,10 +222,10 @@ def qaforums_report(dbcon, filters):
     #= {"up_core":up_core, "up_reg":up_reg, "down_reg":down_reg, "down_occ":down_occ}
     #print(ot_data["up_reg"])
     createCSV(ot_data["core"], "./release/qaforums_core-longterm.csv")
-    createCSV(ot_data["up_reg"], "./release/qaforums_occasional_to_regular-longterm.csv")
-    createCSV(ot_data["up_core"], "./release/qaforums_regular_to_core-longterm.csv")
-    createCSV(ot_data["down_occ"], "./release/qaforums_regular_to_occasional-longterm.csv")
-    createCSV(ot_data["down_reg"], "./release/qaforums_core_to_regular-longterm.csv")
+    createCSV(ot_data["up_reg"], "./release/qaforums_promoted_to_regular-longterm.csv")
+    createCSV(ot_data["up_core"], "./release/qaforums_promoted_to_core-longterm.csv")
+    createCSV(ot_data["down_occ"], "./release/qaforums_relegated_to_occasional-longterm.csv")
+    createCSV(ot_data["down_reg"], "./release/qaforums_relegated_to_regular-longterm.csv")
 
     SetDBChannel(dbcon.user, dbcon.password, dbcon.database)
     bots = QAForums.get_bots()
