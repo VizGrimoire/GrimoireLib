@@ -73,6 +73,11 @@ class DownloadsDS(DataSource):
             data = dict(data.items() + mvalue.items())
 
             if evol is False:
+                init_date = DownloadsDS.get_date_init(startdate, enddate, None, type_analysis)
+                end_date = DownloadsDS.get_date_end(startdate, enddate, None, type_analysis)
+
+                data = dict(data.items() + init_date.items() + end_date.items())
+
                 # Tendencies
                 metrics_trends = DownloadsDS.get_metrics_core_trends()
 
@@ -86,6 +91,17 @@ class DownloadsDS(DataSource):
         else:
             studies = DataSource.get_studies_data(DownloadsDS, period, startdate, enddate, evol)
         return dict(data.items()+studies.items())
+
+    @staticmethod
+    def get_date_init(startdate = None, enddate = None, identities_db = None, type_analysis = None):
+        q = " SELECT DATE_FORMAT (MIN(date), '%Y-%m-%d') as first_date FROM downloads"
+        return(ExecuteQuery(q))
+
+    @staticmethod
+    def get_date_end(startdate = None, enddate = None, identities_db = None, type_analysis = None):
+        q = " SELECT DATE_FORMAT (MAX(date), '%Y-%m-%d') as last_date FROM downloads"
+        return(ExecuteQuery(q))
+
 
     @staticmethod
     def get_evolutionary_data (period, startdate, enddate, i_db, filter_ = None):

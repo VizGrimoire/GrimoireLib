@@ -43,7 +43,7 @@ class ReleasesDS(DataSource):
     @staticmethod
     def get_date_init(startdate = None, enddate = None, identities_db = None, type_analysis = None):
         """Get the date of the first activity in the data source"""
-        q = "SELECT MIN(created_on) AS init_date FROM projects"
+        q = "SELECT DATE_FORMAT (MIN(created_on), '%Y-%m-%d') AS first_date FROM projects"
         return(ExecuteQuery(q))
 
     @staticmethod
@@ -51,7 +51,9 @@ class ReleasesDS(DataSource):
         """Get the date of the last activity in the data source"""
         q1 = "SELECT MAX(updated_on) as ru, MAX(created_on) as rc FROM releases"
         q2 = "SELECT MAX(updated_on) as pu, MAX(created_on) as pr FROM projects"
-        q = "SELECT GREATEST(ru, rc, pu, pr) AS last_date FROM (%s) r, (%s) p" % (q1, q2)
+        q  = "SELECT DATE_FORMAT (last_date,'%Y-%m-%d') as last_date FROM " 
+        q += "(SELECT GREATEST(ru, rc, pu, pr) AS last_date FROM (%s) r, (%s) p) t" % (q1, q2)
+        print (q)
         return(ExecuteQuery(q))
 
     @staticmethod

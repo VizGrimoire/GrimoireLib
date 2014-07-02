@@ -52,7 +52,7 @@ class QAForums(DataSource):
     @staticmethod
     def get_date_init(startdate = None, enddate = None, identities_db = None, type_analysis = None):
         """Get the date of the first activity in the data source"""
-        q = "SELECT DATE_FORMAT (MIN(added_at), '%Y-%m-%d') AS init_date FROM questions"
+        q = "SELECT DATE_FORMAT (MIN(added_at), '%Y-%m-%d') AS first_date FROM questions"
         return(ExecuteQuery(q))
 
     @staticmethod
