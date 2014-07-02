@@ -24,12 +24,8 @@
 
 """ Tool for metrics management """
 
-import logging
+import logging, os, sys
 from optparse import OptionParser
-
-from metric import Metric
-from SCM import SCM
-from report import Report
 
 def get_options():
     parser = OptionParser(usage='Usage: %prog [options]',
@@ -38,16 +34,22 @@ def get_options():
     parser.add_option("-a", "--automator",
                   action="store",
                   dest="automator_file",
+                  default = "../../../conf/main.conf",
                   help="Automator config file")
 
     parser.add_option("-m", "--metrics",
                   action="store",
                   dest="metrics_path",
+                  default = "../vizgrimoire/metrics",
                   help="Path to the metrics modules to be loaded")
     parser.add_option("--data-source",
                       action="store",
                       dest="data_source",
                       help="data source to be generated")
+    parser.add_option("-l", "--list",
+                      action="store",
+                      dest="list",
+                      help="Only list metrics, don't compute them.")
 
     (opts, args) = parser.parse_args()
 
@@ -59,7 +61,24 @@ def get_options():
 
     return opts
 
+def init_env():
+    grimoirelib = os.path.join("..","vizgrimoire")
+    metricslib = os.path.join("..","vizgrimoire","metrics")
+    studieslib = os.path.join("..","vizgrimoire","analysis")
+    alchemy = os.path.join("..","grimoirelib_alch")
+    for dir in [grimoirelib,metricslib,studieslib,alchemy]:
+        sys.path.append(dir)
+
+    # env vars for R
+    os.environ["LANG"] = ""
+    os.environ["R_LIBS"] = "../../r-lib"
+
 if __name__ == '__main__':
+    init_env()
+    from metric import Metric
+    from SCM import SCM
+    from report import Report
+
     logging.basicConfig(level=logging.INFO,format='%(asctime)s %(message)s')
     logging.info("Grimoire Metrics Tool")
     opts = get_options()
@@ -84,7 +103,8 @@ if __name__ == '__main__':
         metrics_set = ds.get_metrics_set(ds)
         for metrics in metrics_set:
             print metrics.get_definition()['name']
-            agg = metrics.get_agg()
-            if agg is not None: print(agg)
-            evol = metrics.get_ts()
-            # if evol is not None: print(evol)
+            if not "list" in opts:
+                agg = metrics.get_agg()
+                if agg is not None: print(agg)
+                evol = metrics.get_ts()
+                # if evol is not None: print(evol)
