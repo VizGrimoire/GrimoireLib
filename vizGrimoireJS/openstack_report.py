@@ -64,7 +64,6 @@ def barh_chart(title, yvalues, xvalues, file_name):
     y_pos = np.arange(len(yvalues))
 
     #plt.barh(y_pos, xvalues)
-    print type(xvalues)
     ppl.barh(y_pos, xvalues, grid='x')
     plt.yticks(y_pos, yvalues)
     plt.savefig(file_name + ".eps")
@@ -163,11 +162,9 @@ def build_releases(releases_dates):
 def scm_report(dbcon, filters):
     commits = scm.Commits(dbcon, filters)
     createJSON(commits.get_agg(), "./release/scm_commits.json")
-    print(commits.get_agg())
 
     authors = scm.Authors(dbcon, filters)
     createJSON(authors.get_agg(), "./release/scm_authors.json")
-    print(authors.get_agg())
 
     dataset = {}
     dataset["commits"] = commits.get_agg()["commits"]
@@ -185,8 +182,8 @@ def its_report(dbcon, filters):
     createJSON(closed.get_agg(), "./release/its_closed.json")
 
     dataset = {}
-    dataset["opened"] = opened
-    dataset["closed"] = closed
+    dataset["opened"] = opened.get_agg()["opened"]
+    dataset["closed"] = closed.get_agg()["closed"]
 
     return dataset
 
@@ -289,7 +286,6 @@ if __name__ == '__main__':
         filters = MetricFilters("month", startdate, enddate, [], opts.npeople)
         scm_dbcon = SCMQuery(opts.dbuser, opts.dbpassword, opts.dbcvsanaly, opts.dbidentities)
         #SCM report
-        print("\n* SCM summary")
         dataset = scm_report(scm_dbcon, filters)
         releases_data[release]["scm"] = dataset
 
@@ -299,12 +295,10 @@ if __name__ == '__main__':
         releases_data[release]["its"] = dataset
 
         #MLS Report
-        print("\n* SCR summary")
         scr_dbcon = SCRQuery(opts.dbuser, opts.dbpassword, opts.dbreview, opts.dbidentities)
         dataset = scr_report(scr_dbcon, filters)
         releases_data[release]["scr"] = dataset
 
-    print releases_data
 
     labels = []
     commits = []
@@ -313,6 +307,7 @@ if __name__ == '__main__':
     submitted = []
     merged = []
     abandoned = []
+    closed = []
     for release in releases:
         labels.append(release[1])
         #scm
@@ -320,6 +315,7 @@ if __name__ == '__main__':
         authors.append(releases_data[release]["scm"]["authors"])
         #its
         opened.append(releases_data[release]["its"]["opened"])
+        closed.append(releases_data[release]["its"]["closed"])
         #scr
         submitted.append(releases_data[release]["scr"]["submitted"])
         merged.append(releases_data[release]["scr"]["merged"])
@@ -329,6 +325,11 @@ if __name__ == '__main__':
 
     barh_chart("Commits per period", labels, commits, "commits")
     barh_chart("Authors per period", labels, commits, "authors")
+    barh_chart("Opened tickets per period", labels, opened, "opened")
+    barh_chart("Closed tickets per period", labels, closed, "closed")
+    barh_chart("Submitted reviews per period", labels, submitted, "submitted_reviews")
+    barh_chart("Merged reviews per period", labels, merged, "merged_reviews")
+    barh_chart("Abandoned reviews  per period", labels, abandoned, "abandoned_reviews")
 
 
 
