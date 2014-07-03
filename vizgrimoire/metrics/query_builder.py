@@ -49,6 +49,12 @@ class DSQuery(object):
 
         db = self.__SetDBChannel__(user, password, database, host, port, group)
 
+        self.create_indexes()
+
+    def create_indexes(self):
+        """ Basic indexes used in each data source """
+        pass
+
     def GetSQLGlobal(self, date, fields, tables, filters, start, end):
         sql = 'SELECT '+ fields
         sql += ' FROM '+ tables
@@ -1164,6 +1170,31 @@ class MediawikiQuery(DSQuery):
 
 class QAForumsQuery(DSQuery):
     """ Specific query builders for question and answer platforms """
+
+    def create_indexes(self):
+        try:
+            q = "create index q_id_a_idx on answers (question_identifier)"
+            self.ExecuteQuery(q)
+        except Exception:
+            pass
+            # logging.info("Indexes for QAForums already created")
+            # import traceback
+            # traceback.print_exc(file=sys.stdout)
+        try:
+            q = "create index q_id_qt_idx on questionstags (question_identifier)"
+            self.ExecuteQuery(q)
+        except:
+            pass
+        try:
+            q = "create index tag_id_qt_idx on questionstags (question_identifier)"
+            self.ExecuteQuery(q)
+        except:
+            pass
+        try:
+            q = "create index tag_idx_t on tags (tag)"
+            self.ExecuteQuery(q)
+        except:
+            pass
 
     def GetSQLReportFrom(self, type_analysis):
         # generic function to generate "from" clauses
