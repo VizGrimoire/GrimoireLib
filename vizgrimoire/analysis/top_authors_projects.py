@@ -30,8 +30,6 @@ from metrics_filter import MetricFilters
 
 class TopAuthorsProjects(Analyses):
     # this class provides a list of top contributors
-    # A top contributor is defined in this function as the aggregation
-    # of questions, comments and answers.
 
     id = "topauthors"
     name = "Top Authors"
