@@ -191,7 +191,7 @@ class SCMQuery(DSQuery):
         #tables necessaries for repositories
         return (" , repositories r")
 
-    def GetSQLProjectWhere (self, project, role, identities_db):
+    def GetSQLProjectWhere (self, project):
         # include all repositories for a project and its subprojects
         # Remove '' from project name
         if (project[0] == "'" and project[-1] == "'"):
@@ -202,7 +202,7 @@ class SCMQuery(DSQuery):
                FROM   %s.projects p, %s.project_repositories pr
                WHERE  p.project_id = pr.project_id AND p.project_id IN (%s)
                      AND pr.data_source='scm'
-               )""" % (identities_db, identities_db, self.get_subprojects(project))
+               )""" % (self.identities_db, self.identities_db, self.get_subprojects(project))
 
         return (repos   + " and r.id = s.repository_id")
 
@@ -284,7 +284,7 @@ class SCMQuery(DSQuery):
         elif analysis == 'company': where = self.GetSQLCompaniesWhere(value, role)
         elif analysis == 'country': where = self.GetSQLCountriesWhere(value, role)
         elif analysis == 'domain': where = self.GetSQLDomainsWhere(value, role)
-        elif analysis == 'project': where = self.GetSQLProjectWhere(value, role, self.identities_db)
+        elif analysis == 'project': where = self.GetSQLProjectWhere(value)
 
         return (where)
 
