@@ -101,6 +101,7 @@ if __name__ == '__main__':
     total_metrics = 0
     total_studies = 0
 
+    # Metrics
     for ds in dss:
         print("\nGetting metrics for " + ds.get_name())
         metrics_set = ds.get_metrics_set(ds)
@@ -112,6 +113,15 @@ if __name__ == '__main__':
                 if agg is not None: print(agg)
                 evol = metrics.get_ts()
                 # if evol is not None: print(evol)
+
+    # Studies
+    studies = Report.get_all_studies()
+    for study in studies:
+        obj = study(None, None)
+        study_def = obj.get_definition()
+        print "New study: " + obj.name
+        total_studies += 1
+
 
     print("\nTotal metrics: " + str(total_metrics))
     print("Total studies: " + str(total_studies))
