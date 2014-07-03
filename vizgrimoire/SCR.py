@@ -57,6 +57,15 @@ class SCR(DataSource):
         metrics_not_filters =  ['verified','codereview','sent','WaitingForReviewer','WaitingForSubmitter','approved']
         return metrics_not_filters
 
+    @staticmethod
+    def get_date_init(startdate = None, enddate = None, identities_db = None, type_analysis = None):
+        q = " SELECT DATE_FORMAT (MIN(submitted_on), '%Y-%m-%d') as first_date FROM issues"
+        return(ExecuteQuery(q))
+
+    @staticmethod
+    def get_date_end(startdate = None, enddate = None, identities_db = None, type_analysis = None):
+        q = " SELECT DATE_FORMAT (MAX(changed_on), '%Y-%m-%d') as last_date FROM changes"
+        return(ExecuteQuery(q))
 
     @staticmethod
     def get_evolutionary_data (period, startdate, enddate, identities_db, filter_ = None):
@@ -139,6 +148,11 @@ class SCR(DataSource):
         # END SCR SPECIFIC #
 
         if not evol:
+            init_date = DS.get_date_init(startdate, enddate, identities_db, type_analysis)
+            end_date = DS.get_date_end(startdate, enddate, identities_db, type_analysis)
+
+            data = dict(data.items() + init_date.items() + end_date.items())
+
             # Tendencies
             metrics_trends = SCR.get_metrics_core_trends()
 

@@ -437,6 +437,7 @@ def read_main_conf(config_file):
             options[s][o] = parser.get(s, o)
     return options
 
+# Old code moved to query_builder. To be removed once it is not needed.
 def get_subprojects(project, identities_db, dsquery = None):
     """ Return all subprojects ids for a project in a string join by comma """
 

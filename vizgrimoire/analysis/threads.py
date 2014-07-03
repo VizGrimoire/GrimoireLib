@@ -174,12 +174,13 @@ class Threads(object):
             people = set([])
             for message in thread:
                 query = """
-                        select pup.upeople_id as upeople_id
+                        select distinct pup.upeople_id as upeople_id
                         from messages m,
                              messages_people mp,
                              people_upeople pup
                         where m.message_ID = '%s' and
                               m.message_ID = mp.message_id and 
+                              mp.type_of_recipient = 'From' and
                               mp.email_address = pup.people_id
                         """ % (message)
                 result = ExecuteQuery(query)
@@ -212,6 +213,7 @@ class Threads(object):
         return Email(self.longest, self.i_db)
 
     def topLongestThread(self, numTop):
+        numTop = int(numTop)
         # Returns list ordered by the longest threads
         top_threads = []
         top_root_msgs = []

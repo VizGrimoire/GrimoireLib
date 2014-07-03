@@ -1,4 +1,7 @@
-## Copyright (C) 2012, 2013 Bitergia
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+## Copyright (C) 2014 Bitergia
 ##
 ## This program is free software; you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -17,22 +20,15 @@
 ##
 ## Authors:
 ##   Daniel Izquierdo-Cortazar <dizquierdo@bitergia.com>
+##   Luis Cañas-Díaz <lcanas@bitergia.com>
 ##
+## example: PYTHONPATH=./:../vizgrimoire/metrics/:../vizgrimoire/analysis/:../vizgrimoire/ python puppet_report.py  -a lcanas_cvsanaly_puppetlabs_copy -i lcanas_cvsanaly_puppetlabs_copy -f acs_sibyl_puppetlabs_copy -b lcanas_mlstats_puppetlabs_copy -u root --dbpassword="" -r 2014-04-01,2014-07-01 -g week
 
-from optparse import OptionParser
-from os import listdir
-from os.path import isfile, join
 import imp, inspect
-
-from metrics import Metrics
-from query_builder import DSQuery, SCMQuery, QAForumsQuery, MLSQuery
-from metrics_filter import MetricFilters
-import scm_metrics as scm
-import qaforums_metrics as qa
-import mls_metrics as mls
-from GrimoireUtils import createJSON
-from GrimoireSQL import SetDBChannel
-
+from optparse import OptionParser
+from os import listdir, path, environ
+from os.path import isfile, join
+import sys
 
 def read_options():
 
@@ -124,61 +120,147 @@ def build_releases(releases_dates):
 
 
 def scm_report(dbcon, filters):
-
     commits = scm.Commits(dbcon, filters)
     createJSON(commits.get_agg(), "./release/scm_commits.json")
+    print(commits.get_agg())
 
     authors = scm.Authors(dbcon, filters)
     createJSON(authors.get_agg(), "./release/scm_authors.json")
+    print(authors.get_agg())
 
     from contributors_new_gone import ContributorsNewGoneSCM
     from SCM import SCM
     newcommers_leavers = ContributorsNewGoneSCM(dbcon, filters)
-    newcommers_leavers.result(SCM, "./release/")
+    newcommers_leavers_dict = newcommers_leavers.result(SCM, "./release/")
+    # createJSON(newcommers_leavers_dict, "./release/scm_newcommers_leavers.json")
+    createCSV(newcommers_leavers_dict['people_new']["authors"], "./release/scm_top_authors_new.csv", ['revtime','author_id','upeople_id'])
+    createCSV(newcommers_leavers_dict['people_gone']["authors"], "./release/scm_top_authors_gone.csv", ['revtime','author_id','upeople_id'])
 
     from SCM import top_people
     top_authors = {}
     bots = SCM.get_bots() 
     SetDBChannel(dbcon.user, dbcon.password, dbcon.database)
-    top_authors["authors"] =  top_people(90, filters.startdate, filters.enddate, "author", bots, str(filters.npeople))
+    top_authors["authors"] =  top_people(0, filters.startdate, filters.enddate, "author", bots, str(filters.npeople))
     createJSON(top_authors, "./release/scm_top_authors.json")
+    createCSV(top_authors["authors"], "./release/scm_top_authors.csv",['id'])
+
+    from SCM import repos_name
+    top_repos = repos_name(filters.startdate, filters.enddate)
+    createJSON(top_repos, "./release/scm_top_repositories.json")
+    createCSV(top_repos, "./release/scm_top_repositories.csv")
+
+    from onion_transitions import OnionTransitions
+    scm_ds = SCM()
+    ot = OnionTransitions(scm_dbcon, filters)
+    ot_data = ot.result(scm_ds)
+    #= {"up_core":up_core, "up_reg":up_reg, "down_reg":down_reg, "down_occ":down_occ}
+    createCSV(ot_data["core"], "./release/scm_core-shortterm.csv")
+    createCSV(ot_data["up_reg"], "./release/scm_promoted_to_regular-shortterm.csv")
+    createCSV(ot_data["up_core"], "./release/scm_promoted_to_core-shortterm.csv")
+    createCSV(ot_data["down_occ"], "./release/scm_relegated_to_occasional-shortterm.csv")
+    createCSV(ot_data["down_reg"], "./release/scm_relegated_to_regular-shortterm.csv")
+
+    ot_data = ot.result(scm_ds, 365)
+    #= {"up_core":up_core, "up_reg":up_reg, "down_reg":down_reg, "down_occ":down_occ}
+    createCSV(ot_data["core"], "./release/scm_core-longterm.csv")
+    createCSV(ot_data["up_reg"], "./release/scm_promoted_to_regular-longterm.csv")
+    createCSV(ot_data["up_core"], "./release/scm_promoted_to_core-longterm.csv")
+    createCSV(ot_data["down_occ"], "./release/scm_relegated_to_occasional-longterm.csv")
+    createCSV(ot_data["down_reg"], "./release/scm_relegated_to_regular-longterm.csv")
 
 def qaforums_report(dbcon, filters):
     questions = qa.Questions(dbcon, filters)
     createJSON(questions.get_agg(), "./release/qaforums_questions.json")
+    print(questions.get_agg())
 
     answers = qa.Answers(dbcon, filters)
     createJSON(answers.get_agg(), "./release/qaforums_answers.json")
+    print(answers.get_agg())
 
     comments = qa.Comments(dbcon, filters)
     createJSON(comments.get_agg(), "./release/qaforums_answers.json")
+    print(comments.get_agg())
 
     senders = qa.QuestionSenders(dbcon, filters)
     createJSON(senders.get_agg(), "./release/qaforums_people_posting_questions.json")
+    print(senders.get_agg())
 
     people_replying = qa.AnswerSenders(dbcon, filters)
     createJSON(people_replying.get_agg(), "./release/qaforums_people_posting_answers.json")
+    print(people_replying.get_agg())
 
     from top_questions_qaforums import TopQuestions
     top_questions = TopQuestions(dbcon, filters)
 
     top_visited_questions = top_questions.top_visited()
+    createCSV(top_visited_questions, "./release/qaforums_top_visited_questions.csv", ['question_identifier'])
     createJSON(top_visited_questions, "./release/qaforums_top_visited_questions.json")    
-    
+
     top_commented_questions = top_questions.top_commented()
+    createCSV(top_commented_questions, "./release/qaforums_top_commented_questions.csv", ['question_identifier'])
     createJSON(top_commented_questions, "./release/qaforums_top_commented_questions.json")
 
     top_crowded_questions = top_questions.top_crowded()
+    createCSV(top_crowded_questions, "./release/qaforums_top_crowded_questions.csv",['question_identifier'])
     createJSON(top_crowded_questions, "./release/qaforums_top_crowded_questions.json")
+
+    top_tags_questions = top_questions.top_tags()
+    createCSV(top_tags_questions, "./release/qaforums_top_tags_questions.csv")
+    createJSON(top_tags_questions, "./release/qaforums_top_tags_questions.json")
+
+    # Top participants
+    from top_qaforums import TopQAForums
+    from QAForums import QAForums
+    top_participants = TopQAForums(dbcon, filters)
+    createJSON(top_participants.result(), "./release/qaforums_top_participants.json")
+    createCSV(top_participants.result(), "./release/qaforums_top_participants.csv",['id'])
+
+    from onion_transitions import OnionTransitions
+    qa_ds = QAForums()
+    ot = OnionTransitions(dbcon, filters)
+    ot_data = ot.result(qa_ds, 365)
+    #= {"up_core":up_core, "up_reg":up_reg, "down_reg":down_reg, "down_occ":down_occ}
+    #print(ot_data["up_reg"])
+    createCSV(ot_data["core"], "./release/qaforums_core-longterm.csv")
+    createCSV(ot_data["up_reg"], "./release/qaforums_promoted_to_regular-longterm.csv")
+    createCSV(ot_data["up_core"], "./release/qaforums_promoted_to_core-longterm.csv")
+    createCSV(ot_data["down_occ"], "./release/qaforums_relegated_to_occasional-longterm.csv")
+    createCSV(ot_data["down_reg"], "./release/qaforums_relegated_to_regular-longterm.csv")
+
+    SetDBChannel(dbcon.user, dbcon.password, dbcon.database)
+    bots = QAForums.get_bots()
+    QAForums.get_top_senders(90, filters.startdate, filters.enddate, dbcon.identities_db, bots, str(filters.npeople), "comments")
+    createJSON(top_participants.result(), "./release/qaforums_top_csenders.json")
+    createCSV(top_participants.result(), "./release/qaforums_top_csenders.csv",['id'])
+
+    QAForums.get_top_senders(90, filters.startdate, filters.enddate, dbcon.identities_db, bots, str(filters.npeople), "questions")
+    createJSON(top_participants.result(), "./release/qaforums_top_qsenders.json")
+    createCSV(top_participants.result(), "./release/qaforums_top_qsenders.csv",['id'])
+
+    QAForums.get_top_senders(90, filters.startdate, filters.enddate, dbcon.identities_db, bots, str(filters.npeople), "answers")
+    createJSON(top_participants.result(), "./release/qaforums_top_asenders.json")
+    createCSV(top_participants.result(), "./release/qaforums_top_asenders.csv",['id'])
+
+    filters_ext = filters
+    filters_ext.npeople = 10000
+    top_participants = TopQAForums(dbcon, filters_ext)
+    data = top_participants.result()
+    names = data["name"]
+    num_participants = {}
+    num_participants["nparticipants"] = len(names)
+    createJSON(num_participants, "./release/qaforums_participants.json")
+    print(num_participants)
 
 
 def mls_report(dbcon, filters):
 
     emails_sent = mls.EmailsSent(dbcon, filters)
-    createJSON(emails_sent.get_agg(), "./release/mls_emailsent.json")    
+    createJSON(emails_sent.get_agg(), "./release/mls_emailsent.json")
+    print(emails_sent.get_agg())
 
     emails_senders = mls.EmailsSenders(dbcon, filters)
     createJSON(emails_senders.get_agg(), "./release/mls_emailsenders.json")
+    print(emails_senders.get_agg())
 
     from MLS import MLS
     from MLS import top_senders
@@ -187,12 +269,14 @@ def mls_report(dbcon, filters):
     top = {}
     top["EmailSenders"] = top_senders(90, filters.startdate, filters.enddate, dbcon.identities_db,bots, str(filters.npeople))
     createJSON(top, "./release/mls_top_email_senders.json")
+    createCSV(top["EmailSenders"], "./release/mls_top_email_senders.csv", ['id'])
 
     from threads import Threads
     SetDBChannel(dbcon.user, dbcon.password, dbcon.database)
     top_threads = {}
     top_threads['threads'] = MLS.getLongestThreads(filters.startdate, filters.enddate, dbcon.identities_db, str(filters.npeople))
     createJSON(top_threads, "./release/mls_top_longest_threads.json")
+    createCSV(top_threads["threads"], "./release/mls_top_longest_threads.csv", ['initiator_id','message_id'])
 
     main_topics= Threads(filters.startdate, filters.enddate, dbcon.identities_db)
     top_crowded = main_topics.topCrowdedThread(filters.npeople)
@@ -214,10 +298,61 @@ def mls_report(dbcon, filters):
         l_threads['initiator_id'].append(email.initiator_id)
         l_threads['url'].append(email.url)
     createJSON(l_threads, "./release/mls_top_crowded_threads.json")
+    createCSV(l_threads, "./release/mls_top_crowded_threads.csv", ['initiator_id','message_id'])
+   
+# Until we use VizPy we will create JSON python files with _py
+def createCSV(data, filepath, skip_fields = []):
+    fd = open(filepath, "w")
+    keys = list(set(data.keys()) - set(skip_fields))
+    
+    header = u''
+    for k in keys:
+        header += unicode(k)
+        header += u','        
+    header = header[:-1]
+    body = ''
+    length = len(data[keys[0]]) # the length should be the same for all
+    cont = 0
+    while (cont < length):
+        for k in keys:
+            try:
+                body += unicode(data[k][cont])
+            except UnicodeDecodeError:
+                body += u'ERROR'
+            body += u','
+        body = body[:-1]
+        body += u'\n'
+        cont += 1
+    fd.write(header.encode('utf-8'))
+    fd.write('\n')
+    fd.write(body.encode('utf-8'))
+    fd.close()
+    print "CSV file generated at: %s" % (filepath)
 
+def init_env():
+    grimoirelib = path.join("..","vizgrimoire")
+    metricslib = path.join("..","vizgrimoire","metrics")
+    studieslib = path.join("..","vizgrimoire","analysis")
+    alchemy = path.join("..","grimoirelib_alch")
+    for dir in [grimoirelib,metricslib,studieslib,alchemy]:
+        sys.path.append(dir)
 
+    # env vars for R
+    environ["LANG"] = ""
+    environ["R_LIBS"] = "../../r-lib"
 
 if __name__ == '__main__':
+
+    init_env()
+
+    from metrics import Metrics
+    from query_builder import DSQuery, SCMQuery, QAForumsQuery, MLSQuery
+    from metrics_filter import MetricFilters
+    import scm_metrics as scm
+    import qaforums_metrics as qa
+    import mls_metrics as mls
+    from GrimoireUtils import createJSON
+    from GrimoireSQL import SetDBChannel
 
     # parse options
     opts = read_options()    
@@ -228,17 +363,20 @@ if __name__ == '__main__':
     for release in releases:
         startdate = "'" + release[0] + "'"
         enddate = "'" + release[1] + "'"
-        filters = MetricFilters("month", startdate, enddate, []) 
-        scm_dbcon = SCMQuery(opts.dbuser, "", opts.dbcvsanaly, opts.dbidentities)      
+        filters = MetricFilters("month", startdate, enddate, [], opts.npeople)
+        scm_dbcon = SCMQuery(opts.dbuser, opts.dbpassword, opts.dbcvsanaly, opts.dbidentities)
         #SCM report
+        print("\n* SCM summary")
         scm_report(scm_dbcon, filters)
 
         #QAForums report
-        qa_dbcon = QAForumsQuery(opts.dbuser, "", opts.dbqaforums, opts.dbidentities)
+        print("\n* Askbot summary")
+        qa_dbcon = QAForumsQuery(opts.dbuser, opts.dbpassword, opts.dbqaforums, opts.dbidentities)
         qaforums_report(qa_dbcon, filters)
 
         #MLS Report
-        mls_dbcon = MLSQuery(opts.dbuser, "", opts.dbmlstats, opts.dbidentities)
+        print("\n* Mailing list summary")
+        mls_dbcon = MLSQuery(opts.dbuser, opts.dbpassword, opts.dbmlstats, opts.dbidentities)
         mls_report(mls_dbcon, filters)
 
 

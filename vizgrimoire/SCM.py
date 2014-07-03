@@ -666,10 +666,11 @@ def top_people (days, startdate, enddate, role, bots, limit) :
 
     q = "SELECT u.id as id, u.identifier as "+ role+ "s, "+\
         " count(distinct(s.id)) as commits "+\
-        " FROM scmlog s, people_upeople pup, upeople u " + dtables +\
+        " FROM scmlog s, actions a, people_upeople pup, upeople u " + dtables +\
         " WHERE " + filter_bots + dfilters +\
         "s."+ role+ "_id = pup.people_id AND "+\
         " pup.upeople_id = u.id AND" +\
+        " s.id = a.commit_id AND " +\
         " s.date >= "+ startdate+ " AND "+\
         " s.date < "+ enddate +\
         " GROUP BY u.identifier "+\
@@ -697,10 +698,11 @@ def top_authors_year (year, limit) :
     # of such year
     q = "SELECT u.id as id, u.identifier as authors, "+\
         "       count(distinct(s.id)) as commits "+\
-        "FROM scmlog s, "+\
+        "FROM scmlog s, actions a, "+\
         "     people_upeople pup, "+\
         "     upeople u "+\
-        "where s.author_id = pup.people_id and "+\
+        "where s.id = a.commit_id and " +\
+        "      s.author_id = pup.people_id and "+\
         "      pup.upeople_id = u.id and "+\
         "      year(s.date) = "+year+" "+\
         "group by u.identifier "+\
@@ -837,6 +839,7 @@ def company_top_authors_year (company_name, year, limit):
         "        count(distinct(s.id)) as commits "+\
         " from people p, "+\
         "      scmlog s, "+\
+        "      actions a, "+\
         "      people_upeople pup, "+\
         "      upeople u, "+\
         "      upeople_companies upc, "+\
@@ -845,6 +848,7 @@ def company_top_authors_year (company_name, year, limit):
         "        s.author_id = pup.people_id and "+\
         "        pup.upeople_id = upc.upeople_id and "+\
         "        pup.upeople_id = u.id and "+\
+        "        s.id = a.commit_id and "+\
         "        s.date >= upc.init and "+\
         "        s.date < upc.end and "+\
         "        year(s.date)="+str(year)+" and "+\
