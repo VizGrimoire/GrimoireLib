@@ -213,6 +213,7 @@ class Threads(object):
         return Email(self.longest, self.i_db)
 
     def topLongestThread(self, numTop):
+        numTop = int(numTop)
         # Returns list ordered by the longest threads
         top_threads = []
         top_root_msgs = []
