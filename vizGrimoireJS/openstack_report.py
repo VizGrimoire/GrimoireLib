@@ -30,6 +30,47 @@ from os import listdir, path, environ
 from os.path import isfile, join
 import sys
 
+import locale
+import matplotlib as mpl
+# This avoids the use of the $DISPLAY value for the charts
+mpl.use('Agg')
+import matplotlib.pyplot as plt
+import prettyplotlib as ppl
+from prettyplotlib import brewer2mpl
+import numpy as np
+from datetime import datetime
+
+
+def ts_chart(title, unixtime_dates, data, file_name):
+
+    fig = plt.figure()
+    plt.title(title)
+
+    dates = []
+    for unixdate in unixtime_dates:
+        dates.append(datetime.fromtimestamp(float(unixdate)))
+
+    ppl.plot(dates, data)
+    fig.autofmt_xdate()
+    fig.savefig(file_name + ".eps")
+
+
+def barh_chart(title, yvalues, xvalues, file_name):
+
+    fig, ax = plt.subplots(1)
+    x_pos = np.arange(len(xvalues))
+
+    plt.title(title)
+    y_pos = np.arange(len(yvalues))
+
+    #plt.barh(y_pos, xvalues)
+    print type(xvalues)
+    ppl.barh(y_pos, xvalues, grid='x')
+    plt.yticks(y_pos, yvalues)
+    plt.savefig(file_name + ".eps")
+
+
+
 def read_options():
 
     parser = OptionParser(usage="usage: %prog [options]",
@@ -129,8 +170,8 @@ def scm_report(dbcon, filters):
     print(authors.get_agg())
 
     dataset = {}
-    dataset["commits"] = commits
-    dataset["authors"] = authors
+    dataset["commits"] = commits.get_agg()["commits"]
+    dataset["authors"] = authors.get_agg()["authors"]
 
     return dataset
 
@@ -138,12 +179,12 @@ def its_report(dbcon, filters):
     opened = its.Opened(dbcon, filters)
     createJSON(opened.get_agg(), "./release/its_opened.json")
 
-    #closed = its.Closed(dbcon, filters)
-    #createJSON(closed.get_agg(), ".(release/its_closed.json")
+    closed = its.Closed(dbcon, filters)
+    createJSON(closed.get_agg(), ".(release/its_closed.json")
 
     dataset = {}
-    dataset["opened"] = opened
-    #dataset["closed"] = closed
+    dataset["opened"] = opened.get_agg()["opened"]
+    dataset["closed"] = closed
 
     return dataset
     
@@ -165,11 +206,11 @@ def scr_report(dbcon, filters):
     createJSON(waiting4submitter.get_agg(), "./release/scr_waiting4submitter.json")
 
     dataset = {}
-    dataset["submitted"] = submitted
-    dataset["merged"] = merged
-    dataset["abandoned"] = abandoned
-    dataset["waiting4reviewer"] = waiting4reviewer
-    dataset["waiting4submitter"] = waiting4submitter
+    dataset["submitted"] = submitted.get_agg()["submitted"]
+    dataset["merged"] = merged.get_agg()["merged"]
+    dataset["abandoned"] = abandoned.get_agg()["abandoned"]
+    dataset["waiting4reviewer"] = waiting4reviewer.get_agg()["ReviewsWaitingForReviewer"]
+    dataset["waiting4submitter"] = waiting4submitter.get_agg()["ReviewsWaitingForSubmitter"]
 
     return dataset
 
@@ -216,6 +257,8 @@ def init_env():
 
 if __name__ == '__main__':
 
+    locale.setlocale(locale.LC_ALL, 'en_US')
+
     init_env()
 
     from metrics import Metrics
@@ -258,5 +301,32 @@ if __name__ == '__main__':
         scr_dbcon = SCRQuery(opts.dbuser, opts.dbpassword, opts.dbreview, opts.dbidentities)
         dataset = scr_report(scr_dbcon, filters)
         releases_data[release]["scr"] = dataset
+
+    print releases_data
+
+    labels = []
+    commits = []
+    authors = []
+    opened = []
+    submitted = []
+    merged = []
+    abandoned = []
+    for release in releases:
+        labels.append(release[1])
+        #scm
+        commits.append(releases_data[release]["scm"]["commits"])
+        authors.append(releases_data[release]["scm"]["authors"])
+        #its
+        opened.append(releases_data[release]["its"]["opened"])
+        #scr
+        submitted.append(releases_data[release]["scr"]["submitted"])
+        merged.append(releases_data[release]["scr"]["merged"])
+        abandoned.append(releases_data[release]["scr"]["abandoned"])
+        
+        
+
+    barh_chart("Commits per period", labels, commits, "commits")
+    barh_chart("Authors per period", labels, commits, "authors")
+
 
 
