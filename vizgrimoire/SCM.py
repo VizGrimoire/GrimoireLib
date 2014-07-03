@@ -107,6 +107,31 @@ class SCM(DataSource):
         createJSON (data, os.path.join(destdir, filename))
 
     @staticmethod
+    def get_project_top_companies (project, startdate, enddate, limit):
+        # First we need to locate the SCM repositories
+        from report import Report
+        db = Report._automator['generic']['db_cvsanaly']
+        db_i = Report._automator['generic']['db_identities']
+        dbuser = Report._automator['generic']['db_user']
+        dbpass = Report._automator['generic']['db_password']
+
+        dbcon = SCM.get_query_builder()(dbuser, dbpass, db, db_i)
+        projects_from = dbcon.GetSQLProjectFrom()
+        # Remove first and
+        projects_where = " WHERE  " + dbcon.GetSQLProjectWhere(project)[3:]
+
+        fields =  "SELECT COUNT(DISTINCT(s.id)) as commits, c.name as companies "
+        fields += "FROM scmlog s, people_upeople pup, upeople u, upeople_companies upc, companies c "
+        q = fields + projects_from + projects_where
+        q += " AND pup.people_id = s.author_id AND u.id = pup.upeople_id "
+        q += " AND u.id = upc.upeople_id AND c.id = upc.company_id "
+        q += " GROUP by c.name ORDER BY commits DESC, c.name"
+
+        res = dbcon.ExecuteQuery(q)
+
+        return res
+
+    @staticmethod
     def get_project_top_authors (project, startdate, enddate, npeople):
         # First we need to locate the SCM repositories
         from report import Report
@@ -142,6 +167,8 @@ class SCM(DataSource):
             top = company_top_authors("'"+filter_.get_item()+"'", startdate, enddate, npeople)
         elif filter_.get_name() == "project":
             top = SCM.get_project_top_authors(filter_.get_item(), startdate, enddate, npeople)
+            top_companies = SCM.get_project_top_companies(filter_.get_item(), startdate, enddate, npeople)
+            top = dict(top.items() + top_companies.items())
         else:
             top = None
         return top
