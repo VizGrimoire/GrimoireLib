@@ -116,20 +116,8 @@ class SCM(DataSource):
         dbpass = Report._automator['generic']['db_password']
 
         dbcon = SCM.get_query_builder()(dbuser, dbpass, db, db_i)
-        projects_from = dbcon.GetSQLProjectFrom()
-        # Remove first and
-        projects_where = " WHERE  " + dbcon.GetSQLProjectWhere(project)[3:]
-
-        fields =  "SELECT COUNT(DISTINCT(s.id)) as commits, c.name as companies "
-        fields += "FROM scmlog s, people_upeople pup, upeople u, upeople_companies upc, companies c "
-        q = fields + projects_from + projects_where
-        q += " AND pup.people_id = s.author_id AND u.id = pup.upeople_id "
-        q += " AND u.id = upc.upeople_id AND c.id = upc.company_id "
-        q += " GROUP by c.name ORDER BY commits DESC, c.name"
-
-        res = dbcon.ExecuteQuery(q)
-
-        return res
+        top_companies = dbcon.get_project_top_companies (project, startdate, enddate, limit)
+        return top_companies
 
     @staticmethod
     def get_project_top_authors (project, startdate, enddate, npeople):
@@ -141,18 +129,9 @@ class SCM(DataSource):
         dbpass = Report._automator['generic']['db_password']
 
         dbcon = SCM.get_query_builder()(dbuser, dbpass, db, db_i)
-        projects_from = dbcon.GetSQLProjectFrom()
-        # Remove first and
-        projects_where = " WHERE  " + dbcon.GetSQLProjectWhere(project)[3:]
+        top_authors = dbcon.get_project_top_authors (project, startdate, enddate, npeople)
+        return top_authors
 
-        fields = "SELECT COUNT(DISTINCT(s.id)) as commits, u.id, u.identifier as authors FROM scmlog s, people_upeople pup, upeople u "
-        q = fields + projects_from + projects_where
-        q += " AND pup.people_id = s.author_id AND u.id = pup.upeople_id "
-        q += " GROUP by u.id ORDER BY commits DESC, u.id"
-
-        res = dbcon.ExecuteQuery(q)
-
-        return res
 
     @staticmethod
     def get_top_data (startdate, enddate, i_db, filter_, npeople):
