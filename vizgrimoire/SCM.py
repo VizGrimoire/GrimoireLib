@@ -107,6 +107,29 @@ class SCM(DataSource):
         createJSON (data, os.path.join(destdir, filename))
 
     @staticmethod
+    def get_project_top_authors (project, startdate, enddate, npeople):
+        # First we need to locate the SCM repositories
+        from report import Report
+        db = Report._automator['generic']['db_cvsanaly']
+        db_i = Report._automator['generic']['db_identities']
+        dbuser = Report._automator['generic']['db_user']
+        dbpass = Report._automator['generic']['db_password']
+
+        dbcon = SCM.get_query_builder()(dbuser, dbpass, db, db_i)
+        projects_from = dbcon.GetSQLProjectFrom()
+        # Remove first and
+        projects_where = " WHERE  " + dbcon.GetSQLProjectWhere(project)[3:]
+
+        fields = "SELECT COUNT(DISTINCT(s.id)) as commits, u.id, u.identifier as authors FROM scmlog s, people_upeople pup, upeople u "
+        q = fields + projects_from + projects_where
+        q += " AND pup.people_id = s.author_id AND u.id = pup.upeople_id "
+        q += " GROUP by u.id ORDER BY commits DESC, u.id"
+
+        res = dbcon.ExecuteQuery(q)
+
+        return res
+
+    @staticmethod
     def get_top_data (startdate, enddate, i_db, filter_, npeople):
         top = {}
         bots = SCM.get_bots()
@@ -117,6 +140,8 @@ class SCM(DataSource):
             top['authors.last year']= top_people(365, startdate, enddate, "author", bots, npeople)
         elif filter_.get_name() == "company":
             top = company_top_authors("'"+filter_.get_item()+"'", startdate, enddate, npeople)
+        elif filter_.get_name() == "project":
+            top = SCM.get_project_top_authors(filter_.get_item(), startdate, enddate, npeople)
         else:
             top = None
         return top
@@ -191,15 +216,10 @@ class SCM(DataSource):
                 items_list['commits_365'].append(agg['commits_365'])
                 items_list['authors_365'].append(agg['authors_365'])
 
-            if (filter_name == "company"):
+            if filter_name in ("company","project"):
                 top_authors = SCM.get_top_data(startdate, enddate, identities_db, filter_item, npeople)
                 fn = os.path.join(destdir, filter_item.get_top_filename(SCM()))
                 createJSON(top_authors, fn)
-
-                # Old code not used. To be removed.
-                for i in [2006,2009,2012]:
-                    data = company_top_authors_year(item_name, i, npeople)
-                    createJSON(data, destdir+"/"+item+"-"+SCM.get_name()+"-top-authors_"+str(i)+".json")
 
         fn = os.path.join(destdir, filter_.get_filename(SCM()))
         createJSON(items_list, fn)
