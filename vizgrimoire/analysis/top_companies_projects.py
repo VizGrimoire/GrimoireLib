@@ -28,33 +28,33 @@ from query_builder import SCMQuery
 
 from metrics_filter import MetricFilters
 
-class TopAuthorsProjects(Analyses):
-    # this class provides a list of top contributors
-    # A top contributor is defined in this function as the aggregation
-    # of questions, comments and answers.
+class TopCompaniesProjects(Analyses):
+    # this class provides a list of top organizations
+    # by number of commits
 
-    id = "topauthors"
-    name = "Top Authors"
-    desc = "Top people committing changes to the source code"
+    id = "toporganizations"
+    name = "Top Organizations"
+    desc = "Top organizations committing changes to the source code"
 
     def __get_sql__(self):
         return ""
 
     def result(self, data_source = None):
-
         project = self.filters.type_analysis[1]
-        projects_from = self.db.GetSQLProjectFrom()
 
+        projects_from = self.db.GetSQLProjectFrom()
         # Remove first and
         projects_where = " WHERE  " + self.db.GetSQLProjectWhere(project)[3:]
 
-        fields =  "SELECT COUNT(DISTINCT(s.id)) as commits, u.id, u.identifier as authors "
-        fields += "FROM actions a, scmlog s, people_upeople pup, upeople u "
+        fields =  "SELECT COUNT(DISTINCT(s.id)) as company_commits, c.name as companies "
+        fields += "FROM actions a, scmlog s, people_upeople pup, upeople u, upeople_companies upc, companies c "
         q = fields + projects_from + projects_where
         q += " AND pup.people_id = s.author_id AND u.id = pup.upeople_id "
+        q += " AND u.id = upc.upeople_id AND c.id = upc.company_id "
+        q += " AND s.date >= upc.init and s.date < upc.end "
+        q += " AND s.date>=" + self.filters.startdate + " and s.date < " + self.filters.enddate
         q += " AND a.commit_id = s.id "
-        q += " AND s.date >= " + self.filters.startdate + " and s.date < " + self.filters.enddate
-        q += " GROUP by u.id ORDER BY commits DESC, u.id"
+        q += " GROUP by c.name ORDER BY company_commits DESC, c.name"
         q += " limit " + str(self.filters.npeople)
 
         res = self.db.ExecuteQuery(q)
@@ -67,10 +67,10 @@ if __name__ == '__main__':
     #example using this class
     filters = MetricFilters("week", "'2014-01-01'", "'2014-04-01'", ["project", "integrated"])
     dbcon = SCMQuery("root", "", "dic_cvsanaly_openstack_2259", "dic_cvsanaly_openstack_2259")
-    top_authors = TopAuthorsProjects(dbcon, filters)
-    print top_authors.result()
+    top_orgs = TopCompaniesProjects(dbcon, filters)
+    print top_orgs.result()
 
     #example using query_builder function
     from query_builder import SCMQuery
     dbcon = SCMQuery("root", "", "dic_cvsanaly_openstack_2259", "dic_cvsanaly_openstack_2259")
-    print dbcon.get_project_top_authors("integrated", "'2014-01-01'", "'2014-04-01'", 10)
+    print dbcon.get_project_top_companies("integrated", "'2014-01-01'", "'2014-04-01'", 10)
