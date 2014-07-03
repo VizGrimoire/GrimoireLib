@@ -135,18 +135,20 @@ def scm_report(dbcon, filters):
     return dataset
 
 def its_report(dbcon, filters):
+    from ITS import ITS
+    ITS.set_backend("launchpad")
     opened = its.Opened(dbcon, filters)
     createJSON(opened.get_agg(), "./release/its_opened.json")
 
-    #closed = its.Closed(dbcon, filters)
-    #createJSON(closed.get_agg(), ".(release/its_closed.json")
+    closed = its.Closed(dbcon, filters)
+    createJSON(closed.get_agg(), "./release/its_closed.json")
 
     dataset = {}
     dataset["opened"] = opened
-    #dataset["closed"] = closed
+    dataset["closed"] = closed
 
     return dataset
-    
+
 
 def scr_report(dbcon, filters):
     submitted = scr.Submitted(dbcon, filters)
