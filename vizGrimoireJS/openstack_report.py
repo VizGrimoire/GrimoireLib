@@ -22,7 +22,7 @@
 ##   Daniel Izquierdo-Cortazar <dizquierdo@bitergia.com>
 ##   Luis Cañas-Díaz <lcanas@bitergia.com>
 ##
-## example of use: python openstack_report.py -a dic_cvsanaly_openstack_2259 -d dic_bicho_openstack_gerrit_3392 -i dic_cvsanaly_openstack_2259 -r 2014-04-01,2014-07-01 -c lcanas_bicho_openstack_1376
+## python openstack_report.py -a dic_cvsanaly_openstack_2259 -d dic_bicho_openstack_gerrit_3392 -i dic_cvsanaly_openstack_2259 -r 2013-07-01,2013-10-01,2014-01-01,2014-04-01,2014-07-01 -c lcanas_bicho_openstack_1376
 
 import imp, inspect
 from optparse import OptionParser
@@ -254,6 +254,12 @@ def init_env():
     environ["LANG"] = ""
     environ["R_LIBS"] = "../../r-lib"
 
+
+def projects(user, password, database):
+    dbcon = DSQuery(user, password, database, None)
+    query = "select id from projects"
+    return dbcon.ExecuteQuery(query)["id"]
+
 if __name__ == '__main__':
 
     locale.setlocale(locale.LC_ALL, 'en_US')
@@ -277,59 +283,64 @@ if __name__ == '__main__':
     # obtain list of releases by tuples [(date1, date2), (date2, date3), ...]
     releases = build_releases(opts.releases)
 
-    releases_data = {}
-    for release in releases:
-        releases_data[release] = {}
 
-        startdate = "'" + release[0] + "'"
-        enddate = "'" + release[1] + "'"
-        filters = MetricFilters("month", startdate, enddate, [], opts.npeople)
-        scm_dbcon = SCMQuery(opts.dbuser, opts.dbpassword, opts.dbcvsanaly, opts.dbidentities)
-        #SCM report
-        dataset = scm_report(scm_dbcon, filters)
-        releases_data[release]["scm"] = dataset
+    projects_list = projects(opts.dbuser, opts.dbpassword, opts.dbidentities)
+    print projects_list
 
-        #ITS report
-        its_dbcon = ITSQuery(opts.dbuser, opts.dbpassword, opts.dbbicho, opts.dbidentities)
-        dataset = its_report(its_dbcon, filters)
-        releases_data[release]["its"] = dataset
+    for project in projects_list:
+        releases_data = {}
+        for release in releases:
+            releases_data[release] = {}
 
-        #MLS Report
-        scr_dbcon = SCRQuery(opts.dbuser, opts.dbpassword, opts.dbreview, opts.dbidentities)
-        dataset = scr_report(scr_dbcon, filters)
-        releases_data[release]["scr"] = dataset
+            startdate = "'" + release[0] + "'"
+            enddate = "'" + release[1] + "'"
+            filters = MetricFilters("month", startdate, enddate, ["project", str(project)], opts.npeople)
+            scm_dbcon = SCMQuery(opts.dbuser, opts.dbpassword, opts.dbcvsanaly, opts.dbidentities)
+            #SCM report
+            dataset = scm_report(scm_dbcon, filters)
+            releases_data[release]["scm"] = dataset
+
+            #ITS report
+            its_dbcon = ITSQuery(opts.dbuser, opts.dbpassword, opts.dbbicho, opts.dbidentities)
+            dataset = its_report(its_dbcon, filters)
+            releases_data[release]["its"] = dataset
+
+            #MLS Report
+            scr_dbcon = SCRQuery(opts.dbuser, opts.dbpassword, opts.dbreview, opts.dbidentities)
+            dataset = scr_report(scr_dbcon, filters)
+            releases_data[release]["scr"] = dataset
 
 
-    labels = []
-    commits = []
-    authors = []
-    opened = []
-    submitted = []
-    merged = []
-    abandoned = []
-    closed = []
-    for release in releases:
-        labels.append(release[1])
-        #scm
-        commits.append(releases_data[release]["scm"]["commits"])
-        authors.append(releases_data[release]["scm"]["authors"])
-        #its
-        opened.append(releases_data[release]["its"]["opened"])
-        closed.append(releases_data[release]["its"]["closed"])
-        #scr
-        submitted.append(releases_data[release]["scr"]["submitted"])
-        merged.append(releases_data[release]["scr"]["merged"])
-        abandoned.append(releases_data[release]["scr"]["abandoned"])
+        labels = []
+        commits = []
+        authors = []
+        opened = []
+        submitted = []
+        merged = []
+        abandoned = []
+        closed = []
+        for release in releases:
+            labels.append(release[1])
+            #scm
+            commits.append(releases_data[release]["scm"]["commits"])
+            authors.append(releases_data[release]["scm"]["authors"])
+            #its
+            opened.append(releases_data[release]["its"]["opened"])
+            closed.append(releases_data[release]["its"]["closed"])
+            #scr
+            submitted.append(releases_data[release]["scr"]["submitted"])
+            merged.append(releases_data[release]["scr"]["merged"])
+            abandoned.append(releases_data[release]["scr"]["abandoned"])
         
         
 
-    barh_chart("Commits per period", labels, commits, "commits")
-    barh_chart("Authors per period", labels, commits, "authors")
-    barh_chart("Opened tickets per period", labels, opened, "opened")
-    barh_chart("Closed tickets per period", labels, closed, "closed")
-    barh_chart("Submitted reviews per period", labels, submitted, "submitted_reviews")
-    barh_chart("Merged reviews per period", labels, merged, "merged_reviews")
-    barh_chart("Abandoned reviews  per period", labels, abandoned, "abandoned_reviews")
+        barh_chart("Commits " + project, labels, commits, "commits"  + project)
+        barh_chart("Authors " + project, labels, commits, "authors" + project)
+        barh_chart("Opened tickets " +  project, labels, opened, "opened" + project)
+        barh_chart("Closed tickets " + project, labels, closed, "closed" + project)
+        barh_chart("Submitted reviews " + project, labels, submitted, "submitted_reviews" + project)
+        barh_chart("Merged reviews " + project, labels, merged, "merged_reviews" + project)
+        barh_chart("Abandoned reviews  " + project, labels, abandoned, "abandoned_reviews" + project)
 
 
 
