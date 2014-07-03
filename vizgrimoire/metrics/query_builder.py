@@ -26,8 +26,6 @@ import MySQLdb
 import re
 import sys
 
-from GrimoireUtils import get_subprojects
-
 class DSQuery(object):
     """ Generic methods to control access to db """
 
@@ -151,6 +149,26 @@ class DSQuery(object):
     def ExecuteViewQuery(self, sql):
         self.cursor.execute(sql)
 
+    def get_subprojects(self, project):
+        """ Return all subprojects ids for a project in a string join by comma """
+
+        q = "SELECT project_id from %s.projects WHERE id='%s'" % (self.identities_db, project)
+        project_id = self.ExecuteQuery(q)['project_id']
+
+        q = """
+            SELECT subproject_id from %s.project_children pc where pc.project_id = '%s'
+        """ % (self.identities_db, project_id)
+
+        subprojects = self.ExecuteQuery(q)
+
+        if not isinstance(subprojects['subproject_id'], list):
+            subprojects['subproject_id'] = [subprojects['subproject_id']]
+
+        project_with_children = subprojects['subproject_id'] + [project_id]
+        project_with_children_str = ','.join(str(x) for x in project_with_children)
+
+        return  project_with_children_str
+
 class SCMQuery(DSQuery):
     """ Specific query builders for source code management system data source """
 
@@ -178,7 +196,7 @@ class SCMQuery(DSQuery):
                FROM   %s.projects p, %s.project_repositories pr
                WHERE  p.project_id = pr.project_id AND p.project_id IN (%s)
                      AND pr.data_source='scm'
-               )""" % (identities_db, identities_db, get_subprojects(project, identities_db))
+               )""" % (identities_db, identities_db, self.get_subprojects(project))
 
         return (repos   + " and r.id = s.repository_id")
 
@@ -341,7 +359,7 @@ class ITSQuery(DSQuery):
             if (project[0] == "'" and project[-1] == "'"):
                 project = project[1:-1]
 
-        subprojects = get_subprojects(project, identities_db, self)
+        subprojects = self.get_subprojects(project)
 
         repos = """ t.url IN (
                SELECT repository_name
@@ -529,7 +547,7 @@ class MLSQuery(DSQuery):
                FROM   %s.projects p, %s.project_repositories pr
                WHERE  p.project_id = pr.project_id AND p.project_id IN (%s)
                    AND pr.data_source='mls'
-        )""" % (identities_db, identities_db, get_subprojects(p, identities_db))
+        )""" % (identities_db, identities_db, self.get_subprojects(p))
 
         return (repos  + " and ml.mailing_list_url = m.mailing_list_url")
 
@@ -639,7 +657,7 @@ class SCRQuery(DSQuery):
                FROM   %s.projects p, %s.project_repositories pr
                WHERE  p.project_id = pr.project_id AND p.project_id IN (%s)
                    AND pr.data_source='scr'
-        )""" % (identities_db, identities_db, get_subprojects(project, identities_db))
+        )""" % (identities_db, identities_db, self.get_subprojects(project))
 
         return (repos   + " and t.id = i.tracker_id")
 
