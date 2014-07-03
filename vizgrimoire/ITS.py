@@ -82,7 +82,6 @@ class ITS(DataSource):
 
     @staticmethod
     def _get_closed_condition():
-        print ITS._get_backend().closed_condition
         return ITS._get_backend().closed_condition
 
     @staticmethod
