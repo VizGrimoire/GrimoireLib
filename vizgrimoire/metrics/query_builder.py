@@ -377,8 +377,21 @@ class SCMQuery(DSQuery):
 
         return res
 
+    def get_repository_top_authors (self, repo, startdate, enddate, npeople):
+        repo = "'"+repo+"'"
+        repos_from = self.GetSQLRepositoriesFrom()
+        # Remove first and
+        repos_where = " WHERE  " + self.GetSQLRepositoriesWhere(repo)[4:]
 
+        fields =  "SELECT COUNT(DISTINCT(s.id)) as commits, u.id, u.identifier as authors "
+        fields += "FROM scmlog s, people_upeople pup, upeople u "
+        q = fields + repos_from + repos_where
+        q += " AND pup.people_id = s.author_id AND u.id = pup.upeople_id "
+        q += " GROUP by u.id ORDER BY commits DESC, r.name"
 
+        res = self.ExecuteQuery(q)
+
+        return res
 
 class ITSQuery(DSQuery):
     """ Specific query builders for issue tracking system data source """

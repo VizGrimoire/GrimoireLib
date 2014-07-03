@@ -108,30 +108,24 @@ class SCM(DataSource):
 
     @staticmethod
     def get_project_top_companies (project, startdate, enddate, limit):
-        # First we need to locate the SCM repositories
-        from report import Report
-        db = Report._automator['generic']['db_cvsanaly']
-        db_i = Report._automator['generic']['db_identities']
-        dbuser = Report._automator['generic']['db_user']
-        dbpass = Report._automator['generic']['db_password']
-
-        dbcon = SCM.get_query_builder()(dbuser, dbpass, db, db_i)
+        # Hack to get a SCMQuery
+        dbcon = SCM.get_metrics_set(SCM)[0].db
         top_companies = dbcon.get_project_top_companies (project, startdate, enddate, limit)
         return top_companies
 
     @staticmethod
     def get_project_top_authors (project, startdate, enddate, npeople):
-        # First we need to locate the SCM repositories
-        from report import Report
-        db = Report._automator['generic']['db_cvsanaly']
-        db_i = Report._automator['generic']['db_identities']
-        dbuser = Report._automator['generic']['db_user']
-        dbpass = Report._automator['generic']['db_password']
-
-        dbcon = SCM.get_query_builder()(dbuser, dbpass, db, db_i)
+        # Hack to get a SCMQuery
+        dbcon = SCM.get_metrics_set(SCM)[0].db
         top_authors = dbcon.get_project_top_authors (project, startdate, enddate, npeople)
         return top_authors
 
+    @staticmethod
+    def get_repository_top_authors (repo, startdate, enddate, npeople):
+        # Hack to get a SCMQuery
+        dbcon = SCM.get_metrics_set(SCM)[0].db
+        top_authors = dbcon.get_repository_top_authors (repo, startdate, enddate, npeople)
+        return top_authors
 
     @staticmethod
     def get_top_data (startdate, enddate, i_db, filter_, npeople):
@@ -148,6 +142,8 @@ class SCM(DataSource):
             top = SCM.get_project_top_authors(filter_.get_item(), startdate, enddate, npeople)
             top_companies = SCM.get_project_top_companies(filter_.get_item(), startdate, enddate, npeople)
             top = dict(top.items() + top_companies.items())
+        elif filter_.get_name() == "repository":
+            top = SCM.get_repository_top_authors(filter_.get_item(), startdate, enddate, npeople)
         else:
             top = None
         return top
@@ -222,7 +218,7 @@ class SCM(DataSource):
                 items_list['commits_365'].append(agg['commits_365'])
                 items_list['authors_365'].append(agg['authors_365'])
 
-            if filter_name in ("company","project"):
+            if filter_name in ("company","project","repository"):
                 top_authors = SCM.get_top_data(startdate, enddate, identities_db, filter_item, npeople)
                 fn = os.path.join(destdir, filter_item.get_top_filename(SCM()))
                 createJSON(top_authors, fn)
