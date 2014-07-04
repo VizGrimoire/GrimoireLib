@@ -99,7 +99,6 @@ class Threads(object):
     def _build_threads (self, message_id):
         # Constructor of threads.
 
-        print(message_id)
         sons = []
         messages = []
         if message_id not in self.list_is_response_of:
