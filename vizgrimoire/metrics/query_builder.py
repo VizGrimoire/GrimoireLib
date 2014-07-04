@@ -49,6 +49,12 @@ class DSQuery(object):
 
         db = self.__SetDBChannel__(user, password, database, host, port, group)
 
+        self.create_indexes()
+
+    def create_indexes(self):
+        """ Basic indexes used in each data source """
+        pass
+
     def GetSQLGlobal(self, date, fields, tables, filters, start, end):
         sql = 'SELECT '+ fields
         sql += ' FROM '+ tables
@@ -185,7 +191,7 @@ class SCMQuery(DSQuery):
         #tables necessaries for repositories
         return (" , repositories r")
 
-    def GetSQLProjectWhere (self, project, role, identities_db):
+    def GetSQLProjectWhere (self, project):
         # include all repositories for a project and its subprojects
         # Remove '' from project name
         if (project[0] == "'" and project[-1] == "'"):
@@ -196,7 +202,7 @@ class SCMQuery(DSQuery):
                FROM   %s.projects p, %s.project_repositories pr
                WHERE  p.project_id = pr.project_id AND p.project_id IN (%s)
                      AND pr.data_source='scm'
-               )""" % (identities_db, identities_db, self.get_subprojects(project))
+               )""" % (self.identities_db, self.identities_db, self.get_subprojects(project))
 
         return (repos   + " and r.id = s.repository_id")
 
@@ -278,7 +284,7 @@ class SCMQuery(DSQuery):
         elif analysis == 'company': where = self.GetSQLCompaniesWhere(value, role)
         elif analysis == 'country': where = self.GetSQLCountriesWhere(value, role)
         elif analysis == 'domain': where = self.GetSQLDomainsWhere(value, role)
-        elif analysis == 'project': where = self.GetSQLProjectWhere(value, role, self.identities_db)
+        elif analysis == 'project': where = self.GetSQLProjectWhere(value)
 
         return (where)
 
@@ -337,6 +343,55 @@ class SCMQuery(DSQuery):
             """ % (q_people_num_commits_evol)
 
         return self.ExecuteQuery(q_people_num_evol)
+
+    def get_project_top_authors (self, project, startdate, enddate, npeople):
+        projects_from = self.GetSQLProjectFrom()
+
+        # Remove first and
+        projects_where = " WHERE  " + self.GetSQLProjectWhere(project)[3:]
+
+        fields =  "SELECT COUNT(DISTINCT(s.id)) as commits, u.id, u.identifier as authors "
+        fields += "FROM scmlog s, people_upeople pup, upeople u "
+        q = fields + projects_from + projects_where
+        q += " AND pup.people_id = s.author_id AND u.id = pup.upeople_id "
+        q += " GROUP by u.id ORDER BY commits DESC, u.id"
+
+        res = self.ExecuteQuery(q)
+
+        return res
+
+    def get_project_top_companies (self, project, startdate, enddate, npeople):
+
+        projects_from = self.GetSQLProjectFrom()
+        # Remove first and
+        projects_where = " WHERE  " + self.GetSQLProjectWhere(project)[3:]
+
+        fields =  "SELECT COUNT(DISTINCT(s.id)) as company_commits, c.name as companies "
+        fields += "FROM scmlog s, people_upeople pup, upeople u, upeople_companies upc, companies c "
+        q = fields + projects_from + projects_where
+        q += " AND pup.people_id = s.author_id AND u.id = pup.upeople_id "
+        q += " AND u.id = upc.upeople_id AND c.id = upc.company_id "
+        q += " GROUP by c.name ORDER BY company_commits DESC, c.name"
+
+        res = self.ExecuteQuery(q)
+
+        return res
+
+    def get_repository_top_authors (self, repo, startdate, enddate, npeople):
+        repo = "'"+repo+"'"
+        repos_from = self.GetSQLRepositoriesFrom()
+        # Remove first and
+        repos_where = " WHERE  " + self.GetSQLRepositoriesWhere(repo)[4:]
+
+        fields =  "SELECT COUNT(DISTINCT(s.id)) as commits, u.id, u.identifier as authors "
+        fields += "FROM scmlog s, people_upeople pup, upeople u "
+        q = fields + repos_from + repos_where
+        q += " AND pup.people_id = s.author_id AND u.id = pup.upeople_id "
+        q += " GROUP by u.id ORDER BY commits DESC, r.name"
+
+        res = self.ExecuteQuery(q)
+
+        return res
 
 class ITSQuery(DSQuery):
     """ Specific query builders for issue tracking system data source """
@@ -1164,6 +1219,31 @@ class MediawikiQuery(DSQuery):
 
 class QAForumsQuery(DSQuery):
     """ Specific query builders for question and answer platforms """
+
+    def create_indexes(self):
+        try:
+            q = "create index q_id_a_idx on answers (question_identifier)"
+            self.ExecuteQuery(q)
+        except Exception:
+            pass
+            # logging.info("Indexes for QAForums already created")
+            # import traceback
+            # traceback.print_exc(file=sys.stdout)
+        try:
+            q = "create index q_id_qt_idx on questionstags (question_identifier)"
+            self.ExecuteQuery(q)
+        except:
+            pass
+        try:
+            q = "create index tag_id_qt_idx on questionstags (question_identifier)"
+            self.ExecuteQuery(q)
+        except:
+            pass
+        try:
+            q = "create index tag_idx_t on tags (tag)"
+            self.ExecuteQuery(q)
+        except:
+            pass
 
     def GetSQLReportFrom(self, type_analysis):
         # generic function to generate "from" clauses

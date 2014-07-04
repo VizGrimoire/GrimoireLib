@@ -99,6 +99,7 @@ class Threads(object):
     def _build_threads (self, message_id):
         # Constructor of threads.
 
+        print(message_id)
         sons = []
         messages = []
         if message_id not in self.list_is_response_of:
@@ -126,7 +127,7 @@ class Threads(object):
        
         # Retrieving all of the messages. 
         query = """
-                select message_ID, is_response_of 
+                select DISTINCT message_ID, is_response_of 
                 from messages 
                 where first_date > %s and first_date <= %s
                 """ % (self.initdate, self.enddate)

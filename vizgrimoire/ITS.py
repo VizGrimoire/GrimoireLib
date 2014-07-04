@@ -38,6 +38,7 @@ import report
 
 class ITS(DataSource):
     _metrics_set = []
+    _backend = None
     debug = False
 
 
@@ -65,10 +66,18 @@ class ITS(DataSource):
         pass
 
     @staticmethod
+    def set_backend(its_name):
+        backend = Backend(its_name)
+        ITS._backend = backend
+
+    @staticmethod
     def _get_backend():
-        automator = report.Report.get_config()
-        its_backend = automator['bicho']['backend']
-        backend = Backend(its_backend)
+        if ITS._backend == None:
+            automator = report.Report.get_config()
+            its_backend = automator['bicho']['backend']
+            backend = Backend(its_backend)
+        else:
+            backend = ITS._backend
         return backend
 
     @staticmethod
@@ -1213,7 +1222,7 @@ class Backend(object):
         self.its_type = its_type
         if (its_type == 'allura'):
             self.closed_condition = "new_value='CLOSED'"
-        if (its_type == 'bugzilla' or its_type == 'bg'):
+        elif (its_type == 'bugzilla' or its_type == 'bg'):
             self.closed_condition = "(new_value='RESOLVED' OR new_value='CLOSED')"
             self.reopened_condition = "new_value='NEW'"
             self.name_log_table = 'issues_log_bugzilla'
@@ -1224,10 +1233,10 @@ class Backend(object):
             Backend.priority = ["Unprioritized", "Low", "Normal", "High", "Highest", "Immediate"]
             Backend.severity = ["trivial", "minor", "normal", "major", "blocker", "critical", "enhancement"]
 
-        if (its_type == 'github'):
+        elif (its_type == 'github'):
             self.closed_condition = "field='closed'"
 
-        if (its_type == 'jira'):
+        elif (its_type == 'jira'):
             self.closed_condition = "(new_value='Closed')"
             self.reopened_condition = "new_value='Reopened'"
             #self.new_condition = "status='Open'"
@@ -1237,13 +1246,13 @@ class Backend(object):
             self.reopened_status = 'Reopened'
             self.name_log_table = 'issues_log_jira'
 
-        if (its_type == 'lp'):
+        elif (its_type == 'lp' or its_type == 'launchpad'):
             #self.closed_condition = "(new_value='Fix Released' or new_value='Invalid' or new_value='Expired' or new_value='Won''t Fix')"
             self.closed_condition = "(new_value='Fix Committed')"
             self.statuses = ["Confirmed", "Fix Committed", "New", "In Progress", "Triaged", "Incomplete", "Invalid", "Won\\'t Fix", "Fix Released", "Opinion", "Unknown", "Expired"]
             self.name_log_table = 'issues_log_launchpad'
 
-        if (its_type == 'redmine'):
+        elif (its_type == 'redmine'):
             self.statuses = ["New", "Verified", "Need More Info", "In Progress", "Feedback",
                          "Need Review", "Testing", "Pending Backport", "Pending Upstream",
                          "Resolved", "Closed", "Rejected", "Won\\'t Fix", "Can\\'t reproduce",
@@ -1252,3 +1261,6 @@ class Backend(object):
                                   " OR new_value='Won\\'t Fix' OR new_value='Can\\'t reproduce' OR new_value='Duplicate')"
             self.reopened_condition = "new_value='Reopened'" # FIXME: fake condition
             self.name_log_table = 'issues_log_redmine'
+        else:
+            logging.error("Backend not found: " + its_type)
+            raise Exception

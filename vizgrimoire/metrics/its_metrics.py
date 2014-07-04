@@ -122,10 +122,15 @@ class Closed(Metrics):
         """ Implemented using Changed """
         close = True
         changed = ITS.get_metrics("changed", ITS)
-        cfilters = changed.filters
-        changed.filters = self.filters
-        q = changed.__get_sql__(evolutionary, close)
-        changed.filters = cfilters
+        if changed is None:
+            # We need to create changers metric
+            changed = Changed(self.db, self.filters)
+            q = changed.__get_sql__(evolutionary, close)
+        else:
+            cfilters = changed.filters
+            changed.filters = self.filters
+            q = changed.__get_sql__(evolutionary, close)
+            changed.filters = cfilters
         return q
 
 #closers
@@ -138,13 +143,18 @@ class Closers(Metrics):
     envision = {"gtype" : "whiskers"}
 
     def __get_sql__(self, evolutionary):
-        """ Implemented using Changers """
+        """ Implemented using Changers (changed metric should exists first) """
         close = True
         changers = ITS.get_metrics("changers", ITS)
-        cfilters = changers.filters
-        changers.filters = self.filters
-        q = changers.__get_sql__(evolutionary, close)
-        changers.filters = cfilters
+        if changers is None:
+            # We need to create changers metric
+            changers = Changers(self.db, self.filters)
+            q = changers.__get_sql__(evolutionary, close)
+        else:
+            cfilters = changers.filters
+            changers.filters = self.filters
+            q = changers.__get_sql__(evolutionary, close)
+            changers.filters = cfilters
         return q
 
 class Changed(Metrics):
@@ -205,10 +215,13 @@ class Changed(Metrics):
         return q
 
     def __get_sql__(self, evolutionary, close = False):
-        if (self.filters.type_analysis is not None and (self.filters.type_analysis[0] in  ["repository","project"])):
-            return self.__get_sql_trk_prj__(evolutionary, close)
+        if (self.filters.type_analysis is not None
+            and len(self.filters.type_analysis) == 2
+            and (self.filters.type_analysis[0] in  ["repository","project"])):
+            q = self.__get_sql_trk_prj__(evolutionary, close)
         else:
-            return self.__get_sql_default__(evolutionary, close)
+            q = self.__get_sql_default__(evolutionary, close)
+        return q
 
 class Changers(Metrics):
     """ Tickets Changers metric class for issue tracking systems """

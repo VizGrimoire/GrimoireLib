@@ -107,6 +107,27 @@ class SCM(DataSource):
         createJSON (data, os.path.join(destdir, filename))
 
     @staticmethod
+    def get_project_top_companies (project, startdate, enddate, limit):
+        # Hack to get a SCMQuery
+        dbcon = SCM.get_metrics_set(SCM)[0].db
+        top_companies = dbcon.get_project_top_companies (project, startdate, enddate, limit)
+        return top_companies
+
+    @staticmethod
+    def get_project_top_authors (project, startdate, enddate, npeople):
+        # Hack to get a SCMQuery
+        dbcon = SCM.get_metrics_set(SCM)[0].db
+        top_authors = dbcon.get_project_top_authors (project, startdate, enddate, npeople)
+        return top_authors
+
+    @staticmethod
+    def get_repository_top_authors (repo, startdate, enddate, npeople):
+        # Hack to get a SCMQuery
+        dbcon = SCM.get_metrics_set(SCM)[0].db
+        top_authors = dbcon.get_repository_top_authors (repo, startdate, enddate, npeople)
+        return top_authors
+
+    @staticmethod
     def get_top_data (startdate, enddate, i_db, filter_, npeople):
         top = {}
         bots = SCM.get_bots()
@@ -117,6 +138,12 @@ class SCM(DataSource):
             top['authors.last year']= top_people(365, startdate, enddate, "author", bots, npeople)
         elif filter_.get_name() == "company":
             top = company_top_authors("'"+filter_.get_item()+"'", startdate, enddate, npeople)
+        elif filter_.get_name() == "project":
+            top = SCM.get_project_top_authors(filter_.get_item(), startdate, enddate, npeople)
+            top_companies = SCM.get_project_top_companies(filter_.get_item(), startdate, enddate, npeople)
+            top = dict(top.items() + top_companies.items())
+        elif filter_.get_name() == "repository":
+            top = SCM.get_repository_top_authors(filter_.get_item(), startdate, enddate, npeople)
         else:
             top = None
         return top
@@ -191,15 +218,10 @@ class SCM(DataSource):
                 items_list['commits_365'].append(agg['commits_365'])
                 items_list['authors_365'].append(agg['authors_365'])
 
-            if (filter_name == "company"):
+            if filter_name in ("company","project","repository"):
                 top_authors = SCM.get_top_data(startdate, enddate, identities_db, filter_item, npeople)
                 fn = os.path.join(destdir, filter_item.get_top_filename(SCM()))
                 createJSON(top_authors, fn)
-
-                # Old code not used. To be removed.
-                for i in [2006,2009,2012]:
-                    data = company_top_authors_year(item_name, i, npeople)
-                    createJSON(data, destdir+"/"+item+"-"+SCM.get_name()+"-top-authors_"+str(i)+".json")
 
         fn = os.path.join(destdir, filter_.get_filename(SCM()))
         createJSON(items_list, fn)
