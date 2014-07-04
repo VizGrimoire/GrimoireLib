@@ -67,7 +67,7 @@ def barh_chart(title, yvalues, xvalues, file_name):
     ppl.barh(y_pos, xvalues, grid='x')
     plt.yticks(y_pos, yvalues)
     plt.savefig(file_name + ".eps")
-
+    plt.close()
 
 
 def read_options():
@@ -160,26 +160,46 @@ def build_releases(releases_dates):
 
 
 def scm_report(dbcon, filters):
+
+    project_name = filters.type_analysis[1]
+    project_name = project_name.replace(" ", "")
+
     commits = scm.Commits(dbcon, filters)
-    createJSON(commits.get_agg(), "./release/scm_commits.json")
+    createJSON(commits.get_agg(), "./release/scm_commits_"+project_name+".json")
 
     authors = scm.Authors(dbcon, filters)
-    createJSON(authors.get_agg(), "./release/scm_authors.json")
+    createJSON(authors.get_agg(), "./release/scm_authors_"+project_name+".json")
 
     dataset = {}
     dataset["commits"] = commits.get_agg()["commits"]
     dataset["authors"] = authors.get_agg()["authors"]
+
+    # tops authors activity
+    from top_authors_projects import TopAuthorsProjects
+    top_authors = TopAuthorsProjects(dbcon, filters)
+    createJSON(top_authors.result(), "./release/scm_top_authors_project_"+project_name+".json")
+    createCSV(top_authors.result(), "./release/scm_top_authors_project_"+project_name+".csv", ["id"])
+
+    # top companies activity
+    from top_companies_projects import TopCompaniesProjects
+    top_companies = TopCompaniesProjects(dbcon, filters)
+    createJSON(top_companies.result(), "./release/scm_top_companies_project_"+project_name+".json")
+    createCSV(top_companies.result(), "./release/scm_top_companies_project_"+project_name+".csv")
 
     return dataset
 
 def its_report(dbcon, filters):
     from ITS import ITS
     ITS.set_backend("launchpad")
+
+    project_name = filters.type_analysis[1]
+    project_name = project_name.replace(" ", "")
+
     opened = its.Opened(dbcon, filters)
-    createJSON(opened.get_agg(), "./release/its_opened.json")
+    createJSON(opened.get_agg(), "./release/its_opened_"+project_name+".json")
 
     closed = its.Closed(dbcon, filters)
-    createJSON(closed.get_agg(), "./release/its_closed.json")
+    createJSON(closed.get_agg(), "./release/its_closed_"+project_name+".json")
 
     dataset = {}
     dataset["opened"] = opened.get_agg()["opened"]
@@ -189,20 +209,25 @@ def its_report(dbcon, filters):
 
 
 def scr_report(dbcon, filters):
+
+    project_name = filters.type_analysis[1]
+    project_name = project_name.replace(" ", "")
+
+
     submitted = scr.Submitted(dbcon, filters)
-    createJSON(submitted.get_agg(), "./release/scr_submitted.json")
+    createJSON(submitted.get_agg(), "./release/scr_submitted_"+project_name+".json")
 
     merged = scr.Merged(dbcon, filters)
-    createJSON(merged.get_agg(), "./release/scr_merged.json")
+    createJSON(merged.get_agg(), "./release/scr_merged.json_"+project_name+"")
 
     abandoned = scr.Abandoned(dbcon, filters)
-    createJSON(abandoned.get_agg(), "./release/scr_abandoned.json")
+    createJSON(abandoned.get_agg(), "./release/scr_abandoned_"+project_name+".json")
 
     waiting4reviewer = scr.ReviewsWaitingForReviewer(dbcon, filters)
-    createJSON(waiting4reviewer.get_agg(), "./release/scr_waiting4reviewer.json")
+    createJSON(waiting4reviewer.get_agg(), "./release/scr_waiting4reviewer_"+project_name+".json")
 
     waiting4submitter = scr.ReviewsWaitingForSubmitter(dbcon, filters)
-    createJSON(waiting4submitter.get_agg(), "./release/scr_waiting4submitter.json")
+    createJSON(waiting4submitter.get_agg(), "./release/scr_waiting4submitter_"+project_name+".json")
 
     dataset = {}
     dataset["submitted"] = submitted.get_agg()["submitted"]
@@ -240,7 +265,6 @@ def createCSV(data, filepath, skip_fields = []):
     fd.write('\n')
     fd.write(body.encode('utf-8'))
     fd.close()
-    print "CSV file generated at: %s" % (filepath)
 
 def init_env():
     grimoirelib = path.join("..","vizgrimoire")
@@ -285,7 +309,6 @@ if __name__ == '__main__':
 
 
     projects_list = projects(opts.dbuser, opts.dbpassword, opts.dbidentities)
-    print projects_list
 
     for project in projects_list:
         releases_data = {}
@@ -319,6 +342,7 @@ if __name__ == '__main__':
         merged = []
         abandoned = []
         closed = []
+        bmi = []
         for release in releases:
             labels.append(release[1])
             #scm
@@ -327,20 +351,25 @@ if __name__ == '__main__':
             #its
             opened.append(releases_data[release]["its"]["opened"])
             closed.append(releases_data[release]["its"]["closed"])
+            if releases_data[release]["its"]["opened"] > 0:
+                bmi.append(float(releases_data[release]["its"]["closed"])/float(releases_data[release]["its"]["opened"]))
+            else:
+                bmi.append(0)
             #scr
             submitted.append(releases_data[release]["scr"]["submitted"])
             merged.append(releases_data[release]["scr"]["merged"])
             abandoned.append(releases_data[release]["scr"]["abandoned"])
         
-        
-
-        barh_chart("Commits " + project, labels, commits, "commits"  + project)
-        barh_chart("Authors " + project, labels, commits, "authors" + project)
-        barh_chart("Opened tickets " +  project, labels, opened, "opened" + project)
-        barh_chart("Closed tickets " + project, labels, closed, "closed" + project)
-        barh_chart("Submitted reviews " + project, labels, submitted, "submitted_reviews" + project)
-        barh_chart("Merged reviews " + project, labels, merged, "merged_reviews" + project)
-        barh_chart("Abandoned reviews  " + project, labels, abandoned, "abandoned_reviews" + project)
+        labels = ["2013-Q3", "2013-Q4", "2014-Q1", "2014-Q2"]        
+        project_name = project.replace(" ", "")
+        barh_chart("Commits " + project, labels, commits, "commits"  + project_name)
+        barh_chart("Authors " + project, labels, commits, "authors" + project_name)
+        barh_chart("Opened tickets " +  project, labels, opened, "opened" + project_name)
+        barh_chart("Closed tickets " + project, labels, closed, "closed" + project_name)
+        barh_chart("Efficiency closing tickets " + project, labels, bmi, "bmi" + project_name)
+        barh_chart("Submitted reviews " + project, labels, submitted, "submitted_reviews" + project_name)
+        barh_chart("Merged reviews " + project, labels, merged, "merged_reviews" + project_name)
+        barh_chart("Abandoned reviews  " + project, labels, abandoned, "abandoned_reviews" + project_name)
 
 
 
