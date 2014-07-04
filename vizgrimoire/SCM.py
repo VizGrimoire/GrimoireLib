@@ -677,13 +677,14 @@ def top_people (days, startdate, enddate, role, bots, limit) :
     # In addition, the number of days allows to limit the study to the last
     # X days specified in that parameter
 
-    filter_bots = ''
+    filter_bots = filter_bots_new = ''
     for bot in bots:
         filter_bots = filter_bots + " u.identifier<>'"+bot+"' and "
+        filter_bots_new = "WHERE " + filter_bots[:-4]
 
     dtables = dfilters = ""
     if (days > 0):
-        dtables = ", (SELECT MAX(date) as last_date from scmlog) t"
+        dtables = ", (SELECT MAX(date) as last_date from scmlog) dt"
         dfilters = " DATEDIFF (last_date, date) < %s AND " % (days)
 
     # Query generates >20 GB of tmp file in Eclipse. The GROUP BY should be done later.
@@ -700,20 +701,20 @@ def top_people (days, startdate, enddate, role, bots, limit) :
         " ORDER BY commits desc, "+role+"s "+\
         " LIMIT "+ limit
 
-    q = "SELECT id, "+ role+ "s, COUNT(DISTINCT(sid)) AS commits FROM ("+\
-        "SELECT u.id as id, u.identifier as "+ role+ "s, "+\
-        " s.id as sid "+\
-        " FROM scmlog s, actions a, people_upeople pup, upeople u " + dtables +\
-        " WHERE " + filter_bots + dfilters +\
-        "s."+ role+ "_id = pup.people_id AND "+\
-        " pup.upeople_id = u.id AND" +\
-        " s.id = a.commit_id AND " +\
-        " s.date >= "+ startdate+ " AND "+\
-        " s.date < "+ enddate +\
-        " ) t " +\
-        " GROUP BY "+role+"s "+\
-        " ORDER BY commits desc, "+role+"s "+\
-        " LIMIT "+ limit
+    q = """
+    SELECT u.id, u.identifier as %ss, SUM(total) AS commits FROM
+    (
+     SELECT s.%s_id, COUNT(DISTINCT(s.id)) as total
+     FROM scmlog s, actions a %s
+     WHERE %s s.id = a.commit_id AND
+        s.date >= %s AND  s.date < %s
+     GROUP BY  s.%s_id ORDER by total DESC, s.%s_id
+    ) t
+    JOIN people_upeople pup ON pup.people_id = %s_id
+    JOIN upeople u ON pup.upeople_id = u.id
+    %s
+    GROUP BY u.identifier ORDER BY commits desc, %ss  limit %s
+    """ % (role, role, dtables, dfilters, startdate, enddate, role, role, role, filter_bots_new, role, limit)
 
     data = ExecuteQuery(q)
     for id in data:
