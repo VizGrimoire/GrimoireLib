@@ -686,7 +686,8 @@ def top_people (days, startdate, enddate, role, bots, limit) :
         dtables = ", (SELECT MAX(date) as last_date from scmlog) t"
         dfilters = " DATEDIFF (last_date, date) < %s AND " % (days)
 
-    q = "SELECT u.id as id, u.identifier as "+ role+ "s, "+\
+    # Query generates >20 GB of tmp file in Eclipse. The GROUP BY should be done later.
+    q_large_tmp = "SELECT u.id as id, u.identifier as "+ role+ "s, "+\
         " count(distinct(s.id)) as commits "+\
         " FROM scmlog s, actions a, people_upeople pup, upeople u " + dtables +\
         " WHERE " + filter_bots + dfilters +\
@@ -698,6 +699,22 @@ def top_people (days, startdate, enddate, role, bots, limit) :
         " GROUP BY u.identifier "+\
         " ORDER BY commits desc, "+role+"s "+\
         " LIMIT "+ limit
+
+    q = "SELECT id, "+ role+ "s, COUNT(DISTINCT(sid)) AS commits FROM ("+\
+        "SELECT u.id as id, u.identifier as "+ role+ "s, "+\
+        " s.id as sid "+\
+        " FROM scmlog s, actions a, people_upeople pup, upeople u " + dtables +\
+        " WHERE " + filter_bots + dfilters +\
+        "s."+ role+ "_id = pup.people_id AND "+\
+        " pup.upeople_id = u.id AND" +\
+        " s.id = a.commit_id AND " +\
+        " s.date >= "+ startdate+ " AND "+\
+        " s.date < "+ enddate +\
+        " ) t " +\
+        " GROUP BY "+role+"s "+\
+        " ORDER BY commits desc, "+role+"s "+\
+        " LIMIT "+ limit
+
     data = ExecuteQuery(q)
     for id in data:
         if not isinstance(data[id], (list)): data[id] = [data[id]]
