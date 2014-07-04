@@ -680,7 +680,7 @@ def top_people (days, startdate, enddate, role, bots, limit) :
     filter_bots = ''
     for bot in bots:
         filter_bots = filter_bots + " u.identifier<>'"+bot+"' and "
-    filter_bots_new = filter_bots[:-4]
+    filter_bots_new = "WHERE " + filter_bots[:-4]
 
     dtables = dfilters = ""
     if (days > 0):
@@ -712,9 +712,11 @@ def top_people (days, startdate, enddate, role, bots, limit) :
     ) t
     JOIN people_upeople pup ON pup.people_id = %s_id
     JOIN upeople u ON pup.upeople_id = u.id
-    WHERE %s
+    %s
     GROUP BY u.identifier ORDER BY commits desc, %ss  limit %s
     """ % (role, role, dtables, dfilters, startdate, enddate, role, role, role, filter_bots_new, role, limit)
+
+    print(q)
 
     data = ExecuteQuery(q)
     for id in data:
