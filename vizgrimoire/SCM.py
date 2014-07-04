@@ -677,10 +677,10 @@ def top_people (days, startdate, enddate, role, bots, limit) :
     # In addition, the number of days allows to limit the study to the last
     # X days specified in that parameter
 
-    filter_bots = ''
+    filter_bots = filter_bots_new = ''
     for bot in bots:
         filter_bots = filter_bots + " u.identifier<>'"+bot+"' and "
-    filter_bots_new = "WHERE " + filter_bots[:-4]
+        filter_bots_new = "WHERE " + filter_bots[:-4]
 
     dtables = dfilters = ""
     if (days > 0):
@@ -715,8 +715,6 @@ def top_people (days, startdate, enddate, role, bots, limit) :
     %s
     GROUP BY u.identifier ORDER BY commits desc, %ss  limit %s
     """ % (role, role, dtables, dfilters, startdate, enddate, role, role, role, filter_bots_new, role, limit)
-
-    print(q)
 
     data = ExecuteQuery(q)
     for id in data:
