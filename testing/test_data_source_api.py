@@ -315,7 +315,7 @@ class DataSourceTest(unittest.TestCase):
                     filter_item = Filter(filter_.get_name(), item)
                     top = ds.get_top_data(startdate, enddate, identities_db,
                                           filter_item, npeople)
-                    if top is None: continue
+                    if top is None or top == {}: continue
                     test_json = os.path.join("json",filter_item.get_top_filename(ds()))
                     self.assertTrue(DataSourceTest._compare_data(top, test_json))
 
