@@ -64,15 +64,14 @@ class SCM(DataSource):
 
     @staticmethod
     def get_url():
-        return StaticURL()
-
+        q = "select uri as url,type from repositories limit 1"
+        return (ExecuteQuery(q))
 
     @staticmethod
     def get_evolutionary_data (period, startdate, enddate, identities_db, filter_ = None):
         type_analysis = None
-        if filter_ is not None:
-            type_analysis = [filter_.get_name(), "'"+filter_.get_item()+"'"]
-        evol_data = GetSCMEvolutionaryData(period, startdate, enddate, 
+        if filter_ is not None: type_analysis = filter_.get_type_analysis()
+        evol_data = GetSCMEvolutionaryData(period, startdate, enddate,
                                            identities_db, type_analysis)
 
         return evol_data
@@ -86,17 +85,14 @@ class SCM(DataSource):
     @staticmethod
     def get_agg_data (period, startdate, enddate, identities_db, filter_= None):
 
+        type_analysis = None
+        if filter_ is not None: type_analysis = filter_.get_type_analysis()
+
+        agg  = GetSCMStaticData(period, startdate, enddate, identities_db, type_analysis)
 
         if (filter_ is None):
-            agg  = GetSCMStaticData(period, startdate, enddate, identities_db, filter_)
-
             static_url = SCM.get_url()
             agg = dict(agg.items() + static_url.items())
-        else:
-            type_analysis = [filter_.get_name(), "'"+filter_.get_item()+"'"]
-
-            data = GetSCMStaticData(period, startdate, enddate, identities_db, type_analysis)
-            agg = data
 
         return agg
 
@@ -544,32 +540,6 @@ def GetSQLReportWhere (type_analysis, role, identities_db = None):
 
     return (where)
 
-##----------------------
-## Auxiliary functions querying the database
-##----------------------
-
-def get_timespan():
-    """Get timespan found in the SCM database.
-    
-    Returns
-    -------
-    startdate : datetime.datetime
-        Time of first commit
-    enddate : datetime.datetime
-        Time of last commit
-
-    Notes
-    -----
-
-    Just looks for first and last date in scmlog.
-
-    """
-
-    q = """SELECT DATE(MIN(date)) as startdate,
-                  DATE(MAX(date)) as enddate FROM scmlog"""
-    data = ExecuteQuery(q)
-    return (data['startdate'], data['enddate'])
-
 #########
 #Functions to obtain info per type of basic piece of data
 #########
@@ -600,13 +570,6 @@ def EvolCommits (period, startdate, enddate, identities_db, type_analysis):
     # Returns the evolution of commits through the time
 
     return(GetCommits(period, startdate, enddate, identities_db, type_analysis, True))
-
-
-def StaticURL () :
-    # Returns the SCM URL     
-
-    q = "select uri as url,type from repositories limit 1"
-    return (ExecuteQuery(q))
 
 #
 # People
@@ -785,178 +748,6 @@ def people () :
     data = ExecuteQuery(q)
     return (data);
 
-def companies_name_wo_affs (affs_list, startdate, enddate) :
-    #List of companies without certain affiliations
-    affiliations = ""
-    for aff in affs_list:
-        affiliations += " c.name<>'"+aff+"' and "
-
-    q_old = "select c.name "+\
-               "  from companies c, "+\
-               "       people_upeople pup, "+\
-               "       upeople_companies upc, "+\
-               "       scmlog s,  "+\
-               "       actions a "+\
-               "  where c.id = upc.company_id and "+\
-               "        upc.upeople_id = pup.upeople_id and "+\
-               "        s.date >= upc.init and "+\
-               "        s.date < upc.end and "+\
-               "        pup.people_id = s.author_id and "+\
-               "        s.id = a.commit_id and "+\
-               "        "+affiliations+"  "+\
-               "        s.date >="+ startdate+ " and "+\
-               "        s.date < "+ enddate+ " "+\
-               "  group by c.name "+\
-               "  order by count(distinct(s.id)) desc"
-
-
-    q = """
-        select c.name, count(distinct(t.s_id)) as total
-        from companies c,  (
-          select distinct(s.id) as s_id, company_id
-          from companies c, people_upeople pup, upeople_companies upc,
-               scmlog s,  actions a
-          where c.id = upc.company_id and  upc.upeople_id = pup.upeople_id
-            and  s.date >= upc.init and s.date < upc.end
-            and pup.people_id = s.author_id
-            and s.id = a.commit_id and
-            %s s.date >=%s and s.date < %s) t
-        where c.id = t.company_id
-        group by c.name
-        order by count(distinct(t.s_id)) desc
-    """ % (affiliations, startdate, enddate)
-
-    data = ExecuteQuery(q)
-    return (data)
-
-
-def companies_name (startdate, enddate) :
-    # companies_limit = 30
-
-    q = "select c.name "+\
-         "from companies c, "+\
-         "     people_upeople pup, "+\
-         "     upeople_companies upc, "+\
-         "     scmlog s,  "+\
-         "     actions a "+\
-         "where c.id = upc.company_id and "+\
-         "      upc.upeople_id = pup.upeople_id and "+\
-         "      pup.people_id = s.author_id and "+\
-         "      s.id = a.commit_id and "+\
-         "      s.date >="+ startdate+ " and "+\
-         "      s.date < "+ enddate+ " "+\
-         "group by c.name "+\
-         "order by count(distinct(s.id)) desc"
-        # order by count(distinct(s.id)) desc LIMIT ", companies_limit
-
-    data = ExecuteQuery(q)	
-    return (data)
-
-def company_top_authors (company_name, startdate, enddate, limit) :
-    # Returns top ten authors per company
-
-    q1 = "select u.id as id, u.identifier  as authors, "+\
-        "       count(distinct(s.id)) as commits "+\
-        " from people p, "+\
-        "      scmlog s, "+\
-        "      actions a,  "+\
-        "      people_upeople pup, "+\
-        "      upeople u, "+\
-        "      upeople_companies upc, "+\
-        "      companies c "+\
-        " where  s.id = a.commit_id and "+\
-        "        p.id = s.author_id and  "+\
-        "        s.author_id = pup.people_id and "+\
-        "        pup.upeople_id = upc.upeople_id and "+\
-        "        pup.upeople_id = u.id and "+\
-        "        s.date >= upc.init and  "+\
-        "        s.date < upc.end and "+\
-        "        upc.company_id = c.id and "+\
-        "        s.date >="+ startdate+ " and "+\
-        "        s.date < "+ enddate+ " and "+\
-        "        c.name ="+ company_name+ " "+\
-        "group by u.id "+\
-        "order by count(distinct(s.id)) desc "+\
-        "limit " + limit
-
-    q = """
-        SELECT id, authors, count(logid) AS commits FROM (
-        SELECT DISTINCT u.id AS id, u.identifier AS authors, s.id as logid
-        FROM people p,  scmlog s,  actions a, people_upeople pup, upeople u,
-             upeople_companies upc,  companies c
-        WHERE  s.id = a.commit_id AND p.id = s.author_id AND s.author_id = pup.people_id  AND
-          pup.upeople_id = upc.upeople_id AND pup.upeople_id = u.id AND  s.date >= upc.init AND
-          s.date < upc.end AND upc.company_id = c.id AND
-          s.date >=%s AND s.date < %s AND c.name =%s) t
-        GROUP BY id
-        ORDER BY commits DESC
-        LIMIT %s
-    """ % (startdate, enddate, company_name, limit)
-
-    data = ExecuteQuery(q)
-    return (data)
-
-def company_top_authors_year (company_name, year, limit):
-    # Top 10 authors per company and in a given year
-
-    q = "select u.id as id, u.identifier as authors, "+\
-        "        count(distinct(s.id)) as commits "+\
-        " from people p, "+\
-        "      scmlog s, "+\
-        "      actions a, "+\
-        "      people_upeople pup, "+\
-        "      upeople u, "+\
-        "      upeople_companies upc, "+\
-        "      companies c "+\
-        " where  p.id = s.author_id and "+\
-        "        s.author_id = pup.people_id and "+\
-        "        pup.upeople_id = upc.upeople_id and "+\
-        "        pup.upeople_id = u.id and "+\
-        "        s.id = a.commit_id and "+\
-        "        s.date >= upc.init and "+\
-        "        s.date < upc.end and "+\
-        "        year(s.date)="+str(year)+" and "+\
-        "        upc.company_id = c.id and "+\
-        "        c.name ="+ company_name+ " "+\
-        " group by u.id "+\
-        " order by count(distinct(s.id)) desc "+\
-        " limit " + limit
-
-    data = ExecuteQuery(q)
-    return (data)
-
-def repos_name (startdate, enddate) :
-    # List of repositories name
-
-    # This query needs pretty large tmp tables
-    q = "select count(distinct(s.id)) as total, "+\
-        "        name "+\
-        " from actions a, "+\
-        "      scmlog s, "+\
-        "      repositories r "+\
-        " where s.id = a.commit_id and "+\
-        "       s.repository_id=r.id and "+\
-        "       s.date >"+startdate+ " and "+\
-        "       s.date <= "+enddate+ " "+\
-        " group by repository_id  "+\
-        " order by total desc,name";
-
-    q = """
-        select count(distinct(sid)) as total, name  
-        from repositories r, (
-          select distinct(s.id) as sid, repository_id from actions a, scmlog s
-          where s.id = a.commit_id  and s.date >%s and s.date <= %s) t
-        WHERE repository_id = r.id
-        group by repository_id   
-        order by total desc,name
-        """ % (startdate, enddate)
-
-    data = ExecuteQuery(q)
-    return (data)	
-
-
-
-
 # COUNTRIES support
 def scm_countries_names (identities_db, startdate, enddate) :
 
@@ -1068,7 +859,8 @@ def GetCommitsSummaryCompanies (period, startdate, enddate, identities_db, num_c
     # The "Others" field is the aggregated value of the rest of the companies
     # Companies above num_companies will be aggregated in Others
 
-    companies  = companies_name_wo_affs(["-Bot", "-Individual", "-Unknown"], startdate, enddate)
+    metric = DataSource.get_metrics("companies", SCM)
+    companies = metric.get_list()
     companies = companies['name']
 
     first_companies = {}
