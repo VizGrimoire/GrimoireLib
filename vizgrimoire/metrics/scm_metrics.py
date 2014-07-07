@@ -530,6 +530,20 @@ class Repositories(Metrics):
                                tables, filters, evolutionary)
         return q
 
+    def get_list(self):
+        """Repositories list ordered by number of commits"""
+        q = """
+            select count(distinct(sid)) as total, name
+            from repositories r, (
+              select distinct(s.id) as sid, repository_id from actions a, scmlog s
+              where s.id = a.commit_id  and s.date >%s and s.date <= %s) t
+            WHERE repository_id = r.id
+            group by repository_id   
+            order by total desc,name
+            """ % (self.filters.startdate, self.filters.enddate)
+
+        return self.db.ExecuteQuery(q)
+
 class Companies(Metrics):
     """ Companies participating in the source code management system """
     #TO BE REFACTORED
@@ -551,6 +565,32 @@ class Companies(Metrics):
                                tables, filters, evol)
         return q
 
+    def get_list(self):
+        from data_source import DataSource
+        from filter import Filter
+        bots = DataSource.get_filter_bots(Filter("company"))
+        fbots = ''
+        for bot in bots:
+            fbots += " c.name<>'"+bot+"' and "
+
+        q = """
+            select c.name, count(distinct(t.s_id)) as total
+            from companies c,  (
+              select distinct(s.id) as s_id, company_id
+              from companies c, people_upeople pup, upeople_companies upc,
+                   scmlog s,  actions a
+              where c.id = upc.company_id and  upc.upeople_id = pup.upeople_id
+                and  s.date >= upc.init and s.date < upc.end
+                and pup.people_id = s.author_id
+                and s.id = a.commit_id and
+                %s s.date >=%s and s.date < %s) t
+            where c.id = t.company_id
+            group by c.name
+            order by count(distinct(t.s_id)) desc
+        """ % (fbots, self.filters.startdate, self.filters.enddate)
+
+        return self.db.ExecuteQuery(q)
+
 class Countries(Metrics):
     """ Countries participating in the source code management system """
     #TO BE REFACTORED
@@ -569,6 +609,27 @@ class Countries(Metrics):
                                tables, filters, evol)
         return q
 
+    def get_list(self): 
+        rol = "author" #committer
+        identities_db = self.db.identities_db
+        startdate = self.filters.startdate
+        enddate = self.filters.enddate
+
+        q = "SELECT count(s.id) as commits, c.name as name "+\
+            "FROM scmlog s,  "+\
+            "     people_upeople pup, "+\
+            "     "+identities_db+".countries c, "+\
+            "     "+identities_db+".upeople_countries upc "+\
+            "WHERE pup.people_id = s."+rol+"_id AND "+\
+            "      pup.upeople_id  = upc.upeople_id and "+\
+            "      upc.country_id = c.id and "+\
+            "      s.date >="+startdate+ " and "+\
+            "      s.date < "+enddate+ " "+\
+            "group by c.name "+\
+            "order by commits desc"
+
+        return self.db.ExecuteQuery(q)
+
 class Domains(Metrics):
     """ Domains participating in the source code management system """
     #TO BE REFACTORED
@@ -586,3 +647,68 @@ class Domains(Metrics):
                                self.filters.enddate, " s.date ", fields,
                                tables, filters, evol)
         return q
+
+    def get_list(self):
+        rol = "author" #committer
+        identities_db = self.db.identities_db
+        startdate = self.filters.startdate
+        enddate = self.filters.enddate
+
+        q = "SELECT count(s.id) as commits, d.name as name "+\
+            "FROM scmlog s, "+\
+            "  people_upeople pup, "+\
+            "  "+identities_db+".domains d, "+\
+            "  "+identities_db+".upeople_domains upd "+\
+            "WHERE pup.people_id = s."+rol+"_id AND "+\
+            "  pup.upeople_id  = upd.upeople_id and "+\
+            "  upd.domain_id = d.id and "+\
+            "  s.date >="+ startdate+ " and "+\
+            "  s.date < "+ enddate+ " "+\
+            "GROUP BY d.name "+\
+            "ORDER BY commits desc"
+
+        return self.db.ExecuteQuery(q)
+
+class Projects(Metrics):
+    """ Projects in the source code management system """
+    #TO BE COMPLETED
+
+    id = "projects"
+    name = "Projects"
+    desc = "Projects in the source code management system"
+    data_source = SCM
+
+    def get_list(self):
+        from data_source import DataSource
+        from metrics_filter import MetricFilters
+
+        identities_db = self.db.identities_db
+        startdate = self.filters.startdate
+        enddate = self.filters.enddate
+
+        # Get all projects list
+        q = "SELECT p.id AS name FROM  %s.projects p" % (identities_db)
+        projects = self.db.ExecuteQuery(q)
+        data = []
+
+        # Loop all projects getting reviews
+        for project in projects['name']:
+            type_analysis = ['project', project]
+            period = None
+            evol = False
+            mcommits = DataSource.get_metrics("commits", SCM)
+            mfilter = MetricFilters(period, startdate, enddate, type_analysis)
+            mfilter_orig = mcommits.filters
+            mcommits.filters = mfilter
+            commits = mcommits.get_agg()
+            mcommits.filters = mfilter_orig
+            commits = commits['commits']
+            if (commits > 0):
+                data.append([commits,project])
+
+        # Order the list using reviews: https://wiki.python.org/moin/HowTo/Sorting
+        from operator import itemgetter
+        data_sort = sorted(data, key=itemgetter(0),reverse=True)
+        names = [name[1] for name in data_sort]
+
+        return({"name":names})

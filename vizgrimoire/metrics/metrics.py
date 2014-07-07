@@ -102,4 +102,4 @@ class Metrics(object):
 
     def get_list(self):
         """ Returns a list of items """
-        raise NotImplementedError
+        pass

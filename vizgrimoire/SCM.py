@@ -159,17 +159,19 @@ class SCM(DataSource):
         filter_name = filter_.get_name()
 
         if (filter_name == "repository"):
-            items  = repos_name(startdate, enddate)
+            metric = DataSource.get_metrics("repositories", SCM)
         elif (filter_name == "company"):
-            items  = companies_name_wo_affs(bots, startdate, enddate)
+            metric = DataSource.get_metrics("companies", SCM)
         elif (filter_name == "country"):
-            items = scm_countries_names (identities_db, startdate, enddate)
+            metric = DataSource.get_metrics("countries", SCM)
         elif (filter_name == "domain"):
-            items = scm_domains_names (identities_db, startdate, enddate)
+            metric = DataSource.get_metrics("domains", SCM)
         elif (filter_name == "project"):
-            items = scm_projects_name (identities_db, startdate, enddate)
+            metric = DataSource.get_metrics("projects", SCM)
         else:
             logging.error(filter_name + " not supported")
+
+        items = metric.get_list()
         return items
 
     @staticmethod
