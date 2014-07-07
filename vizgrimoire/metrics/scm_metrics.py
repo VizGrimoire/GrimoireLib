@@ -178,13 +178,54 @@ class Authors(Metrics):
 
         return res
 
-    def get_list(self, metric_filters = None):
+    def get_top (self, days = 0, role = "author") :
+        # This function returns the top people participating in the source code.
+        # In addition, the number of days allows to limit the study to the last
+        # X days specified in that parameter
+
+        startdate = self.filters.startdate
+        enddate = self.filters.enddate
+        limit = self.filters.npeople
+        bots = SCM.get_bots()
+
+        filter_bots = ''
+        for bot in bots:
+            filter_bots = filter_bots + " u.identifier<>'"+bot+"' and "
+        if filter_bots != "": filter_bots = "WHERE " + filter_bots[:-4]
+
+        dtables = dfilters = ""
+        if (days > 0):
+            dtables = ", (SELECT MAX(date) as last_date from scmlog) dt"
+            dfilters = " DATEDIFF (last_date, date) < %s AND " % (days)
+
+        q = """
+        SELECT u.id, u.identifier as %ss, SUM(total) AS commits FROM
+        (
+         SELECT s.%s_id, COUNT(DISTINCT(s.id)) as total
+         FROM scmlog s, actions a %s
+         WHERE %s s.id = a.commit_id AND
+            s.date >= %s AND  s.date < %s
+         GROUP BY  s.%s_id ORDER by total DESC, s.%s_id
+        ) t
+        JOIN people_upeople pup ON pup.people_id = %s_id
+        JOIN upeople u ON pup.upeople_id = u.id
+        %s
+        GROUP BY u.identifier ORDER BY commits desc, %ss  limit %s
+        """ % (role, role, dtables, dfilters, startdate, enddate, role, role, role, filter_bots, role, limit)
+
+        data = self.db.ExecuteQuery(q)
+        for id in data:
+            if not isinstance(data[id], (list)): data[id] = [data[id]]
+        return (data)
+
+    def get_list(self, metric_filters = None, days = 0):
         alist = {}
 
         if metric_filters is not None:
             metric_filters_orig = self.filters
             self.filters = metric_filters
 
+        if metric_filters.type_analysis is not None:
             if metric_filters.type_analysis[0] == "repository":
                 alist = self. get_top_repository()
             elif metric_filters.type_analysis[0] == "company":
@@ -192,7 +233,7 @@ class Authors(Metrics):
             elif metric_filters.type_analysis[0] == "project":
                 alist = self. get_top_project()
         else:
-            pass
+            alist = self. get_top(days)
 
         if metric_filters is not None: self.filters = metric_filters_orig
         return alist
@@ -675,6 +716,25 @@ class Companies(Metrics):
 
         return q
 
+    def get_top(self, fbots = None):
+        q = """
+            select c.name, count(distinct(t.s_id)) as total
+            from companies c,  (
+              select distinct(s.id) as s_id, company_id
+              from companies c, people_upeople pup, upeople_companies upc,
+                   scmlog s,  actions a
+              where c.id = upc.company_id and  upc.upeople_id = pup.upeople_id
+                and  s.date >= upc.init and s.date < upc.end
+                and pup.people_id = s.author_id
+                and s.id = a.commit_id and
+                %s s.date >=%s and s.date < %s) t
+            where c.id = t.company_id
+            group by c.name
+            order by count(distinct(t.s_id)) desc
+        """ % (fbots, self.filters.startdate, self.filters.enddate)
+
+        return q
+
     def get_list(self, metric_filters = None):
         from data_source import DataSource
         from filter import Filter
@@ -691,21 +751,7 @@ class Companies(Metrics):
                 q = self. get_top_project(fbots)
 
         else:
-            q = """
-                select c.name, count(distinct(t.s_id)) as total
-                from companies c,  (
-                  select distinct(s.id) as s_id, company_id
-                  from companies c, people_upeople pup, upeople_companies upc,
-                       scmlog s,  actions a
-                  where c.id = upc.company_id and  upc.upeople_id = pup.upeople_id
-                    and  s.date >= upc.init and s.date < upc.end
-                    and pup.people_id = s.author_id
-                    and s.id = a.commit_id and
-                    %s s.date >=%s and s.date < %s) t
-                where c.id = t.company_id
-                group by c.name
-                order by count(distinct(t.s_id)) desc
-            """ % (fbots, self.filters.startdate, self.filters.enddate)
+            q = self.get_top(fbots)
 
         if metric_filters is not None: self.filters = metric_filters_orig
 
