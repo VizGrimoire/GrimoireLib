@@ -291,7 +291,6 @@ class CompaniesActivity(Analyses):
         activity = self.add_companies_data (activity, data)
         self.add_metric_years("sent",activity,start_year,end_year)
 
-        print(activity)
         createJSON(activity, destdir+"/companies-activity.json")
 
     def get_report_files(self, data_source = None):
