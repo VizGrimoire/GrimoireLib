@@ -34,77 +34,136 @@ from datetime import datetime
 from timeseries import TimeSeries
 from activity import ActivityList
 
-Base = declarative_base(cls=DeferredReflection)
-BaseId = declarative_base(cls=DeferredReflection)
+#BaseId = declarative_base(cls=DeferredReflection)
 
-def buildSession(database, id_database = None, echo = False):
-    """Create a session with the database
-        
-    - database: string, url of the database, in the format
-       mysql://user:passwd@host:port/database
-    - echo: boolean, output SQL to stdout or not
-        
-    Instantiatates an engine and a session to work with it
+
+def table_factory (bases, name, tablename, schemaname, columns = {}):
+    """Factory for building table classes.
+
+    Parameters
+    ----------
+
+    base: list of classes to inherit from
+       Base classes, of which the resulting clase will inherit
+    name: string
+       Name of the class to be built
+    tablename: string
+       Name of the database table to be interfaced by the class
+    schemaname: string
+       Name of the schema to which the table belongs
+
+    Returns
+    -------
+
+    class in the Base hierarchy
+
     """
 
-    # To set Unicode interaction with MySQL
-    # http://docs.sqlalchemy.org/en/rel_0_9/dialects/mysql.html#unicode
-    trailer = "?charset=utf8&use_unicode=0"
-    if id_database is None:
-        id_database = database
-    database = database + trailer
-    id_database = id_database + trailer
-    engine = create_engine(database,
-                           convert_unicode=True, encoding='utf8',
-                           echo=echo)
-    id_engine = create_engine(id_database,
-                              convert_unicode=True, encoding='utf8',
-                              echo=echo)
-    Base.prepare(engine)
-    BaseId.prepare(id_engine)
-    bindings = {Changes: engine,
-                Issues: engine,
-                People: engine,
-                PeopleUPeople: engine,
-                Trackers: engine,
-                UPeople: id_engine}
-    Session = sessionmaker(binds=bindings, query_cls=ITSQuery)
-    session = Session()
-    return (session)
+    attr = dict (
+        __tablename__ = tablename,
+        __table_args__ = {'schema': schemaname}
+        )
+    for key in columns:
+        attr[key] = columns[key]
+    table_class = type(name, bases, attr)
+    return table_class
 
 
-class Changes(Base):
-    """changes table"""
 
-    __tablename__ = 'changes'
-    issue_id = Column(Integer, ForeignKey('issues.id'))
 
-class Issues (Base):
-    """issues table"""
+class ITSDatabase():
 
-    __tablename__ = 'issues'
-    changed_by = Column(Integer, ForeignKey('people.id'))
+    def __init__(self, schema, schema_id):
 
-class People(Base):
-    """upeople table"""
+        global Changes, Issues, People, PeopleUPeople, Trackers
+        global UPeople
+        Base = declarative_base(cls=DeferredReflection)
+        self.Base = Base
+        Changes = table_factory (bases = (Base,), name = 'Changes',
+                                 tablename = 'changes',
+                                 schemaname = schema,
+                                 columns = dict (
+                issue_id = Column(Integer,
+                                  ForeignKey(schema + '.' + 'issues.id'))
+                ))
+        Issues = table_factory (bases = (Base,), name = 'Issues',
+                                tablename = 'issues',
+                                schemaname = schema,
+                                columns = dict (
+                changed_by = Column(Integer,
+                                    ForeignKey(schema + '.' + 'people.id'))     
+                ))
+        People = table_factory (bases = (Base,), name = 'People',
+                                tablename = 'people',
+                                schemaname = schema)
+        PeopleUPeople = table_factory (bases = (Base,), name = 'PeopleUPeople',
+                                tablename = 'people_upeople',
+                                schemaname = schema,
+                                columns = dict (
+                upeople_id = Column(Integer,
+                                    ForeignKey(schema + '.' + 'upeople.id'))
+                ))
+        Trackers = table_factory (bases = (Base,), name = 'Trackers',
+                                tablename = 'trackers',
+                                schemaname = schema)
+        UPeople = table_factory (bases = (Base,), name = 'UPeople',
+                                tablename = 'upeople',
+                                schemaname = schema_id)
 
-    __tablename__ = 'people'
+    def build_session(self, database, echo = False):
+        """Create a session with the database
+        
+        - database: string, url of the database, in the format
+           mysql://user:passwd@host:port/database
+        - echo: boolean, output SQL to stdout or not
+        
+        Instantiatates an engine and a session to work with it
+        """
+        
+        # To set Unicode interaction with MySQL
+        # http://docs.sqlalchemy.org/en/rel_0_9/dialects/mysql.html#unicode
+        trailer = "?charset=utf8&use_unicode=0"
+        database = database + trailer
+        engine = create_engine(database,
+                               convert_unicode=True, encoding='utf8',
+                               echo=echo)
+        self.Base.prepare(engine)
+        Session = sessionmaker(bind=engine, query_cls=ITSQuery)
+        session = Session()
+        return (session)
 
-class PeopleUPeople(Base):
-    """people_upeople table"""
+# class Changes(Base):
+#     """changes table"""
 
-    __tablename__ = 'people_upeople'
-    upeople_id = Column(Integer, ForeignKey('upeople.id'))
+#     __tablename__ = 'changes'
+#     issue_id = Column(Integer, ForeignKey('issues.id'))
 
-class Trackers(Base):
-    """repositories table"""
+# class Issues (Base):
+#     """issues table"""
 
-    __tablename__ = 'trackers'
+#     __tablename__ = 'issues'
+#     changed_by = Column(Integer, ForeignKey('people.id'))
 
-class UPeople(BaseId):
-    """upeople table"""
+# class People(Base):
+#     """people table"""
 
-    __tablename__ = 'upeople'
+#     __tablename__ = 'people'
+
+# class PeopleUPeople(Base):
+#     """people_upeople table"""
+
+#     __tablename__ = 'people_upeople'
+#     upeople_id = Column(Integer, ForeignKey('upeople.id'))
+
+# class Trackers(Base):
+#     """repositories table"""
+
+#     __tablename__ = 'trackers'
+
+# class UPeople(BaseId):
+#     """upeople table"""
+
+#     __tablename__ = 'upeople'
 
 class ITSQuery (Query):
     """Class for dealing with ITS queries"""
@@ -184,23 +243,95 @@ class ITSQuery (Query):
                                   label('email', People.email))
         if kind == "openers":
             person = Issues.submitted_by
-            if Issues in self.joined:
-                query = query.filter (People.id == person)
-            else:
-                self.joined.append (Issues)
-                query = query.join (Issues, People.id == person)
+            table = Issues
         elif kind == "changers":
             person = Changes.changed_by
-            if Changes in self.joined:
-                query = query.filter (People.id == person)
-            else:
-                self.joined.append (Changes)
-                query = query.join (Changes, People.id == person)
+            table = Changes
         elif kind == "closers":
             raise Exception ("select_personsdata: Not yet implemented")
         else:
             raise Exception ("select_personsdata: Unknown kind %s." \
                              % kind)
+
+        if table in self.joined:
+            query = query.filter (People.id == person)
+        else:
+            self.joined.append (table)
+            query = query.join (table, People.id == person)
+        return query
+
+
+    def select_personsdata_uid(self, kind):
+        """Adds columns with persons data to select clause (uid version).
+
+        Adds person_id, name, to the select clause of query,
+        having unique identities into account.
+        Joins with PeopleUPeople, UPeople, and Changes / Isues if they
+        are not already joined.
+        Relationships: UPeople.id == PeopleUPeople.upeople_id,
+        PeopleUPeople.people_id == person
+
+        Parameters
+        ----------
+
+        kind: {"openers", "closers", "changers"}
+           Kind of person to select
+
+        Returns
+        -------
+
+        SCMObject: Result query, with new fields: id, name, email        
+
+        """
+
+        query = self.add_columns (label("person_id", UPeople.id),
+                                  label("name", UPeople.identifier))
+        if kind == "openers":
+            person = Issues.submitted_by
+            table = Issues
+        elif kind == "changers":
+            person = Changes.changed_by
+            table = Changes
+        elif kind == "closers":
+            raise Exception ("select_personsdata: Not yet implemented")
+        else:
+            raise Exception ("select_personsdata: Unknown kind %s." \
+                             % kind)
+        if not self.joined:
+            # First table, UPeople is in FROM
+            self.joined.append (UPeople)
+        if not self.joined or UPeople in self.joined:
+            # First table, UPeople is in FROM, or we have UPeople
+            if PeopleUPeople not in self.joined:
+                self.joined.append (PeopleUPeople)
+                query = query.join (PeopleUPeople,
+                                    UPeople.id == PeopleUPeople.upeople_id)
+            if table in self.joined:
+                query = query.filter (PeopleUPeople.people_id == person)
+            else:
+                self.joined.append (table)
+                query = query.join (table, PeopleUPeople.people_id == person)
+        elif PeopleUPeople in self.joined:
+            # We have PeopleUPeople (table should be joined), no UPeople
+            if table not in self.joined:
+                raise Exception ("select_personsdata_uid: " + \
+                                     "If PeopleUPeople is joined, " + \
+                                     str(table) + " should be joined too")
+            self.joined.append (UPeople)
+            query = query.join (UPeople,
+                                UPeople.id == PeopleUPeople.upeople_id)
+        elif table in self.joined:
+            # We have table, and no PeopleUPeople, no UPeople
+            self.joined.append (PeopleUPeople)
+            query = query.join (PeopleUPeople,
+                                PeopleUPeople.people_id == person)
+            self.joined.append (UPeople)
+            query = query.join (UPeople,
+                                UPeople.id == PeopleUPeople.upeople_id)
+        else:
+            # No table, no PeopleUPeople, no UPeople but some other table
+            raise Exception ("select_personsdata_uid: " + \
+                                 "Unknown table to join to")
         return query
 
 
@@ -295,10 +426,11 @@ if __name__ == "__main__":
     # http://stackoverflow.com/questions/492483/setting-the-correct-encoding-when-piping-stdout-in-python
     sys.stdout = codecs.getwriter('utf8')(sys.stdout)
 
-    session = buildSession(
-        database='mysql://jgb:XXX@localhost/vizgrimoire_bicho',
-        id_database='mysql://jgb:XXX@localhost/vizgrimoire_cvsanaly',
-        echo=False)
+    ITSDB = ITSDatabase(schema = 'vizgrimoire_bicho',
+                        schema_id = 'vizgrimoire_cvsanaly')
+    session = ITSDB.build_session(
+        database = 'mysql://jgb:XXX@localhost/',
+        echo = False)
 
     #---------------------------------
     print_banner ("List of openers")
@@ -318,3 +450,13 @@ if __name__ == "__main__":
     print res
     for row in res.limit(10).all():
         print row.person_id, row.name, row.email, row.firstdate, row.lastdate
+
+    #---------------------------------
+    print_banner ("Activity period for changers (uid)")
+    res = session.query() \
+        .select_personsdata_uid("changers") \
+        .select_changesperiod() \
+        .group_by_person()
+    print res
+    for row in res.limit(10).all():
+        print row.person_id, row.name, row.firstdate, row.lastdate
