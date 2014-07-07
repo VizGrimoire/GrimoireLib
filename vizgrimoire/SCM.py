@@ -27,7 +27,7 @@ import os, logging
 
 from GrimoireSQL import GetSQLGlobal, GetSQLPeriod
 # TODO integrate: from GrimoireSQL import  GetSQLReportFrom 
-from GrimoireSQL import GetSQLReportWhere, ExecuteQuery, BuildQuery
+from GrimoireSQL import ExecuteQuery, BuildQuery
 from GrimoireUtils import GetPercentageDiff, GetDates, completePeriodIds
 from GrimoireUtils import createJSON, getPeriod, get_subprojects
 from data_source import DataSource
@@ -69,10 +69,11 @@ class SCM(DataSource):
 
     @staticmethod
     def get_evolutionary_data (period, startdate, enddate, identities_db, filter_ = None):
-        type_analysis = None
-        if filter_ is not None: type_analysis = filter_.get_type_analysis()
-        evol_data = GetSCMEvolutionaryData(period, startdate, enddate,
-                                           identities_db, type_analysis)
+        metrics = DataSource.get_metrics_data(SCM, period, startdate, enddate, identities_db, filter_, True)
+        if filter_ is not None: studies = {}
+        else:
+            studies = DataSource.get_studies_data(SCM, period, startdate, enddate, True)
+        evol_data = dict(metrics.items()+studies.items())
 
         return evol_data
 
@@ -84,11 +85,11 @@ class SCM(DataSource):
 
     @staticmethod
     def get_agg_data (period, startdate, enddate, identities_db, filter_= None):
-
-        type_analysis = None
-        if filter_ is not None: type_analysis = filter_.get_type_analysis()
-
-        agg  = GetSCMStaticData(period, startdate, enddate, identities_db, type_analysis)
+        metrics = DataSource.get_metrics_data(SCM, period, startdate, enddate, identities_db, filter_, False)
+        if filter_ is not None: studies = {}
+        else:
+            studies = DataSource.get_studies_data(SCM, period, startdate, enddate, False)
+        agg = dict(metrics.items()+studies.items())
 
         if (filter_ is None):
             static_url = SCM.get_url()
@@ -206,6 +207,7 @@ class SCM(DataSource):
         items = SCM.get_filter_items(filter_, startdate, enddate, identities_db, bots)
         if (items == None): return
         items = items['name']
+        print(items)
 
         filter_name = filter_.get_name()
 
@@ -388,189 +390,6 @@ class SCM(DataSource):
     def get_metrics_core_trends():
         return ['commits','authors','files','lines']
 
-
-
-##########
-# Meta-functions to automatically call metrics functions and merge them
-##########
-
-def GetSCMEvolutionaryData (period, startdate, enddate, i_db, type_analysis):
-    filter_ = None
-    if type_analysis is not None:
-        filter_ = Filter(type_analysis[0],type_analysis[1])
-    metrics = DataSource.get_metrics_data(SCM, period, startdate, enddate, i_db, filter_, True)
-    if filter_ is not None: studies = {}
-    else:
-        studies = DataSource.get_studies_data(SCM, period, startdate, enddate, True)
-    return dict(metrics.items()+studies.items())
-
-def GetSCMStaticData (period, startdate, enddate, i_db, type_analysis):
-    filter_ = None
-    if type_analysis is not None:
-        filter_ = Filter(type_analysis[0],type_analysis[1])
-    metrics = DataSource.get_metrics_data(SCM, period, startdate, enddate, i_db, filter_, False)
-    if filter_ is not None: studies = {}
-    else:
-        studies = DataSource.get_studies_data(SCM, period, startdate, enddate, False)
-    return dict(metrics.items()+studies.items())
-
-##########
-# Specific FROM and WHERE clauses per type of report
-##########
-def GetSQLRepositoriesFrom ():
-    #tables necessaries for repositories
-    return (" , repositories r")
-
-
-def GetSQLRepositoriesWhere (repository):
-    #fields necessaries to match info among tables
-    return (" and r.name ="+ repository + \
-            " and r.id = s.repository_id")
-
-def GetSQLProjectFrom ():
-    #tables necessaries for repositories
-    return (" , repositories r")
-
-
-def GetSQLProjectWhere (project, role, identities_db):
-    # include all repositories for a project and its subprojects
-    # Remove '' from project name
-    if (project[0] == "'" and project[-1] == "'"):
-        project = project[1:-1]
-
-    repos = """and r.uri IN (
-           SELECT repository_name
-           FROM   %s.projects p, %s.project_repositories pr
-           WHERE  p.project_id = pr.project_id AND p.project_id IN (%s)
-            AND pr.data_source='scm'
-    )""" % (identities_db, identities_db, get_subprojects(project, identities_db))
-
-    return (repos   + " and r.id = s.repository_id")
-
-def GetSQLCompaniesFrom (identities_db):
-    #tables necessaries for companies
-    return (" , "+identities_db+".people_upeople pup,"+\
-                  identities_db+".upeople_companies upc,"+\
-                  identities_db+".companies c")
-
-
-def GetSQLCompaniesWhere (company, role):
-    #fields necessaries to match info among tables
-    return ("and s."+role+"_id = pup.people_id "+\
-            "  and pup.upeople_id = upc.upeople_id "+\
-            "  and s.date >= upc.init "+\
-            "  and s.date < upc.end "+\
-            "  and upc.company_id = c.id "+\
-            "  and c.name =" + company)
-
-
-def GetSQLCountriesFrom (identities_db):
-    #tables necessaries for companies
-    return (" , "+identities_db+".people_upeople pup, "+\
-                  identities_db+".upeople_countries upc, "+\
-                  identities_db+".countries c")
-
-
-def GetSQLCountriesWhere (country, role):
-    #fields necessaries to match info among tables
-    return ("and s."+role+"_id = pup.people_id "+\
-                  "and pup.upeople_id = upc.upeople_id "+\
-                  "and upc.country_id = c.id "+\
-                  "and c.name ="+ country)
-
-
-def GetSQLDomainsFrom (identities_db) :
-    #tables necessaries for domains
-    return (" , "+identities_db+".people_upeople pup, "+\
-                identities_db+".upeople_domains upd, "+\
-                identities_db+".domains d")
-
-
-def GetSQLDomainsWhere (domain, role) :
-    #fields necessaries to match info among tables
-    return ("and s."+role+"_id = pup.people_id "+\
-            "and pup.upeople_id = upd.upeople_id "+\
-            "and upd.domain_id = d.id "+\
-            "and d.name ="+ domain)
-
-
-##########
-#Generic functions to obtain FROM and WHERE clauses per type of report
-##########
-
-# TODO: Use a SCM specific name
-def GetSQLReportFrom (identities_db, type_analysis):
-    #generic function to generate 'from' clauses
-    #"type" is a list of two values: type of analysis and value of 
-    #such analysis
-
-    From = ""
-
-    if (type_analysis is None or len(type_analysis) != 2): return From
-
-    analysis = type_analysis[0]
-    # value = type_analysis[1]
-
-    if analysis == 'repository': From = GetSQLRepositoriesFrom()
-    elif analysis == 'company': From = GetSQLCompaniesFrom(identities_db)
-    elif analysis == 'country': From = GetSQLCountriesFrom(identities_db)
-    elif analysis == 'domain': From = GetSQLDomainsFrom(identities_db)
-    elif analysis == 'project': From = GetSQLProjectFrom()
-
-    return (From)
-
-def GetSQLReportWhere (type_analysis, role, identities_db = None):
-    #generic function to generate 'where' clauses
-
-    #"type" is a list of two values: type of analysis and value of 
-    #such analysis
-
-    where = ""
-
-    if (type_analysis is None or len(type_analysis) != 2): return where
-
-    analysis = type_analysis[0]
-    value = type_analysis[1]
-
-    if analysis == 'repository': where = GetSQLRepositoriesWhere(value)
-    elif analysis == 'company': where = GetSQLCompaniesWhere(value, role)
-    elif analysis == 'country': where = GetSQLCountriesWhere(value, role)
-    elif analysis == 'domain': where = GetSQLDomainsWhere(value, role)
-    elif analysis == 'project': where = GetSQLProjectWhere(value, role, identities_db)
-
-    return (where)
-
-#########
-#Functions to obtain info per type of basic piece of data
-#########
-
-# All of the EvolXXX or StaticXXX contains the same parameters:
-#    period:
-#    startdate:
-#    enddate:
-#    identities_db: MySQL database name
-#    type_analysis: tuple with two values: typeof and value
-#                   typeof = 'companies', 'countries', 'repositories' or ''
-#                   value = any value that corresponds with the type of analysis
-
-def GetCommits (period, startdate, enddate, identities_db, type_analysis, evolutionary):
-    # This function contains basic parts of the query to count commits.
-    # That query is built and results returned.
-
-    fields = " count(distinct(s.id)) as commits "
-    tables = " scmlog s, actions a " + GetSQLReportFrom(identities_db, type_analysis)
-    filters = GetSQLReportWhere(type_analysis, "author", identities_db) + " and s.id=a.commit_id "
-
-    q = BuildQuery(period, startdate, enddate, " s.date ", fields, tables, filters, evolutionary)
-
-    return(ExecuteQuery(q))
-
-
-def EvolCommits (period, startdate, enddate, identities_db, type_analysis):
-    # Returns the evolution of commits through the time
-
-    return(GetCommits(period, startdate, enddate, identities_db, type_analysis, True))
-
 #
 # People
 #
@@ -748,28 +567,6 @@ def people () :
     data = ExecuteQuery(q)
     return (data);
 
-# COUNTRIES support
-def scm_countries_names (identities_db, startdate, enddate) :
-
-    countries_limit = 30 
-    rol = "author" #committer
-
-    q = "SELECT count(s.id) as commits, c.name as name "+\
-        "FROM scmlog s,  "+\
-        "     people_upeople pup, "+\
-        "     "+identities_db+".countries c, "+\
-        "     "+identities_db+".upeople_countries upc "+\
-        "WHERE pup.people_id = s."+rol+"_id AND "+\
-        "      pup.upeople_id  = upc.upeople_id and "+\
-        "      upc.country_id = c.id and "+\
-        "      s.date >="+startdate+ " and "+\
-        "      s.date < "+enddate+ " "+\
-        "group by c.name "+\
-        "order by commits desc LIMIT "+ str(countries_limit)
-
-    data = ExecuteQuery(q)	
-    return (data)
-
 # Companies / Countries support
 
 def scm_companies_countries_evol (identities_db, company, country, period, startdate, enddate) :
@@ -799,54 +596,6 @@ def scm_companies_countries_evol (identities_db, company, country, period, start
     data = ExecuteQuery(q)	
     return (data)
 
-
-def scm_domains_names (identities_db, startdate, enddate) :
-
-    rol = "author" #committer
-
-    q = "SELECT count(s.id) as commits, d.name as name "+\
-        "FROM scmlog s, "+\
-        "  people_upeople pup, "+\
-        "  "+identities_db+".domains d, "+\
-        "  "+identities_db+".upeople_domains upd "+\
-        "WHERE pup.people_id = s."+rol+"_id AND "+\
-        "  pup.upeople_id  = upd.upeople_id and "+\
-        "  upd.domain_id = d.id and "+\
-        "  s.date >="+ startdate+ " and "+\
-        "  s.date < "+ enddate+ " "+\
-        "GROUP BY d.name "+\
-        "ORDER BY commits desc"
-
-    data = ExecuteQuery(q)
-    return (data)
-
-def scm_projects_name  (identities_db, startdate, enddate, limit = 0):
-    # Projects activity needs to include subprojects also
-    logging.info ("Getting projects list for SCM")
-
-    # Get all projects list
-    q = "SELECT p.id AS name FROM  %s.projects p" % (identities_db)
-    projects = ExecuteQuery(q)
-    data = []
-
-    # Loop all projects getting reviews
-    for project in projects['name']:
-        type_analysis = ['project', project]
-        period = None
-        evol = False
-        commits = GetCommits (period, startdate, enddate, identities_db, type_analysis, evol)
-        commits = commits['commits']
-        if (commits > 0):
-            data.append([commits,project])
-
-    # Order the list using reviews: https://wiki.python.org/moin/HowTo/Sorting
-    from operator import itemgetter
-    data_sort = sorted(data, key=itemgetter(0),reverse=True)
-    names = [name[1] for name in data_sort]
-
-    if (limit > 0): names = names[:limit]
-    return({"name":names})
-
 ##############
 # Micro Studies
 ##############
@@ -867,9 +616,15 @@ def GetCommitsSummaryCompanies (period, startdate, enddate, identities_db, num_c
     count = 1
     for company in companies:
         company_name = "'"+company+"'"
-
-        commits = EvolCommits(period, startdate, enddate, identities_db, ["company", company_name])
-        commits = completePeriodIds(commits, period, startdate, enddate)
+        type_analysis = ['company', company_name]
+        mcommits = DataSource.get_metrics("commits", SCM)
+        mfilter = MetricFilters(period, startdate, enddate, type_analysis)
+        mfilter_orig = mcommits.filters
+        mcommits.filters = mfilter
+        commits = mcommits.get_ts()
+        mcommits.filters = mfilter_orig
+        # commits = EvolCommits(period, startdate, enddate, identities_db, ["company", company_name])
+        # commits = completePeriodIds(commits, period, startdate, enddate)
         # Rename field commits to company name
         commits[company] = commits["commits"]
         del commits['commits']
@@ -887,5 +642,4 @@ def GetCommitsSummaryCompanies (period, startdate, enddate, identities_db, num_c
 
     #TODO: remove global variables...
     first_companies = completePeriodIds(first_companies, period, startdate, enddate)
-
     return(first_companies)
