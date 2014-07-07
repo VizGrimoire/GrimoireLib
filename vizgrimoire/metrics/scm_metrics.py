@@ -110,6 +110,96 @@ class Authors(Metrics):
         return q
 
 
+    def get_top_repository (self):
+        identities_db = self.db.identities_db
+        startdate = self.filters.startdate
+        enddate = self.filters.enddate
+        repo = self.filters.type_analysis[1]
+
+        repos_from = self.db.GetSQLRepositoriesFrom()
+        # Remove first and
+        repos_where = " WHERE  " + self.db.GetSQLRepositoriesWhere(repo)[4:]
+
+        fields =  "SELECT COUNT(DISTINCT(s.id)) as commits, u.id, u.identifier as authors "
+        fields += "FROM scmlog s, people_upeople pup, upeople u "
+        q = fields + repos_from + repos_where
+        q += " AND pup.people_id = s.author_id AND u.id = pup.upeople_id "
+        q += " AND s.date >= " + startdate + " and s.date < " + enddate
+        q += " GROUP by u.id ORDER BY commits DESC, r.name"
+        q += " limit " + str(self.filters.npeople)
+
+        print(q)
+
+        res = self.db.ExecuteQuery(q)
+
+        return res
+
+    def get_top_company (self):
+        startdate = self.filters.startdate
+        enddate = self.filters.enddate
+        company = self.filters.type_analysis[1]
+        limit = self.filters.npeople
+
+        q = """
+        SELECT id, authors, count(logid) AS commits FROM (
+        SELECT DISTINCT u.id AS id, u.identifier AS authors, s.id as logid
+        FROM people p,  scmlog s,  actions a, people_upeople pup, upeople u,
+             upeople_companies upc,  companies c
+        WHERE  s.id = a.commit_id AND p.id = s.author_id AND s.author_id = pup.people_id  AND
+          pup.upeople_id = upc.upeople_id AND pup.upeople_id = u.id AND  s.date >= upc.init AND
+          s.date < upc.end AND upc.company_id = c.id AND
+          s.date >=%s AND s.date < %s AND c.name =%s) t
+        GROUP BY id
+        ORDER BY commits DESC
+        LIMIT %s
+        """ % (startdate, enddate, company, limit)
+
+        data = self.db.ExecuteQuery(q)
+        return (data)
+
+    def get_top_project(self):
+        startdate = self.filters.startdate
+        enddate = self.filters.enddate
+        project = self.filters.type_analysis[1]
+        limit = self.filters.npeople
+
+        projects_from = self.db.GetSQLProjectFrom()
+
+        # Remove first and
+        projects_where = " WHERE  " + self.db.GetSQLProjectWhere(project)[3:]
+
+        fields =  "SELECT COUNT(DISTINCT(s.id)) as commits, u.id, u.identifier as authors "
+        fields += "FROM scmlog s, people_upeople pup, upeople u "
+        q = fields + projects_from + projects_where
+        q += " AND pup.people_id = s.author_id AND u.id = pup.upeople_id "
+        q += " AND s.date >= " + startdate + " and s.date < " + enddate
+        q += " GROUP by u.id ORDER BY commits DESC, u.id"
+        q += " limit " + str(self.filters.npeople)
+
+        res = self.db.ExecuteQuery(q)
+
+        return res
+
+    def get_list(self, metric_filters = None):
+        print "Getting Authors list ... "
+        alist = {}
+
+        if metric_filters is not None:
+            metric_filters_orig = self.filters
+            self.filters = metric_filters
+
+            if metric_filters.type_analysis[0] == "repository":
+                alist = self. get_top_repository()
+            elif metric_filters.type_analysis[0] == "company":
+                alist = self. get_top_company()
+            elif metric_filters.type_analysis[0] == "project":
+                alist = self. get_top_project()
+        else:
+            pass
+
+        if metric_filters is not None: self.filters = metric_filters_orig
+        return alist
+
 class Committers(Metrics):
     """ Committers metric class for source code management system """
 

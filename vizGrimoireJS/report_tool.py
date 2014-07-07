@@ -63,6 +63,7 @@ def get_top_report(startdate, enddate, identities_db, npeople):
 
 def create_top_report(startdate, enddate, destdir, npeople, identities_db):
     for ds in Report.get_data_sources():
+        logging.info("Creating TOP for " + ds.get_name())
         Report.connect_ds(ds)
         ds.create_top_report (startdate, enddate, destdir, npeople, identities_db)
 

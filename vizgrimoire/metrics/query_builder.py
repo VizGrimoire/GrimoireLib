@@ -344,22 +344,6 @@ class SCMQuery(DSQuery):
 
         return self.ExecuteQuery(q_people_num_evol)
 
-    def get_project_top_authors (self, project, startdate, enddate, npeople):
-        projects_from = self.GetSQLProjectFrom()
-
-        # Remove first and
-        projects_where = " WHERE  " + self.GetSQLProjectWhere(project)[3:]
-
-        fields =  "SELECT COUNT(DISTINCT(s.id)) as commits, u.id, u.identifier as authors "
-        fields += "FROM scmlog s, people_upeople pup, upeople u "
-        q = fields + projects_from + projects_where
-        q += " AND pup.people_id = s.author_id AND u.id = pup.upeople_id "
-        q += " GROUP by u.id ORDER BY commits DESC, u.id"
-
-        res = self.ExecuteQuery(q)
-
-        return res
-
     def get_project_top_companies (self, project, startdate, enddate, npeople):
 
         projects_from = self.GetSQLProjectFrom()
@@ -372,22 +356,6 @@ class SCMQuery(DSQuery):
         q += " AND pup.people_id = s.author_id AND u.id = pup.upeople_id "
         q += " AND u.id = upc.upeople_id AND c.id = upc.company_id "
         q += " GROUP by c.name ORDER BY company_commits DESC, c.name"
-
-        res = self.ExecuteQuery(q)
-
-        return res
-
-    def get_repository_top_authors (self, repo, startdate, enddate, npeople):
-        repo = "'"+repo+"'"
-        repos_from = self.GetSQLRepositoriesFrom()
-        # Remove first and
-        repos_where = " WHERE  " + self.GetSQLRepositoriesWhere(repo)[4:]
-
-        fields =  "SELECT COUNT(DISTINCT(s.id)) as commits, u.id, u.identifier as authors "
-        fields += "FROM scmlog s, people_upeople pup, upeople u "
-        q = fields + repos_from + repos_where
-        q += " AND pup.people_id = s.author_id AND u.id = pup.upeople_id "
-        q += " GROUP by u.id ORDER BY commits DESC, r.name"
 
         res = self.ExecuteQuery(q)
 
