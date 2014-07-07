@@ -110,11 +110,14 @@ class Authors(Metrics):
         return q
 
 
-    def get_top_repository (self):
-        identities_db = self.db.identities_db
-        startdate = self.filters.startdate
-        enddate = self.filters.enddate
-        repo = self.filters.type_analysis[1]
+    def get_top_repository (self, metric_filters = None):
+        if metric_filters == None:
+            metric_filters = self.filters
+        startdate = metric_filters.startdate
+        enddate = metric_filters.enddate
+        repo = metric_filters.type_analysis[1]
+        limit = metric_filters.npeople
+        filter_bots = self.get_bots_filter_sql(metric_filters)
 
         repos_from = self.db.GetSQLRepositoriesFrom()
         # Remove first and
@@ -123,6 +126,7 @@ class Authors(Metrics):
         fields =  "SELECT COUNT(DISTINCT(s.id)) as commits, u.id, u.identifier as authors "
         fields += "FROM scmlog s, people_upeople pup, upeople u "
         q = fields + repos_from + repos_where
+        if filter_bots != "": q += " AND "+ filter_bots
         q += " AND pup.people_id = s.author_id AND u.id = pup.upeople_id "
         q += " AND s.date >= " + startdate + " and s.date < " + enddate
         q += " GROUP by u.id ORDER BY commits DESC, r.name"
@@ -132,34 +136,41 @@ class Authors(Metrics):
 
         return res
 
-    def get_top_company (self):
-        startdate = self.filters.startdate
-        enddate = self.filters.enddate
-        company = self.filters.type_analysis[1]
-        limit = self.filters.npeople
+    def get_top_company (self, metric_filters = None):
+        if metric_filters == None:
+            metric_filters = self.filters
+        startdate = metric_filters.startdate
+        enddate = metric_filters.enddate
+        company = metric_filters.type_analysis[1]
+        limit = metric_filters.npeople
+        filter_bots = self.get_bots_filter_sql(metric_filters)
+        if filter_bots != '': filter_bots += " AND "
 
         q = """
         SELECT id, authors, count(logid) AS commits FROM (
         SELECT DISTINCT u.id AS id, u.identifier AS authors, s.id as logid
         FROM people p,  scmlog s,  actions a, people_upeople pup, upeople u,
              upeople_companies upc,  companies c
-        WHERE  s.id = a.commit_id AND p.id = s.author_id AND s.author_id = pup.people_id  AND
+        WHERE  %s s.id = a.commit_id AND p.id = s.author_id AND s.author_id = pup.people_id  AND
           pup.upeople_id = upc.upeople_id AND pup.upeople_id = u.id AND  s.date >= upc.init AND
           s.date < upc.end AND upc.company_id = c.id AND
           s.date >=%s AND s.date < %s AND c.name =%s) t
         GROUP BY id
         ORDER BY commits DESC
         LIMIT %s
-        """ % (startdate, enddate, company, limit)
+        """ % (filter_bots, startdate, enddate, company, limit)
 
         data = self.db.ExecuteQuery(q)
         return (data)
 
-    def get_top_project(self):
-        startdate = self.filters.startdate
-        enddate = self.filters.enddate
-        project = self.filters.type_analysis[1]
-        limit = self.filters.npeople
+    def get_top_project(self, metric_filters = None):
+        if metric_filters == None:
+            metric_filters = self.filters
+        startdate = metric_filters.startdate
+        enddate = metric_filters.enddate
+        project = metric_filters.type_analysis[1]
+        limit = metric_filters.npeople
+        filter_bots = self.get_bots_filter_sql(metric_filters)
 
         projects_from = self.db.GetSQLProjectFrom()
 
@@ -169,6 +180,7 @@ class Authors(Metrics):
         fields =  "SELECT COUNT(DISTINCT(s.id)) as commits, u.id, u.identifier as authors "
         fields += "FROM scmlog s, people_upeople pup, upeople u "
         q = fields + projects_from + projects_where
+        if filter_bots != "": q += " AND "+ filter_bots
         q += " AND pup.people_id = s.author_id AND u.id = pup.upeople_id "
         q += " AND s.date >= " + startdate + " and s.date < " + enddate
         q += " GROUP by u.id ORDER BY commits DESC, u.id"
@@ -178,20 +190,18 @@ class Authors(Metrics):
 
         return res
 
-    def get_top (self, days = 0, role = "author") :
+    def get_top (self, days = 0, metric_filters = None, role = "author") :
         # This function returns the top people participating in the source code.
         # In addition, the number of days allows to limit the study to the last
         # X days specified in that parameter
 
-        startdate = self.filters.startdate
-        enddate = self.filters.enddate
-        limit = self.filters.npeople
-        bots = SCM.get_bots()
-
-        filter_bots = ''
-        for bot in bots:
-            filter_bots = filter_bots + " u.identifier<>'"+bot+"' and "
-        if filter_bots != "": filter_bots = "WHERE " + filter_bots[:-4]
+        if metric_filters == None:
+            metric_filters = self.filters
+        startdate = metric_filters.startdate
+        enddate = metric_filters.enddate
+        limit = metric_filters.npeople
+        filter_bots = self.get_bots_filter_sql(metric_filters)
+        if filter_bots != "": filter_bots = "WHERE " + filter_bots
 
         dtables = dfilters = ""
         if (days > 0):
@@ -217,6 +227,19 @@ class Authors(Metrics):
         for id in data:
             if not isinstance(data[id], (list)): data[id] = [data[id]]
         return (data)
+
+    def get_bots_filter_sql (self, metric_filters = None):
+        bots = SCM.get_bots()
+        if metric_filters is not None:
+            if metric_filters.people_out is not None:
+                bots = metric_filters.people_out
+
+        filter_bots = ''
+        for bot in bots:
+            filter_bots = filter_bots + " u.identifier<>'"+bot+"' AND "
+        if filter_bots != '': filter_bots = filter_bots[:-4]
+
+        return filter_bots
 
     def get_list(self, metric_filters = None, days = 0):
         alist = {}
