@@ -79,7 +79,7 @@ class MLS(DataSource):
 
         type_analysis = None
         if (filter_ is not None):
-            type_analysis = [filter_.get_name(), "'"+filter_.get_item()+"'"]
+            type_analysis = [filter_.get_name(), filter_.get_item()]
         evol = EvolMLSInfo(period, startdate, enddate, identities_db, rfield, type_analysis)
 
         return evol
@@ -96,7 +96,7 @@ class MLS(DataSource):
 
         type_analysis = None
         if (filter_ is not None):
-            type_analysis = [filter_.get_name(), "'"+filter_.get_item()+"'"]
+            type_analysis = [filter_.get_name(), filter_.get_item()]
         agg = StaticMLSInfo(period, startdate, enddate, identities_db, rfield, type_analysis)
 
         return agg

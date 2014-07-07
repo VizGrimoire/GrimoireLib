@@ -89,7 +89,7 @@ class ITS(DataSource):
         closed_condition = ITS._get_closed_condition()
 
         if (filter_ is not None):
-            type_analysis = [filter_.get_name(), "'"+filter_.get_item()+"'"]
+            type_analysis = [filter_.get_name(), filter_.get_item()]
             evol = EvolITSInfo(period, startdate, enddate, identities_db, 
                                type_analysis, closed_condition)
 
@@ -110,7 +110,7 @@ class ITS(DataSource):
         closed_condition = ITS._get_closed_condition()
 
         if (filter_ is not None):
-            type_analysis = [filter_.get_name(), "'"+filter_.get_item()+"'"]
+            type_analysis = [filter_.get_name(), filter_.get_item()]
             data = AggITSInfo(period, startdate, enddate, identities_db, type_analysis, closed_condition)
             agg = data
 

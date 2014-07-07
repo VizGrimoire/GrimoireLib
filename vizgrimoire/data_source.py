@@ -308,7 +308,7 @@ class DataSource(object):
 
         type_analysis = None
         if filter_ is not None:
-            type_analysis = [filter_.get_name(), filter_.get_item()]
+            type_analysis = filter_.get_type_analysis()
 
         if DS.get_name()+"_startdate" in Report.get_config()['r']:
             startdate = Report.get_config()['r'][DS.get_name()+"_startdate"]

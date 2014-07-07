@@ -1063,7 +1063,7 @@ class IRCQuery(DSQuery):
 
     def GetSQLRepositoriesWhere(self, repository):
         # filters necessaries for repositories
-        return (" i.channel_id = c.id and c.name='" + repository + "'")
+        return (" i.channel_id = c.id and c.name=" + repository)
 
     def GetSQLCompaniesFrom(self):
         # tables necessary to companies analysis
@@ -1078,7 +1078,7 @@ class IRCQuery(DSQuery):
                "upc.company_id = c.id and "+\
                "i.submitted_on >= upc.init and "+\
                "i.submitted_on < upc.end and "+\
-               "c.name = '" + name + "'")
+               "c.name = " + name)
 
     def GetSQLCountriesFrom(self):
         # tables necessary to countries analysis
@@ -1091,7 +1091,7 @@ class IRCQuery(DSQuery):
         return(" i.nick = pup.people_id and "+\
                "pup.upeople_id = upc.upeople_id and "+\
                "upc.country_id = c.id and "+\
-               "c.name = '" + name + "'")
+               "c.name = " + name)
 
     def GetSQLDomainsFrom(self):
         # tables necessary to domains analysis
@@ -1104,7 +1104,7 @@ class IRCQuery(DSQuery):
         return(" i.nick = pup.people_id and "+\
                "pup.upeople_id = upd.upeople_id and "+\
                "upd.domain_id = d.id and "+\
-               "d.name = '" + name + "'")
+               "d.name = " + name)
 
     def GetTablesOwnUniqueIds (self) :
         tables = 'irclog, people_upeople pup'
@@ -1239,7 +1239,7 @@ class QAForumsQuery(DSQuery):
         #      data source in VizGrimoireJS-lib
         if report == "repository":
             where = shorttable + ".question_identifier = qt.question_identifier and " +\
-                    " qt.tag_id = t.id and t.tag = '" + value + "'"
+                    " qt.tag_id = t.id and t.tag = " + value
 
         return where
 
