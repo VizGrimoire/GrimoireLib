@@ -131,11 +131,12 @@ class SCM(DataSource):
     @staticmethod
     def get_top_data_companies (startdate, enddate, i_db, filter_, npeople):
         top = {}
-        mcompanies = DataSource.get_metrics("authors", SCM)
+        mcompanies = DataSource.get_metrics("companies", SCM)
         period = None
         if filter_ is not None:
             if filter_.get_name() == "project":
-                top = SCM.get_project_top_companies(filter_.get_item(), startdate, enddate, npeople)
+                mfilter = MetricFilters(period, startdate, enddate, filter_.get_type_analysis(), npeople)
+                top = mcompanies.get_list(mfilter)
         return top
 
 
@@ -151,7 +152,7 @@ class SCM(DataSource):
             top['authors.last month']= top_people(31, startdate, enddate, "author", bots, npeople)
             top['authors.last year']= top_people(365, startdate, enddate, "author", bots, npeople)
         elif filter_.get_name() in ["company","repository","project"]:
-            mfilter = MetricFilters(period, startdate, enddate, filter_.get_type_analysis())
+            mfilter = MetricFilters(period, startdate, enddate, filter_.get_type_analysis(), npeople)
             top = mauthors.get_list(mfilter) 
         else:
             logging.info("Top authors not support for " + filter_.get_name())

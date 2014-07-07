@@ -128,8 +128,6 @@ class Authors(Metrics):
         q += " GROUP by u.id ORDER BY commits DESC, r.name"
         q += " limit " + str(self.filters.npeople)
 
-        print(q)
-
         res = self.db.ExecuteQuery(q)
 
         return res
@@ -181,7 +179,6 @@ class Authors(Metrics):
         return res
 
     def get_list(self, metric_filters = None):
-        print "Getting Authors list ... "
         alist = {}
 
         if metric_filters is not None:
@@ -655,7 +652,30 @@ class Companies(Metrics):
                                tables, filters, evol)
         return q
 
-    def get_list(self):
+    def get_top_project(self, fbots = None):
+
+        startdate = self.filters.startdate
+        enddate = self.filters.enddate
+        project = self.filters.type_analysis[1]
+        limit = self.filters.npeople
+
+        projects_from = self.db.GetSQLProjectFrom()
+        # Remove first and
+        projects_where = " WHERE  " + self.db.GetSQLProjectWhere(project)[3:]
+
+        fields =  "SELECT COUNT(DISTINCT(s.id)) as company_commits, c.name as companies "
+        fields += "FROM scmlog s, people_upeople pup, upeople u, upeople_companies upc, companies c "
+        q = fields + projects_from + projects_where
+        q += " AND " + fbots + " pup.people_id = s.author_id AND u.id = pup.upeople_id "
+        q += " AND u.id = upc.upeople_id AND c.id = upc.company_id "
+        q += " AND s.date >= " + startdate + " and s.date < " + enddate
+        q += " AND s.date >= upc.init AND s.date < upc.end "
+        q += " GROUP by c.name ORDER BY company_commits DESC, c.name"
+        q += " limit " + str(self.filters.npeople)
+
+        return q
+
+    def get_list(self, metric_filters = None):
         from data_source import DataSource
         from filter import Filter
         bots = DataSource.get_filter_bots(Filter("company"))
@@ -663,21 +683,31 @@ class Companies(Metrics):
         for bot in bots:
             fbots += " c.name<>'"+bot+"' and "
 
-        q = """
-            select c.name, count(distinct(t.s_id)) as total
-            from companies c,  (
-              select distinct(s.id) as s_id, company_id
-              from companies c, people_upeople pup, upeople_companies upc,
-                   scmlog s,  actions a
-              where c.id = upc.company_id and  upc.upeople_id = pup.upeople_id
-                and  s.date >= upc.init and s.date < upc.end
-                and pup.people_id = s.author_id
-                and s.id = a.commit_id and
-                %s s.date >=%s and s.date < %s) t
-            where c.id = t.company_id
-            group by c.name
-            order by count(distinct(t.s_id)) desc
-        """ % (fbots, self.filters.startdate, self.filters.enddate)
+        if metric_filters is not None:
+            metric_filters_orig = self.filters
+            self.filters = metric_filters
+
+            if metric_filters.type_analysis[0] == "project":
+                q = self. get_top_project(fbots)
+
+        else:
+            q = """
+                select c.name, count(distinct(t.s_id)) as total
+                from companies c,  (
+                  select distinct(s.id) as s_id, company_id
+                  from companies c, people_upeople pup, upeople_companies upc,
+                       scmlog s,  actions a
+                  where c.id = upc.company_id and  upc.upeople_id = pup.upeople_id
+                    and  s.date >= upc.init and s.date < upc.end
+                    and pup.people_id = s.author_id
+                    and s.id = a.commit_id and
+                    %s s.date >=%s and s.date < %s) t
+                where c.id = t.company_id
+                group by c.name
+                order by count(distinct(t.s_id)) desc
+            """ % (fbots, self.filters.startdate, self.filters.enddate)
+
+        if metric_filters is not None: self.filters = metric_filters_orig
 
         return self.db.ExecuteQuery(q)
 

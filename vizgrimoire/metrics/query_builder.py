@@ -344,23 +344,6 @@ class SCMQuery(DSQuery):
 
         return self.ExecuteQuery(q_people_num_evol)
 
-    def get_project_top_companies (self, project, startdate, enddate, npeople):
-
-        projects_from = self.GetSQLProjectFrom()
-        # Remove first and
-        projects_where = " WHERE  " + self.GetSQLProjectWhere(project)[3:]
-
-        fields =  "SELECT COUNT(DISTINCT(s.id)) as company_commits, c.name as companies "
-        fields += "FROM scmlog s, people_upeople pup, upeople u, upeople_companies upc, companies c "
-        q = fields + projects_from + projects_where
-        q += " AND pup.people_id = s.author_id AND u.id = pup.upeople_id "
-        q += " AND u.id = upc.upeople_id AND c.id = upc.company_id "
-        q += " GROUP by c.name ORDER BY company_commits DESC, c.name"
-
-        res = self.ExecuteQuery(q)
-
-        return res
-
 class ITSQuery(DSQuery):
     """ Specific query builders for issue tracking system data source """
     def GetSQLRepositoriesFrom (self):
