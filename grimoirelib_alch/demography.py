@@ -169,14 +169,14 @@ class ActivityPersonsITS (ActivityPersons):
         else:
             raise Exception ("ActivityPersons: Either a session or a " + \
                                  "database must be specified")
-        if var in ("list_changers"):
+        if var in ("list_changers", "list_uchangers"):
             persons = "changers"
         else:
             raise Exception ("ActivityPersons: Unknown variable %s." % var)
         self.query = self.session.query()
         if var in ("list_changers"):
             self.query = self.query.select_personsdata(persons)
-        elif var in ("list_uchangers", "list_ucommitters"):
+        elif var in ("list_uchangers"):
             self.query = self.query.select_personsdata_uid(persons)
         else:
             raise Exception ("ActivityPersons: Unknown variable %s." % var)
@@ -185,7 +185,7 @@ class ActivityPersonsITS (ActivityPersons):
             .group_by_person()
         for condition in conditions:
             self.query = condition.filter(self.query)
-
+        print self.query
 
 class DurationCondition ():
     """Root of all conditions for DurationPersons objects
@@ -446,6 +446,16 @@ if __name__ == "__main__":
         schema_id = 'vizgrimoire_cvsanaly',
         var = "list_changers",
         conditions = (period,))
+    activity = data.activity()
+    print activity
+
+    #---------------------------------
+    print_banner("List of activity for each changer (unique ids)")
+    data = ActivityPersonsITS (
+        database = 'mysql://jgb:XXX@localhost/',
+        schema = 'vizgrimoire_bicho',
+        schema_id = 'vizgrimoire_cvsanaly',
+        var = "list_uchangers")
     activity = data.activity()
     print activity
 
