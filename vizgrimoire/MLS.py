@@ -72,15 +72,15 @@ class MLS(DataSource):
 
     @staticmethod
     def get_evolutionary_data (period, startdate, enddate, identities_db, filter_ = None):
-        rfield = MLS.get_repo_field()
+        # rfield = MLS.get_repo_field()
+        evolutionary = True
         evol = {}
 
-        rfield = MLS.get_repo_field()
-
-        type_analysis = None
-        if (filter_ is not None):
-            type_analysis = [filter_.get_name(), filter_.get_item()]
-        evol = EvolMLSInfo(period, startdate, enddate, identities_db, rfield, type_analysis)
+        metrics = DataSource.get_metrics_data(MLS, period, startdate, enddate, identities_db, filter_, evolutionary)
+        if filter_ is not None: studies = {}
+        else:
+            studies = DataSource.get_studies_data(MLS, period, startdate, enddate, evolutionary)
+        evol = dict(metrics.items()+studies.items())
 
         return evol
 
@@ -93,11 +93,13 @@ class MLS(DataSource):
     @staticmethod
     def get_agg_data (period, startdate, enddate, identities_db, filter_ = None):
         rfield = MLS.get_repo_field()
+        evolutionary = False
 
-        type_analysis = None
-        if (filter_ is not None):
-            type_analysis = [filter_.get_name(), filter_.get_item()]
-        agg = StaticMLSInfo(period, startdate, enddate, identities_db, rfield, type_analysis)
+        metrics = DataSource.get_metrics_data(MLS, period, startdate, enddate, identities_db, filter_, evolutionary)
+        if filter_ is not None: studies = {}
+        else:
+            studies = DataSource.get_studies_data(MLS, period, startdate, enddate, evolutionary)
+        agg = dict(metrics.items()+studies.items())
 
         return agg
 
@@ -513,25 +515,6 @@ def GetMLSFiltersResponse () :
 ##########
 # Meta functions that aggregate all evolutionary or static data in one call
 ##########
-
-
-def GetMLSInfo (period, startdate, enddate, identities_db, rfield, type_analysis, evolutionary):
-    filter_ = None
-    if type_analysis is not None:
-        filter_ = Filter(type_analysis[0],type_analysis[1])
-    metrics = DataSource.get_metrics_data(MLS, period, startdate, enddate, identities_db, filter_, evolutionary)
-    if filter_ is not None: studies = {}
-    else:
-        studies = DataSource.get_studies_data(MLS, period, startdate, enddate, evolutionary)
-    return dict(metrics.items()+studies.items())
-
-def EvolMLSInfo (period, startdate, enddate, identities_db, rfield, type_analysis = []):
-    #Evolutionary info all merged in a dataframe
-    return(GetMLSInfo(period, startdate, enddate, identities_db, rfield, type_analysis, True))
-
-def StaticMLSInfo (period, startdate, enddate, identities_db, rfield, type_analysis = []):
-    #Agg info all merged in a dataframe
-    return(GetMLSInfo(period, startdate, enddate, identities_db, rfield, type_analysis, False))
 
 
 def GetActiveSendersMLS(days, enddate):
