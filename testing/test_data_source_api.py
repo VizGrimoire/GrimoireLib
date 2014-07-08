@@ -117,7 +117,7 @@ class DataSourceTest(unittest.TestCase):
         data_file.close()
         createJSON(data, data_file_name, check=False, skip_fields = [])
 
-        check = compareJSON(data_file_name, json_file)
+        check = compareJSON(json_file, data_file_name)
         if check: os.remove(data_file_name)
         return check
 
