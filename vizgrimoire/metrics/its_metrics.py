@@ -220,6 +220,55 @@ class Closers(Metrics):
 
         return filter_bots
 
+    def get_top_company (self, metric_filters) :
+        startdate = metric_filters.startdate
+        enddate = metric_filters.enddate
+        company_name = metric_filters.type_analysis[1]
+        limit = metric_filters.npeople
+        filter_bots = self.get_bots_filter_sql(metric_filters)
+        closed_condition =  ITS._get_closed_condition()
+
+
+        q = "SELECT u.id as id, u.identifier as closers, "+\
+            "       COUNT(DISTINCT(c.id)) as closed "+\
+            "FROM "+self.db.GetTablesCompanies(self.db.identities_db)+", "+\
+            "     "+self.db.identities_db+".companies com, "+\
+            "     "+self.db.identities_db+".upeople u "+\
+            "WHERE "+self.db.GetFiltersCompanies()+" AND " + closed_condition + " "+\
+            "      AND pup.upeople_id = u.id "+\
+            "      AND upc.company_id = com.id "+\
+            "      AND com.name = "+ company_name +" "+\
+            "      AND changed_on >= "+startdate+" AND changed_on < "+enddate+\
+            "      AND " + filter_bots +\
+            " GROUP BY u.identifier ORDER BY closed DESC, closers LIMIT " + str(limit)
+
+        data = self.db.ExecuteQuery(q)
+        return (data)
+
+    def get_top_domain (self, metric_filters):
+        startdate = metric_filters.startdate
+        enddate = metric_filters.enddate
+        domain_name = metric_filters.type_analysis[1]
+        limit = metric_filters.npeople
+        filter_bots = self.get_bots_filter_sql(metric_filters)
+        closed_condition =  ITS._get_closed_condition()
+
+        q = "SELECT u.id as id, u.identifier as closers, "+\
+            "COUNT(DISTINCT(c.id)) as closed "+\
+            "FROM "+self.db.GetTablesDomains(self.db.identities_db)+", "+\
+            "     "+self.db.identities_db+".domains dom, "+\
+            "     "+self.db.identities_db+".upeople u "+\
+            "WHERE "+ self.db.GetFiltersDomains()+" AND "+closed_condition+" "+\
+            "      AND pup.upeople_id = u.id "+\
+            "      AND upd.domain_id = dom.id "+\
+            "      AND dom.name = "+domain_name+" "+\
+            "      AND changed_on >= "+startdate+" AND changed_on < " +enddate +\
+            "      AND " + filter_bots +\
+            " GROUP BY u.identifier ORDER BY closed DESC, closers LIMIT " + str(limit)
+
+        data = self.db.ExecuteQuery(q)
+        return (data)
+
     def get_top(self, days = 0, metric_filters = None):
         if metric_filters == None:
             metric_filters = self.filters
@@ -269,7 +318,12 @@ class Closers(Metrics):
 
         if metric_filters.type_analysis and metric_filters.type_analysis is not None:
             if metric_filters.type_analysis[0] == "repository":
-                alist = self.get_top_repository()
+                # alist = self.get_top_repository(metric_filters)
+                pass
+            if metric_filters.type_analysis[0] == "company":
+                alist = self.get_top_company(metric_filters)
+            if metric_filters.type_analysis[0] == "domain":
+                alist = self.get_top_domain(metric_filters)
         else:
             alist = self.get_top(days)
 

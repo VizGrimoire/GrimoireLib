@@ -490,6 +490,31 @@ class ITSQuery(DSQuery):
         if (table == "issues"): filters = 'pup.people_id = i.submitted_by'
         return (filters)
 
+    # TODO: Companies using unique ids
+    def GetTablesCompanies (self, table='') :
+        tables = self.GetTablesOwnUniqueIds(table)
+        tables += ','+self.identities_db+'.upeople_companies upc'
+        return (tables)
+
+    def GetFiltersCompanies (self, table='') :
+        filters = self.GetFiltersOwnUniqueIds(table)
+        filters += " AND pup.upeople_id = upc.upeople_id"
+        if (table == 'issues') :
+            filters += " AND submitted_on >= upc.init AND submitted_on < upc.end"
+        else :
+             filters += " AND changed_on >= upc.init AND changed_on < upc.end"
+        return (filters)
+
+    def GetTablesDomains (self, table='') :
+        tables = self.GetTablesOwnUniqueIds(table)
+        tables += ','+self.identities_db+'.upeople_domains upd'
+        return(tables)
+
+    def GetFiltersDomains (self, table='') :
+        filters = self.GetFiltersOwnUniqueIds(table)
+        filters += " AND pup.upeople_id = upd.upeople_id"
+        return(filters)
+
 class MLSQuery(DSQuery):
     """ Specific query builders for mailing lists data source """
     def GetSQLRepositoriesFrom (self):
