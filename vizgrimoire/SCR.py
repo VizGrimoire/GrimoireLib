@@ -182,26 +182,36 @@ class SCR(DataSource):
     @staticmethod
     def get_top_data (startdate, enddate, identities_db, filter_, npeople):
         bots = SCR.get_bots()
+        top_all = None
+        mreviewers = DataSource.get_metrics("reviewers", SCR)
+        mopeners = DataSource.get_metrics("submitters", SCR)
+        mmergers = DataSource.get_metrics("closers", SCR)
+        period = None
+        type_analysis = None
+        if filter_ is not None:
+            type_analysis = filter_.get_type_analysis()
+        mfilter = MetricFilters(period, startdate, enddate, type_analysis, npeople)
 
-        top_reviewers = {}
-        top_reviewers['reviewers'] = GetTopReviewersSCR(0, startdate, enddate, identities_db, bots, npeople)
-        top_reviewers['reviewers.last year']= GetTopReviewersSCR(365, startdate, enddate, identities_db, bots, npeople)
-        top_reviewers['reviewers.last month']= GetTopReviewersSCR(31, startdate, enddate, identities_db, bots, npeople)
+        if filter_ is None:
+            top_reviewers = {}
+            top_reviewers['reviewers'] = mreviewers.get_list(mfilter, 0)
+            top_reviewers['reviewers.last month']= mreviewers.get_list(mfilter, 31)
+            top_reviewers['reviewers.last year']= mreviewers.get_list(mfilter, 365)
 
-        # Top openers
-        top_openers = {}
-        top_openers['openers.']=GetTopOpenersSCR(0, startdate, enddate,identities_db, bots, npeople)
-        top_openers['openers.last year']=GetTopOpenersSCR(365, startdate, enddate,identities_db, bots, npeople)
-        top_openers['openers.last_month']=GetTopOpenersSCR(31, startdate, enddate,identities_db, bots, npeople)
+            top_openers = {}
+            top_openers['openers.'] = mopeners.get_list(mfilter, 0)
+            top_openers['openers.last_month']= mopeners.get_list(mfilter, 31)
+            top_openers['openers.last year'] = mopeners.get_list(mfilter, 365)
 
-        # Top mergers
-        top_mergers = {}
-        top_mergers['mergers.last year']=GetTopMergersSCR(365, startdate, enddate,identities_db, bots, npeople)
-        top_mergers['mergers.']=GetTopMergersSCR(0, startdate, enddate,identities_db, bots, npeople)
-        top_mergers['mergers.last_month']=GetTopMergersSCR(31, startdate, enddate,identities_db, bots, npeople)
+            top_mergers = {}
+            top_mergers['mergers.'] = mmergers.get_list(mfilter, 0)
+            top_mergers['mergers.last_month'] = mmergers.get_list(mfilter, 31)
+            top_mergers['mergers.last year'] = mmergers.get_list(mfilter, 365)
 
-        # The order of the list item change so we can not check it
-        top_all = dict(top_reviewers.items() +  top_openers.items() + top_mergers.items())
+            # The order of the list item change so we can not check it
+            top_all = dict(top_reviewers.items() +  top_openers.items() + top_mergers.items())
+        else:
+            logging.info("SCR does not support yet top for filters.")
 
         return (top_all)
 
@@ -581,82 +591,6 @@ def GetLongestReviews  (startdate, enddate, identities_db, type_analysis = []):
                            startdate, enddate)
 
     return(ExecuteQuery(q))
-
-##
-# Tops
-##
-
-# Is this right???
-def GetTopReviewersSCR (days, startdate, enddate, identities_db, bots, limit):
-    date_limit = ""
-    filter_bots = ''
-    for bot in bots:
-        filter_bots = filter_bots + " up.identifier<>'"+bot+"' and "
-
-    if (days != 0 ):
-        q = "SELECT @maxdate:=max(changed_on) from changes limit 1"
-        ExecuteQuery(q)
-        date_limit = " AND DATEDIFF(@maxdate, changed_on)<" + str(days)
-
-    q = "SELECT up.id as id, up.identifier as reviewers, "+\
-        "               count(distinct(c.id)) as reviewed "+\
-        "        FROM people_upeople pup, changes c, "+ identities_db+".upeople up "+\
-        "        WHERE "+ filter_bots+ " "+\
-        "            c.changed_by = pup.people_id and "+\
-        "            pup.upeople_id = up.id and "+\
-        "            c.changed_on >= "+ startdate + " and "+\
-        "            c.changed_on < "+ enddate + " "+\
-        "            "+ date_limit + " "+\
-        "        GROUP BY up.identifier "+\
-        "        ORDER BY reviewed desc, reviewers "+\
-        "        LIMIT " + limit
-    return(ExecuteQuery(q))
-
-
-def GetTopSubmittersQuerySCR   (days, startdate, enddate, identities_db, bots, limit, merged = False):
-    date_limit = ""
-    merged_sql = ""
-    rol = "openers"
-    action = "opened"
-    filter_bots = ''
-    for bot in bots:
-        filter_bots = filter_bots+ " up.identifier<>'"+bot+"' and "
-
-    if (days != 0 ):
-        q = "SELECT @maxdate:=max(submitted_on) from issues limit 1"
-        ExecuteQuery(q)
-        date_limit = " AND DATEDIFF(@maxdate, submitted_on)<"+str(days)
-
-    if (merged):
-        merged_sql = " AND status='MERGED' "
-        rol = "mergers"
-        action = "merged"
-
-
-    q = "SELECT up.id as id, up.identifier as "+rol+", "+\
-        "            count(distinct(i.id)) as "+action+" "+\
-        "        FROM people_upeople pup, issues i, "+identities_db+".upeople up "+\
-        "        WHERE "+ filter_bots+ " "+\
-        "            i.submitted_by = pup.people_id and "+\
-        "            pup.upeople_id = up.id and "+\
-        "            i.submitted_on >= "+ startdate+ " and "+\
-        "            i.submitted_on < "+ enddate+ " "+\
-        "            "+date_limit+ merged_sql+ " "+\
-        "        GROUP BY up.identifier "+\
-        "        ORDER BY "+action+" desc, id "+\
-        "        LIMIT "+ limit
-    return(q)
-
-
-def GetTopOpenersSCR (days, startdate, enddate, identities_db, bots, limit):
-    q = GetTopSubmittersQuerySCR (days, startdate, enddate, identities_db, bots, limit)
-    return(ExecuteQuery(q))
-
-
-def GetTopMergersSCR   (days, startdate, enddate, identities_db, bots, limit):
-    q = GetTopSubmittersQuerySCR (days, startdate, enddate, identities_db, bots, limit, True)
-    return(ExecuteQuery(q))
-
 
 #########
 # PEOPLE: Pretty similar to ITS

@@ -143,7 +143,6 @@ class Metrics(object):
         if metric_filters is not None:
             if metric_filters.people_out is not None:
                 bots = metric_filters.people_out
-
         filter_bots = ''
         for bot in bots:
             filter_bots = filter_bots + " u.identifier<>'"+bot+"' AND "
