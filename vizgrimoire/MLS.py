@@ -142,11 +142,18 @@ class MLS(DataSource):
     @staticmethod
     def get_top_data (startdate, enddate, identities_db, filter_, npeople):
         bots = MLS.get_bots()
+        msenders = DataSource.get_metrics("senders", MLS)
+        period = None
+        type_analysis = None
+        if filter_ is not None:
+            type_analysis = filter_.get_type_analysis()
+        mfilter = MetricFilters(period, startdate, enddate, type_analysis, npeople)
+
         if filter_ is None:
             top = {}
-            top['senders.']=top_senders(0, startdate, enddate,identities_db,bots, npeople)
-            top['senders.last year']=top_senders(365, startdate, enddate,identities_db, bots, npeople)
-            top['senders.last month']=top_senders(31, startdate, enddate,identities_db,bots, npeople)
+            top['senders.'] = msenders.get_list(mfilter, 0)
+            top['senders.last month'] = msenders.get_list(mfilter, 31)
+            top['senders.last year'] = msenders.get_list(mfilter, 365)
 
             top['threads.'] = MLS.getLongestThreads(startdate, enddate, identities_db, npeople)
             startdate = datetime.date.today() - datetime.timedelta(days=365)
@@ -160,15 +167,8 @@ class MLS(DataSource):
             filter_name = filter_.get_name()
             item = filter_.get_item()
 
-            if (filter_name == "company"):
-                top = companyTopSenders (item, identities_db, startdate, enddate, npeople)
-            elif (filter_name == "country"):
-                top = countryTopSenders (item, identities_db, startdate, enddate, npeople)
-            elif (filter_name == "domain"):
-                top = domainTopSenders(item, identities_db, startdate, enddate, npeople)
-            elif (filter_name == "repository"):
-                rfield = MLS.get_repo_field()
-                top = repoTopSenders (item, identities_db, startdate, enddate, rfield, npeople)
+            if filter_name in ["company","domain","repository","domain","country"]:
+                top = msenders.get_list(mfilter)
             else:
                 top = None
 
@@ -763,96 +763,6 @@ def GetStaticPeopleMLS (developer_id, startdate, enddate) :
 #########################
 # Top activity developers
 #########################
-
-
-def top_senders (days, startdate, enddate, identities_db, bots, limit) :
-
-    filter_bots = ''
-    for bot in bots:
-        filter_bots = filter_bots + " up.identifier<>'"+bot+"' and "
-
-    dtables = dfilters = ""
-    if (days > 0):
-        dtables = ", (SELECT MAX(first_date) as last_date from messages) t"
-        dfilters = " AND DATEDIFF (last_date, first_date) < %s " % (days)
-
-    tables = GetTablesOwnUniqueIdsMLS()
-    filters = GetFiltersOwnUniqueIdsMLS()
-
-    q = "SELECT up.id as id, up.identifier as senders, "+\
-            "COUNT(distinct(m.message_id)) as sent "+\
-            "FROM "+ tables + dtables +\
-            " ,"+identities_db+".upeople up "+\
-            "WHERE "+ filter_bots + filters + " AND "+\
-            "  pup.upeople_id = up.id AND "+\
-            "  m.first_date >= "+startdate+" AND "+\
-            "  m.first_date < "+enddate +\
-            dfilters+ " "+\
-            "GROUP BY up.identifier "+\
-            "ORDER BY sent desc, senders "+\
-            "LIMIT " + limit
-    data = ExecuteQuery(q)
-    return (data)
-
-def repoTopSenders (repo, identities_db, startdate, enddate, rfield, limit):
-    q = "SELECT up.id as id, up.identifier as senders, "+\
-            "COUNT(m.message_id) as sent "+\
-            "FROM "+ GetTablesOwnUniqueIdsMLS()+ ","+identities_db+".upeople up "+\
-            "WHERE "+ GetFiltersOwnUniqueIdsMLS()+ " AND "+\
-            "  pup.upeople_id = up.id AND "+\
-            "  m.first_date >= "+startdate+" AND "+\
-            "  m.first_date < "+enddate+" AND "+\
-            "  m."+rfield+"='"+repo+"' "+\
-            "GROUP BY up.identifier "+\
-            "ORDER BY sent desc "+\
-            "LIMIT " + limit
-    data = ExecuteQuery(q)
-    return (data)
-
-def countryTopSenders (country_name, identities_db, startdate, enddate, limit):
-    q = "SELECT up.id as id, up.identifier as senders, "+\
-        "COUNT(DISTINCT(m.message_id)) as sent "+\
-        "FROM "+ GetTablesCountries(identities_db)+ \
-        "  , "+identities_db+".upeople up "+\
-        "WHERE "+ GetFiltersCountries()+ " AND "+\
-        "  up.id = upc.upeople_id AND "+\
-        "  m.first_date >= "+startdate+" AND "+\
-        "  m.first_date < "+enddate+" AND "+\
-        "  c.name = '"+country_name+"' "+\
-        "GROUP BY up.identifier "+\
-        "ORDER BY COUNT(DISTINCT(m.message_ID)) DESC LIMIT " + limit
-    data = ExecuteQuery(q)
-    return (data)
-
-def companyTopSenders (company_name, identities_db, startdate, enddate, limit):
-    q = "SELECT up.id as id, up.identifier as senders, "+\
-        "COUNT(DISTINCT(m.message_id)) as sent "+\
-        "FROM "+GetTablesCompanies(identities_db)+\
-        ", "+identities_db+".upeople up "+\
-        "WHERE "+GetFiltersCompanies()+" AND "+\
-        "  up.id = upc.upeople_id AND "+\
-        "  m.first_date >= "+startdate+" AND "+\
-        "  m.first_date < "+enddate+" AND "+\
-        "  c.name = '"+company_name+"' "+\
-        "GROUP BY up.identifier "+\
-        "ORDER BY COUNT(DISTINCT(m.message_ID)) DESC LIMIT " + limit
-    data = ExecuteQuery(q)
-    return (data)
-
-def domainTopSenders (domain_name, identities_db, startdate, enddate, limit):
-    q = "SELECT up.identifier as senders, "+\
-        "COUNT(DISTINCT(m.message_id)) as sent "+\
-        "FROM "+GetTablesDomains(identities_db) +\
-        " , "+identities_db+".upeople up "+\
-        "WHERE "+GetFiltersDomains()+ " AND "+\
-        "  up.id = upd.upeople_id AND "+\
-        "  m.first_date >= "+startdate+" AND "+\
-        "  m.first_date < "+enddate+" AND "+\
-        "  d.name = '"+domain_name+"' "+\
-        "GROUP BY up.identifier "+\
-        "ORDER BY COUNT(DISTINCT(m.message_ID)) DESC LIMIT "+ limit
-    data = ExecuteQuery(q)
-    return (data)
 
 
 #######################

@@ -594,10 +594,13 @@ class MLSQuery(DSQuery):
         return (repos  + " and ml.mailing_list_url = m.mailing_list_url")
 
     # Using senders only here!
-    def GetFiltersOwnUniqueIds  (self) :
+    def GetFiltersOwnUniqueIds  (self):
         return ('m.message_ID = mp.message_id AND '+\
                 ' mp.email_address = pup.people_id AND '+\
                 ' mp.type_of_recipient=\'From\'')
+    def GetTablesOwnUniqueIds (self):
+        return ('messages m, messages_people mp, people_upeople pup')
+
 
     ##########
     #Generic functions to obtain FROM and WHERE clauses per type of report
