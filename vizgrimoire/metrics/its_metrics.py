@@ -269,6 +269,32 @@ class Closers(Metrics):
         data = self.db.ExecuteQuery(q)
         return (data)
 
+    def get_top_repository (self, metric_filters):
+        startdate = metric_filters.startdate
+        enddate = metric_filters.enddate
+        repo_name = metric_filters.type_analysis[1]
+        limit = metric_filters.npeople
+        filter_bots = self.get_bots_filter_sql(metric_filters)
+        closed_condition =  ITS._get_closed_condition()
+
+        q = "SELECT u.id as id, u.identifier as closers, "+\
+            "COUNT(DISTINCT(i.id)) as closed "+\
+            "FROM issues i, changes c, trackers t, people_upeople pup, " +\
+            "     "+self.db.identities_db+".upeople u "+\
+            "WHERE "+closed_condition+" "+\
+            "      AND pup.upeople_id = u.id "+\
+            "      AND c.changed_by = pup.people_id "+\
+            "      AND c.issue_id = i.id "+\
+            "      AND i.tracker_id = t.id "+\
+            "      AND t.url = "+repo_name+" "+\
+            "      AND changed_on >= "+startdate+" AND changed_on < " +enddate +\
+            "      AND " + filter_bots +\
+            " GROUP BY u.identifier ORDER BY closed DESC, closers LIMIT " + str(limit)
+
+        data = self.db.ExecuteQuery(q)
+        return (data)
+
+
     def get_top(self, days = 0, metric_filters = None):
         if metric_filters == None:
             metric_filters = self.filters
@@ -318,8 +344,7 @@ class Closers(Metrics):
 
         if metric_filters.type_analysis and metric_filters.type_analysis is not None:
             if metric_filters.type_analysis[0] == "repository":
-                # alist = self.get_top_repository(metric_filters)
-                pass
+                alist = self.get_top_repository(metric_filters)
             if metric_filters.type_analysis[0] == "company":
                 alist = self.get_top_company(metric_filters)
             if metric_filters.type_analysis[0] == "domain":

@@ -227,12 +227,12 @@ class ITS(DataSource):
             fn = os.path.join(destdir, filter_item.get_static_filename(ITS()))
             createJSON(agg, fn)
 
-            if filter_name in ("domain", "company", "repository"):
+            if filter_name in ["domain", "company", "repository"]:
                 items_list['name'].append(item.replace('/', '_'))
                 items_list['closed_365'].append(agg['closed_365'])
                 items_list['closers_365'].append(agg['closers_365'])
 
-            if (filter_name in ["company","domain"]):
+            if filter_name in ["company","domain","repository"]:
                 top = ITS.get_top_data(startdate, enddate, identities_db, filter_item, npeople)
                 fn = os.path.join(destdir, filter_item.get_top_filename(ITS()))
                 createJSON(top, fn)
