@@ -128,7 +128,7 @@ class ActivityPersonsITS (ActivityPersons):
 
     def __init__ (self, var, conditions = (), 
                   session = None,
-                  database = None, id_database = None,
+                  database = None, schema = None, schema_id = None,
                   echo = False):
         """Instantiation of the object.
 
@@ -145,9 +145,12 @@ class ActivityPersonsITS (ActivityPersons):
         session: sqlalchemy.orm.session.Session
            SQLAlchemy session
         database: string
-           SQLAlchemy url of the database to work with (default: "")
-        id_database: string
-           SQLAlchemy url of the identities database (default: same as database)
+           SQLAlchemy url for the database to be used, such as
+           mysql://user:passwd@host:port/
+        schema: string
+           Schema name for the ITS data
+        schema_id: string
+           Schema name for the unique ids data
         echo: boolean
            Write SQL queries to output stream
         """
@@ -155,9 +158,14 @@ class ActivityPersonsITS (ActivityPersons):
         if session is not None:
             self.session = session
         elif database is not None:
-            self.session = its_query.buildSession(
-                database=database, id_database=id_database,
-                echo=echo)
+            if schema is None or schema_id is None:
+                raise Exception ("ActivityPersonsITS: if database is a " + \
+                                     "parameter, both schema and schema_id " + \
+                                     "should be parameters too.")
+            ITSDB = its_query.ITSDatabase (database = database,
+                                           schema = schema,
+                                           schema_id = schema_id)
+            self.session = ITSDB.build_session(echo=echo)
         else:
             raise Exception ("ActivityPersons: Either a session or a " + \
                                  "database must be specified")
@@ -421,8 +429,9 @@ if __name__ == "__main__":
     #---------------------------------
     print_banner("List of activity for each changer")
     data = ActivityPersonsITS (
-        database = 'mysql://jgb:XXX@localhost/vizgrimoire_bicho',
-        id_database = 'mysql://jgb:XXX@localhost/vizgrimoire_cvsanaly',
+        database = 'mysql://jgb:XXX@localhost/',
+        schema = 'vizgrimoire_bicho',
+        schema_id = 'vizgrimoire_cvsanaly',
         var = "list_changers")
     activity = data.activity()
     print activity
@@ -432,8 +441,9 @@ if __name__ == "__main__":
     period = its_conditions.PeriodCondition (start = datetime(2014,1,1),
                                              end = None)
     data = ActivityPersonsITS (
-        database = 'mysql://jgb:XXX@localhost/vizgrimoire_bicho',
-        id_database = 'mysql://jgb:XXX@localhost/vizgrimoire_cvsanaly',
+        database = 'mysql://jgb:XXX@localhost/',
+        schema = 'vizgrimoire_bicho',
+        schema_id = 'vizgrimoire_cvsanaly',
         var = "list_changers",
         conditions = (period,))
     activity = data.activity()
