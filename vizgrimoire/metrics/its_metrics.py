@@ -103,21 +103,7 @@ class Openers(Metrics):
                                fields, tables, filters, evolutionary)
         return q
 
-
-    def get_bots_filter_sql (self, metric_filters = None):
-        bots = ITS.get_bots()
-        if metric_filters is not None:
-            if metric_filters.people_out is not None:
-                bots = metric_filters.people_out
-
-        filter_bots = ''
-        for bot in bots:
-            filter_bots = filter_bots + " u.identifier<>'"+bot+"' AND "
-        if filter_bots != '': filter_bots = filter_bots[:-4]
-
-        return filter_bots
-
-    def get_top(self, days = 0, metric_filters = None):
+    def get_top_global(self, days = 0, metric_filters = None):
 
         if metric_filters == None:
             metric_filters = self.filters
@@ -150,23 +136,6 @@ class Openers(Metrics):
 
         data = self.db.ExecuteQuery(q)
         return (data)
-
-
-    def get_list(self, metric_filters = None, days = 0):
-        alist = {}
-
-        if metric_filters is not None:
-            metric_filters_orig = self.filters
-            self.filters = metric_filters
-
-        if metric_filters.type_analysis and metric_filters.type_analysis is not None:
-            if metric_filters.type_analysis[0] == "repository":
-                alist = self.get_top_repository()
-        else:
-            alist = self.get_top(days)
-
-        if metric_filters is not None: self.filters = metric_filters_orig
-        return alist
 
     def __get_sql__(self, evolutionary):
         if (self.filters.type_analysis is not None and (self.filters.type_analysis[0] in  ["repository","project"])):
@@ -206,19 +175,6 @@ class Closers(Metrics):
     desc = "Number of persons closing tickets"
     data_source = ITS
     envision = {"gtype" : "whiskers"}
-
-    def get_bots_filter_sql (self, metric_filters = None):
-        bots = ITS.get_bots()
-        if metric_filters is not None:
-            if metric_filters.people_out is not None:
-                bots = metric_filters.people_out
-
-        filter_bots = ''
-        for bot in bots:
-            filter_bots = filter_bots + " u.identifier<>'"+bot+"' AND "
-        if filter_bots != '': filter_bots = filter_bots[:-4]
-
-        return filter_bots
 
     def get_top_company (self, metric_filters) :
         startdate = metric_filters.startdate

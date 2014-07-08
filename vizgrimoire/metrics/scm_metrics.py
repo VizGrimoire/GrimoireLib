@@ -190,7 +190,7 @@ class Authors(Metrics):
 
         return res
 
-    def get_top (self, days = 0, metric_filters = None, role = "author") :
+    def get_top_global (self, days = 0, metric_filters = None, role = "author") :
         # This function returns the top people participating in the source code.
         # In addition, the number of days allows to limit the study to the last
         # X days specified in that parameter
@@ -228,38 +228,8 @@ class Authors(Metrics):
             if not isinstance(data[id], (list)): data[id] = [data[id]]
         return (data)
 
-    def get_bots_filter_sql (self, metric_filters = None):
-        bots = SCM.get_bots()
-        if metric_filters is not None:
-            if metric_filters.people_out is not None:
-                bots = metric_filters.people_out
-
-        filter_bots = ''
-        for bot in bots:
-            filter_bots = filter_bots + " u.identifier<>'"+bot+"' AND "
-        if filter_bots != '': filter_bots = filter_bots[:-4]
-
-        return filter_bots
-
-    def get_list(self, metric_filters = None, days = 0):
-        alist = {}
-
-        if metric_filters is not None:
-            metric_filters_orig = self.filters
-            self.filters = metric_filters
-
-        if metric_filters.type_analysis and metric_filters.type_analysis is not None:
-            if metric_filters.type_analysis[0] == "repository":
-                alist = self.get_top_repository()
-            elif metric_filters.type_analysis[0] == "company":
-                alist = self.get_top_company()
-            elif metric_filters.type_analysis[0] == "project":
-                alist = self.get_top_project()
-        else:
-            alist = self.get_top(days)
-
-        if metric_filters is not None: self.filters = metric_filters_orig
-        return alist
+    def get_top_supported_filters(self):
+        return ['repository','company','project']
 
 class Committers(Metrics):
     """ Committers metric class for source code management system """

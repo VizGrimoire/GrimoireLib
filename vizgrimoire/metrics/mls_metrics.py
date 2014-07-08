@@ -62,6 +62,125 @@ class EmailsSenders(Metrics):
     desc = "People sending emails"
     data_source = MLS
 
+    def get_top_repository (self, metric_filters):
+        startdate = metric_filters.startdate
+        enddate = metric_filters.enddate
+        repo = metric_filters.type_analysis[1]
+        limit = metric_filters.npeople
+        filter_bots = self.get_bots_filter_sql(metric_filters)
+        rfield = MLS.get_repo_field()
+
+        q = "SELECT up.id as id, up.identifier as senders, "+\
+                " COUNT(m.message_id) as sent "+\
+                " FROM "+ self.db.GetTablesOwnUniqueIds()+ ","+self.db.identities_db+".upeople up "+\
+                " WHERE "+ self.db.GetFiltersOwnUniqueIds()+ " AND "+\
+                "  pup.upeople_id = up.id AND "+\
+                "  m.first_date >= "+startdate+" AND "+\
+                "  m.first_date < "+enddate+" AND "+\
+                "  m."+rfield+"="+ repo +\
+                " GROUP BY up.identifier "+\
+                " ORDER BY sent desc "+\
+                " LIMIT " + str(limit)
+        data = ExecuteQuery(q)
+        return (data)
+
+    def get_top_country (self, metric_filters):
+        startdate = metric_filters.startdate
+        enddate = metric_filters.enddate
+        country_name = metric_filters.type_analysis[1]
+        limit = metric_filters.npeople
+        filter_bots = self.get_bots_filter_sql(metric_filters)
+
+        q = "SELECT up.id as id, up.identifier as senders, "+\
+            " COUNT(DISTINCT(m.message_id)) as sent "+\
+            " FROM messages m "+ self.db.GetSQLCountriesFrom(self.db.identities_db)+ \
+            "  , "+self.db.identities_db+".upeople up "+\
+            " WHERE "+ self.db.GetSQLCountriesWhere(country_name)+ " AND "+\
+            "  up.id = upc.upeople_id AND "+\
+            "  m.first_date >= "+startdate+" AND "+\
+            "  m.first_date < "+enddate+\
+            " GROUP BY up.identifier "+\
+            " ORDER BY COUNT(DISTINCT(m.message_ID)) DESC LIMIT " + str(limit)
+        data = ExecuteQuery(q)
+        return (data)
+
+    def get_top_company (self, metric_filters):
+        startdate = metric_filters.startdate
+        enddate = metric_filters.enddate
+        company_name = metric_filters.type_analysis[1]
+        limit = metric_filters.npeople
+        filter_bots = self.get_bots_filter_sql(metric_filters)
+
+        q = "SELECT up.id as id, up.identifier as senders, "+\
+            " COUNT(DISTINCT(m.message_id)) as sent "+\
+            " FROM messages m, "+self.db.identities_db+".upeople up "+\
+             self.db.GetSQLCompaniesFrom(self.db.identities_db) +\
+            " WHERE "+self.db.GetSQLCompaniesWhere(company_name)+" AND "+\
+            "  up.id = upc.upeople_id AND "+\
+            "  m.first_date >= "+startdate+" AND "+\
+            "  m.first_date < "+enddate+\
+            " GROUP BY up.identifier "+\
+            " ORDER BY COUNT(DISTINCT(m.message_ID)) DESC LIMIT " + str(limit)
+        data = ExecuteQuery(q)
+        return (data)
+
+    def get_top_domain (self, metric_filters):
+        startdate = metric_filters.startdate
+        enddate = metric_filters.enddate
+        domain_name = metric_filters.type_analysis[1]
+        limit = metric_filters.npeople
+        filter_bots = self.get_bots_filter_sql(metric_filters)
+
+        q = "SELECT up.identifier as senders, "+\
+            " COUNT(DISTINCT(m.message_id)) as sent "+\
+            " FROM messages m "+self.db.GetSQLDomainsFrom(self.db.identities_db) +\
+            " , "+self.db.identities_db+".upeople up "+\
+            " WHERE "+self.db.GetSQLDomainsWhere(domain_name)+ " AND "+\
+            "  up.id = upd.upeople_id AND "+\
+            "  m.first_date >= "+startdate+" AND "+\
+            "  m.first_date < "+enddate+\
+            " GROUP BY up.identifier "+\
+            " ORDER BY COUNT(DISTINCT(m.message_ID)) DESC LIMIT "+ str(limit)
+        data = ExecuteQuery(q)
+        return (data)
+
+
+    def get_top_global (self, days = 0, metric_filters = None):
+        if metric_filters == None:
+            metric_filters = self.filters
+
+        tables = self.db.GetTablesOwnUniqueIds()
+        filters = self.db.GetFiltersOwnUniqueIds()
+
+        startdate = metric_filters.startdate
+        enddate = metric_filters.enddate
+        limit = metric_filters.npeople
+        filter_bots = self.get_bots_filter_sql(metric_filters)
+        if filter_bots != "": filter_bots += " AND "
+
+        dtables = dfilters = ""
+        if (days > 0):
+            dtables = ", (SELECT MAX(first_date) as last_date from messages) t"
+            dfilters = " AND DATEDIFF (last_date, first_date) < %s " % (days)
+
+        q = "SELECT u.id as id, u.identifier as senders, "+\
+                "COUNT(distinct(m.message_id)) as sent "+\
+                "FROM "+ tables + dtables +\
+                " ,"+self.db.identities_db+".upeople u "+\
+                "WHERE "+ filter_bots + filters + " AND "+\
+                "  pup.upeople_id = u.id AND "+\
+                "  m.first_date >= "+startdate+" AND "+\
+                "  m.first_date < "+enddate +\
+                dfilters+ " "+\
+                "GROUP BY u.identifier "+\
+                "ORDER BY sent desc, senders "+\
+                "LIMIT " + str(limit)
+        data = self.db.ExecuteQuery(q)
+        return (data)
+
+    def get_top_supported_filters(self):
+        return ['repository','company','country','domain']
+
     def __get_sql__ (self, evolutionary):
         fields = " count(distinct(pup.upeople_id)) as senders "
         tables = " messages m " + self.db.GetSQLReportFrom(self.filters.type_analysis)
