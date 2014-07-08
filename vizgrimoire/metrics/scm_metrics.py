@@ -250,13 +250,13 @@ class Authors(Metrics):
 
         if metric_filters.type_analysis and metric_filters.type_analysis is not None:
             if metric_filters.type_analysis[0] == "repository":
-                alist = self. get_top_repository()
+                alist = self.get_top_repository()
             elif metric_filters.type_analysis[0] == "company":
-                alist = self. get_top_company()
+                alist = self.get_top_company()
             elif metric_filters.type_analysis[0] == "project":
-                alist = self. get_top_project()
+                alist = self.get_top_project()
         else:
-            alist = self. get_top(days)
+            alist = self.get_top(days)
 
         if metric_filters is not None: self.filters = metric_filters_orig
         return alist
