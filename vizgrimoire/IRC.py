@@ -93,7 +93,7 @@ class IRC(DataSource):
             top['senders.last month'] = msenders.get_list(mfilter, 31)
             top['senders.last year'] = msenders.get_list(mfilter, 365)
         else:
-            logging.info("SCR does not support yet top for filters.")
+            logging.info("IRC does not support yet top for filters.")
 
         return(top)
 
