@@ -57,8 +57,16 @@ class Mediawiki(DataSource):
         return ExecuteQuery(q)
 
     @staticmethod
-    def get_evolutionary_data (period, startdate, enddate, i_db, type_analysis = None):
-        return GetDataMediaWiki (period, startdate, enddate, i_db, type_analysis, True)
+    def get_evolutionary_data (period, startdate, enddate, i_db, filter_ = None):
+        if filter_ is not None:
+            logging.warn("Mediawiki does not support filters yet.")
+            return {}
+
+        metrics =  DataSource.get_metrics_data(Mediawiki, period, startdate, enddate, i_db, filter_, True)
+        if filter_ is not None: studies = {}
+        else:
+            studies =  DataSource.get_studies_data(Mediawiki, period, startdate, enddate, True)
+        return dict(metrics.items()+studies.items())
 
     @staticmethod
     def create_evolutionary_report (period, startdate, enddate, destdir, i_db, type_analysis = None):
@@ -68,15 +76,15 @@ class Mediawiki(DataSource):
 
     @staticmethod
     def get_agg_data (period, startdate, enddate, identities_db, filter_ = None):
-        # Tendencies
-        agg = {}
-
-        if (filter_ is None):
-            agg = GetDataMediaWiki(period, startdate, enddate, identities_db, None, False)
-        else:
+        if filter_ is not None:
             logging.warn("Mediawiki does not support filters yet.")
+            return {}
 
-        return agg
+        metrics =  DataSource.get_metrics_data(Mediawiki, period, startdate, enddate, identities_db, filter_, False)
+        if filter_ is not None: studies = {}
+        else:
+            studies =  DataSource.get_studies_data(Mediawiki, period, startdate, enddate, False)
+        return dict(metrics.items()+studies.items())
 
     @staticmethod
     def create_agg_report (period, startdate, enddate, destdir, i_db, type_analysis = None):
@@ -170,16 +178,6 @@ def GetFiltersOwnUniqueIdsMediaWiki () :
 
 
 # GLOBAL
-
-def GetDataMediaWiki (period, startdate, enddate, i_db, type_analysis, evol = False):
-    filter_ = None
-    if type_analysis is not None:
-        filter_ = Filter(type_analysis[0],type_analysis[1])
-    metrics =  DataSource.get_metrics_data(Mediawiki, period, startdate, enddate, i_db, filter_, evol)
-    if filter_ is not None: studies = {}
-    else:
-        studies =  DataSource.get_studies_data(Mediawiki, period, startdate, enddate, evol)
-    return dict(metrics.items()+studies.items())
 
 def GetTopAuthorsMediaWiki (days, startdate, enddate, identities_db, bots, limit) :
     date_limit = ""
