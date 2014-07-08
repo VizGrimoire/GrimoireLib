@@ -22,7 +22,8 @@
 ##   Daniel Izquierdo-Cortazar <dizquierdo@bitergia.com>
 ##   Luis Cañas-Díaz <lcanas@bitergia.com>
 ##
-## python openstack_report.py -a dic_cvsanaly_openstack_2259 -d dic_bicho_openstack_gerrit_3392 -i dic_cvsanaly_openstack_2259 -r 2013-07-01,2013-10-01,2014-01-01,2014-04-01,2014-07-01 -c lcanas_bicho_openstack_1376 -b lcanas_mlstats_openstack_1376 -f dic_sibyl_openstack_3194_new
+## python openstack_report.py -a dic_cvsanaly_openstack_2259 -d dic_bicho_openstack_gerrit_3392 -i dic_cvsanaly_openstack_2259 -r 2013-07-01,2013-10-01,2014-01-01,2014-04-01,2014-07-01 -c lcanas_bicho_openstack_1376 -b lcanas_mlstats_openstack_1376 -f dic_sibyl_openstack_3194_new -e dic_irc_openstack_3277
+
 
 import imp, inspect
 from optparse import OptionParser
@@ -342,6 +343,27 @@ def qaforums_report(dbcon, filters):
     
     return dataset
 
+def irc_report(dbcon, filters):
+    sent = irc.Sent(dbcon, filters)
+    createJSON(sent.get_agg(), "./release/irc_sent.json")
+
+    senders = irc.Senders(dbcon, filters)
+    createJSON(senders.get_agg(), "./release/irc_senders.json")
+
+    dataset = {}
+    dataset["sent"] = sent.get_agg()["sent"]
+    dataset["senders"] = senders.get_agg()["senders"]
+
+    from IRC import GetTopSendersIRC
+    SetDBChannel(dbcon.user, dbcon.password, dbcon.database)
+    top_senders = GetTopSendersIRC(0, filters.startdate, filters.enddate, 
+                                   dbcon.identities_db, "", "10")
+    createJSON(top_senders, "./release/irc_top_senders.json")
+    createCSV(top_senders, "./release/irc_top_senders.csv")
+
+    return dataset
+
+
 # Until we use VizPy we will create JSON python files with _py
 def createCSV(data, filepath, skip_fields = []):
     fd = open(filepath, "w")
@@ -395,13 +417,14 @@ if __name__ == '__main__':
     init_env()
 
     from metrics import Metrics
-    from query_builder import DSQuery, SCMQuery, QAForumsQuery, MLSQuery, SCRQuery, ITSQuery
+    from query_builder import DSQuery, SCMQuery, QAForumsQuery, MLSQuery, SCRQuery, ITSQuery, IRCQuery
     from metrics_filter import MetricFilters
     import scm_metrics as scm
     import qaforums_metrics as qa
     import mls_metrics as mls
     import scr_metrics as scr
     import its_metrics as its
+    import irc_metrics as irc
     from GrimoireUtils import createJSON
     from GrimoireSQL import SetDBChannel
 
@@ -416,7 +439,6 @@ if __name__ == '__main__':
     projects_list = projects(opts.dbuser, opts.dbpassword, opts.dbidentities)
 
     for project in projects_list:
-        break
         releases_data = {}
         for release in releases:
             releases_data[release] = {}
@@ -485,6 +507,8 @@ if __name__ == '__main__':
     answers = []
     comments = []
     qsenders = []
+    irc_sent = []
+    irc_senders = []
     releases_data = {}
     for release in releases:
         startdate = "'" + release[0] + "'"
@@ -507,8 +531,10 @@ if __name__ == '__main__':
         qsenders.append(dataset["qsenders"])
 
         # IRC info - TBD
-        #irc_dbcon = IRCQuery(opts.dbuser, opts.dbpassword, opts.dbirc, opts.dbidentities)
-        #dataset = irc_report(irc_dbcon, filters)
+        irc_dbcon = IRCQuery(opts.dbuser, opts.dbpassword, opts.dbirc, opts.dbidentities)
+        dataset = irc_report(irc_dbcon, filters)
+        irc_sent.append(dataset["sent"])
+        irc_senders.append(dataset["senders"])
 
 
     labels = ["2013-Q3", "2013-Q4", "2014-Q1", "2014-Q2"]
@@ -519,4 +545,6 @@ if __name__ == '__main__':
     barh_chart("Answers", labels, answers, "answers")
     barh_chart("Comments", labels, comments, "comments")
     barh_chart("People asking Questions", labels, qsenders, "question_senders")
+    barh_chart("Messages in IRC channels", labels, irc_sent, "irc_sent")
+    barh_chart("People in IRC channels", labels, irc_senders, "irc_senders")
 
