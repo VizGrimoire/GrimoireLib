@@ -141,7 +141,6 @@ class MLS(DataSource):
 
     @staticmethod
     def get_top_data (startdate, enddate, identities_db, filter_, npeople):
-        bots = MLS.get_bots()
         msenders = DataSource.get_metrics("senders", MLS)
         period = None
         type_analysis = None
@@ -758,12 +757,6 @@ def GetStaticPeopleMLS (developer_id, startdate, enddate) :
 
     data = ExecuteQuery(q)
     return (data)
-
-
-#########################
-# Top activity developers
-#########################
-
 
 #######################
 # Functions to analyze last activity
