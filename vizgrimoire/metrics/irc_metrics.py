@@ -60,6 +60,36 @@ class Senders(Metrics):
     desc = "Number of message senders to IRC channels"
     data_source = IRC
 
+
+    def get_top_global (self, days = 0, metric_filters = None):
+        if metric_filters == None:
+            metric_filters = self.filters
+
+        startdate = metric_filters.startdate
+        enddate = metric_filters.enddate
+        limit = metric_filters.npeople
+        filter_bots = self.get_bots_filter_sql(metric_filters)
+        if filter_bots != "": filter_bots += " AND "
+        date_limit = ""
+
+        if (days != 0 ):
+            sql = "SELECT @maxdate:=max(date) from irclog limit 1"
+            res = self.db.ExecuteQuery(sql)
+            date_limit = " AND DATEDIFF(@maxdate, date)<"+str(days)
+        q = "SELECT u.id as id, u.identifier as senders,"+\
+            "       COUNT(irclog.id) as sent "+\
+            " FROM irclog, people_upeople pup, "+self.db.identities_db+".upeople u "+\
+            " WHERE "+ filter_bots +\
+            "            irclog.type = 'COMMENT' and "+\
+            "            irclog.nick = pup.people_id and "+\
+            "            pup.upeople_id = u.id and "+\
+            "            date >= "+ startdate+ " and "+\
+            "            date  < "+ enddate+ " "+ date_limit +\
+            "            GROUP BY senders "+\
+            "            ORDER BY sent desc, senders "+\
+            "            LIMIT " + str(limit)
+        return(self.db.ExecuteQuery(q))
+
     def __get_sql__(self, evolutionary):
         fields = " COUNT(DISTINCT(nick)) AS senders "
         tables = " irclog i " + self.db.GetSQLReportFrom(self.filters.type_analysis)

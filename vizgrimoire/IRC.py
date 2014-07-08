@@ -80,17 +80,22 @@ class IRC(DataSource):
 
     @staticmethod
     def get_top_data (startdate, enddate, identities_db, filter_, npeople):
-        bots = IRC.get_bots()
+        top = {}
+        msenders = DataSource.get_metrics("senders", IRC)
+        period = None
+        type_analysis = None
+        if filter_ is not None:
+            type_analysis = filter_.get_type_analysis()
+        mfilter = MetricFilters(period, startdate, enddate, type_analysis, npeople)
 
-        top_senders = {}
-        top_senders['senders.'] = \
-            GetTopSendersIRC(0, startdate, enddate, identities_db, bots, npeople)
-        top_senders['senders.last year'] = \
-            GetTopSendersIRC(365, startdate, enddate, identities_db, bots, npeople)
-        top_senders['senders.last month'] = \
-            GetTopSendersIRC(31, startdate, enddate, identities_db, bots, npeople)
+        if filter_ is None:
+            top['senders.'] = msenders.get_list(mfilter, 0)
+            top['senders.last month'] = msenders.get_list(mfilter, 31)
+            top['senders.last year'] = msenders.get_list(mfilter, 365)
+        else:
+            logging.info("SCR does not support yet top for filters.")
 
-        return(top_senders)
+        return(top)
 
     @staticmethod
     def create_top_report (startdate, enddate, destdir, npeople, i_db):
@@ -306,31 +311,6 @@ def GetIRCSQLReportWhere (type_analysis):
     elif analysis == 'domain': where = GetIRCSQLDomainsWhere(value)
 
     return (where)
-
-
-def GetTopSendersIRC (days, startdate, enddate, identities_db, bots, limit):
-    date_limit = ""
-    filter_bots = ''
-    for bot in bots:
-        filter_bots += " nick<>'"+bot+"' and "
-    if (days != 0 ):
-        sql = "SELECT @maxdate:=max(date) from irclog limit 1"
-        res = ExecuteQuery(sql)
-        date_limit = " AND DATEDIFF(@maxdate, date)<"+str(days)
-    q = "SELECT up.id as id, up.identifier as senders,"+\
-        "       COUNT(irclog.id) as sent "+\
-        " FROM irclog, people_upeople pup, "+identities_db+".upeople up "+\
-        " WHERE "+ filter_bots +\
-        "            irclog.type = 'COMMENT' and "+\
-        "            irclog.nick = pup.people_id and "+\
-        "            pup.upeople_id = up.id and "+\
-        "            date >= "+ startdate+ " and "+\
-        "            date  < "+ enddate+ " "+ date_limit +\
-        "            GROUP BY senders "+\
-        "            ORDER BY sent desc, senders "+\
-        "            LIMIT " + limit
-    return(ExecuteQuery(q))
-
 #
 # Repositories (channels)
 #
