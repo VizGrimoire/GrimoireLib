@@ -248,7 +248,7 @@ class Authors(Metrics):
             metric_filters_orig = self.filters
             self.filters = metric_filters
 
-        if metric_filters.type_analysis is not None:
+        if metric_filters.type_analysis and metric_filters.type_analysis is not None:
             if metric_filters.type_analysis[0] == "repository":
                 alist = self. get_top_repository()
             elif metric_filters.type_analysis[0] == "company":

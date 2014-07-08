@@ -136,11 +136,8 @@ def scm_report(dbcon, filters):
     createCSV(newcommers_leavers_dict['people_new']["authors"], "./release/scm_top_authors_new.csv", ['revtime','author_id','upeople_id'])
     createCSV(newcommers_leavers_dict['people_gone']["authors"], "./release/scm_top_authors_gone.csv", ['revtime','author_id','upeople_id'])
 
-    from SCM import top_people
     top_authors = {}
-    bots = SCM.get_bots() 
-    SetDBChannel(dbcon.user, dbcon.password, dbcon.database)
-    top_authors["authors"] =  top_people(0, filters.startdate, filters.enddate, "author", bots, str(filters.npeople))
+    top_authors["authors"] =  scm.Authors(dbcon, filters).get_list(filters, 0)
     createJSON(top_authors, "./release/scm_top_authors.json")
     createCSV(top_authors["authors"], "./release/scm_top_authors.csv",['id'])
 
