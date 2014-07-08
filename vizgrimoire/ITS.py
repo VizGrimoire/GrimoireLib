@@ -62,8 +62,11 @@ class ITS(DataSource):
     @staticmethod
     def get_url():
         """Get the URL from which the data source was gathered"""
-        return TrackerURL()
-        pass
+
+        q = "SELECT url, name as type FROM trackers t JOIN "+\
+            "supported_trackers s ON t.type = s.id limit 1"
+
+        return(ExecuteQuery(q))
 
     @staticmethod
     def set_backend(its_name):
@@ -88,16 +91,11 @@ class ITS(DataSource):
     def get_evolutionary_data (period, startdate, enddate, identities_db, filter_ = None):
         closed_condition = ITS._get_closed_condition()
 
-        if (filter_ is not None):
-            type_analysis = [filter_.get_name(), filter_.get_item()]
-            evol = EvolITSInfo(period, startdate, enddate, identities_db, 
-                               type_analysis, closed_condition)
-
+        metrics = DataSource.get_metrics_data(ITS, period, startdate, enddate, identities_db, filter_, True)
+        if filter_ is not None: studies = {}
         else:
-            data = EvolITSInfo(period, startdate, enddate, identities_db, None, closed_condition)
-            evol = completePeriodIds(data, period, startdate, enddate)
-
-        return evol
+            studies = DataSource.get_studies_data(ITS, period, startdate, enddate, True)
+        return dict(metrics.items()+studies.items())
 
     @staticmethod
     def create_evolutionary_report (period, startdate, enddate, destdir, i_db, filter_ = None):
@@ -109,19 +107,15 @@ class ITS(DataSource):
     def get_agg_data (period, startdate, enddate, identities_db, filter_ = None):
         closed_condition = ITS._get_closed_condition()
 
-        if (filter_ is not None):
-            type_analysis = [filter_.get_name(), filter_.get_item()]
-            data = AggITSInfo(period, startdate, enddate, identities_db, type_analysis, closed_condition)
-            agg = data
-
+        metrics = DataSource.get_metrics_data(ITS, period, startdate, enddate, identities_db, filter_, False)
+        if filter_ is not None: studies = {}
         else:
-            agg = AggITSInfo(period, startdate, enddate, identities_db, None, closed_condition)
+            studies = DataSource.get_studies_data(ITS, period, startdate, enddate, False)
+        agg =  dict(metrics.items()+studies.items())
+
+        if filter_ is None:
             data = ITS.get_url()
             agg = dict(agg.items() +  data.items())
-#            # Last Activity: to be removed
-#            for i in [7,14,30,60,90,180,365,730]:
-#                period_activity = GetLastActivityITS(i, closed_condition)
-#                agg = dict(agg.items() + period_activity.items())
 
         return agg
 
@@ -520,105 +514,6 @@ def GetITSSQLReportWhere (type_analysis, identities_db = None):
 
     return (where)
 
-##########
-# Meta functions to retrieve data
-##########
-
-def GetITSInfo (period, startdate, enddate, identities_db, type_analysis, closed_condition, evolutionary):
-    filter_ = None
-    if type_analysis is not None:
-        filter_ = Filter(type_analysis[0],type_analysis[1])
-    metrics = DataSource.get_metrics_data(ITS, period, startdate, enddate, identities_db, filter_, evolutionary)
-    if filter_ is not None: studies = {}
-    else:
-        studies = DataSource.get_studies_data(ITS, period, startdate, enddate, evolutionary)
-    return dict(metrics.items()+studies.items())
-
-def EvolITSInfo (period, startdate, enddate, identities_db, type_analysis, closed_condition):
-    #Evolutionary info all merged in a dataframe
-    return(GetITSInfo(period, startdate, enddate, identities_db, type_analysis, closed_condition, True))
-
-def AggITSInfo (period, startdate, enddate, identities_db, type_analysis, closed_condition):
-    #Agg info all merged in a dataframe
-    return(GetITSInfo(period, startdate, enddate, identities_db, type_analysis, closed_condition, False))
-
-
-####
-# DEPRECATED CODE only used in its-analysis.py
-##
-
-# Repositories
-def GetIssuesRepositories (period, startdate, enddate, identities_db, type_analysis, evolutionary):
-    # Generic function that counts repositories
-
-    fields = " COUNT(DISTINCT(tracker_id)) AS trackers  "
-    tables = " issues i " + GetITSSQLReportFrom(identities_db, type_analysis)
-    filters = GetITSSQLReportWhere(type_analysis, identities_db)
-
-    q = BuildQuery(period, startdate, enddate, " i.submitted_on ", fields, tables, filters, evolutionary)
-    return(ExecuteQuery(q))
-
-def EvolIssuesRepositories (period, startdate, enddate, identities_db, type_analysis = []):
-    # Evolution of trackers
-    return(GetIssuesRepositories(period, startdate, enddate, identities_db, type_analysis, True))
-
-def AggIssuesRepositories (period, startdate, enddate, identities_db, type_analysis = []):
-    # Evolution of trackers
-    return(GetIssuesRepositories(period, startdate, enddate, identities_db, type_analysis, False))
-
-def GetIssuesStudies (period, startdate, enddate, identities_db, type_analysis, evolutionary, study):
-    # Generic function that counts evolution/agg number of specific studies with similar
-    # database schema such as domains, companies and countries
-    fields = ' count(distinct(name)) as ' + study
-    tables = " issues i " + GetITSSQLReportFrom(identities_db, type_analysis)
-    filters = GetITSSQLReportWhere(type_analysis, identities_db)
-
-    #Filtering last part of the query, not used in this case
-    #filters = gsub("and\n( )+(d|c|cou|com).name =.*$", "", filters)
-
-    q = BuildQuery(period, startdate, enddate, " i.submitted_on ", fields, tables, filters, evolutionary)
-    q = re.sub(r'and (d|c|cou|com).name.*=', "", q)
-    data = ExecuteQuery(q)
-    return(data)
-
-def EvolIssuesDomains (period, startdate, enddate, identities_db):
-    # Evol number of domains used
-    return(GetIssuesStudies(period, startdate, enddate, identities_db, ['domain', ''], True, 'domains'))
-
-def EvolIssuesProjects (period, startdate, enddate, identities_db):
-    # Evol number of projects used
-    return(GetIssuesStudies(period, startdate, enddate, identities_db, ['project', ''], True, 'projects'))
-
-def EvolIssuesCountries (period, startdate, enddate, identities_db):
-    # Evol number of countries
-    return(GetIssuesStudies(period, startdate, enddate, identities_db, ['country', ''], True, 'countries'))
-
-def EvolIssuesCompanies (period, startdate, enddate, identities_db):
-    # Evol number of companies
-    data = GetIssuesStudies(period, startdate, enddate, identities_db, ['company', ''], True, 'companies')
-    return(data)
-
-def AggIssuesDomains (period, startdate, enddate, identities_db):
-    # Agg number of domains
-    return(GetIssuesStudies(period, startdate, enddate, identities_db, ['domain', ''], False, 'domains'))
-
-def AggIssuesProjects (period, startdate, enddate, identities_db):
-    # Agg number of projects
-    return(GetIssuesStudies(period, startdate, enddate, identities_db, ['project', ''], False, 'projects'))
-
-def AggIssuesCountries (period, startdate, enddate, identities_db):
-    # Agg number of countries
-    return(GetIssuesStudies(period, startdate, enddate, identities_db, ['country', ''], False, 'countries'))
-
-def AggIssuesCompanies (period, startdate, enddate, identities_db):
-    # Agg number of companies
-    return(GetIssuesStudies(period, startdate, enddate, identities_db, ['company', ''], False, 'companies'))
-
-####
-# END DEPRECATED CODE only used in its-analysis.py
-####
-
-
 
 def GetDate (startdate, enddate, identities_db, type_analysis, type):
     # date of submmitted issues (type= max or min)
@@ -642,37 +537,6 @@ def GetEndDate (startdate, enddate, identities_db, type_analysis):
     #End date of submitted issues
     return(GetDate(startdate, enddate, identities_db, type_analysis, "max"))
 
-##----------------------
-## Auxiliary functions querying the database
-##----------------------
-
-def get_timespan():
-    """Get timespan found in the ITS database.
-    
-    Returns
-    -------
-    startdate : datetime.datetime
-        Time of first activity in tickets
-    enddate : datetime.datetime
-        Time of last activity in tickets
-
-    Notes
-    -----
-
-    Looks for entries both in issues and changes tables.
-
-    """
-
-    q = """SELECT
-          DATE(MIN(DATE)) as startdate,
-          DATE(MAX(date)) as enddate
-      FROM
-          (SELECT submitted_on AS date FROM issues
-           UNION ALL
-           SELECT changed_on AS date FROM changes) AS dates"""
-    data = ExecuteQuery(q)
-    # Returns [first time, last_time]
-    return (data['startdate'], data['enddate'])
 
 ###############
 # Others
@@ -681,14 +545,6 @@ def get_timespan():
 def AggAllParticipants (startdate, enddate):
     # All participants from the whole history
     q = "SELECT count(distinct(pup.upeople_id)) as allhistory_participants from people_upeople pup"
-
-    return(ExecuteQuery(q))
-
-
-def TrackerURL ():
-    # URL of the analyzed tracker
-    q = "SELECT url, name as type FROM trackers t JOIN "+\
-        "supported_trackers s ON t.type = s.id limit 1"
 
     return(ExecuteQuery(q))
 
