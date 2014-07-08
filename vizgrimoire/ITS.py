@@ -154,12 +154,8 @@ class ITS(DataSource):
 
         else:
             filter_name = filter_.get_name()
-            item = "'"+filter_.get_item()+"'"
-
-            if (filter_name == "company"):
-                top = GetCompanyTopClosers(item, startdate, enddate, identities_db, bots, closed_condition, npeople)
-            elif (filter_name == "domain"):
-                top = GetDomainTopClosers(item, startdate, enddate, identities_db, bots, closed_condition, npeople)
+            if filter_name in ["company","domain","repository"]:
+                top = mclosers.get_list(mfilter)
             else:
                 top = None
 
@@ -831,69 +827,10 @@ def GetTablesOwnUniqueIdsITS (table='') :
     if (table == "issues"): tables = 'issues i, people_upeople pup'
     return (tables)
 
-def GetTablesCompaniesITS (i_db, table='') :
-    tables = GetTablesOwnUniqueIdsITS(table)
-    tables += ','+i_db+'.upeople_companies upc'
-    return (tables)
-
 def GetFiltersOwnUniqueIdsITS (table='') :
     filters = 'pup.people_id = c.changed_by'
     if (table == "issues"): filters = 'pup.people_id = i.submitted_by'
     return (filters)
-
-
-def GetFiltersCompaniesITS (table='') :
-    filters = GetFiltersOwnUniqueIdsITS(table)
-    filters += " AND pup.upeople_id = upc.upeople_id"
-    if (table == 'issues') :
-        filters += " AND submitted_on >= upc.init AND submitted_on < upc.end"
-    else :
-         filters += " AND changed_on >= upc.init AND changed_on < upc.end"
-    return (filters)
-
-def GetCompanyTopClosers (company_name, startdate, enddate,
-        identities_db, filter, closed_condition, limit) :
-    affiliations = ""
-    for aff in filter:
-        affiliations += " AND up.identifier<>'"+aff+"' "
-
-    q = "SELECT up.id as id, up.identifier as closers, "+\
-        "       COUNT(DISTINCT(c.id)) as closed "+\
-        "FROM "+GetTablesCompaniesITS(identities_db)+", "+\
-        "     "+identities_db+".companies com, "+\
-        "     "+identities_db+".upeople up "+\
-        "WHERE "+GetFiltersCompaniesITS()+" AND " + closed_condition + " "+\
-        "      AND pup.upeople_id = up.id "+\
-        "      AND upc.company_id = com.id "+\
-        "      AND com.name = "+ company_name +" "+\
-        "      AND changed_on >= "+startdate+" AND changed_on < "+enddate+\
-            affiliations +\
-        " GROUP BY up.identifier ORDER BY closed DESC, closers LIMIT " + limit
-
-    data = ExecuteQuery(q)
-    return (data)
-
-def GetDomainTopClosers (domain_name, startdate, enddate,
-        identities_db, filter, closed_condition, limit) :
-    affiliations = ""
-    for aff in filter:
-        affiliations += " AND up.identifier<>'"+aff+"' "
-
-    q = "SELECT up.id as id, up.identifier as closers, "+\
-        "COUNT(DISTINCT(c.id)) as closed "+\
-        "FROM "+GetTablesDomainsITS(identities_db)+", "+\
-        "     "+identities_db+".domains dom, "+\
-        "     "+identities_db+".upeople up "+\
-        "WHERE "+ GetFiltersDomainsITS()+" AND "+closed_condition+" "+\
-        "      AND pup.upeople_id = up.id "+\
-        "      AND upd.domain_id = dom.id "+\
-        "      AND dom.name = "+domain_name+" "+\
-        "      AND changed_on >= "+startdate+" AND changed_on < " +enddate +\
-              affiliations+ " "+\
-        "GROUP BY up.identifier ORDER BY closed DESC, closers LIMIT " + limit
-
-    data = ExecuteQuery(q)
-    return (data)
 
 
 #################
