@@ -1421,6 +1421,57 @@ class QAForumsQuery(DSQuery):
 
         return q
 
+    def __get_date_field(self, table_name):
+        # the tables of the Sibyl tool are not coherent among them
+        #so we have different fields for the date of the different posts
+        if (table_name == "questions"):
+            return "added_at"
+        elif (table_name == "answers"):
+            return "submitted_on"
+        elif (table_name == "comments"):
+            return "submitted_on"
+        # FIXME add exceptions here
+
+    def __get_author_field(self, table_name):
+        # the tables of the Sibyl tool are not coherent among them
+        #so we have different fields for the author ids of the different posts
+        if (table_name == "questions"):
+            return "author_identifier"
+        elif (table_name == "answers"):
+            return "user_identifier"
+        elif (table_name == "comments"):
+            return "user_identifier"
+        # FIXME add exceptions here
+
+
+    def get_top_senders(self, days, startdate, enddate, limit, type_post):
+        # FIXME: neither using unique identities nor filtering bots
+        from QAForums import QAForums
+        table_name = type_post
+        date_field = self.__get_date_field(table_name)
+        author_field = self.__get_author_field(table_name)
+        date_limit = ""
+        bots = QAForums.get_bots()
+
+        filter_bots = ''
+        for bot in bots:
+            filter_bots = filter_bots + " p.username<>'"+bot+"' and "
+
+        if (days != 0):
+            sql = "SELECT @maxdate:=max(%s) from %s limit 1" % (date_field, table_name)
+            res = self.ExecuteQuery(sql)
+            date_limit = " AND DATEDIFF(@maxdate, %s) < %s" % (date_field, str(days))
+            #end if
+
+        select = "SELECT %s AS id, p.username AS senders, COUNT(%s.id) AS sent" % \
+          (author_field, table_name)
+        fromtable = " FROM %s, people p" % (table_name)
+        filters = " WHERE %s %s = p.identifier AND %s >= %s AND %s < %s " % \
+          (filter_bots, author_field, date_field, startdate, date_field, enddate)
+
+        tail = " GROUP BY senders ORDER BY sent DESC, senders LIMIT %s" % (limit)
+        q = select + fromtable + filters + date_limit + tail
+        return(self.ExecuteQuery(q))
 
 class DownloadsDSQuery(DSQuery):
     """ Specific query builders for downloads """

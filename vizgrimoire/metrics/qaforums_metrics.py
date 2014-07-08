@@ -52,7 +52,6 @@ class Questions(Metrics):
         return self.db.get_sent(self.filters.period, self.filters.startdate, self.filters.enddate,
                                  self.filters.type_analysis, evolutionary, "questions")
 
-
 class Answers(Metrics):
     """Answers class"""
 
@@ -64,8 +63,6 @@ class Answers(Metrics):
     def __get_sql__(self, evolutionary):
         return self.db.get_sent(self.filters.period, self.filters.startdate, self.filters.enddate,
                                  self.filters.type_analysis, evolutionary, "answers")
-
-
 class Comments(Metrics):
     """Comments class"""
 
@@ -77,8 +74,6 @@ class Comments(Metrics):
     def __get_sql__(self, evolutionary):
         return self.db.get_sent(self.filters.period, self.filters.startdate, self.filters.enddate,
                                  self.filters.type_analysis, evolutionary, "comments")
-
-
 class QuestionSenders(Metrics):
     """QuestionsSenders class"""
 
@@ -90,7 +85,17 @@ class QuestionSenders(Metrics):
     def __get_sql__(self, evolutionary):
         return self.db.get_senders(self.filters.period, self.filters.startdate, self.filters.enddate,
                                  self.filters.type_analysis, evolutionary, "questions")
-       
+
+    def get_top_global(self, days = 0, metric_filters = 0):
+
+        if metric_filters == None:
+            metric_filters = self.filters
+
+        startdate = metric_filters.startdate
+        enddate = metric_filters.enddate
+        limit = metric_filters.npeople
+
+        return self.db.get_top_senders(days, startdate, enddate, limit, "questions")
 
 class AnswerSenders(Metrics):
     """AnswerSenders class"""
@@ -104,6 +109,16 @@ class AnswerSenders(Metrics):
         return self.db.get_senders(self.filters.period, self.filters.startdate, self.filters.enddate,
                                  self.filters.type_analysis, evolutionary, "answers")
 
+    def get_top_global(self, days = 0, metric_filters = 0):
+
+        if metric_filters == None:
+            metric_filters = self.filters
+
+        startdate = metric_filters.startdate
+        enddate = metric_filters.enddate
+        limit = metric_filters.npeople
+
+        return self.db.get_top_senders(days, startdate, enddate, limit, "answers")
 
 class CommentSenders(Metrics):
     """CommentSenders class"""
@@ -117,6 +132,15 @@ class CommentSenders(Metrics):
         return self.db.get_senders(self.filters.period, self.filters.startdate, self.filters.enddate,
                                  self.filters.type_analysis, evolutionary, "comments")
 
+    def get_top_global(self, days = 0, metric_filters = 0):
+        if metric_filters == None:
+            metric_filters = self.filters
+
+        startdate = metric_filters.startdate
+        enddate = metric_filters.enddate
+        limit = metric_filters.npeople
+
+        return self.db.get_top_senders(days, startdate, enddate, limit, "comments")
 
 class Participants(Metrics):
     """All participants included in this metric, those commenting, asking and answering"""
@@ -154,3 +178,54 @@ class Participants(Metrics):
                                    tables, filters, evolutionary)
         return query
 
+    def get_top_global(self, days = 0, metric_filters = 0):
+
+        if metric_filters == None:
+            metric_filters = self.filters
+
+        startdate = metric_filters.startdate
+        enddate = metric_filters.enddate
+        limit = metric_filters.npeople
+        filter_bots = self.get_bots_filter_sql(metric_filters)
+        if filter_bots != "": filter_bots += " AND "
+        date_limit = ""
+
+        # TODO: Last date to be reviewed using answers and comments
+        if (days != 0 ):
+            sql = "SELECT @maxdate:= max(last_activity_at) from questions limit 1"
+            res = self.db.ExecuteQuery(sql)
+            date_limit = " AND DATEDIFF(@maxdate, t.date)<"+str(days)
+
+        query = """
+             select pup.upeople_id as id, 
+                    p.username as name, 
+                    count(*) as messages_sent from 
+              (
+                 (select p.identifier as identifier, 
+                         q.added_at as date 
+                  from questions q, 
+                       people p 
+                  where q.author_identifier=p.identifier) 
+                 union 
+                 (select p.identifier as identifier, 
+                         a.submitted_on as date  
+                  from answers a, 
+                       people p 
+                  where a.user_identifier=p.identifier) 
+                 union 
+                 (select p.identifier as identifier, 
+                         c.submitted_on as date 
+                  from comments c, 
+                       people p 
+                  where c.user_identifier=p.identifier)) t,
+              people p,
+              people_upeople pup
+             where p.identifier = t.identifier and
+                   p.id = pup.people_id and 
+                   t.date >= %s and
+                   t.date < %s 
+                   %s
+             group by p.username order by count(*) desc limit %s
+             """ % (startdate, enddate, date_limit, limit)
+
+        return self.db.ExecuteQuery(query)
