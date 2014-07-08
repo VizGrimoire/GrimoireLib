@@ -149,7 +149,6 @@ class SCM(DataSource):
 
         if filter_ is None:
             top['authors.'] = mauthors.get_list(mfilter, 0)
-            # top['authors.'] = top_people(0, startdate, enddate, "author" , bots , npeople)
             top['authors.last month'] = mauthors.get_list(mfilter, 31)
             top['authors.last year'] = mauthors.get_list(mfilter, 365)
         elif filter_.get_name() in ["company","repository","project"]:
