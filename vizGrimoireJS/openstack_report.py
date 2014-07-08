@@ -22,7 +22,7 @@
 ##   Daniel Izquierdo-Cortazar <dizquierdo@bitergia.com>
 ##   Luis Cañas-Díaz <lcanas@bitergia.com>
 ##
-## python openstack_report.py -a dic_cvsanaly_openstack_2259 -d dic_bicho_openstack_gerrit_3392 -i dic_cvsanaly_openstack_2259 -r 2013-07-01,2013-10-01,2014-01-01,2014-04-01,2014-07-01 -c lcanas_bicho_openstack_1376
+##python openstack_report.py -a dic_cvsanaly_openstack_2259 -d dic_bicho_openstack_gerrit_3392 -i dic_cvsanaly_openstack_2259 -r 2013-07-01,2013-10-01,2014-01-01,2014-04-01,2014-07-01 -c lcanas_bicho_openstack_1376 -b lcanas_mlstats_openstack_1376
 
 import imp, inspect
 from optparse import OptionParser
@@ -238,6 +238,64 @@ def scr_report(dbcon, filters):
 
     return dataset
 
+def serialize_threads(threads, crowded=False):
+
+    l_threads = {}
+    l_threads['message_id'] = []
+    if crowded:
+        l_threads['people'] = []
+    l_threads['subject'] = []
+    l_threads['date'] = []
+    l_threads['initiator_name'] = []
+    l_threads['initiator_id'] = []
+    l_threads['url'] = []
+    for email_people in threads:
+        if crowded:
+            email = email_people[0]
+        else:
+            email = email_people
+        l_threads['message_id'].append(email.message_id)
+        if crowded:    
+            l_threads['people'].append(email_people[1])
+        l_threads['subject'].append(email.subject)
+        l_threads['date'].append(email.date.strftime("%Y-%m-%d"))
+        l_threads['initiator_name'].append(email.initiator_name)
+        l_threads['initiator_id'].append(email.initiator_id)
+        l_threads['url'].append(email.url)
+
+    return l_threads
+
+def mls_report(dbcon, filters):
+    
+    emails = mls.EmailsSent(dbcon, filters)
+    createJSON(emails.get_agg(), "./release/mls_emailssent.json")
+
+    senders = mls.EmailsSenders(dbcon, filters)
+    createJSON(senders.get_agg(), "./release/mls_emailssenders.json")
+
+    senders_init = mls.SendersInit(dbcon, filters)
+    createJSON(senders_init.get_agg(), "./release/mls_sendersinit.json")
+
+    dataset = {}
+    dataset["sent"] = emails.get_agg()["sent"]
+    dataset["senders"] = senders.get_agg()["senders"]
+    dataset["senders_init"] = senders_init.get_agg()["senders_init"]
+
+    from threads import Threads
+    SetDBChannel(dbcon.user, dbcon.password, dbcon.database)
+    threads = Threads(filters.startdate, filters.enddate, dbcon.identities_db)
+    top_longest_threads = threads.topLongestThread(10)
+    top_longest_threads = serialize_threads(top_longest_threads)
+    createJSON(top_longest_threads, "./release/mls_top_longest_threads.json")
+    createCSV(top_longest_threads, "./release/mls_top_longest_threads.csv")
+
+    top_crowded_threads = threads.topCrowdedThread(10)
+    top_crowded_threads = serialize_threads(top_crowded_threads, True)
+    createJSON(top_longest_threads, "./release/mls_top_crowded_threads.json")
+    createCSV(top_longest_threads, "./release/mls_top_crowded_threads.csv")
+
+    return dataset
+
 # Until we use VizPy we will create JSON python files with _py
 def createCSV(data, filepath, skip_fields = []):
     fd = open(filepath, "w")
@@ -308,9 +366,11 @@ if __name__ == '__main__':
     releases = build_releases(opts.releases)
 
 
+    # Projects analysis. This includes SCM, SCR and ITS.
     projects_list = projects(opts.dbuser, opts.dbpassword, opts.dbidentities)
 
     for project in projects_list:
+        break
         releases_data = {}
         for release in releases:
             releases_data[release] = {}
@@ -328,7 +388,7 @@ if __name__ == '__main__':
             dataset = its_report(its_dbcon, filters)
             releases_data[release]["its"] = dataset
 
-            #MLS Report
+            #SCR Report
             scr_dbcon = SCRQuery(opts.dbuser, opts.dbpassword, opts.dbreview, opts.dbidentities)
             dataset = scr_report(scr_dbcon, filters)
             releases_data[release]["scr"] = dataset
@@ -371,5 +431,33 @@ if __name__ == '__main__':
         barh_chart("Merged reviews " + project, labels, merged, "merged_reviews" + project_name)
         barh_chart("Abandoned reviews  " + project, labels, abandoned, "abandoned_reviews" + project_name)
 
+    # General info from MLS, IRC and QAForums.
+    emails = []
+    emails_senders =  []
+    emails_senders_init = []
+    releases_data = {}
+    for release in releases:
+        startdate = "'" + release[0] + "'"
+        enddate = "'" + release[1] + "'"
+        filters = MetricFilters("month", startdate, enddate, [], opts.npeople)
+
+        # MLS info
+        mls_dbcon = MLSQuery(opts.dbuser, opts.dbpassword, opts.dbmlstats, opts.dbidentities)
+        dataset = mls_report(mls_dbcon, filters)
+        emails.append(dataset["sent"])
+        emails_senders.append(dataset["senders"])
+        emails_senders_init.append(dataset["senders_init"])
+ 
+        # QAForums info - TBD
+        #qaforums_dbcon = QAForumsQuery(opts.dbuser, opts.dbpassword, opts.dbsibyl, opts.dbidentities)
+        #dataset = qaforums_report(qaforums_dbcon, filters)
+
+        # IRC info - TBD
+        #irc_dbcon = IRCQuery(opts.dbuser, opts.dbpassword, opts.dbirc, opts.dbidentities)
+        #dataset = irc_report(irc_dbcon, filters)
 
 
+    labels = ["2013-Q3", "2013-Q4", "2014-Q1", "2014-Q2"]
+    barh_chart("Emails sent", labels, emails, "emails")
+    barh_chart("People sending emails", labels, emails_senders, "emails_senders")
+    barh_chart("People initiating threads", labels, emails_senders_init, "emails_senders_init")
