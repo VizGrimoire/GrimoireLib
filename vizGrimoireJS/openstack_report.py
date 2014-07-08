@@ -238,30 +238,30 @@ def scr_report(dbcon, filters):
 
     return dataset
 
-def serialize_threads(threads, crowded=False):
+def serialize_threads(threads, crowded, threads_object):
 
     l_threads = {}
-    l_threads['message_id'] = []
     if crowded:
         l_threads['people'] = []
+    else:
+        l_threads['len'] = []
     l_threads['subject'] = []
     l_threads['date'] = []
-    l_threads['initiator_name'] = []
-    l_threads['initiator_id'] = []
-    l_threads['url'] = []
+    l_threads['initiator'] = []
     for email_people in threads:
         if crowded:
             email = email_people[0]
         else:
             email = email_people
-        l_threads['message_id'].append(email.message_id)
         if crowded:    
             l_threads['people'].append(email_people[1])
-        l_threads['subject'].append(email.subject)
+        else:
+            l_threads['len'].append(threads_object.lenThread(email.message_id))
+        subject = email.subject.replace(",", " ")
+        subject = subject.replace("\n", " ")
+        l_threads['subject'].append(subject)
         l_threads['date'].append(email.date.strftime("%Y-%m-%d"))
-        l_threads['initiator_name'].append(email.initiator_name)
-        l_threads['initiator_id'].append(email.initiator_id)
-        l_threads['url'].append(email.url)
+        l_threads['initiator'].append(email.initiator_name.replace(",", " "))
 
     return l_threads
 
@@ -285,14 +285,14 @@ def mls_report(dbcon, filters):
     SetDBChannel(dbcon.user, dbcon.password, dbcon.database)
     threads = Threads(filters.startdate, filters.enddate, dbcon.identities_db)
     top_longest_threads = threads.topLongestThread(10)
-    top_longest_threads = serialize_threads(top_longest_threads)
+    top_longest_threads = serialize_threads(top_longest_threads, False, threads)
     createJSON(top_longest_threads, "./release/mls_top_longest_threads.json")
     createCSV(top_longest_threads, "./release/mls_top_longest_threads.csv")
 
     top_crowded_threads = threads.topCrowdedThread(10)
-    top_crowded_threads = serialize_threads(top_crowded_threads, True)
-    createJSON(top_longest_threads, "./release/mls_top_crowded_threads.json")
-    createCSV(top_longest_threads, "./release/mls_top_crowded_threads.csv")
+    top_crowded_threads = serialize_threads(top_crowded_threads, True, threads)
+    createJSON(top_crowded_threads, "./release/mls_top_crowded_threads.json")
+    createCSV(top_crowded_threads, "./release/mls_top_crowded_threads.csv")
 
     return dataset
 
