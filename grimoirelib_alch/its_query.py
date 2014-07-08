@@ -69,14 +69,30 @@ def table_factory (bases, name, tablename, schemaname, columns = {}):
     return table_class
 
 
-
-
 class ITSDatabase():
+    """Class for dealing with ITS (Bicho) databases.
 
-    def __init__(self, schema, schema_id):
+    """
+
+    def __init__(self, database, schema, schema_id):
+        """Instatiation.
+
+        Parameters
+        ----------
+
+        database: string
+           SQLAlchemy url for the database to be used, such as
+           mysql://user:passwd@host:port/
+        schema: string
+           Schema name for the ITS data
+        schema_id: string
+           Schema name for the unique ids data
+        
+        """
 
         global Changes, Issues, People, PeopleUPeople, Trackers
         global UPeople
+        self.database = database
         Base = declarative_base(cls=DeferredReflection)
         self.Base = Base
         Changes = table_factory (bases = (Base,), name = 'Changes',
@@ -110,20 +126,23 @@ class ITSDatabase():
                                 tablename = 'upeople',
                                 schemaname = schema_id)
 
-    def build_session(self, database, echo = False):
+    def build_session(self, echo = False):
         """Create a session with the database
+
+        Instantiatates an engine and a session to work with it.
+
+        Parameters
+        ----------
         
-        - database: string, url of the database, in the format
-           mysql://user:passwd@host:port/database
-        - echo: boolean, output SQL to stdout or not
+        echo: boolean
+           Output SQL to stdout or not
         
-        Instantiatates an engine and a session to work with it
         """
         
         # To set Unicode interaction with MySQL
         # http://docs.sqlalchemy.org/en/rel_0_9/dialects/mysql.html#unicode
         trailer = "?charset=utf8&use_unicode=0"
-        database = database + trailer
+        database = self.database + trailer
         engine = create_engine(database,
                                convert_unicode=True, encoding='utf8',
                                echo=echo)
@@ -426,11 +445,10 @@ if __name__ == "__main__":
     # http://stackoverflow.com/questions/492483/setting-the-correct-encoding-when-piping-stdout-in-python
     sys.stdout = codecs.getwriter('utf8')(sys.stdout)
 
-    ITSDB = ITSDatabase(schema = 'vizgrimoire_bicho',
+    ITSDB = ITSDatabase(database = 'mysql://jgb:XXX@localhost/',
+                        schema = 'vizgrimoire_bicho',
                         schema_id = 'vizgrimoire_cvsanaly')
-    session = ITSDB.build_session(
-        database = 'mysql://jgb:XXX@localhost/',
-        echo = False)
+    session = ITSDB.build_session(echo = False)
 
     #---------------------------------
     print_banner ("List of openers")
