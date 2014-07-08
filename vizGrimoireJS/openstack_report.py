@@ -22,7 +22,7 @@
 ##   Daniel Izquierdo-Cortazar <dizquierdo@bitergia.com>
 ##   Luis Cañas-Díaz <lcanas@bitergia.com>
 ##
-##python openstack_report.py -a dic_cvsanaly_openstack_2259 -d dic_bicho_openstack_gerrit_3392 -i dic_cvsanaly_openstack_2259 -r 2013-07-01,2013-10-01,2014-01-01,2014-04-01,2014-07-01 -c lcanas_bicho_openstack_1376 -b lcanas_mlstats_openstack_1376
+## python openstack_report.py -a dic_cvsanaly_openstack_2259 -d dic_bicho_openstack_gerrit_3392 -i dic_cvsanaly_openstack_2259 -r 2013-07-01,2013-10-01,2014-01-01,2014-04-01,2014-07-01 -c lcanas_bicho_openstack_1376 -b lcanas_mlstats_openstack_1376 -f dic_sibyl_openstack_3194_new
 
 import imp, inspect
 from optparse import OptionParser
@@ -296,6 +296,52 @@ def mls_report(dbcon, filters):
 
     return dataset
 
+def qaforums_report(dbcon, filters):
+    questions = qa.Questions(dbcon, filters)
+    createJSON(questions.get_agg(), "./release/qaforums_questions.json")
+
+    answers = qa.Answers(dbcon, filters)
+    createJSON(answers.get_agg(), "./release/qaforums_answers.json")
+
+    comments = qa.Comments(dbcon, filters)
+    createJSON(comments.get_agg(), "./release/qaforums_comments.json")
+
+    q_senders = qa.QuestionSenders(dbcon, filters)
+    createJSON(q_senders.get_agg(), "./release/qaforums_question_senders.json")
+
+    dataset = {}
+    dataset["questions"] = questions.get_agg()["qsent"]
+    dataset["answers"] = answers.get_agg()["asent"]
+    dataset["comments"] = comments.get_agg()["csent"]
+    dataset["qsenders"] = q_senders.get_agg()["qsenders"]
+
+    import top_questions_qaforums as top
+    tops = top.TopQuestions(dbcon, filters)
+    commented = tops.top_commented()
+    commented["qid"] = commented.pop("question_identifier")
+    # Taking the last part of the URL
+    #commented["site"] = commented.pop("url").split("/")[-2:][1:]
+    commented["site"] = commented.pop("url")
+    createJSON(commented, "./release/qa_top_questions_commented.json")
+    createCSV(commented, "./release/qa_top_questions_commented.csv")
+
+    visited = tops.top_visited()
+    visited["qid"] = visited.pop("question_identifier")
+    visited["site"] = visited.pop("url")
+    createJSON(visited, "./release/qa_top_questions_visited.json")
+    createCSV(visited, "./release/qa_top_questions_visited.csv")
+
+    crowded = tops.top_crowded()
+    crowded["qid"] = crowded.pop("question_identifier")
+    createJSON(crowded, "./release/qa_top_questions_crowded.json")
+    createCSV(crowded, "./release/qa_top_questions_crowded.csv")
+
+    filters.npeople = 15
+    createJSON(tops.top_tags(), "./release/qa_top_tags.json")
+    createCSV(tops.top_tags(), "./release/qa_top_tags.csv")
+    
+    return dataset
+
 # Until we use VizPy we will create JSON python files with _py
 def createCSV(data, filepath, skip_fields = []):
     fd = open(filepath, "w")
@@ -435,6 +481,10 @@ if __name__ == '__main__':
     emails = []
     emails_senders =  []
     emails_senders_init = []
+    questions = []
+    answers = []
+    comments = []
+    qsenders = []
     releases_data = {}
     for release in releases:
         startdate = "'" + release[0] + "'"
@@ -449,8 +499,12 @@ if __name__ == '__main__':
         emails_senders_init.append(dataset["senders_init"])
  
         # QAForums info - TBD
-        #qaforums_dbcon = QAForumsQuery(opts.dbuser, opts.dbpassword, opts.dbsibyl, opts.dbidentities)
-        #dataset = qaforums_report(qaforums_dbcon, filters)
+        qaforums_dbcon = QAForumsQuery(opts.dbuser, opts.dbpassword, opts.dbqaforums, opts.dbidentities)
+        dataset = qaforums_report(qaforums_dbcon, filters)
+        questions.append(dataset["questions"])
+        answers.append(dataset["answers"])
+        comments.append(dataset["comments"])
+        qsenders.append(dataset["qsenders"])
 
         # IRC info - TBD
         #irc_dbcon = IRCQuery(opts.dbuser, opts.dbpassword, opts.dbirc, opts.dbidentities)
@@ -461,3 +515,8 @@ if __name__ == '__main__':
     barh_chart("Emails sent", labels, emails, "emails")
     barh_chart("People sending emails", labels, emails_senders, "emails_senders")
     barh_chart("People initiating threads", labels, emails_senders_init, "emails_senders_init")
+    barh_chart("Questions", labels, questions, "questions")
+    barh_chart("Answers", labels, answers, "answers")
+    barh_chart("Comments", labels, comments, "comments")
+    barh_chart("People asking Questions", labels, qsenders, "question_senders")
+
