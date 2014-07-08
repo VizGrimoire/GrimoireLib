@@ -130,17 +130,25 @@ class ITS(DataSource):
         bots = ITS.get_bots()
         closed_condition =  ITS._get_closed_condition()
         top = None
+        mopeners = DataSource.get_metrics("openers", ITS)
+        mclosers = DataSource.get_metrics("closers", ITS)
+        period = None
+        type_analysis = None
+        if filter_ is not None:
+            type_analysis = filter_.get_type_analysis()
+        mfilter = MetricFilters(period, startdate, enddate, type_analysis, npeople)
+
 
         if filter_ is None:
             top_closers_data = {}
-            top_closers_data['closers.']=GetTopClosers(0, startdate, enddate,identities_db, bots, closed_condition, npeople)
-            top_closers_data['closers.last year']=GetTopClosers(365, startdate, enddate,identities_db, bots, closed_condition, npeople)
-            top_closers_data['closers.last month']=GetTopClosers(31, startdate, enddate,identities_db, bots, closed_condition, npeople)
+            top_closers_data['closers.'] =  mclosers.get_list(mfilter, 0)
+            top_closers_data['closers.last month']= mclosers.get_list(mfilter, 31)
+            top_closers_data['closers.last year']= mclosers.get_list(mfilter, 365)
 
             top_openers_data = {}
-            top_openers_data['openers.']=GetTopOpeners(0, startdate, enddate,identities_db, bots, closed_condition, npeople)
-            top_openers_data['openers.last year']=GetTopOpeners(365, startdate, enddate,identities_db, bots, closed_condition, npeople)
-            top_openers_data['openers.last month']=GetTopOpeners(31, startdate, enddate,identities_db, bots, closed_condition, npeople)
+            top_openers_data['openers.'] = mopeners.get_list(mfilter, 0)
+            top_openers_data['openers.last month'] = mopeners.get_list(mfilter, 31)
+            top_openers_data['openers.last year'] = mopeners.get_list(mfilter, 365)
 
             top = dict(top_closers_data.items() + top_openers_data.items())
 
@@ -865,43 +873,6 @@ def GetCompanyTopClosers (company_name, startdate, enddate,
     data = ExecuteQuery(q)
     return (data)
 
-def GetTopClosers (days, startdate, enddate,
-        identities_db, bots, closed_condition, limit) :
-
-    filter_bots = ''
-    for bot in bots:
-        filter_bots = filter_bots + " up.identifier<>'"+bot+"' and "
-
-    tables = GetTablesOwnUniqueIdsITS()
-    filters = GetFiltersOwnUniqueIdsITS ()
-
-    dtables = dfilters = ""
-    if (days > 0):
-        dtables = ", (SELECT MAX(changed_on) as last_date from changes) t "
-        dfilters = " AND DATEDIFF (last_date, changed_on) < %s " % (days)
-
-    q = "SELECT up.id as id, up.identifier as closers, "+\
-        "       count(distinct(c.id)) as closed "+\
-        "FROM  "+tables+\
-        ",     "+identities_db+".upeople up "+ dtables +\
-        "WHERE "+filter_bots + filters + " and "+\
-        "      c.changed_by = pup.people_id and "+\
-        "      pup.upeople_id = up.id and "+\
-        "      c.changed_on >= "+ startdate+ " and "+\
-        "      c.changed_on < "+ enddate+ " and " +\
-        "      "+closed_condition + " " + dfilters+ " "+\
-        "GROUP BY up.identifier "+\
-        "ORDER BY closed desc, closers "+\
-        "LIMIT "+ limit
-
-    data = ExecuteQuery(q)
-
-    if not isinstance(data['id'], list):
-        data = {item: [data[item]] for item in data}
-
-    return (data)
-
-
 def GetDomainTopClosers (domain_name, startdate, enddate,
         identities_db, filter, closed_condition, limit) :
     affiliations = ""
@@ -924,36 +895,6 @@ def GetDomainTopClosers (domain_name, startdate, enddate,
     data = ExecuteQuery(q)
     return (data)
 
-
-def GetTopOpeners (days, startdate, enddate,
-        identities_db, bots, closed_condition, limit) :
-
-    filter_bots = ''
-    for bot in bots:
-        filter_bots = filter_bots + " up.identifier<>'"+bot+"' and "
-
-    tables = GetTablesOwnUniqueIdsITS("issues")
-    filters = GetFiltersOwnUniqueIdsITS ("issues")
-
-
-    dtables = dfilters = ""
-    if (days > 0):
-        dtables = ", (SELECT MAX(submitted_on) as last_date from issues) t "
-        dfilters = " AND DATEDIFF (last_date, submitted_on) < %s " % (days)
-
-    q = "SELECT up.id as id, up.identifier as openers, "+\
-        "    count(distinct(i.id)) as opened "+\
-        "FROM " +tables +\
-        " ,   "+identities_db+".upeople up "+ dtables + \
-        "WHERE "+filter_bots + filters +" and "+\
-        "    pup.upeople_id = up.id and "+\
-        "    i.submitted_on >= "+ startdate+ " and "+\
-        "    i.submitted_on < "+ enddate + dfilters +\
-        "    GROUP BY up.identifier "+\
-        "    ORDER BY opened desc, openers "+\
-        "    LIMIT " + limit
-    data = ExecuteQuery(q)
-    return (data)
 
 #################
 # People information, to be refactored

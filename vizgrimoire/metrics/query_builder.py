@@ -479,6 +479,17 @@ class ITSQuery(DSQuery):
 
         return (q)
 
+    # TODO: use this queries en GetSQLReportWhere and From
+    def GetTablesOwnUniqueIds (self, table='') :
+        tables = 'changes c, people_upeople pup'
+        if (table == "issues"): tables = 'issues i, people_upeople pup'
+        return (tables)
+
+    def GetFiltersOwnUniqueIds (self, table='') :
+        filters = 'pup.people_id = c.changed_by'
+        if (table == "issues"): filters = 'pup.people_id = i.submitted_by'
+        return (filters)
+
 class MLSQuery(DSQuery):
     """ Specific query builders for mailing lists data source """
     def GetSQLRepositoriesFrom (self):

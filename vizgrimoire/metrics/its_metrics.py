@@ -103,6 +103,71 @@ class Openers(Metrics):
                                fields, tables, filters, evolutionary)
         return q
 
+
+    def get_bots_filter_sql (self, metric_filters = None):
+        bots = ITS.get_bots()
+        if metric_filters is not None:
+            if metric_filters.people_out is not None:
+                bots = metric_filters.people_out
+
+        filter_bots = ''
+        for bot in bots:
+            filter_bots = filter_bots + " u.identifier<>'"+bot+"' AND "
+        if filter_bots != '': filter_bots = filter_bots[:-4]
+
+        return filter_bots
+
+    def get_top(self, days = 0, metric_filters = None):
+
+        if metric_filters == None:
+            metric_filters = self.filters
+
+        tables = self.db.GetTablesOwnUniqueIds("issues")
+        filters = self.db.GetFiltersOwnUniqueIds("issues")
+
+        startdate = metric_filters.startdate
+        enddate = metric_filters.enddate
+        limit = metric_filters.npeople
+        filter_bots = self.get_bots_filter_sql(metric_filters)
+        if filter_bots != "": filter_bots += " AND "
+
+        dtables = dfilters = ""
+        if (days > 0):
+            dtables = ", (SELECT MAX(submitted_on) as last_date from issues) t "
+            dfilters = " AND DATEDIFF (last_date, submitted_on) < %s " % (days)
+
+        q = "SELECT u.id as id, u.identifier as openers, "+\
+            "    count(distinct(i.id)) as opened "+\
+            "FROM " +tables +\
+            " ,   "+self.db.identities_db+".upeople u "+ dtables + \
+            "WHERE "+filter_bots + filters +" and "+\
+            "    pup.upeople_id = u.id and "+\
+            "    i.submitted_on >= "+ startdate+ " and "+\
+            "    i.submitted_on < "+ enddate + dfilters +\
+            "    GROUP BY u.identifier "+\
+            "    ORDER BY opened desc, openers "+\
+            "    LIMIT " + str(limit)
+
+        data = self.db.ExecuteQuery(q)
+        return (data)
+
+
+    def get_list(self, metric_filters = None, days = 0):
+        alist = {}
+
+        if metric_filters is not None:
+            metric_filters_orig = self.filters
+            self.filters = metric_filters
+
+        if metric_filters.type_analysis and metric_filters.type_analysis is not None:
+            if metric_filters.type_analysis[0] == "repository":
+                alist = self.get_top_repository()
+        else:
+            alist = self.get_top(days)
+
+        if metric_filters is not None: self.filters = metric_filters_orig
+        return alist
+
     def __get_sql__(self, evolutionary):
         if (self.filters.type_analysis is not None and (self.filters.type_analysis[0] in  ["repository","project"])):
             return self.__get_sql_trk_prj__(evolutionary)
@@ -141,6 +206,75 @@ class Closers(Metrics):
     desc = "Number of persons closing tickets"
     data_source = ITS
     envision = {"gtype" : "whiskers"}
+
+    def get_bots_filter_sql (self, metric_filters = None):
+        bots = ITS.get_bots()
+        if metric_filters is not None:
+            if metric_filters.people_out is not None:
+                bots = metric_filters.people_out
+
+        filter_bots = ''
+        for bot in bots:
+            filter_bots = filter_bots + " u.identifier<>'"+bot+"' AND "
+        if filter_bots != '': filter_bots = filter_bots[:-4]
+
+        return filter_bots
+
+    def get_top(self, days = 0, metric_filters = None):
+        if metric_filters == None:
+            metric_filters = self.filters
+
+        tables = self.db.GetTablesOwnUniqueIds("changes")
+        filters = self.db.GetFiltersOwnUniqueIds("changes")
+
+        startdate = metric_filters.startdate
+        enddate = metric_filters.enddate
+        limit = metric_filters.npeople
+        filter_bots = self.get_bots_filter_sql(metric_filters)
+        if filter_bots != "": filter_bots += " AND "
+        closed_condition =  ITS._get_closed_condition()
+
+        dtables = dfilters = ""
+        if (days > 0):
+            dtables = ", (SELECT MAX(changed_on) as last_date from changes) t "
+            dfilters = " AND DATEDIFF (last_date, changed_on) < %s " % (days)
+
+        q = "SELECT u.id as id, u.identifier as closers, "+\
+            "       count(distinct(c.id)) as closed "+\
+            "FROM  "+tables+\
+            ",     "+self.db.identities_db+".upeople u "+ dtables +\
+            "WHERE "+filter_bots + filters + " and "+\
+            "      c.changed_by = pup.people_id and "+\
+            "      pup.upeople_id = u.id and "+\
+            "      c.changed_on >= "+ startdate+ " and "+\
+            "      c.changed_on < "+ enddate+ " and " +\
+            "      " + closed_condition + " " + dfilters+ " "+\
+            "GROUP BY u.identifier "+\
+            "ORDER BY closed desc, closers "+\
+            "LIMIT "+ str(limit)
+
+        data = self.db.ExecuteQuery(q)
+
+        if not isinstance(data['id'], list):
+            data = {item: [data[item]] for item in data}
+
+        return (data)
+
+    def get_list(self, metric_filters = None, days = 0):
+        alist = {}
+
+        if metric_filters is not None:
+            metric_filters_orig = self.filters
+            self.filters = metric_filters
+
+        if metric_filters.type_analysis and metric_filters.type_analysis is not None:
+            if metric_filters.type_analysis[0] == "repository":
+                alist = self.get_top_repository()
+        else:
+            alist = self.get_top(days)
+
+        if metric_filters is not None: self.filters = metric_filters_orig
+        return alist
 
     def __get_sql__(self, evolutionary):
         """ Implemented using Changers (changed metric should exists first) """
