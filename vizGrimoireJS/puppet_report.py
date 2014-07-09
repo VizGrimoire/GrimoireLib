@@ -219,31 +219,31 @@ def qaforums_report(dbcon, filters):
     createCSV(ot_data["down_reg"], "./release/qaforums_relegated_to_regular-longterm.csv")
 
     # Top People
+    days = 90 # Per quarter analysis
     mcsenders = qa.CommentSenders(dbcon, filters)
-    top_csenders = mcsenders.get_list(filters, 90)
+    top_csenders = mcsenders.get_list(filters, days)
     createJSON(top_csenders, "./release/qaforums_top_csenders.json")
     createCSV(top_csenders, "./release/qaforums_top_csenders.csv",['id'])
 
     masenders = qa.AnswerSenders(dbcon, filters)
-    top_asenders = masenders.get_list(filters, 90)
+    top_asenders = masenders.get_list(filters, days)
     createJSON(top_asenders, "./release/qaforums_top_asenders.json")
     createCSV(top_asenders, "./release/qaforums_top_asenders.csv",['id'])
 
     mqsenders = qa.QuestionSenders(dbcon, filters)
-    top_qsenders = mqsenders.get_list(filters, 90)
+    top_qsenders = mqsenders.get_list(filters, days)
     createJSON(top_csenders, "./release/qaforums_top_qsenders.json")
     createCSV(top_csenders, "./release/qaforums_top_qsenders.csv",['id'])
 
     # Top participants
     mparticipants = qa.Participants(dbcon, filters)
-    days = 0 # 0 or 90?
     top_participants = mparticipants.get_list(filters, days)
     createJSON(top_participants, "./release/qaforums_top_participants.json")
     createCSV(top_participants, "./release/qaforums_top_participants.csv",['id'])
 
     filters_ext = filters
-    filters_ext.npeople = 10000
-    data = mparticipants.get_list(filters_ext, 0)
+    filters_ext.npeople = 10000 # all participants
+    data = mparticipants.get_list(filters_ext, days)
     names = data["name"]
     num_participants = {}
     num_participants["nparticipants"] = len(names)
