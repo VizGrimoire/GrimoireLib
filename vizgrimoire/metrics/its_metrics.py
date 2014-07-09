@@ -184,6 +184,7 @@ class Closers(Metrics):
         filter_bots = self.get_bots_filter_sql(metric_filters)
         closed_condition =  ITS._get_closed_condition()
 
+        if filter_bots != '': filter_bots = " AND " + filter_bots
 
         q = "SELECT u.id as id, u.identifier as closers, "+\
             "       COUNT(DISTINCT(c.id)) as closed "+\
@@ -195,7 +196,7 @@ class Closers(Metrics):
             "      AND upc.company_id = com.id "+\
             "      AND com.name = "+ company_name +" "+\
             "      AND changed_on >= "+startdate+" AND changed_on < "+enddate+\
-            "      AND " + filter_bots +\
+            "      " + filter_bots +\
             " GROUP BY u.identifier ORDER BY closed DESC, closers LIMIT " + str(limit)
 
         data = self.db.ExecuteQuery(q)
@@ -208,6 +209,7 @@ class Closers(Metrics):
         limit = metric_filters.npeople
         filter_bots = self.get_bots_filter_sql(metric_filters)
         closed_condition =  ITS._get_closed_condition()
+        if filter_bots != '': filter_bots = " AND " + filter_bots
 
         q = "SELECT u.id as id, u.identifier as closers, "+\
             "COUNT(DISTINCT(c.id)) as closed "+\
@@ -219,7 +221,7 @@ class Closers(Metrics):
             "      AND upd.domain_id = dom.id "+\
             "      AND dom.name = "+domain_name+" "+\
             "      AND changed_on >= "+startdate+" AND changed_on < " +enddate +\
-            "      AND " + filter_bots +\
+            "      " + filter_bots +\
             " GROUP BY u.identifier ORDER BY closed DESC, closers LIMIT " + str(limit)
 
         data = self.db.ExecuteQuery(q)
@@ -232,6 +234,7 @@ class Closers(Metrics):
         limit = metric_filters.npeople
         filter_bots = self.get_bots_filter_sql(metric_filters)
         closed_condition =  ITS._get_closed_condition()
+        if filter_bots != '': filter_bots = " AND " + filter_bots
 
         q = "SELECT u.id as id, u.identifier as closers, "+\
             "COUNT(DISTINCT(i.id)) as closed "+\
@@ -244,7 +247,7 @@ class Closers(Metrics):
             "      AND i.tracker_id = t.id "+\
             "      AND t.url = "+repo_name+" "+\
             "      AND changed_on >= "+startdate+" AND changed_on < " +enddate +\
-            "      AND " + filter_bots +\
+            "      " + filter_bots +\
             " GROUP BY u.identifier ORDER BY closed DESC, closers LIMIT " + str(limit)
 
         data = self.db.ExecuteQuery(q)
