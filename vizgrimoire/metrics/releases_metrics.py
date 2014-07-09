@@ -93,7 +93,7 @@ class Authors(Metrics):
                                tables, filters, evolutionary)
         return(q)
 
-    def get_top_global (self, days = 0, metric_filters = None):
+    def _get_top_global (self, days = 0, metric_filters = None):
         if metric_filters == None:
             metric_filters = self.filters
 

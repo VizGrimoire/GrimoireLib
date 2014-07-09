@@ -75,7 +75,7 @@ class Packages(Metrics):
                                       filters, evolutionary)
         return query
 
-    def get_top_global (self, days = 0, metric_filters = None):
+    def _get_top_global (self, days = 0, metric_filters = None):
         if metric_filters == None:
             metric_filters = self.filters
 
@@ -121,7 +121,7 @@ class IPs(Metrics):
     desc = "Number of IPs downloading packages """
     data_source = DownloadsDS
 
-    def get_top_global (self, days = 0, metric_filters = None):
+    def _get_top_global (self, days = 0, metric_filters = None):
         if metric_filters == None:
             metric_filters = self.filters
 

@@ -411,7 +411,7 @@ class Reviewers(Metrics):
     action = "reviews"
 
     # Not sure if this top is right
-    def get_top_global (self, days = 0, metric_filters = None):
+    def _get_top_global (self, days = 0, metric_filters = None):
         if metric_filters == None:
             metric_filters = self.filters
 
@@ -461,7 +461,7 @@ class Closers(Metrics):
     data_source = SCR
     action = "closed"
 
-    def get_top_global (self, days = 0, metric_filters = None):
+    def _get_top_global (self, days = 0, metric_filters = None):
 
         if metric_filters == None:
             metric_filters = self.filters
@@ -557,7 +557,7 @@ class Submitters(Metrics):
         else:
             return self.__get_sql_default__(evolutionary)
 
-    def get_top_global (self, days = 0, metric_filters = None):
+    def _get_top_global (self, days = 0, metric_filters = None):
         if metric_filters == None:
             metric_filters = self.filters
         startdate = metric_filters.startdate
