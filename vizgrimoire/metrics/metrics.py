@@ -132,7 +132,7 @@ class Metrics(object):
             metric_filters_orig = self.filters
             self.filters = metric_filters
 
-        mlist = self.get_top(metric_filters, days)
+        mlist = self.get_top(self.filters, days)
 
         if metric_filters is not None: self.filters = metric_filters_orig
 
