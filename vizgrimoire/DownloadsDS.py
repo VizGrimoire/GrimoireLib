@@ -73,6 +73,11 @@ class DownloadsDS(DataSource):
             data = dict(data.items() + mvalue.items())
 
             if evol is False:
+                init_date = DownloadsDS.get_date_init(startdate, enddate, None, type_analysis)
+                end_date = DownloadsDS.get_date_end(startdate, enddate, None, type_analysis)
+
+                data = dict(data.items() + init_date.items() + end_date.items())
+
                 # Tendencies
                 metrics_trends = DownloadsDS.get_metrics_core_trends()
 
@@ -86,6 +91,16 @@ class DownloadsDS(DataSource):
         else:
             studies = DataSource.get_studies_data(DownloadsDS, period, startdate, enddate, evol)
         return dict(data.items()+studies.items())
+
+    @staticmethod
+    def get_date_init(startdate = None, enddate = None, identities_db = None, type_analysis = None):
+        q = " SELECT DATE_FORMAT (MIN(date), '%Y-%m-%d') as first_date FROM downloads"
+        return(ExecuteQuery(q))
+
+    @staticmethod
+    def get_date_end(startdate = None, enddate = None, identities_db = None, type_analysis = None):
+        q = " SELECT DATE_FORMAT (MAX(date), '%Y-%m-%d') as last_date FROM downloads"
+        return(ExecuteQuery(q))
 
     @staticmethod
     def get_evolutionary_data (period, startdate, enddate, i_db, filter_ = None):
@@ -109,10 +124,22 @@ class DownloadsDS(DataSource):
 
     @staticmethod
     def get_top_data (startdate, enddate, identities_db, filter_ = None, npeople = None):
-        top20 = {}
-        top20['ips.'] = TopIPs(startdate, enddate, 20)
-        top20['packages.'] = TopPackages(startdate, enddate, 20)
-        return top20
+        top = {}
+        mips = DataSource.get_metrics("ips", DownloadsDS)
+        mpackages = DataSource.get_metrics("packages", DownloadsDS)
+        period = None
+        type_analysis = None
+        if filter_ is not None:
+            type_analysis = filter_.get_type_analysis()
+        mfilter = MetricFilters(period, startdate, enddate, type_analysis, npeople)
+
+        if filter_ is None:
+            top['ips.'] = mips.get_list(mfilter, 0)
+            top['packages.'] = mpackages.get_list(mfilter, 0)
+        else:
+            logging.info("DownloadsDS does not support yet top for filters.")
+
+        return top
 
 
     @staticmethod
@@ -166,29 +193,3 @@ class DownloadsDS(DataSource):
     @staticmethod
     def get_metrics_core_trends():
         return ['downloads','packages']
-
-def TopIPs(startdate, enddate, numTop):
-    # Top IPs downloading packages in a given period
-    query = """
-            select ip as ips, count(*) as downloads 
-            from downloads
-            where date >= %s and
-                  date < %s
-            group by ips
-            order by downloads desc
-            limit %s
-            """ % (startdate, enddate, str(numTop))
-    return ExecuteQuery(query)
-
-def TopPackages(startdate, enddate, numTop):
-    # Top Packages bein downloaded in a given period
-    query = """
-            select package as packages, count(*) as downloads
-            from downloads
-            where date >= %s and
-                  date < %s
-            group by packages
-            order by downloads desc
-            limit %s
-            """ % (startdate, enddate, str(numTop))
-    return ExecuteQuery(query)

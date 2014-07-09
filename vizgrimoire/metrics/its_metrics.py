@@ -103,6 +103,40 @@ class Openers(Metrics):
                                fields, tables, filters, evolutionary)
         return q
 
+    def get_top_global(self, days = 0, metric_filters = None):
+
+        if metric_filters == None:
+            metric_filters = self.filters
+
+        tables = self.db.GetTablesOwnUniqueIds("issues")
+        filters = self.db.GetFiltersOwnUniqueIds("issues")
+
+        startdate = metric_filters.startdate
+        enddate = metric_filters.enddate
+        limit = metric_filters.npeople
+        filter_bots = self.get_bots_filter_sql(metric_filters)
+        if filter_bots != "": filter_bots += " AND "
+
+        dtables = dfilters = ""
+        if (days > 0):
+            dtables = ", (SELECT MAX(submitted_on) as last_date from issues) t "
+            dfilters = " AND DATEDIFF (last_date, submitted_on) < %s " % (days)
+
+        q = "SELECT u.id as id, u.identifier as openers, "+\
+            "    count(distinct(i.id)) as opened "+\
+            "FROM " +tables +\
+            " ,   "+self.db.identities_db+".upeople u "+ dtables + \
+            "WHERE "+filter_bots + filters +" and "+\
+            "    pup.upeople_id = u.id and "+\
+            "    i.submitted_on >= "+ startdate+ " and "+\
+            "    i.submitted_on < "+ enddate + dfilters +\
+            "    GROUP BY u.identifier "+\
+            "    ORDER BY opened desc, openers "+\
+            "    LIMIT " + str(limit)
+
+        data = self.db.ExecuteQuery(q)
+        return (data)
+
     def __get_sql__(self, evolutionary):
         if (self.filters.type_analysis is not None and (self.filters.type_analysis[0] in  ["repository","project"])):
             return self.__get_sql_trk_prj__(evolutionary)
@@ -122,10 +156,15 @@ class Closed(Metrics):
         """ Implemented using Changed """
         close = True
         changed = ITS.get_metrics("changed", ITS)
-        cfilters = changed.filters
-        changed.filters = self.filters
-        q = changed.__get_sql__(evolutionary, close)
-        changed.filters = cfilters
+        if changed is None:
+            # We need to create changers metric
+            changed = Changed(self.db, self.filters)
+            q = changed.__get_sql__(evolutionary, close)
+        else:
+            cfilters = changed.filters
+            changed.filters = self.filters
+            q = changed.__get_sql__(evolutionary, close)
+            changed.filters = cfilters
         return q
 
 #closers
@@ -137,14 +176,157 @@ class Closers(Metrics):
     data_source = ITS
     envision = {"gtype" : "whiskers"}
 
+    def get_top_company (self, metric_filters) :
+        startdate = metric_filters.startdate
+        enddate = metric_filters.enddate
+        company_name = metric_filters.type_analysis[1]
+        limit = metric_filters.npeople
+        filter_bots = self.get_bots_filter_sql(metric_filters)
+        closed_condition =  ITS._get_closed_condition()
+
+        if filter_bots != '': filter_bots = " AND " + filter_bots
+
+        q = "SELECT u.id as id, u.identifier as closers, "+\
+            "       COUNT(DISTINCT(c.id)) as closed "+\
+            "FROM "+self.db.GetTablesCompanies(self.db.identities_db)+", "+\
+            "     "+self.db.identities_db+".companies com, "+\
+            "     "+self.db.identities_db+".upeople u "+\
+            "WHERE "+self.db.GetFiltersCompanies()+" AND " + closed_condition + " "+\
+            "      AND pup.upeople_id = u.id "+\
+            "      AND upc.company_id = com.id "+\
+            "      AND com.name = "+ company_name +" "+\
+            "      AND changed_on >= "+startdate+" AND changed_on < "+enddate+\
+            "      " + filter_bots +\
+            " GROUP BY u.identifier ORDER BY closed DESC, closers LIMIT " + str(limit)
+
+        data = self.db.ExecuteQuery(q)
+        return (data)
+
+    def get_top_domain (self, metric_filters):
+        startdate = metric_filters.startdate
+        enddate = metric_filters.enddate
+        domain_name = metric_filters.type_analysis[1]
+        limit = metric_filters.npeople
+        filter_bots = self.get_bots_filter_sql(metric_filters)
+        closed_condition =  ITS._get_closed_condition()
+        if filter_bots != '': filter_bots = " AND " + filter_bots
+
+        q = "SELECT u.id as id, u.identifier as closers, "+\
+            "COUNT(DISTINCT(c.id)) as closed "+\
+            "FROM "+self.db.GetTablesDomains(self.db.identities_db)+", "+\
+            "     "+self.db.identities_db+".domains dom, "+\
+            "     "+self.db.identities_db+".upeople u "+\
+            "WHERE "+ self.db.GetFiltersDomains()+" AND "+closed_condition+" "+\
+            "      AND pup.upeople_id = u.id "+\
+            "      AND upd.domain_id = dom.id "+\
+            "      AND dom.name = "+domain_name+" "+\
+            "      AND changed_on >= "+startdate+" AND changed_on < " +enddate +\
+            "      " + filter_bots +\
+            " GROUP BY u.identifier ORDER BY closed DESC, closers LIMIT " + str(limit)
+
+        data = self.db.ExecuteQuery(q)
+        return (data)
+
+    def get_top_repository (self, metric_filters):
+        startdate = metric_filters.startdate
+        enddate = metric_filters.enddate
+        repo_name = metric_filters.type_analysis[1]
+        limit = metric_filters.npeople
+        filter_bots = self.get_bots_filter_sql(metric_filters)
+        closed_condition =  ITS._get_closed_condition()
+        if filter_bots != '': filter_bots = " AND " + filter_bots
+
+        q = "SELECT u.id as id, u.identifier as closers, "+\
+            "COUNT(DISTINCT(i.id)) as closed "+\
+            "FROM issues i, changes c, trackers t, people_upeople pup, " +\
+            "     "+self.db.identities_db+".upeople u "+\
+            "WHERE "+closed_condition+" "+\
+            "      AND pup.upeople_id = u.id "+\
+            "      AND c.changed_by = pup.people_id "+\
+            "      AND c.issue_id = i.id "+\
+            "      AND i.tracker_id = t.id "+\
+            "      AND t.url = "+repo_name+" "+\
+            "      AND changed_on >= "+startdate+" AND changed_on < " +enddate +\
+            "      " + filter_bots +\
+            " GROUP BY u.identifier ORDER BY closed DESC, closers LIMIT " + str(limit)
+
+        data = self.db.ExecuteQuery(q)
+        return (data)
+
+
+    def get_top(self, days = 0, metric_filters = None):
+        if metric_filters == None:
+            metric_filters = self.filters
+
+        tables = self.db.GetTablesOwnUniqueIds("changes")
+        filters = self.db.GetFiltersOwnUniqueIds("changes")
+
+        startdate = metric_filters.startdate
+        enddate = metric_filters.enddate
+        limit = metric_filters.npeople
+        filter_bots = self.get_bots_filter_sql(metric_filters)
+        if filter_bots != "": filter_bots += " AND "
+        closed_condition =  ITS._get_closed_condition()
+
+        dtables = dfilters = ""
+        if (days > 0):
+            dtables = ", (SELECT MAX(changed_on) as last_date from changes) t "
+            dfilters = " AND DATEDIFF (last_date, changed_on) < %s " % (days)
+
+        q = "SELECT u.id as id, u.identifier as closers, "+\
+            "       count(distinct(c.id)) as closed "+\
+            "FROM  "+tables+\
+            ",     "+self.db.identities_db+".upeople u "+ dtables +\
+            "WHERE "+filter_bots + filters + " and "+\
+            "      c.changed_by = pup.people_id and "+\
+            "      pup.upeople_id = u.id and "+\
+            "      c.changed_on >= "+ startdate+ " and "+\
+            "      c.changed_on < "+ enddate+ " and " +\
+            "      " + closed_condition + " " + dfilters+ " "+\
+            "GROUP BY u.identifier "+\
+            "ORDER BY closed desc, closers "+\
+            "LIMIT "+ str(limit)
+
+        data = self.db.ExecuteQuery(q)
+
+        if not isinstance(data['id'], list):
+            data = {item: [data[item]] for item in data}
+
+        return (data)
+
+    def get_list(self, metric_filters = None, days = 0):
+        alist = {}
+
+        if metric_filters is not None:
+            metric_filters_orig = self.filters
+            self.filters = metric_filters
+
+        if metric_filters.type_analysis and metric_filters.type_analysis is not None:
+            if metric_filters.type_analysis[0] == "repository":
+                alist = self.get_top_repository(metric_filters)
+            if metric_filters.type_analysis[0] == "company":
+                alist = self.get_top_company(metric_filters)
+            if metric_filters.type_analysis[0] == "domain":
+                alist = self.get_top_domain(metric_filters)
+        else:
+            alist = self.get_top(days)
+
+        if metric_filters is not None: self.filters = metric_filters_orig
+        return alist
+
     def __get_sql__(self, evolutionary):
-        """ Implemented using Changers """
+        """ Implemented using Changers (changed metric should exists first) """
         close = True
         changers = ITS.get_metrics("changers", ITS)
-        cfilters = changers.filters
-        changers.filters = self.filters
-        q = changers.__get_sql__(evolutionary, close)
-        changers.filters = cfilters
+        if changers is None:
+            # We need to create changers metric
+            changers = Changers(self.db, self.filters)
+            q = changers.__get_sql__(evolutionary, close)
+        else:
+            cfilters = changers.filters
+            changers.filters = self.filters
+            q = changers.__get_sql__(evolutionary, close)
+            changers.filters = cfilters
         return q
 
 class Changed(Metrics):
@@ -205,10 +387,13 @@ class Changed(Metrics):
         return q
 
     def __get_sql__(self, evolutionary, close = False):
-        if (self.filters.type_analysis is not None and (self.filters.type_analysis[0] in  ["repository","project"])):
-            return self.__get_sql_trk_prj__(evolutionary, close)
+        if (self.filters.type_analysis is not None
+            and len(self.filters.type_analysis) == 2
+            and (self.filters.type_analysis[0] in  ["repository","project"])):
+            q = self.__get_sql_trk_prj__(evolutionary, close)
         else:
-            return self.__get_sql_default__(evolutionary, close)
+            q = self.__get_sql_default__(evolutionary, close)
+        return q
 
 class Changers(Metrics):
     """ Tickets Changers metric class for issue tracking systems """

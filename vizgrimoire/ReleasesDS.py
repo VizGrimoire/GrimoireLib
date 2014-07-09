@@ -43,7 +43,7 @@ class ReleasesDS(DataSource):
     @staticmethod
     def get_date_init(startdate = None, enddate = None, identities_db = None, type_analysis = None):
         """Get the date of the first activity in the data source"""
-        q = "SELECT MIN(created_on) AS init_date FROM projects"
+        q = "SELECT DATE_FORMAT (MIN(created_on), '%Y-%m-%d') AS first_date FROM projects"
         return(ExecuteQuery(q))
 
     @staticmethod
@@ -51,7 +51,8 @@ class ReleasesDS(DataSource):
         """Get the date of the last activity in the data source"""
         q1 = "SELECT MAX(updated_on) as ru, MAX(created_on) as rc FROM releases"
         q2 = "SELECT MAX(updated_on) as pu, MAX(created_on) as pr FROM projects"
-        q = "SELECT GREATEST(ru, rc, pu, pr) AS last_date FROM (%s) r, (%s) p" % (q1, q2)
+        q  = "SELECT DATE_FORMAT (last_date,'%Y-%m-%d') as last_date FROM " 
+        q += "(SELECT GREATEST(ru, rc, pu, pr) AS last_date FROM (%s) r, (%s) p) t" % (q1, q2)
         return(ExecuteQuery(q))
 
     @staticmethod
@@ -59,7 +60,7 @@ class ReleasesDS(DataSource):
         metrics =  DataSource.get_metrics_data(ReleasesDS, period, startdate, enddate, i_db, filter_, True)
         if filter_ is not None: studies = {}
         else:
-            studies =  DataSource.get_metrics_data(ReleasesDS, period, startdate, enddate, True)
+            studies =  DataSource.get_studies_data(ReleasesDS, period, startdate, enddate, True)
         return dict(metrics.items()+studies.items())
  
     @staticmethod
@@ -83,41 +84,23 @@ class ReleasesDS(DataSource):
         createJSON (data, os.path.join(destdir, filename))
 
     @staticmethod
-    def get_top_authors (days_period, startdate, enddate, identities_db, bots, npeople):
-        # Unique identities not supported yet
-
-        filter_bots = ''
-        for bot in bots:
-            filter_bots = filter_bots + " username<>'"+bot+"' and "
-        # filter_bots = ''
-
-        # fields = "COUNT(r.id) as releases, username, u.id"
-        fields = "COUNT(r.id) as releases, pup.upeople_id AS id, username"
-        tables = "users u, releases r, projects p, people_upeople pup"
-        filters = filter_bots + "pup.people_id = u.id AND r.author_id = u.id AND r.project_id = p.id"
-        if (days_period > 0):
-            tables += ", (SELECT MAX(r.created_on) as last_date from releases r) t"
-            filters += " AND DATEDIFF (last_date, r.created_on) < %s" % (days_period)
-        filters += " GROUP by username"
-        filters += " ORDER BY releases DESC, r.name"
-        filters += " LIMIT %s" % (npeople)
-
-        q = "SELECT %s FROM %s WHERE %s" % (fields, tables, filters)
-        data = ExecuteQuery(q)
-#        for id in data:
-#            if not isinstance(data[id], (list)): data[id] = [data[id]]
-        return(data)
-
-    @staticmethod
     def get_top_data (startdate, enddate, identities_db, filter_, npeople):
-        bots = ReleasesDS.get_bots()
+        top = {}
+        mauthors = DataSource.get_metrics("authors", ReleasesDS)
+        period = None
+        type_analysis = None
+        if filter_ is not None:
+            type_analysis = filter_.get_type_analysis()
+        mfilter = MetricFilters(period, startdate, enddate, type_analysis, npeople)
 
-        top_authors = {}
-        top_authors['authors.'] = ReleasesDS.get_top_authors(0, startdate, enddate, identities_db, bots, npeople)
-        top_authors['authors.last month']= ReleasesDS.get_top_authors(31, startdate, enddate, identities_db, bots, npeople)
-        top_authors['authors.last year']= ReleasesDS.get_top_authors(365, startdate, enddate, identities_db, bots, npeople)
+        if filter_ is None:
+            top['authors.'] = mauthors.get_list(mfilter, 0)
+            top['authors.last month']= mauthors.get_list(mfilter, 31)
+            top['authors.last year']= mauthors.get_list(mfilter, 365)
+        else:
+            logging.info("ReleasesDS does not support yet top for filters.")
 
-        return(top_authors)
+        return(top)
 
     @staticmethod
     def create_top_report (startdate, enddate, destdir, npeople, i_db):

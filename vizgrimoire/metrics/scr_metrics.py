@@ -410,6 +410,40 @@ class Reviewers(Metrics):
     data_source = SCR
     action = "reviews"
 
+    # Not sure if this top is right
+    def get_top_global (self, days = 0, metric_filters = None):
+        if metric_filters == None:
+            metric_filters = self.filters
+
+        startdate = metric_filters.startdate
+        enddate = metric_filters.enddate
+        limit = metric_filters.npeople
+        filter_bots = self.get_bots_filter_sql(metric_filters)
+        if filter_bots != "": filter_bots += " AND "
+        date_limit = ""
+
+
+        if (days != 0 ):
+            q = "SELECT @maxdate:=max(changed_on) from changes limit 1"
+            self.db.ExecuteQuery(q)
+            date_limit = " AND DATEDIFF(@maxdate, changed_on)<" + str(days)
+
+        q = "SELECT u.id as id, u.identifier as reviewers, "+\
+            "               count(distinct(c.id)) as reviewed "+\
+            "        FROM people_upeople pup, changes c, "+ self.db.identities_db+".upeople u "+\
+            "        WHERE "+ filter_bots+ " "+\
+            "            c.changed_by = pup.people_id and "+\
+            "            pup.upeople_id = u.id and "+\
+            "            c.changed_on >= "+ startdate + " and "+\
+            "            c.changed_on < "+ enddate + " "+\
+            "            "+ date_limit + " "+\
+            "        GROUP BY u.identifier "+\
+            "        ORDER BY reviewed desc, reviewers "+\
+            "        LIMIT " + str(limit)
+        return(self.db.ExecuteQuery(q))
+
+
+
     def __get_sql__(self, evolutionary):
         fields = " count(distinct(changed_by)) as reviewers "
         tables = " changes c "
@@ -426,6 +460,43 @@ class Closers(Metrics):
     desc = "Number of persons closing code review activities"
     data_source = SCR
     action = "closed"
+
+    def get_top_global (self, days = 0, metric_filters = None):
+
+        if metric_filters == None:
+            metric_filters = self.filters
+
+        startdate = metric_filters.startdate
+        enddate = metric_filters.enddate
+        limit = metric_filters.npeople
+        filter_bots = self.get_bots_filter_sql(metric_filters)
+        if filter_bots != "": filter_bots += " AND "
+        date_limit = ""
+
+        if (days != 0 ):
+            q = "SELECT @maxdate:=max(submitted_on) from issues limit 1"
+            self.db.ExecuteQuery(q)
+            date_limit = " AND DATEDIFF(@maxdate, submitted_on)<"+str(days)
+
+
+        merged_sql = " AND status='MERGED' "
+        rol = "mergers"
+        action = "merged"
+
+        q = "SELECT u.id as id, u.identifier as "+rol+", "+\
+            "            count(distinct(i.id)) as "+action+" "+\
+            "        FROM people_upeople pup, issues i, "+self.db.identities_db+".upeople u "+\
+            "        WHERE "+ filter_bots+ " "+\
+            "            i.submitted_by = pup.people_id and "+\
+            "            pup.upeople_id = u.id and "+\
+            "            i.submitted_on >= "+ startdate+ " and "+\
+            "            i.submitted_on < "+ enddate+ " "+\
+            "            "+date_limit+ merged_sql+ " "+\
+            "        GROUP BY u.identifier "+\
+            "        ORDER BY "+action+" desc, id "+\
+            "        LIMIT "+ str(limit)
+        return(self.db.ExecuteQuery(q))
+
 
     def __get_sql__(self, evolutionary):
         pass
@@ -486,6 +557,38 @@ class Submitters(Metrics):
         else:
             return self.__get_sql_default__(evolutionary)
 
+    def get_top_global (self, days = 0, metric_filters = None):
+        if metric_filters == None:
+            metric_filters = self.filters
+        startdate = metric_filters.startdate
+        enddate = metric_filters.enddate
+        limit = metric_filters.npeople
+        filter_bots = self.get_bots_filter_sql(metric_filters)
+        if filter_bots != "": filter_bots += " AND "
+
+        date_limit = ""
+        rol = "openers"
+        action = "opened"
+
+        if (days != 0 ):
+            q = "SELECT @maxdate:=max(submitted_on) from issues limit 1"
+            self.db.ExecuteQuery(q)
+            date_limit = " AND DATEDIFF(@maxdate, submitted_on)<"+str(days)
+
+        q = "SELECT u.id as id, u.identifier as "+rol+", "+\
+            "            count(distinct(i.id)) as "+action+" "+\
+            "        FROM people_upeople pup, issues i, "+self.db.identities_db+".upeople u "+\
+            "        WHERE "+ filter_bots+ " "+\
+            "            i.submitted_by = pup.people_id and "+\
+            "            pup.upeople_id = u.id and "+\
+            "            i.submitted_on >= "+ startdate+ " and "+\
+            "            i.submitted_on < "+ enddate+ " "+\
+            "            "+date_limit +  " "+\
+            "        GROUP BY u.identifier "+\
+            "        ORDER BY "+action+" desc, id "+\
+            "        LIMIT "+ str(limit)
+        return(self.db.ExecuteQuery(q))
+
 class TimeToReview(Metrics):
     id = "review_time"
     name = "Review Time"
@@ -504,6 +607,7 @@ class TimeToReview(Metrics):
         from GrimoireUtils import removeDecimals
 
         q = self.__get_sql__()
+        if q is None: return {}
         data = self.db.ExecuteQuery(q)
         data = data['revtime']
         if (isinstance(data, list) == False): data = [data]
@@ -518,6 +622,7 @@ class TimeToReview(Metrics):
 
     def get_ts(self):
         q = self.__get_sql__()
+        if q is None: return {}
         review_list = self.db.ExecuteQuery(q)
         checkListArray(review_list)
         metrics_list = {}

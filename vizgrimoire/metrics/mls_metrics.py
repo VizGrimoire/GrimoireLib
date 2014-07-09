@@ -24,19 +24,16 @@
 
 
 import logging
-import MySQLdb
 
-import re, sys
+from datetime import datetime
 
 from GrimoireUtils import completePeriodIds, GetDates, GetPercentageDiff
+from GrimoireSQL import ExecuteQuery
 
 from metrics import Metrics
 
-from metrics_filter import MetricFilters
-
-from query_builder import MLSQuery
-
 from MLS import MLS
+
 
 class EmailsSent(Metrics):
     """ Emails metric class for mailing lists analysis """
@@ -64,6 +61,125 @@ class EmailsSenders(Metrics):
     name = "Email Senders"
     desc = "People sending emails"
     data_source = MLS
+
+    def get_top_repository (self, metric_filters):
+        startdate = metric_filters.startdate
+        enddate = metric_filters.enddate
+        repo = metric_filters.type_analysis[1]
+        limit = metric_filters.npeople
+        filter_bots = self.get_bots_filter_sql(metric_filters)
+        rfield = MLS.get_repo_field()
+
+        q = "SELECT up.id as id, up.identifier as senders, "+\
+                " COUNT(m.message_id) as sent "+\
+                " FROM "+ self.db.GetTablesOwnUniqueIds()+ ","+self.db.identities_db+".upeople up "+\
+                " WHERE "+ self.db.GetFiltersOwnUniqueIds()+ " AND "+\
+                "  pup.upeople_id = up.id AND "+\
+                "  m.first_date >= "+startdate+" AND "+\
+                "  m.first_date < "+enddate+" AND "+\
+                "  m."+rfield+"="+ repo +\
+                " GROUP BY up.identifier "+\
+                " ORDER BY sent desc "+\
+                " LIMIT " + str(limit)
+        data = ExecuteQuery(q)
+        return (data)
+
+    def get_top_country (self, metric_filters):
+        startdate = metric_filters.startdate
+        enddate = metric_filters.enddate
+        country_name = metric_filters.type_analysis[1]
+        limit = metric_filters.npeople
+        filter_bots = self.get_bots_filter_sql(metric_filters)
+
+        q = "SELECT up.id as id, up.identifier as senders, "+\
+            " COUNT(DISTINCT(m.message_id)) as sent "+\
+            " FROM messages m "+ self.db.GetSQLCountriesFrom(self.db.identities_db)+ \
+            "  , "+self.db.identities_db+".upeople up "+\
+            " WHERE "+ self.db.GetSQLCountriesWhere(country_name)+ " AND "+\
+            "  up.id = upc.upeople_id AND "+\
+            "  m.first_date >= "+startdate+" AND "+\
+            "  m.first_date < "+enddate+\
+            " GROUP BY up.identifier "+\
+            " ORDER BY COUNT(DISTINCT(m.message_ID)) DESC LIMIT " + str(limit)
+        data = ExecuteQuery(q)
+        return (data)
+
+    def get_top_company (self, metric_filters):
+        startdate = metric_filters.startdate
+        enddate = metric_filters.enddate
+        company_name = metric_filters.type_analysis[1]
+        limit = metric_filters.npeople
+        filter_bots = self.get_bots_filter_sql(metric_filters)
+
+        q = "SELECT up.id as id, up.identifier as senders, "+\
+            " COUNT(DISTINCT(m.message_id)) as sent "+\
+            " FROM messages m, "+self.db.identities_db+".upeople up "+\
+             self.db.GetSQLCompaniesFrom(self.db.identities_db) +\
+            " WHERE "+self.db.GetSQLCompaniesWhere(company_name)+" AND "+\
+            "  up.id = upc.upeople_id AND "+\
+            "  m.first_date >= "+startdate+" AND "+\
+            "  m.first_date < "+enddate+\
+            " GROUP BY up.identifier "+\
+            " ORDER BY COUNT(DISTINCT(m.message_ID)) DESC LIMIT " + str(limit)
+        data = ExecuteQuery(q)
+        return (data)
+
+    def get_top_domain (self, metric_filters):
+        startdate = metric_filters.startdate
+        enddate = metric_filters.enddate
+        domain_name = metric_filters.type_analysis[1]
+        limit = metric_filters.npeople
+        filter_bots = self.get_bots_filter_sql(metric_filters)
+
+        q = "SELECT up.identifier as senders, "+\
+            " COUNT(DISTINCT(m.message_id)) as sent "+\
+            " FROM messages m "+self.db.GetSQLDomainsFrom(self.db.identities_db) +\
+            " , "+self.db.identities_db+".upeople up "+\
+            " WHERE "+self.db.GetSQLDomainsWhere(domain_name)+ " AND "+\
+            "  up.id = upd.upeople_id AND "+\
+            "  m.first_date >= "+startdate+" AND "+\
+            "  m.first_date < "+enddate+\
+            " GROUP BY up.identifier "+\
+            " ORDER BY COUNT(DISTINCT(m.message_ID)) DESC LIMIT "+ str(limit)
+        data = ExecuteQuery(q)
+        return (data)
+
+
+    def get_top_global (self, days = 0, metric_filters = None):
+        if metric_filters == None:
+            metric_filters = self.filters
+
+        tables = self.db.GetTablesOwnUniqueIds()
+        filters = self.db.GetFiltersOwnUniqueIds()
+
+        startdate = metric_filters.startdate
+        enddate = metric_filters.enddate
+        limit = metric_filters.npeople
+        filter_bots = self.get_bots_filter_sql(metric_filters)
+        if filter_bots != "": filter_bots += " AND "
+
+        dtables = dfilters = ""
+        if (days > 0):
+            dtables = ", (SELECT MAX(first_date) as last_date from messages) t"
+            dfilters = " AND DATEDIFF (last_date, first_date) < %s " % (days)
+
+        q = "SELECT u.id as id, u.identifier as senders, "+\
+                "COUNT(distinct(m.message_id)) as sent "+\
+                "FROM "+ tables + dtables +\
+                " ,"+self.db.identities_db+".upeople u "+\
+                "WHERE "+ filter_bots + filters + " AND "+\
+                "  pup.upeople_id = u.id AND "+\
+                "  m.first_date >= "+startdate+" AND "+\
+                "  m.first_date < "+enddate +\
+                dfilters+ " "+\
+                "GROUP BY u.identifier "+\
+                "ORDER BY sent desc, senders "+\
+                "LIMIT " + str(limit)
+        data = self.db.ExecuteQuery(q)
+        return (data)
+
+    def get_top_supported_filters(self):
+        return ['repository','company','country','domain']
 
     def __get_sql__ (self, evolutionary):
         fields = " count(distinct(pup.upeople_id)) as senders "
@@ -264,3 +380,84 @@ class Countries(Metrics):
     def __get_sql__(self, evolutionary):
         return self.db.GetStudies(self.filters.period, self.filters.startdate,
                                   self.filters.enddate, ['country', ''], evolutionary, 'countries')
+
+
+class UnansweredPosts(Metrics):
+    """ Unanswered posts in mailing lists """
+
+    id = "unanswered_posts"
+    name = "Unanswered Posts"
+    desc = "Unanswered posts in mailing lists"""
+    data_source = MLS
+
+    def __get_date_from_month(self, monthid):
+        # month format: year*12+month
+        year = (monthid-1) / 12
+        month = monthid - year*12
+        day = 1
+        current = str(year) + "-" + str(month) + "-" + str(day)
+        return (current)
+
+    def __get_messages(self, from_date, to_date):
+        query = "SELECT message_ID, is_response_of "
+        query += "FROM messages m "
+        query += "WHERE m.first_date >= '" + str(from_date) + "' AND m.first_date < '" + str(to_date) + "' "
+        query += "AND m.first_date >= " + str(self.filters.startdate) + " AND m.first_date < " + str(self.filters.enddate) + " "
+        query += "ORDER BY m.first_date"
+
+        results = self.db.ExecuteQuery(query)
+
+        if isinstance(results['message_ID'], list):
+            return [(results['message_ID'][i], results['is_response_of'][i])\
+                    for i in range(len(results['message_ID']))]
+        else:
+            return [(results['message_ID'], results['is_response_of'])]
+
+    def get_agg(self):
+        return {}
+
+    def get_ts(self):
+        # Get all posts for each month and determine which from those
+        # are still unanswered. Returns the number of unanswered
+        # posts on each month.
+        period = self.filters.period
+
+        if (period != "month"):
+            logging.error("Period not supported in " + self.id + " " + period)
+            return None
+
+        startdate = self.filters.startdate
+        enddate = self.filters.enddate
+
+        start = datetime.strptime(startdate, "'%Y-%m-%d'")
+        end = datetime.strptime(enddate, "'%Y-%m-%d'")
+
+        start_month = (start.year * 12 + start.month) - 1
+        end_month = (end.year * 12 + end.month) - 1
+        months = end_month - start_month + 2
+        num_unanswered = {'month' : [],
+                          'unanswered_posts' : []}
+
+        for i in range(0, months):
+            unanswered = []
+            current_month = start_month + i
+            from_date = self.__get_date_from_month(current_month)
+            to_date = self.__get_date_from_month(current_month + 1)
+            messages = self.__get_messages(from_date, to_date)
+
+            for message in messages:
+                message_id = message[0]
+                response_of = message[1]
+
+                if response_of is None:
+                    unanswered.append(message_id)
+                    continue
+
+                if response_of in unanswered:
+                    unanswered.remove(response_of)
+
+            num_unanswered['month'].append(current_month)
+            num_unanswered['unanswered_posts'].append(len(unanswered))
+
+        return completePeriodIds(num_unanswered, self.filters.period,
+                                 self.filters.startdate, self.filters.enddate)

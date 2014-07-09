@@ -57,8 +57,16 @@ class Mediawiki(DataSource):
         return ExecuteQuery(q)
 
     @staticmethod
-    def get_evolutionary_data (period, startdate, enddate, i_db, type_analysis = None):
-        return GetDataMediaWiki (period, startdate, enddate, i_db, type_analysis, True)
+    def get_evolutionary_data (period, startdate, enddate, i_db, filter_ = None):
+        if filter_ is not None:
+            logging.warn("Mediawiki does not support filters yet.")
+            return {}
+
+        metrics =  DataSource.get_metrics_data(Mediawiki, period, startdate, enddate, i_db, filter_, True)
+        if filter_ is not None: studies = {}
+        else:
+            studies =  DataSource.get_studies_data(Mediawiki, period, startdate, enddate, True)
+        return dict(metrics.items()+studies.items())
 
     @staticmethod
     def create_evolutionary_report (period, startdate, enddate, destdir, i_db, type_analysis = None):
@@ -68,15 +76,15 @@ class Mediawiki(DataSource):
 
     @staticmethod
     def get_agg_data (period, startdate, enddate, identities_db, filter_ = None):
-        # Tendencies
-        agg = {}
-
-        if (filter_ is None):
-            agg = GetDataMediaWiki(period, startdate, enddate, identities_db, None, False)
-        else:
+        if filter_ is not None:
             logging.warn("Mediawiki does not support filters yet.")
+            return {}
 
-        return agg
+        metrics =  DataSource.get_metrics_data(Mediawiki, period, startdate, enddate, identities_db, filter_, False)
+        if filter_ is not None: studies = {}
+        else:
+            studies =  DataSource.get_studies_data(Mediawiki, period, startdate, enddate, False)
+        return dict(metrics.items()+studies.items())
 
     @staticmethod
     def create_agg_report (period, startdate, enddate, destdir, i_db, type_analysis = None):
@@ -86,14 +94,22 @@ class Mediawiki(DataSource):
 
     @staticmethod
     def get_top_data (startdate, enddate, identities_db, filter_, npeople):
-        bots = Mediawiki.get_bots()
+        top = {}
+        mauthors = DataSource.get_metrics("authors", Mediawiki)
+        period = None
+        type_analysis = None
+        if filter_ is not None:
+            type_analysis = filter_.get_type_analysis()
+        mfilter = MetricFilters(period, startdate, enddate, type_analysis, npeople)
 
-        top_authors = {}
-        top_authors['authors.'] = GetTopAuthorsMediaWiki(0, startdate, enddate, identities_db, bots, npeople)
-        top_authors['authors.last year']= GetTopAuthorsMediaWiki(365, startdate, enddate, identities_db, bots, npeople)
-        top_authors['authors.last month']= GetTopAuthorsMediaWiki(31, startdate, enddate, identities_db, bots, npeople)
+        if filter_ is None:
+            top['authors.'] = mauthors.get_list(mfilter, 0)
+            top['authors.last month'] = mauthors.get_list(mfilter, 31)
+            top['authors.last year'] = mauthors.get_list(mfilter, 365)
+        else:
+            logging.info("Mediawiki does not support yet top for filters.")
 
-        return(top_authors)
+        return(top)
 
     @staticmethod
     def create_top_report (startdate, enddate, destdir, npeople, i_db):
@@ -167,45 +183,6 @@ def GetTablesOwnUniqueIdsMediaWiki () :
 def GetFiltersOwnUniqueIdsMediaWiki () :
     filters = 'pup.people_id = wiki_pages_revs.user'
     return (filters) 
-
-
-# GLOBAL
-
-def GetDataMediaWiki (period, startdate, enddate, i_db, type_analysis, evol = False):
-    filter_ = None
-    if type_analysis is not None:
-        filter_ = Filter(type_analysis[0],type_analysis[1])
-    metrics =  DataSource.get_metrics_data(Mediawiki, period, startdate, enddate, i_db, filter_, evol)
-    if filter_ is not None: studies = {}
-    else:
-        studies =  DataSource.get_studies_data(Mediawiki, period, startdate, enddate, evol)
-    return dict(metrics.items()+studies.items())
-
-def GetTopAuthorsMediaWiki (days, startdate, enddate, identities_db, bots, limit) :
-    date_limit = ""
-    filter_bots = ''
-    for bot in bots:
-        filter_bots += " user<>'"+bot+"' and "
-
-    if (days != 0 ) :
-        ExecuteQuery("SELECT @maxdate:=max(date) from wiki_pages_revs limit 1")
-        date_limit = " AND DATEDIFF(@maxdate, date)<"+str(days)
-
-    q = "SELECT up.id as id, up.identifier as authors, "+\
-        "    count(wiki_pages_revs.id) as reviews "+\
-        "FROM wiki_pages_revs, people_upeople pup, "+identities_db+".upeople up "+\
-        "WHERE "+ filter_bots+ " "+\
-        "    wiki_pages_revs.user = pup.people_id and "+\
-        "    pup.upeople_id = up.id and "+\
-        "    date >= "+ startdate+ " and "+\
-        "    date  < "+ enddate+ " "+ date_limit+ " "+\
-        "    GROUP BY authors "+\
-        "    ORDER BY reviews desc, authors "+\
-        "    LIMIT "+ limit
-
-    data = ExecuteQuery(q)
-    return (data)
-
 
 #########
 # PEOPLE

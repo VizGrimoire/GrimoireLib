@@ -34,6 +34,7 @@ class Report(object):
     _filters = []
     _all_data_sources = []
     _all_studies = []
+    _on_studies = []
     _automator = None
     _automator_file = None
 
@@ -129,11 +130,12 @@ class Report(object):
             studies_classes = [c for c in mod.__dict__.values()
                                if inspect.isclass(c) and issubclass(c, Analyses)]
             for study_class in studies_classes:
-                if study_class.id is None or study_class.id not in studies_on: continue
-                logging.info("Adding new study: " + study_class.id)
+                if study_class == Analyses: continue
                 Report._all_studies.append(study_class)
-        logging.info("Total studies: " + str(len(Report._all_studies)))
-
+                if study_class.id is None or study_class.id not in studies_on: continue
+                # logging.info("Adding new study: " + study_class.id)
+                Report._on_studies.append(study_class)
+        #  logging.info("Total studies: " + str(len(Report._on_studies)))
 
     @staticmethod
     def get_config():
@@ -187,11 +189,15 @@ class Report(object):
 
     @staticmethod
     def get_studies():
+        return Report._on_studies
+
+    @staticmethod
+    def get_all_studies():
         return Report._all_studies
 
     @staticmethod
     def set_studies(studies):
-        Report._all_studies = studies
+        Report._on_studies = studies
 
     @staticmethod
     def get_study_by_id(sid):

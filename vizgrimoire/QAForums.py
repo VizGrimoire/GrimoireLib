@@ -25,6 +25,8 @@ import logging
 
 import os
 
+import datetime
+
 from GrimoireSQL import GetSQLGlobal, GetSQLPeriod, ExecuteQuery, BuildQuery
 
 from GrimoireUtils import GetPercentageDiff, GetDates, getPeriod, createJSON, completePeriodIds
@@ -50,7 +52,7 @@ class QAForums(DataSource):
     @staticmethod
     def get_date_init(startdate = None, enddate = None, identities_db = None, type_analysis = None):
         """Get the date of the first activity in the data source"""
-        q = "SELECT DATE_FORMAT (MIN(added_at), '%Y-%m-%d') AS init_date FROM questions"
+        q = "SELECT DATE_FORMAT (MIN(added_at), '%Y-%m-%d') AS first_date FROM questions"
         return(ExecuteQuery(q))
 
     @staticmethod
@@ -63,64 +65,12 @@ class QAForums(DataSource):
         return(ExecuteQuery(q))
 
     @staticmethod
-    def __get_date_field(table_name):
-        # the tables of the Sibyl tool are not coherent among them
-        #so we have different fields for the date of the different posts
-        if (table_name == "questions"):
-            return "added_at"
-        elif (table_name == "answers"):
-            return "submitted_on"
-        elif (table_name == "comments"):
-            return "submitted_on"
-        # FIXME add exceptions here
-
-    @staticmethod
-    def __get_author_field(table_name):
-        # the tables of the Sibyl tool are not coherent among them
-        #so we have different fields for the author ids of the different posts
-        if (table_name == "questions"):
-            return "author_identifier"
-        elif (table_name == "answers"):
-            return "user_identifier"
-        elif (table_name == "comments"):
-            return "user_identifier"
-        # FIXME add exceptions here
-
-    @staticmethod
     def __get_data (period, startdate, enddate, i_db, filter_, evol):
         metrics =  DataSource.get_metrics_data(QAForums, period, startdate, enddate, i_db, filter_, evol)
         if filter_ is not None: studies = {}
         else:
             studies =  DataSource.get_studies_data(QAForums, period, startdate, enddate, evol)
         return dict(metrics.items()+studies.items())
-
-    @staticmethod
-    def get_top_senders(days, startdate, enddate, identities_db, bots, limit, type_post):
-        # FIXME: neither using unique identities nor filtering bots
-        table_name = type_post
-        date_field = QAForums.__get_date_field(table_name)
-        author_field = QAForums.__get_author_field(table_name)
-        date_limit = ""
-
-        filter_bots = ''
-        for bot in bots:
-            filter_bots = filter_bots + " p.username<>'"+bot+"' and "
-
-        if (days != 0):
-            sql = "SELECT @maxdate:=max(%s) from %s limit 1" % (date_field, table_name)
-            res = ExecuteQuery(sql)
-            date_limit = " AND DATEDIFF(@maxdate, %s) < %s" % (date_field, str(days))
-            #end if
-
-        select = "SELECT %s AS id, p.username AS senders, COUNT(%s.id) AS sent" % \
-          (author_field, table_name)
-        fromtable = " FROM %s, people p" % (table_name)
-        filters = " WHERE %s %s = p.identifier AND %s >= %s AND %s < %s " % \
-          (filter_bots, author_field, date_field, startdate, date_field, enddate)
-
-        tail = " GROUP BY senders ORDER BY sent DESC, senders LIMIT %s" % (limit)
-        q = select + fromtable + filters + date_limit + tail
-        return(ExecuteQuery(q))
 
     @staticmethod
     def get_evolutionary_data (period, startdate, enddate, identities_db, filter_ = None):
@@ -144,31 +94,38 @@ class QAForums(DataSource):
 
     @staticmethod
     def get_top_data(startdate, enddate, identities_db, filter_, npeople):
-        bots = QAForums.get_bots()
+        top = {}
+        mcsenders = DataSource.get_metrics("csenders", QAForums)
+        masenders = DataSource.get_metrics("asenders", QAForums)
+        mqsenders = DataSource.get_metrics("qsenders", QAForums)
+        mparticipants = DataSource.get_metrics("participants", QAForums)
+        period = None
+        type_analysis = None
+        if filter_ is not None:
+            type_analysis = filter_.get_type_analysis()
+        mfilter = MetricFilters(period, startdate, enddate, type_analysis, npeople)
 
-        top_senders = {}
-        top_senders['csenders.'] = \
-            QAForums.get_top_senders(0, startdate, enddate, identities_db, bots, npeople, "comments")
-        top_senders['csenders.last year'] = \
-            QAForums.get_top_senders(365, startdate, enddate, identities_db, bots, npeople, "comments")
-        top_senders['csenders.last month'] = \
-            QAForums.get_top_senders(31, startdate, enddate, identities_db, bots, npeople, "comments")
+        if filter_ is None:
+            top['csenders.'] = mcsenders.get_list(mfilter, 0)
+            top['csenders.last month'] = mcsenders.get_list(mfilter, 31)
+            top['csenders.last year'] = mcsenders.get_list(mfilter, 365)
 
-        top_senders['qsenders.'] = \
-            QAForums.get_top_senders(0, startdate, enddate, identities_db, bots, npeople, "questions")
-        top_senders['qsenders.last year'] = \
-            QAForums.get_top_senders(365, startdate, enddate, identities_db, bots, npeople, "questions")
-        top_senders['qsenders.last month'] = \
-            QAForums.get_top_senders(31, startdate, enddate, identities_db, bots, npeople, "questions")
+            top['asenders.'] = masenders.get_list(mfilter, 0)
+            top['asenders.last month'] = masenders.get_list(mfilter, 31)
+            top['asenders.last year'] = masenders.get_list(mfilter, 365)
 
-        top_senders['asenders.'] = \
-            QAForums.get_top_senders(0, startdate, enddate, identities_db, bots, npeople, "answers")
-        top_senders['asenders.last year'] = \
-            QAForums.get_top_senders(365, startdate, enddate, identities_db, bots, npeople, "answers")
-        top_senders['asenders.last month'] = \
-            QAForums.get_top_senders(31, startdate, enddate, identities_db, bots, npeople, "answers")
+            top['qsenders.'] = mqsenders.get_list(mfilter, 0)
+            top['qsenders.last month'] = mqsenders.get_list(mfilter, 31)
+            top['qsenders.last year'] = mqsenders.get_list(mfilter, 365)
 
-        return(top_senders)
+            top['participants.'] = mparticipants.get_list(mfilter, 0)
+            top['participants.last month'] = mparticipants.get_list(mfilter, 31)
+            top['participants.last year'] = mparticipants.get_list(mfilter, 365)
+
+        else:
+            logging.info("QAForums does not support yet top for filters.")
+
+        return top
 
     @staticmethod
     def create_top_report(startdate, enddate, destdir, npeople, i_db):
@@ -249,12 +206,12 @@ class QAForums(DataSource):
 
     @staticmethod
     def get_metrics_core_agg():
-        return ['qsent','asent','csent','qsenders','asenders','csenders']
+        return ['qsent','asent','csent','qsenders','asenders','csenders','participants']
 
     @staticmethod
     def get_metrics_core_ts():
-        return ['qsent','asent','csent','qsenders','asenders','csenders']
+        return ['qsent','asent','csent','qsenders','asenders','csenders','participants']
 
     @staticmethod
     def get_metrics_core_trends():
-        return ['qsent','asent','csent','qsenders','asenders','csenders']
+        return ['qsent','asent','csent','qsenders','asenders','csenders','participants']

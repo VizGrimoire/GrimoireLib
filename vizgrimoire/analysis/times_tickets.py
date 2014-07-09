@@ -363,7 +363,9 @@ class TimesTickets(Analyses):
 
 
 
-    def result(self):
+    def result(self, data_source = None):
+        from ITS import ITS
+        if data_source != ITS: return None
         period = self.filters.period
         startdate = self.filters.startdate
         enddate = self.filters.enddate

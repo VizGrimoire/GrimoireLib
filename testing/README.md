@@ -40,4 +40,16 @@ Install R environment in root dir:
     R CMD INSTALL -l r-lib vizgrimoire
 
 Then execute in testing dir:
-    LANG= R_LIBS=../r-lib PYTHONPATH=../vizgrimoire:../vizgrimoire/analysis/:../vizgrimoire/metrics/:../vizGrimoireJS/ ./test_data_source_api.py -s 2010-01-01 -e 2014-03-22 -c automator.conf -m ../vizgrimoire/metrics
+    ./test_data_source_api.py
+
+If you want to clean all dbs first:
+
+    echo "drop database cp_cvsanaly_GrimoireLibTests" | mysql -u root
+    echo "drop database cp_bicho_GrimoireLibTests" | mysql -u root
+    echo "drop database cp_gerrit_GrimoireLibTests" | mysql -u root
+    echo "drop database cp_mlstats_GrimoireLibTests" | mysql -u root
+    echo "drop database cp_irc_GrimoireLibTests" | mysql -u root
+    echo "drop database cp_mediawiki_GrimoireLibTests" | mysql -u root
+    echo "drop database cp_downloads_GrimoireLibTests" | mysql -u root
+    echo "drop database cp_releases_GrimoireLibTests" | mysql -u root
+    echo "drop database cp_qaforums_GrimoireLibTests" | mysql -u root

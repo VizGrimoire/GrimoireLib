@@ -80,17 +80,22 @@ class IRC(DataSource):
 
     @staticmethod
     def get_top_data (startdate, enddate, identities_db, filter_, npeople):
-        bots = IRC.get_bots()
+        top = {}
+        msenders = DataSource.get_metrics("senders", IRC)
+        period = None
+        type_analysis = None
+        if filter_ is not None:
+            type_analysis = filter_.get_type_analysis()
+        mfilter = MetricFilters(period, startdate, enddate, type_analysis, npeople)
 
-        top_senders = {}
-        top_senders['senders.'] = \
-            GetTopSendersIRC(0, startdate, enddate, identities_db, bots, npeople)
-        top_senders['senders.last year'] = \
-            GetTopSendersIRC(365, startdate, enddate, identities_db, bots, npeople)
-        top_senders['senders.last month'] = \
-            GetTopSendersIRC(31, startdate, enddate, identities_db, bots, npeople)
+        if filter_ is None:
+            top['senders.'] = msenders.get_list(mfilter, 0)
+            top['senders.last month'] = msenders.get_list(mfilter, 31)
+            top['senders.last year'] = msenders.get_list(mfilter, 365)
+        else:
+            logging.info("IRC does not support yet top for filters.")
 
-        return(top_senders)
+        return(top)
 
     @staticmethod
     def create_top_report (startdate, enddate, destdir, npeople, i_db):
@@ -123,6 +128,7 @@ class IRC(DataSource):
         for item in items :
             # item_name = "'"+ item+ "'"
             logging.info (item)
+
             filter_item = Filter(filter_.get_name(), item)
 
             evol_data = IRC.get_evolutionary_data(period, startdate, enddate, identities_db, filter_item)
@@ -208,7 +214,7 @@ def GetIRCSQLRepositoriesFrom ():
 
 def GetIRCSQLRepositoriesWhere(repository):
     # filters necessaries for repositories
-    return (" i.channel_id = c.id and c.name='" + repository + "'")
+    return (" i.channel_id = c.id and c.name=" + repository)
 
 
 def GetIRCSQLCompaniesFrom (i_db):
@@ -225,7 +231,7 @@ def GetIRCSQLCompaniesWhere(name):
            "upc.company_id = c.id and "+\
            "i.submitted_on >= upc.init and "+\
            "i.submitted_on < upc.end and "+\
-           "c.name = '" + name + "'")
+           "c.name = " + name)
 
 
 def GetIRCSQLCountriesFrom (i_db):
@@ -240,7 +246,7 @@ def GetIRCSQLCountriesWhere(name):
     return(" i.nick = pup.people_id and "+\
            "pup.upeople_id = upc.upeople_id and "+\
            "upc.country_id = c.id and "+\
-           "c.name = '" + name + "'")
+           "c.name = " + name)
 
 def GetIRCSQLDomainsFrom (i_db):
     # tables necessary to domains analysis
@@ -253,7 +259,7 @@ def GetIRCSQLDomainsWhere (name):
     return(" i.nick = pup.people_id and "+\
            "pup.upeople_id = upd.upeople_id and "+\
            "upd.domain_id = d.id and "+\
-           "d.name = '" + name + "'")
+           "d.name = " + name)
 
 def GetTablesOwnUniqueIdsIRC () :
     tables = 'irclog, people_upeople pup'
@@ -305,125 +311,6 @@ def GetIRCSQLReportWhere (type_analysis):
     elif analysis == 'domain': where = GetIRCSQLDomainsWhere(value)
 
     return (where)
-
-# GLOBAL
-
-def GetStaticDataIRC (period, startdate, enddate, i_db, type_analysis):
-
-    # 1- Retrieving information
-    sent = StaticNumSentIRC(period, startdate, enddate, i_db, type_analysis)
-    senders = StaticNumSendersIRC(period, startdate, enddate, i_db, type_analysis)
-    repositories = StaticNumRepositoriesIRC(period, startdate	, enddate, i_db, type_analysis)
-
-    # 2- Merging information
-    static_data = dict(sent.items()+ senders.items()+ repositories.items())
-
-    return (static_data)
-
-
-def GetEvolDataIRC (period, startdate, enddate, i_db, type_analysis):
-
-    # 1- Retrieving information
-    sent = EvolSentIRC(period, startdate, enddate, i_db, type_analysis)
-    sent = completePeriodIds(sent, period, startdate, enddate)
-    senders = EvolSendersIRC(period, startdate, enddate, i_db, type_analysis)
-    senders = completePeriodIds(senders, period, startdate, enddate)
-    repositories = EvolRepositoriesIRC(period, startdate, enddate, i_db, type_analysis)
-    repositories = completePeriodIds(repositories, period, startdate, enddate)
-
-    # 2- Merging information
-    evol_data = dict(sent.items()+ senders.items()+ repositories.items())
-
-    return (evol_data)
-
-
-def StaticNumSentIRC (period, startdate, enddate, identities_db=None, type_analysis=[]):
-    fields = "SELECT count(message) as sent, \
-              DATE_FORMAT (min(date), '%Y-%m-%d') as first_date, \
-              DATE_FORMAT (max(date), '%Y-%m-%d') as last_date "
-    tables = " FROM irclog "
-    filters = "WHERE date >=" + startdate + " and date < " + enddate
-    filters += " AND type='COMMENT' "
-    q = fields + tables + filters
-    return(ExecuteQuery(q))
-
-def StaticNumSendersIRC (period, startdate, enddate, identities_db=None, type_analysis=[]):
-    fields = "SELECT count(distinct(nick)) as senders"
-    tables = " FROM irclog "
-    filters = "WHERE date >=" + startdate + " and date < " + enddate
-    filters += " AND type='COMMENT' "
-    q = fields + tables + filters
-    return(ExecuteQuery(q))
-
-def StaticNumRepositoriesIRC (period, startdate, enddate, identities_db=None, type_analysis=[]):
-    fields = "SELECT COUNT(DISTINCT(channel_id)) AS repositories "
-    tables = "FROM irclog "
-    filters = "WHERE date >=" + startdate + " AND date < " + enddate
-    filters += " AND type='COMMENT' "
-    q = fields + tables + filters
-    return(ExecuteQuery(q))
-
-def GetSentIRC (period, startdate, enddate, identities_db, type_analysis, evolutionary):
-    fields = " count(distinct(message)) as sent " 
-    tables = " irclog " + GetIRCSQLReportFrom(identities_db, type_analysis)
-    filters = GetIRCSQLReportWhere(type_analysis)
-    filters += " and type='COMMENT' "
-    q = BuildQuery(period, startdate, enddate, " date ", fields, tables, filters, evolutionary)    
-    return(ExecuteQuery(q))
-
-
-def EvolSentIRC (period, startdate, enddate, identities_db, type_analysis):
-    return(GetSentIRC(period, startdate, enddate, identities_db, type_analysis, True))
-
-
-def GetSendersIRC (period, startdate, enddate, identities_db, type_analysis, evolutionary):    
-    fields = " count(distinct(nick)) as senders "
-    tables = " irclog " + GetIRCSQLReportFrom(identities_db, type_analysis)
-    filters = GetIRCSQLReportWhere(type_analysis)
-    filters += " and type='COMMENT' "
-    q = BuildQuery(period, startdate, enddate, " date ", fields, tables, filters, evolutionary)    
-    return(ExecuteQuery(q))
-
-
-def EvolSendersIRC (period, startdate, enddate, identities_db, type_analysis):
-    return(GetSendersIRC(period, startdate, enddate, identities_db, type_analysis, True))
-
-
-def GetRepositoriesIRC (period, startdate, enddate, identities_db, type_analysis, evolutionary):
-    fields = " COUNT(DISTINCT(channel_id)) AS repositories "
-    tables = " irclog " + GetIRCSQLReportFrom(identities_db, type_analysis)
-    filters = GetIRCSQLReportWhere(type_analysis)
-    q = BuildQuery(period, startdate, enddate, " date ", fields, tables, filters, evolutionary)
-    return(ExecuteQuery(q))
-
-
-def EvolRepositoriesIRC (period, startdate, enddate, identities_db, type_analysis):
-    return(GetRepositoriesIRC(period, startdate, enddate, identities_db, type_analysis, True))
-
-
-def GetTopSendersIRC (days, startdate, enddate, identities_db, bots, limit):
-    date_limit = ""
-    filter_bots = ''
-    for bot in bots:
-        filter_bots += " nick<>'"+bot+"' and "
-    if (days != 0 ):
-        sql = "SELECT @maxdate:=max(date) from irclog limit 1"
-        res = ExecuteQuery(sql)
-        date_limit = " AND DATEDIFF(@maxdate, date)<"+str(days)
-    q = "SELECT up.id as id, up.identifier as senders,"+\
-        "       COUNT(irclog.id) as sent "+\
-        " FROM irclog, people_upeople pup, "+identities_db+".upeople up "+\
-        " WHERE "+ filter_bots +\
-        "            irclog.type = 'COMMENT' and "+\
-        "            irclog.nick = pup.people_id and "+\
-        "            pup.upeople_id = up.id and "+\
-        "            date >= "+ startdate+ " and "+\
-        "            date  < "+ enddate+ " "+ date_limit +\
-        "            GROUP BY senders "+\
-        "            ORDER BY sent desc, senders "+\
-        "            LIMIT " + limit
-    return(ExecuteQuery(q))
-
 #
 # Repositories (channels)
 #
@@ -443,23 +330,6 @@ def GetReposNameIRC ():
         "  WHERE i.channel_id=c.id "+\
         "  GROUP BY name ORDER BY total DESC"
     return(ExecuteQuery(q)['name'])
-
-def GetRepoEvolSentSendersIRC (repo, period, startdate, enddate):
-    fields = 'COUNT(irclog.id) AS sent, COUNT(DISTINCT(pup.upeople_id)) AS senders'
-    tables= GetTablesReposIRC()
-    filters = GetFiltersReposIRC() + " AND c.name='"+repo+"'"
-    filters += " AND irclog.type='COMMENT'"
-    q = GetSQLPeriod(period,'date', fields, tables, filters, startdate, enddate)
-    return(ExecuteQuery(q))
-
-def GetRepoStaticSentSendersIRC (repo, startdate, enddate):
-    fields = 'COUNT(irclog.id) AS sent,'+\
-            'COUNT(DISTINCT(pup.upeople_id)) AS senders'
-    tables = GetTablesReposIRC()
-    filters = GetFiltersReposIRC()+" AND c.name='"+repo+"'"
-    filters += " AND irclog.type='COMMENT'"
-    q = GetSQLGlobal('date',fields, tables, filters, startdate, enddate)
-    return(ExecuteQuery(q))
 
 #########
 # PEOPLE

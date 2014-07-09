@@ -39,10 +39,12 @@ class QuartersData(Analyses):
     desc = "Metrics by Quarter"
 
     def create_report(self, data_source, destdir):
-        if data_source != SCR: return
-        self.result(destdir)
+        if data_source != SCR: return None
+        self.result(data_source, destdir)
 
-    def result(self, destdir):
+    def result(self, data_source, destdir = None):
+        if data_source != SCR or destdir is None: return None
+
         period = self.filters.period
         startdate = self.filters.startdate
         enddate = self.filters.enddate
@@ -76,3 +78,10 @@ class QuartersData(Analyses):
             start = start + relativedelta(months=3)
         createJSON(companies_quarters, destdir+"/scr-companies-quarters.json")
         createJSON(people_quarters, destdir+"/scr-people-quarters.json")
+
+    def get_report_files(self, data_source = None):
+        if data_source is not SCR: return []
+        return ["scr-people-all.json",
+                "scr-companies-all.json",
+                "scr-companies-quarters.json",
+                "scr-people-quarters.json"]
