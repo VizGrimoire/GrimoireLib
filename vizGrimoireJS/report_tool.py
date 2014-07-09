@@ -82,38 +82,36 @@ def create_report_people(startdate, enddate, destdir, npeople, identities_db):
         logging.info("Creating people for " + ds.get_name())
         ds().create_people_report(period, startdate, enddate, destdir, npeople, identities_db)
 
-# TODO: refactor to generalize it
-def get_top_people (startdate, enddate, idb, bots):
+def get_top_people (startdate, enddate, idb):
     """Top people for all data sources."""
-    import GrimoireSQL, SCR, MLS, ITS, IRC, Mediawiki
+    import GrimoireSQL
+    from SCR import SCR
+    from MLS import MLS
+    from ITS import ITS
+    from IRC import IRC
+    from Mediawiki import Mediawiki
+    from metrics_filter import MetricFilters
+    from data_source import DataSource
     npeople = "10000" # max limit, all people included
     min_data_sources = 4 # min data sources to be in the list
     tops = {}
     all_top = {}
     all_top_min_ds = {}
-    db = automator['generic']['db_gerrit']
-    GrimoireSQL.SetDBChannel (database=db, user=opts.dbuser, password=opts.dbpassword)
-    tops["scr"] = SCR.GetTopOpenersSCR(0, startdate, enddate, idb, bots, npeople)
-    db = automator['generic']['db_mlstats']
-    GrimoireSQL.SetDBChannel (database=db, user=opts.dbuser, password=opts.dbpassword)
-    tops["mls"] = MLS.top_senders(0, startdate, enddate, idb, bots, npeople)
-    db = automator['generic']['db_bicho']
-    GrimoireSQL.SetDBChannel (database=db, user=opts.dbuser, password=opts.dbpassword)
-    # Fixed for bugzilla, what Wikimedia uses
-    closed_condition = "(new_value='RESOLVED' OR new_value='CLOSED' OR new_value='Lowest')"
-    # TODO: include in "-Bot" company all the bots
-    tops["its"] = ITS.GetTopOpeners(0, startdate, enddate, idb, ["-Bot"], closed_condition, npeople)
-    db = automator['generic']['db_irc']
-    GrimoireSQL.SetDBChannel (database=db, user=opts.dbuser, password=opts.dbpassword)
-    tops["irc"] = IRC.GetTopSendersIRC(0, startdate, enddate, idb, bots, npeople)
-    db = automator['generic']['db_mediawiki']
-    GrimoireSQL.SetDBChannel (database=db, user=opts.dbuser, password=opts.dbpassword)
-    tops["mediawiki"] = Mediawiki.GetTopAuthorsMediaWiki(0, startdate, enddate, idb, bots, npeople)
+    period = None
+    type_analysis = None
+    mfilter = MetricFilters(period, startdate, enddate, type_analysis, npeople)
+
     # SCR and SCM are the same. Don't use both for Tops
-    # TODO: include in "-Bot" company all the bots
-    # db = automator['generic']['db_cvsanaly']
-    # GrimoireSQL.SetDBChannel (database=db, user=opts.dbuser, password=opts.dbpassword)
-    # tops["scm"] = SCM.top_people(0, startdate, enddate, "author" , ["-Bot"] , npeople)
+    mopeners = DataSource.get_metrics("submitters", SCR)
+    tops["scr"] =  mopeners.get_list(mfilter, 0)
+    msenders = DataSource.get_metrics("senders", MLS)
+    tops["mls"] =  msenders.get_list(mfilter, 0)
+    mopeners = DataSource.get_metrics("openers", ITS)
+    tops["its"] =  mopeners.get_list(mfilter, 0)
+    msenders = DataSource.get_metrics("senders", IRC)
+    tops["irc"] =  msenders.get_list(mfilter, 0)
+    mauthors = DataSource.get_metrics("authors", Mediawiki)
+    tops["mediawiki"] = mauthors.get_list(mfilter, 0)
 
     # Build the consolidated top list using all data sources data
     # Only people in all data sources is used
@@ -128,9 +126,9 @@ def get_top_people (startdate, enddate, idb, bots):
         if len(all_top[id])>=min_data_sources: all_top_min_ds[id] = all_top[id]
     return all_top_min_ds
 
-def create_top_people_report(startdate, enddate, destdir, idb, bots):
+def create_top_people_report(startdate, enddate, destdir, idb):
     """Top people for all data sources."""
-    all_top_min_ds = get_top_people (startdate, enddate, idb, bots)
+    all_top_min_ds = get_top_people (startdate, enddate, idb)
     createJSON(all_top_min_ds, opts.destdir+"/all_top.json")
 
 
@@ -149,11 +147,11 @@ def create_reports_r(enddate, destdir):
         logging.info("Creating R reports for " + ds.get_name())
         ds.create_r_reports(vizr, enddate, destdir)
 
-def create_people_identifiers(startdate, enddate, destdir, idb, bots):
+def create_people_identifiers(startdate, enddate, destdir, idb):
     logging.info("Generating people identifiers")
 
     from SCM import GetPeopleListSCM
-    import People
+    import People, GrimoireSQL
 
     scm = None
     for ds in Report.get_data_sources():
@@ -174,7 +172,7 @@ def create_people_identifiers(startdate, enddate, destdir, idb, bots):
     for upeople_id in people:
         people_data[upeople_id] = People.GetPersonIdentifiers(upeople_id)
 
-    all_top_min_ds = get_top_people(startdate, enddate, idb, bots)
+    all_top_min_ds = get_top_people(startdate, enddate, idb)
     print(all_top_min_ds)
 
     db = automator['generic']['db_cvsanaly']
@@ -334,21 +332,19 @@ if __name__ == '__main__':
         if (automator['r']['reports'].find('people')>-1):
             create_report_people(startdate, enddate, opts.destdir, opts.npeople, identities_db)
         create_reports_r(end_date, opts.destdir)
-        create_people_identifiers(startdate, enddate, opts.destdir, identities_db, bots)
-
-    if not opts.study and not opts.no_filters:
-        create_reports_filters(period, startdate, enddate, opts.destdir, opts.npeople, identities_db, bots)
-    if not opts.filter:
-        create_reports_studies(period, startdate, enddate, opts.destdir)
-    create_top_people_report(startdate, enddate, opts.destdir, identities_db, bots)
-    create_people_identifiers(startdate, enddate, opts.destdir, identities_db, bots)
+        create_people_identifiers(startdate, enddate, opts.destdir, identities_db)
 
     if not opts.study and not opts.no_filters:
         create_reports_filters(period, startdate, enddate, opts.destdir, opts.npeople, identities_db)
     if not opts.filter:
         create_reports_studies(period, startdate, enddate, opts.destdir)
-    create_people_identifiers(startdate, enddate, opts.destdir)
+    create_top_people_report(startdate, enddate, opts.destdir, identities_db)
+    create_people_identifiers(startdate, enddate, opts.destdir, identities_db)
 
->>>>>>> master
+    if not opts.study and not opts.no_filters:
+        create_reports_filters(period, startdate, enddate, opts.destdir, opts.npeople, identities_db)
+    if not opts.filter:
+        create_reports_studies(period, startdate, enddate, opts.destdir)
+    create_people_identifiers(startdate, enddate, opts.destdir, identities_db)
 
     logging.info("Report data source analysis OK")
