@@ -110,7 +110,7 @@ class Authors(Metrics):
         return q
 
 
-    def get_top_repository (self, metric_filters = None):
+    def _get_top_repository (self, metric_filters = None):
         if metric_filters == None:
             metric_filters = self.filters
         startdate = metric_filters.startdate
@@ -136,7 +136,7 @@ class Authors(Metrics):
 
         return res
 
-    def get_top_company (self, metric_filters = None):
+    def _get_top_company (self, metric_filters = None):
         if metric_filters == None:
             metric_filters = self.filters
         startdate = metric_filters.startdate
@@ -163,7 +163,7 @@ class Authors(Metrics):
         data = self.db.ExecuteQuery(q)
         return (data)
 
-    def get_top_project(self, metric_filters = None):
+    def _get_top_project(self, metric_filters = None):
         if metric_filters == None:
             metric_filters = self.filters
         startdate = metric_filters.startdate
@@ -190,7 +190,7 @@ class Authors(Metrics):
 
         return res
 
-    def get_top_global (self, days = 0, metric_filters = None, role = "author") :
+    def _get_top_global (self, days = 0, metric_filters = None, role = "author") :
         # This function returns the top people participating in the source code.
         # In addition, the number of days allows to limit the study to the last
         # X days specified in that parameter
@@ -228,7 +228,7 @@ class Authors(Metrics):
             if not isinstance(data[id], (list)): data[id] = [data[id]]
         return (data)
 
-    def get_top_supported_filters(self):
+    def _get_top_supported_filters(self):
         return ['repository','company','project']
 
 class Committers(Metrics):
@@ -686,7 +686,7 @@ class Companies(Metrics):
                                tables, filters, evol)
         return q
 
-    def get_top_project(self, fbots = None):
+    def _get_top_project(self, fbots = None):
 
         startdate = self.filters.startdate
         enddate = self.filters.enddate
@@ -709,7 +709,7 @@ class Companies(Metrics):
 
         return q
 
-    def get_top(self, fbots = None):
+    def _get_top(self, fbots = None):
         q = """
             select c.name, count(distinct(t.s_id)) as total
             from companies c,  (
@@ -741,10 +741,10 @@ class Companies(Metrics):
             self.filters = metric_filters
 
             if metric_filters.type_analysis[0] == "project":
-                q = self. get_top_project(fbots)
+                q = self._get_top_project(fbots)
 
         else:
-            q = self.get_top(fbots)
+            q = self._get_top(fbots)
 
         if metric_filters is not None: self.filters = metric_filters_orig
 

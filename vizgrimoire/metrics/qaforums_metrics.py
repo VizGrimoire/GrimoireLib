@@ -86,7 +86,7 @@ class QuestionSenders(Metrics):
         return self.db.get_senders(self.filters.period, self.filters.startdate, self.filters.enddate,
                                  self.filters.type_analysis, evolutionary, "questions")
 
-    def get_top_global(self, days = 0, metric_filters = 0):
+    def _get_top_global(self, days = 0, metric_filters = 0):
 
         if metric_filters == None:
             metric_filters = self.filters
@@ -109,7 +109,7 @@ class AnswerSenders(Metrics):
         return self.db.get_senders(self.filters.period, self.filters.startdate, self.filters.enddate,
                                  self.filters.type_analysis, evolutionary, "answers")
 
-    def get_top_global(self, days = 0, metric_filters = 0):
+    def _get_top_global(self, days = 0, metric_filters = 0):
 
         if metric_filters == None:
             metric_filters = self.filters
@@ -132,7 +132,7 @@ class CommentSenders(Metrics):
         return self.db.get_senders(self.filters.period, self.filters.startdate, self.filters.enddate,
                                  self.filters.type_analysis, evolutionary, "comments")
 
-    def get_top_global(self, days = 0, metric_filters = 0):
+    def _get_top_global(self, days = 0, metric_filters = 0):
         if metric_filters == None:
             metric_filters = self.filters
 
@@ -178,7 +178,7 @@ class Participants(Metrics):
                                    tables, filters, evolutionary)
         return query
 
-    def get_top_global(self, days = 0, metric_filters = 0):
+    def _get_top_global(self, days = 0, metric_filters = 0):
 
         if metric_filters == None:
             metric_filters = self.filters

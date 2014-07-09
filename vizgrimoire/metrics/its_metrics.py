@@ -103,7 +103,7 @@ class Openers(Metrics):
                                fields, tables, filters, evolutionary)
         return q
 
-    def get_top_global(self, days = 0, metric_filters = None):
+    def _get_top_global(self, days = 0, metric_filters = None):
 
         if metric_filters == None:
             metric_filters = self.filters
@@ -176,7 +176,7 @@ class Closers(Metrics):
     data_source = ITS
     envision = {"gtype" : "whiskers"}
 
-    def get_top_company (self, metric_filters) :
+    def _get_top_company (self, metric_filters) :
         startdate = metric_filters.startdate
         enddate = metric_filters.enddate
         company_name = metric_filters.type_analysis[1]
@@ -202,7 +202,7 @@ class Closers(Metrics):
         data = self.db.ExecuteQuery(q)
         return (data)
 
-    def get_top_domain (self, metric_filters):
+    def _get_top_domain (self, metric_filters):
         startdate = metric_filters.startdate
         enddate = metric_filters.enddate
         domain_name = metric_filters.type_analysis[1]
@@ -227,7 +227,7 @@ class Closers(Metrics):
         data = self.db.ExecuteQuery(q)
         return (data)
 
-    def get_top_repository (self, metric_filters):
+    def _get_top_repository (self, metric_filters):
         startdate = metric_filters.startdate
         enddate = metric_filters.enddate
         repo_name = metric_filters.type_analysis[1]
@@ -254,7 +254,7 @@ class Closers(Metrics):
         return (data)
 
 
-    def get_top(self, days = 0, metric_filters = None):
+    def _get_top(self, days = 0, metric_filters = None):
         if metric_filters == None:
             metric_filters = self.filters
 
@@ -303,13 +303,13 @@ class Closers(Metrics):
 
         if metric_filters.type_analysis and metric_filters.type_analysis is not None:
             if metric_filters.type_analysis[0] == "repository":
-                alist = self.get_top_repository(metric_filters)
+                alist = self._get_top_repository(metric_filters)
             if metric_filters.type_analysis[0] == "company":
-                alist = self.get_top_company(metric_filters)
+                alist = self._get_top_company(metric_filters)
             if metric_filters.type_analysis[0] == "domain":
-                alist = self.get_top_domain(metric_filters)
+                alist = self._get_top_domain(metric_filters)
         else:
-            alist = self.get_top(days)
+            alist = self._get_top(days)
 
         if metric_filters is not None: self.filters = metric_filters_orig
         return alist

@@ -62,7 +62,7 @@ class EmailsSenders(Metrics):
     desc = "People sending emails"
     data_source = MLS
 
-    def get_top_repository (self, metric_filters):
+    def _get_top_repository (self, metric_filters):
         startdate = metric_filters.startdate
         enddate = metric_filters.enddate
         repo = metric_filters.type_analysis[1]
@@ -84,7 +84,7 @@ class EmailsSenders(Metrics):
         data = ExecuteQuery(q)
         return (data)
 
-    def get_top_country (self, metric_filters):
+    def _get_top_country (self, metric_filters):
         startdate = metric_filters.startdate
         enddate = metric_filters.enddate
         country_name = metric_filters.type_analysis[1]
@@ -104,7 +104,7 @@ class EmailsSenders(Metrics):
         data = ExecuteQuery(q)
         return (data)
 
-    def get_top_company (self, metric_filters):
+    def _get_top_company (self, metric_filters):
         startdate = metric_filters.startdate
         enddate = metric_filters.enddate
         company_name = metric_filters.type_analysis[1]
@@ -124,7 +124,7 @@ class EmailsSenders(Metrics):
         data = ExecuteQuery(q)
         return (data)
 
-    def get_top_domain (self, metric_filters):
+    def _get_top_domain (self, metric_filters):
         startdate = metric_filters.startdate
         enddate = metric_filters.enddate
         domain_name = metric_filters.type_analysis[1]
@@ -145,7 +145,7 @@ class EmailsSenders(Metrics):
         return (data)
 
 
-    def get_top_global (self, days = 0, metric_filters = None):
+    def _get_top_global (self, days = 0, metric_filters = None):
         if metric_filters == None:
             metric_filters = self.filters
 
@@ -178,7 +178,7 @@ class EmailsSenders(Metrics):
         data = self.db.ExecuteQuery(q)
         return (data)
 
-    def get_top_supported_filters(self):
+    def _get_top_supported_filters(self):
         return ['repository','company','country','domain']
 
     def __get_sql__ (self, evolutionary):
