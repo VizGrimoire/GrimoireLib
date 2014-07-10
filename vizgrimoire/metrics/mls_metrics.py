@@ -515,11 +515,18 @@ class UnansweredPosts(Metrics):
         return (current)
 
     def __get_messages(self, from_date, to_date):
-        query = "SELECT message_ID, is_response_of "
-        query += "FROM messages m "
-        query += "WHERE m.first_date >= '" + str(from_date) + "' AND m.first_date < '" + str(to_date) + "' "
-        query += "AND m.first_date >= " + str(self.filters.startdate) + " AND m.first_date < " + str(self.filters.enddate) + " "
-        query += "ORDER BY m.first_date"
+        select = "SELECT message_ID, is_response_of "
+        tables = "FROM messages m "
+        where = "WHERE m.first_date >= '" + str(from_date) + "' AND m.first_date < '" + str(to_date) + "' "
+        where += "AND m.first_date >= " + str(self.filters.startdate) + " AND m.first_date < " + str(self.filters.enddate) + " "
+
+        if (self.filters.type_analysis and self.filters.type_analysis[0] in ("repository")):
+            tables += self.db.GetSQLReportFrom(self.filters.type_analysis)
+            where += "AND " + self.db.GetSQLReportWhere(self.filters.type_analysis)
+
+        where += "ORDER BY m.first_date"
+
+        query = select + tables + where
 
         results = self.db.ExecuteQuery(query)
 
@@ -537,6 +544,9 @@ class UnansweredPosts(Metrics):
         # are still unanswered. Returns the number of unanswered
         # posts on each month.
         period = self.filters.period
+
+        if (self.filters.type_analysis and self.filters.type_analysis[0] not in ("repository")):
+            return {}
 
         if (period != "month"):
             logging.error("Period not supported in " + self.id + " " + period)
