@@ -285,7 +285,8 @@ class DataSource(object):
                     res = obj.get_ts(ds)
                 else:
                     res = obj.get_agg(ds)
-                data = dict(res.items() + data.items())
+                if res is not None:
+                    data = dict(res.items() + data.items())
             except TypeError:
                 # logging.info(study.id + " does no support standard API. Not used.")
                 pass
