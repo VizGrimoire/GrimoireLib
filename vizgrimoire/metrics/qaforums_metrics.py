@@ -48,7 +48,7 @@ class Questions(Metrics):
     desc = "Questions found in the QA platform"
     data_source = QAForums
   
-    def __get_sql__(self, evolutionary):
+    def _get_sql(self, evolutionary):
         return self.db.get_sent(self.filters.period, self.filters.startdate, self.filters.enddate,
                                  self.filters.type_analysis, evolutionary, "questions")
 
@@ -60,7 +60,7 @@ class Answers(Metrics):
     desc = "Answers found in the QA platform"
     data_source = QAForums
 
-    def __get_sql__(self, evolutionary):
+    def _get_sql(self, evolutionary):
         return self.db.get_sent(self.filters.period, self.filters.startdate, self.filters.enddate,
                                  self.filters.type_analysis, evolutionary, "answers")
 class Comments(Metrics):
@@ -71,7 +71,7 @@ class Comments(Metrics):
     desc = "Comments found in the QA platform"
     data_source = QAForums
 
-    def __get_sql__(self, evolutionary):
+    def _get_sql(self, evolutionary):
         return self.db.get_sent(self.filters.period, self.filters.startdate, self.filters.enddate,
                                  self.filters.type_analysis, evolutionary, "comments")
 class QuestionSenders(Metrics):
@@ -82,7 +82,7 @@ class QuestionSenders(Metrics):
     desc = "People asking questions in the QA platform"
     data_source = QAForums
 
-    def __get_sql__(self, evolutionary):
+    def _get_sql(self, evolutionary):
         return self.db.get_senders(self.filters.period, self.filters.startdate, self.filters.enddate,
                                  self.filters.type_analysis, evolutionary, "questions")
 
@@ -105,7 +105,7 @@ class AnswerSenders(Metrics):
     desc = "People sending answers in the QA platform"
     data_source = QAForums
 
-    def __get_sql__(self, evolutionary):
+    def _get_sql(self, evolutionary):
         return self.db.get_senders(self.filters.period, self.filters.startdate, self.filters.enddate,
                                  self.filters.type_analysis, evolutionary, "answers")
 
@@ -128,7 +128,7 @@ class CommentSenders(Metrics):
     desc = "People commenting in questions or answers in the QA platform"
     data_source = QAForums
 
-    def __get_sql__(self, evolutionary):
+    def _get_sql(self, evolutionary):
         return self.db.get_senders(self.filters.period, self.filters.startdate, self.filters.enddate,
                                  self.filters.type_analysis, evolutionary, "comments")
 
@@ -150,7 +150,7 @@ class Participants(Metrics):
     desc = "All participants included in this metric, those commenting, asking and answering"
     data_source = QAForums
 
-    def __get_sql__(self, evolutionary):
+    def _get_sql(self, evolutionary):
         fields = " count(distinct(t.identifier)) as participants"
         tables = """
                   (
@@ -239,7 +239,7 @@ class Tags(Metrics):
     desc = "Tags used in QAForums"
     data_source = QAForums
 
-    def __get_sql__(self, evolutionary):
+    def _get_sql(self, evolutionary):
         pass
 
     def get_list(self):

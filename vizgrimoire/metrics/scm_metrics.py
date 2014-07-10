@@ -50,7 +50,7 @@ class Commits(Metrics):
                 "show_markers" : "true" }
     data_source = SCM
 
-    def __get_sql__(self, evolutionary):
+    def _get_sql(self, evolutionary):
         q_actions = " AND s.id IN (select distinct(a.commit_id) from actions a)"
 
         fields = " count(distinct(s.id)) as commits "
@@ -61,7 +61,7 @@ class Commits(Metrics):
                                    tables, filters, evolutionary)
         return query
 
-    def __get_sql__slow(self, evolutionary):
+    def _get_sqlslow(self, evolutionary):
         fields = " count(distinct(s.id)) as commits "
         tables = " scmlog s, actions a " + self.db.GetSQLReportFrom(self.filters.type_analysis)
         filters = self.db.GetSQLReportWhere(self.filters.type_analysis, "author") + " and s.id=a.commit_id "
@@ -82,7 +82,7 @@ class Authors(Metrics):
     action = "commits"
     data_source = SCM
 
-    def __get_sql__ (self, evolutionary):
+    def _get_sql (self, evolutionary):
         # This function contains basic parts of the query to count authors
         # That query is later built and executed
 
@@ -243,7 +243,7 @@ class Committers(Metrics):
     action = "commits"
     data_source = SCM
 
-    def __get_sql__(self, evolutionary):
+    def _get_sql(self, evolutionary):
         # This function contains basic parts of the query to count committers
         fields = 'count(distinct(pup.upeople_id)) AS committers '
         tables = "scmlog s "
@@ -278,7 +278,7 @@ class Files(Metrics):
     desc = "Number of files 'touched' (added, modified, removed, ) by at least one commit"
     data_source = SCM
 
-    def __get_sql__(self, evolutionary):
+    def _get_sql(self, evolutionary):
         # This function contains basic parts of the query to count files
         fields = " count(distinct(a.file_id)) as files "
         tables = " scmlog s, actions a "
@@ -304,7 +304,7 @@ class Lines(Metrics):
     desc = "Number of added and/or removed lines"
     data_source = SCM
 
-    def __get_sql__(self, evolutionary):
+    def _get_sql(self, evolutionary):
         # This function contains basic parts of the query to count added and removed lines
         fields = "sum(cl.added) as added_lines, sum(cl.removed) as removed_lines"
         tables = "scmlog s, commits_lines cl "
@@ -323,7 +323,7 @@ class Lines(Metrics):
 
     def get_ts(self):
         #Specific needs for Added and Removed lines not considered in meta class Metrics
-        query = self.__get_sql__(True)
+        query = self._get_sql(True)
         data = self.db.ExecuteQuery(query)
 
         if not (isinstance(data['removed_lines'], list)): data['removed_lines'] = [data['removed_lines']]
@@ -374,7 +374,7 @@ class Branches(Metrics):
     desc = "Number of active branches"
     data_source = SCM
 
-    def __get_sql__(self, evolutionary):
+    def _get_sql(self, evolutionary):
         # Basic parts of the query needed when calculating branches
         fields = "count(distinct(a.branch_id)) as branches "
         tables = " scmlog s, actions a "
@@ -399,7 +399,7 @@ class Actions(Metrics):
     desc = "Actions performed on several files (add, remove, copy, ... each file)"
     data_source = SCM
 
-    def __get_sql__ (self, evolutionary):
+    def _get_sql (self, evolutionary):
         # Basic parts of the query needed when calculating actions
         fields = " count(distinct(a.id)) as actions "
         tables = " scmlog s, actions a "
@@ -421,7 +421,7 @@ class CommitsPeriod(Metrics):
     desc = "Average number of commits per period"
     data_source = SCM
 
-    def __get_sql__(self, evolutionary):
+    def _get_sql(self, evolutionary):
         # Basic parts of the query needed when calculating commits per period
 
         fields = " count(distinct(s.id))/timestampdiff("+self.filters.period+",min(s.date),max(s.date)) as avg_commits_"+self.filters.period
@@ -449,7 +449,7 @@ class FilesPeriod(Metrics):
     desc = "Average number of files per period"
     data_source = SCM
 
-    def __get_sql__(self, evolutionary):
+    def _get_sql(self, evolutionary):
         # Basic parts of the query needed when calculating commits per period
 
         fields = " count(distinct(a.file_id))/timestampdiff("+self.filters.period+",min(s.date),max(s.date)) as avg_files_"+self.filters.period
@@ -477,7 +477,7 @@ class CommitsAuthor(Metrics):
     desc = "Average number of commits per author"
     data_source = SCM
 
-    def __get_sql__(self, evolutionary):
+    def _get_sql(self, evolutionary):
         # Basic parts of the query needed when calculating commits per author
   
         fields = " count(distinct(s.id))/count(distinct(pup.upeople_id)) as avg_commits_author "
@@ -514,7 +514,7 @@ class AuthorsPeriod(Metrics):
     desc = "Average number of authors per period"
     data_source = SCM
 
-    def __get_sql__(self, evolutionary):
+    def _get_sql(self, evolutionary):
         # Basic parts of the query needed when calculating commits per period
 
         fields = " count(distinct(pup.upeople_id))/timestampdiff("+self.filters.period+",min(s.date),max(s.date)) as avg_authors_"+self.filters.period
@@ -556,7 +556,7 @@ class CommittersPeriod(Metrics):
     desc = "Average number of committers per period"
     data_source = SCM
 
-    def __get_sql__(self, evolutionary):
+    def _get_sql(self, evolutionary):
         # Basic parts of the query needed when calculating commits per period
 
         #TODO: the following three lines should be initialize in a __init__ method.
@@ -601,7 +601,7 @@ class FilesAuthor(Metrics):
     desc = "Average number of files per author"
     data_source = SCM
 
-    def __get_sql__(self, evolutionary):
+    def _get_sql(self, evolutionary):
         # Basic parts of the query needed when calculating files per author
 
         fields = " count(distinct(a.file_id))/count(distinct(pup.upeople_id)) as avg_files_author "
@@ -639,7 +639,7 @@ class Repositories(Metrics):
     envision = {"gtype" : "whiskers"}
     data_source = SCM
 
-    def __get_sql__(self, evolutionary):
+    def _get_sql(self, evolutionary):
         fields = "count(distinct(s.repository_id)) AS repositories "
         tables = "scmlog s "
 
@@ -676,7 +676,7 @@ class Companies(Metrics):
     desc = "Companies participating in the source code management system"
     data_source = SCM
 
-    def __get_sql__(self, evol):
+    def _get_sql(self, evol):
         fields = "count(distinct(upc.company_id)) as companies"
         tables = " scmlog s, people_upeople pup, upeople_companies upc"
         filters = "s.author_id = pup.people_id and "+\
@@ -761,7 +761,7 @@ class Countries(Metrics):
     desc = "Countries participating in the source code management system"
     data_source = SCM
 
-    def __get_sql__(self, evol):
+    def _get_sql(self, evol):
         fields = "count(distinct(upc.country_id)) as countries"
         tables = "scmlog s, people_upeople pup, upeople_countries upc"
         filters = "s.author_id = pup.people_id and pup.upeople_id = upc.upeople_id"
@@ -800,7 +800,7 @@ class Domains(Metrics):
     desc = "Domains participating in the source code management system"
     data_source = SCM
 
-    def __get_sql__(self, evol):
+    def _get_sql(self, evol):
         fields = "COUNT(DISTINCT(upd.domain_id)) AS domains"
         tables = "scmlog s, people_upeople pup, upeople_domains upd"
         filters = "s.author_id = pup.people_id and pup.upeople_id = upd.upeople_id"

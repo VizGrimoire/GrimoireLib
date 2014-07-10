@@ -57,7 +57,7 @@ class Metrics(object):
         """ Returns the family of the instance """
         return Metrics.data_source
 
-    def __get_sql__(self, evolutionary):
+    def _get_sql(self, evolutionary):
         """ Returns specific sql for the provided filters """
         raise NotImplementedError
 
@@ -66,14 +66,14 @@ class Metrics(object):
 
     def get_ts (self):
         """ Returns a time serie of values """
-        query = self.__get_sql__(True)
+        query = self._get_sql(True)
         ts = self.db.ExecuteQuery(query)
         return completePeriodIds(ts, self.filters.period, 
                                  self.filters.startdate, self.filters.enddate)
 
     def get_agg(self):
         """ Returns an aggregated value """
-        query = self.__get_sql__(False)
+        query = self._get_sql(False)
         return self.db.ExecuteQuery(query)
 
     def get_agg_diff_days(self, date, days):
