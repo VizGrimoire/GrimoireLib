@@ -143,6 +143,8 @@ class TopIssues(Analyses):
         return details
 
 
+    def create_report(self, data_source = None, destdir = None):
+    	return self.result(data_source)
 
     def result(self, data_source = None):
         """ Returns a JSON to be included in top file """
