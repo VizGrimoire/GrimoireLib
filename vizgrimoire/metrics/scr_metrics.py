@@ -354,6 +354,22 @@ class Companies(Metrics):
                                 fields, tables, filters, evolutionary)
         return q
 
+    def get_list (self):
+        q = "SELECT c.id as id, c.name as name, COUNT(DISTINCT(i.id)) AS total "+\
+                   "FROM  "+self.db.identities_db+".companies c, "+\
+                           self.db.identities_db+".upeople_companies upc, "+\
+                    "     people_upeople pup, "+\
+                    "     issues i "+\
+                   "WHERE i.submitted_by = pup.people_id AND "+\
+                   "  upc.upeople_id = pup.upeople_id AND "+\
+                   "  c.id = upc.company_id AND "+\
+                   "  i.status = 'merged' AND "+\
+                   "  i.submitted_on >="+  self.filters.startdate+ " AND "+\
+                   "  i.submitted_on < "+ self.filters.enddate+ " "+\
+                   "GROUP BY c.name "+\
+                   "ORDER BY total DESC "
+        return(self.db.ExecuteQuery(q))
+
 class Countries(Metrics):
     id = "countries"
     name = "Countries"
@@ -370,6 +386,22 @@ class Countries(Metrics):
                                 fields, tables, filters, evolutionary)
         return q
 
+    def get_list  (self):
+        q = "SELECT c.name as name, COUNT(DISTINCT(i.id)) AS issues "+\
+               "FROM  "+self.db.identities_db+".countries c, "+\
+                       self.db.identities_db+".upeople_countries upc, "+\
+                "    people_upeople pup, "+\
+                "    issues i "+\
+               "WHERE i.submitted_by = pup.people_id AND "+\
+               "  upc.upeople_id = pup.upeople_id AND "+\
+               "  c.id = upc.country_id AND "+\
+               "  i.status = 'merged' AND "+\
+               "  i.submitted_on >="+  self.filters.startdate+ " AND "+\
+               "  i.submitted_on < "+ self.filters.enddate+ " "+\
+               "GROUP BY c.name "+\
+               "ORDER BY issues DESC "
+        return(self.db.ExecuteQuery(q))
+
 class Domains(Metrics):
     id = "domains"
     name = "Domains"
@@ -378,6 +410,41 @@ class Domains(Metrics):
 
     def __get_sql__(self, evolutionary):
         pass
+
+class Projects(Metrics):
+    id = "projects"
+    name = "Projects"
+    desc = "Number of projects in code review"
+    data_source = SCR
+
+    def __get_sql__(self, evolutionary):
+        pass
+
+    def get_list (self):
+        # Projects activity needs to include subprojects also
+        logging.info ("Getting projects list for SCR")
+
+        # Get all projects list
+        q = "SELECT p.id AS name FROM  %s.projects p" % (self.db.identities_db)
+        projects = self.db.ExecuteQuery(q)
+        data = []
+
+        # Loop all projects getting reviews
+        for project in projects['name']:
+            type_analysis = ['project', project]
+            period = None
+            evol = False
+            reviews = SCR.get_metrics("submitted", SCR).get_agg()
+            reviews = reviews['submitted']
+            if (reviews > 0):
+                data.append([reviews,project])
+
+        # Order the list using reviews: https://wiki.python.org/moin/HowTo/Sorting
+        from operator import itemgetter
+        data_sort = sorted(data, key=itemgetter(0),reverse=True)
+        names = [name[1] for name in data_sort]
+
+        return({"name":names})
 
 class Repositories(Metrics):
     id = "repositories"
@@ -393,6 +460,19 @@ class Repositories(Metrics):
                                 self.filters.enddate, " i.submitted_on",
                                 fields, tables, filters, evolutionary)
         return q
+
+    def get_list  (self):
+        q = "SELECT t.url as name, COUNT(DISTINCT(i.id)) AS issues "+\
+               " FROM  issues i, trackers t "+\
+               " WHERE i.tracker_id = t.id AND "+\
+               "  i.submitted_on >="+  self.filters.startdate+ " AND "+\
+               "  i.submitted_on < "+ self.filters.enddate +\
+               " GROUP BY t.url "+\
+               " ORDER BY issues DESC "
+        names = self.db.ExecuteQuery(q)
+        if not isinstance(names['name'], (list)): names['name'] = [names['name']]
+        return(names)
+
 
 class People(Metrics):
     id = "people"
