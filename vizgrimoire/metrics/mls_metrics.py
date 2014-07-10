@@ -20,6 +20,7 @@
 ##
 ## Authors:
 ##   Daniel Izquierdo-Cortazar <dizquierdo@bitergia.com>
+##   Alvaro del Castillo <acs@bitergia.com>
 ##
 
 
@@ -27,10 +28,12 @@ import logging
 
 from datetime import datetime
 
+from data_source import DataSource
 from GrimoireUtils import completePeriodIds, GetDates, GetPercentageDiff
 from GrimoireSQL import ExecuteQuery
-
+from filter import Filter
 from metrics import Metrics
+from metrics_filter import MetricFilters
 
 from MLS import MLS
 
@@ -343,6 +346,29 @@ class Repositories(Metrics):
                                    tables, filters, evolutionary)
         return query
 
+    def get_list (self) :
+        rfield = MLS.get_repo_field()
+        names = ""
+        if (rfield == "mailing_list_url") :
+            q = "SELECT ml.mailing_list_url, COUNT(message_ID) AS total "+\
+                   "FROM messages m, mailing_lists ml "+\
+                   "WHERE m.mailing_list_url = ml.mailing_list_url AND "+\
+                   "m.first_date >= "+self.filters.startdate+" AND "+\
+                   "m.first_date < "+self.filters.enddate+" "+\
+                   "GROUP BY ml.mailing_list_url ORDER by total desc"
+            mailing_lists = self.db.ExecuteQuery(q)
+            mailing_lists_files = self.db.ExecuteQuery(q)
+            names = mailing_lists_files[rfield]
+        else:
+            # TODO: not ordered yet by total messages
+            q = "SELECT DISTINCT(mailing_list) FROM messages m "+\
+                "WHERE m.first_date >= "+startdate+" AND "+\
+                "m.first_date < "+enddate
+            mailing_lists = ExecuteQuery(q)
+            names = mailing_lists
+        return (names)
+
+
 class Companies(Metrics):
     """ Companies participating in mailing lists """
 
@@ -355,6 +381,23 @@ class Companies(Metrics):
         return self.db.GetStudies(self.filters.period, self.filters.startdate, 
                                   self.filters.enddate, ['company', ''], evolutionary, 'companies')
 
+    def get_list (self):
+        filter_ = DataSource.get_filter_bots(Filter("company"))
+        filter_companies = ''
+        for company in filter_:
+            filter_companies += " c.name<>'"+company+"' AND "
+
+        q = "SELECT c.name as name, COUNT(DISTINCT(m.message_ID)) as sent "+\
+            "    FROM "+ self.db.GetTablesCompanies()+ " "+\
+            "    WHERE "+ self.db.GetFiltersCompanies()+ " AND "+\
+            "      "+ filter_companies+ " "+\
+            "      m.first_date >= "+self.filters.startdate+" AND "+\
+            "      m.first_date < "+self.filters.enddate+" "+\
+            "    GROUP BY c.name "+\
+            "    ORDER BY COUNT(DISTINCT(m.message_ID)) DESC"
+
+        data = self.db.ExecuteQuery(q)
+        return (data['name'])
 
 class Domains(Metrics):
     """ Domains found in the analysis of mailing lists """
@@ -368,19 +411,92 @@ class Domains(Metrics):
         return self.db.GetStudies(self.filters.period, self.filters.startdate,
                                   self.filters.enddate, ['domain', ''], evolutionary, 'domains')
 
+    def get_list  (self) :
+        filter_ = DataSource.get_filter_bots(Filter("domain"))
+        filter_domains = ""
+        for domain in filter_:
+            filter_domains += " d.name<>'"+ domain + "' AND "
+
+        q = "SELECT d.name as name, COUNT(DISTINCT(m.message_ID)) as sent "+\
+            "    FROM "+self.db.GetTablesDomains()+ " "+\
+            "    WHERE "+ self.db.GetFiltersDomains()+ " AND "+\
+            "    "+ filter_domains+ " "+\
+            "    m.first_date >= "+self.filters.startdate+" AND "+\
+            "    m.first_date < "+self.filters.enddate+\
+            "    GROUP BY d.name "+\
+            "    ORDER BY COUNT(DISTINCT(m.message_ID)) DESC "
+        data = self.db.ExecuteQuery(q)
+        return (data['name'])
 
 class Countries(Metrics):
     """ Countries participating in mailing lists """
 
     id = "countries"
     name = "Countries"
-    desc = "Countries participating in mailing lists """
+    desc = "Countries participating in mailing lists"
     data_source = MLS
 
     def __get_sql__(self, evolutionary):
         return self.db.GetStudies(self.filters.period, self.filters.startdate,
                                   self.filters.enddate, ['country', ''], evolutionary, 'countries')
 
+    def get_list  (self):
+        filter_ = DataSource.get_filter_bots(Filter("country"))
+        filter_countries = ''
+        for country in filter_:
+            filter_countries += " c.name<>'"+country+"' AND "
+
+        q = "SELECT c.name as name, COUNT(m.message_ID) as sent "+\
+                "FROM "+ self.db.GetTablesCountries()+ " "+\
+                "WHERE "+ self.db.GetFiltersCountries()+ " AND "+\
+                "  "+ filter_countries+ " "+\
+                "  m.first_date >= "+self.filters.startdate+" AND "+\
+                "  m.first_date < "+self.filters.enddate+" "+\
+                "GROUP BY c.name "+\
+                "ORDER BY COUNT((m.message_ID)) DESC "
+        data = self.db.ExecuteQuery(q)
+        return(data['name'])
+
+
+class Projects(Metrics):
+    """ Projects existing in mailing lists """
+
+    id = "projects"
+    name = "Projects"
+    desc = "Projects existing in mailing lists"
+    data_source = MLS
+
+    def get_list(self):
+        # Projects activity needs to include subprojects also
+        logging.info ("Getting projects list for MLS")
+
+        # Get all projects list
+        q = "SELECT p.id AS name FROM  %s.projects p" % (self.db.identities_db)
+        projects = self.db.ExecuteQuery(q)
+        data = []
+
+        # Loop all projects getting reviews
+        for project in projects['name']:
+            type_analysis = ['project', project]
+            period = None
+            filter_com = MetricFilters(period, self.filters.startdate,
+                                       self.filters.enddate, type_analysis)
+            msent = MLS.get_metrics("sent", MLS)
+            # TODO: we should restore original filter
+            msent.filters = filter_com
+            sent = msent.get_agg()
+
+            sent = sent['sent']
+            if (sent > 0):
+                data.append([sent,project])
+
+        # Order the list using reviews: https://wiki.python.org/moin/HowTo/Sorting
+        from operator import itemgetter
+        data_sort = sorted(data, key=itemgetter(0),reverse=True)
+        names = [name[1] for name in data_sort]
+
+        # if (limit > 0): names = names[:limit]
+        return names
 
 class UnansweredPosts(Metrics):
     """ Unanswered posts in mailing lists """
