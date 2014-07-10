@@ -229,3 +229,34 @@ class Participants(Metrics):
              """ % (startdate, enddate, date_limit, limit)
 
         return self.db.ExecuteQuery(query)
+
+
+class Tags(Metrics):
+    """Tags used in QAForum """
+
+    id = "tags"
+    name = "Tags"
+    desc = "Tags used in QAForums"
+    data_source = QAForums
+
+    def __get_sql__(self, evolutionary):
+        pass
+
+    def get_list(self):
+        # Returns list of tags
+        query = "select tag as name from tags"
+        query = """select t.tag as name, 
+                          count(distinct(qt.question_identifier)) as total 
+                   from tags t, 
+                        questionstags qt,
+                        questions q 
+                   where t.id=qt.tag_id and
+                         qt.question_identifier = q.question_identifier and
+                         q.added_at >= %s and
+                         q.added_at < %s
+                   group by t.tag 
+                   having total > 20
+                   order by total desc, name;""" % (self.filters.startdate, self.filters.enddate)
+        data = self.db.ExecuteQuery(query)
+        return data
+        
