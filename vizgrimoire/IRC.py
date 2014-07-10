@@ -109,7 +109,9 @@ class IRC(DataSource):
         filter_name = filter_.get_name()
 
         if (filter_name == "repository"):
-            items = GetReposNameIRC()
+            metric = DataSource.get_metrics("repositories", IRC)
+            items = metric.get_list()
+            # items = GetReposNameIRC()
         else:
             logging.error("IRC " + filter_name + " not supported")
         return items
@@ -322,14 +324,6 @@ def GetTablesReposIRC () :
 def GetFiltersReposIRC () :
     filters = GetFiltersOwnUniqueIdsIRC() +" AND c.id = irclog.channel_id"
     return(filters)
-
-
-def GetReposNameIRC ():
-    q = "SELECT name, count(i.id) AS total "+\
-        "  FROM irclog i, channels c "+\
-        "  WHERE i.channel_id=c.id "+\
-        "  GROUP BY name ORDER BY total DESC"
-    return(ExecuteQuery(q)['name'])
 
 #########
 # PEOPLE

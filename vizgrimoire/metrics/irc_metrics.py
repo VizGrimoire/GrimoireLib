@@ -117,6 +117,12 @@ class Repositories(Metrics):
                                tables, filters, evolutionary)
         return q
 
+    def get_list (self):
+        q = "SELECT name, count(i.id) AS total "+\
+            "  FROM irclog i, channels c "+\
+            "  WHERE i.channel_id=c.id "+\
+            "  GROUP BY name ORDER BY total DESC"
+        return(self.db.ExecuteQuery(q)['name'])
 
 # Examples of use
 if __name__ == '__main__':
