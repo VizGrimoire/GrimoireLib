@@ -124,10 +124,11 @@ class Authors(Metrics):
         repos_where = " WHERE  " + self.db.GetSQLRepositoriesWhere(repo)[4:]
 
         fields =  "SELECT COUNT(DISTINCT(s.id)) as commits, u.id, u.identifier as authors "
-        fields += "FROM scmlog s, people_upeople pup, upeople u "
+        fields += "FROM actions a, scmlog s, people_upeople pup, upeople u "
         q = fields + repos_from + repos_where
         if filter_bots != "": q += " AND "+ filter_bots
         q += " AND pup.people_id = s.author_id AND u.id = pup.upeople_id "
+        q += " and s.id = a.commit_id "
         q += " AND s.date >= " + startdate + " and s.date < " + enddate
         q += " GROUP by u.id ORDER BY commits DESC, r.name"
         q += " limit " + str(self.filters.npeople)
@@ -178,10 +179,11 @@ class Authors(Metrics):
         projects_where = " WHERE  " + self.db.GetSQLProjectWhere(project)[3:]
 
         fields =  "SELECT COUNT(DISTINCT(s.id)) as commits, u.id, u.identifier as authors "
-        fields += "FROM scmlog s, people_upeople pup, upeople u "
+        fields += "FROM actions a, scmlog s, people_upeople pup, upeople u "
         q = fields + projects_from + projects_where
         if filter_bots != "": q += " AND "+ filter_bots
         q += " AND pup.people_id = s.author_id AND u.id = pup.upeople_id "
+        q += " and a.commit_id = s.id "
         q += " AND s.date >= " + startdate + " and s.date < " + enddate
         q += " GROUP by u.id ORDER BY commits DESC, u.id"
         q += " limit " + str(self.filters.npeople)
