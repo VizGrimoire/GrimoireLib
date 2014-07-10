@@ -43,7 +43,7 @@ class Opened(Metrics):
     envision =  {"y_labels" : "true", "show_markers" : "true"}
     data_source = ITS
 
-    def __get_sql__(self, evolutionary):
+    def _get_sql(self, evolutionary):
 
         fields = " count(distinct(i.id)) as opened "
         tables = " issues i "+ self.db.GetSQLReportFrom(self.db.identities_db, self.filters.type_analysis)
@@ -137,7 +137,7 @@ class Openers(Metrics):
         data = self.db.ExecuteQuery(q)
         return (data)
 
-    def __get_sql__(self, evolutionary):
+    def _get_sql(self, evolutionary):
         if (self.filters.type_analysis is not None and (self.filters.type_analysis[0] in  ["repository","project"])):
             return self.__get_sql_trk_prj__(evolutionary)
         else:
@@ -152,18 +152,18 @@ class Closed(Metrics):
     desc = "Number of closed tickets"
     data_source = ITS
 
-    def __get_sql__(self, evolutionary):
+    def _get_sql(self, evolutionary):
         """ Implemented using Changed """
         close = True
         changed = ITS.get_metrics("changed", ITS)
         if changed is None:
             # We need to create changers metric
             changed = Changed(self.db, self.filters)
-            q = changed.__get_sql__(evolutionary, close)
+            q = changed._get_sql(evolutionary, close)
         else:
             cfilters = changed.filters
             changed.filters = self.filters
-            q = changed.__get_sql__(evolutionary, close)
+            q = changed._get_sql(evolutionary, close)
             changed.filters = cfilters
         return q
 
@@ -314,18 +314,18 @@ class Closers(Metrics):
         if metric_filters is not None: self.filters = metric_filters_orig
         return alist
 
-    def __get_sql__(self, evolutionary):
+    def _get_sql(self, evolutionary):
         """ Implemented using Changers (changed metric should exists first) """
         close = True
         changers = ITS.get_metrics("changers", ITS)
         if changers is None:
             # We need to create changers metric
             changers = Changers(self.db, self.filters)
-            q = changers.__get_sql__(evolutionary, close)
+            q = changers._get_sql(evolutionary, close)
         else:
             cfilters = changers.filters
             changers.filters = self.filters
-            q = changers.__get_sql__(evolutionary, close)
+            q = changers._get_sql(evolutionary, close)
             changers.filters = cfilters
         return q
 
@@ -386,7 +386,7 @@ class Changed(Metrics):
                                fields, tables, filters, evolutionary)
         return q
 
-    def __get_sql__(self, evolutionary, close = False):
+    def _get_sql(self, evolutionary, close = False):
         if (self.filters.type_analysis is not None
             and len(self.filters.type_analysis) == 2
             and (self.filters.type_analysis[0] in  ["repository","project"])):
@@ -463,7 +463,7 @@ class Changers(Metrics):
                                fields, tables, filters, evolutionary)
         return q
 
-    def __get_sql__(self, evolutionary, close = False):
+    def _get_sql(self, evolutionary, close = False):
         if (self.filters.type_analysis is not None and (self.filters.type_analysis[0] in  ["repository","project"])):
             return self.__get_sql_trk_prj__(evolutionary, close)
         else:
@@ -527,7 +527,7 @@ class Trackers(Metrics):
         return (data)
 
 
-    def __get_sql__(self, evolutionary):
+    def _get_sql(self, evolutionary):
         fields = " COUNT(DISTINCT(tracker_id)) AS trackers  "
         tables = " issues i " + self.db.GetSQLReportFrom(self.db.identities_db, self.filters.type_analysis)
         filters = self.db.GetSQLReportWhere(self.filters.type_analysis, self.db.identities_db)
@@ -580,7 +580,7 @@ class Companies(Metrics):
         data = self.db.ExecuteQuery(q)
         return (data)
 
-    def __get_sql__(self, evolutionary):
+    def _get_sql(self, evolutionary):
         q = self.db.GetSQLIssuesStudies(self.filters.period, self.filters.startdate, 
                                            self.filters.enddate, self.db.identities_db, 
                                            ['company', ''], evolutionary, 'companies')
@@ -593,7 +593,7 @@ class Countries(Metrics):
     desc = "Number of countries with persons active in the ticketing system"
     data_source = ITS
 
-    def __get_sql__(self, evolutionary):
+    def _get_sql(self, evolutionary):
         q = self.db.GetSQLIssuesStudies(self.filters.period, self.filters.startdate, 
                                            self.filters.enddate, self.db.identities_db, 
                                            ['country', ''], evolutionary, 'countries')
@@ -630,7 +630,7 @@ class Domains(Metrics):
     desc = "Number of distinct email domains with persons active in the ticketing system"
     data_source = ITS
 
-    def __get_sql__(self, evolutionary):
+    def _get_sql(self, evolutionary):
         q = self.db.GetSQLIssuesStudies(self.filters.period, self.filters.startdate, 
                                            self.filters.enddate, self.db.identities_db, 
                                            ['domain', ''], evolutionary, 'domains')
@@ -701,7 +701,7 @@ class Projects(Metrics):
 
         return({"name":names})
 
-    def __get_sql__(self, evolutionary):
+    def _get_sql(self, evolutionary):
         # Not yet working
         return None
         q = self.db.GetSQLIssuesStudies(self.filters.period, self.filters.startdate, 
@@ -717,7 +717,7 @@ class AllParticipants(Metrics):
     desc = "Number of participants in all history in the ticketing system"
     data_source = ITS
 
-    def __get_sql__(self, evolutionary):
+    def _get_sql(self, evolutionary):
         q = "SELECT count(distinct(pup.upeople_id)) as allhistory_participants from people_upeople pup"
         return q
 
@@ -727,6 +727,6 @@ class AllParticipants(Metrics):
 
     def get_agg(self):
         if self.filters.type_analysis is None:
-            query = self.__get_sql__(False)
+            query = self._get_sql(False)
             return self.db.ExecuteQuery(query)
         else: return {}

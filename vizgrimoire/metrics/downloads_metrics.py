@@ -46,7 +46,7 @@ class Downloads(Metrics):
     desc = "Number of total downloads"
     data_source = DownloadsDS
 
-    def __get_sql__(self, evolutionary):
+    def _get_sql(self, evolutionary):
         fields = "count(*) as downloads"
         tables = "downloads"
         filters = ""
@@ -65,7 +65,7 @@ class Packages(Metrics):
     desc = "Number of downloaded packages"
     data_source = DownloadsDS
 
-    def __get_sql__(self, evolutionary):
+    def _get_sql(self, evolutionary):
         fields = "count(distinct(package)) as packages"
         tables = "downloads"
         filters = ""
@@ -102,7 +102,7 @@ class Protocols(Metrics):
     desc = "Number of protocols used to download packages """
     data_source = DownloadsDS
 
-    def __get_sql__(self, evolutionary):
+    def _get_sql(self, evolutionary):
         fields = "count(distinct(protocol)) as protocols"
         tables = "downloads"
         filters = ""
@@ -140,7 +140,7 @@ class IPs(Metrics):
                 """ % (startdate, enddate, str(limit))
         return self.db.ExecuteQuery(query)
 
-    def __get_sql__(self, evolutionary):
+    def _get_sql(self, evolutionary):
         fields = "count(distinct(ip)) as ips"
         tables = "downloads"
         filters = ""

@@ -46,7 +46,7 @@ class Releases(Metrics):
     desc = "Number of Releases done in a project"
     data_source = ReleasesDS
 
-    def __get_sql__(self, evolutionary):
+    def _get_sql(self, evolutionary):
 
         fields = "COUNT(DISTINCT(r.id)) AS releases"
         tables = "releases r, projects p"
@@ -64,7 +64,7 @@ class Modules(Metrics):
     desc = "Number of modules (projects)"
     data_source = ReleasesDS
 
-    def __get_sql__ (self, evolutionary):
+    def _get_sql (self, evolutionary):
         fields = "COUNT(*) AS modules"
         tables = "projects p"
         filters = ""
@@ -83,7 +83,7 @@ class Authors(Metrics):
     desc = "Number of people working in modules (projects) and releases"
     data_source = ReleasesDS
 
-    def __get_sql__ (self, evolutionary):
+    def _get_sql (self, evolutionary):
         fields = " COUNT(DISTINCT(pup.upeople_id)) as authors "
         # fields = "COUNT(DISTINCT(u.id)) AS authors"
         tables = "users u, releases r, projects p, people_upeople pup"

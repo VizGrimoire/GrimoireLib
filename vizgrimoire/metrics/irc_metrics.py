@@ -42,7 +42,7 @@ class Sent(Metrics):
     desc = "Number of messages sent to IRC channels"
     data_source = IRC
 
-    def __get_sql__(self, evolutionary):
+    def _get_sql(self, evolutionary):
         fields = " COUNT(message) AS sent "
         tables = " irclog i " + self.db.GetSQLReportFrom(self.filters.type_analysis)
         filters = self.db.GetSQLReportWhere(self.filters.type_analysis)
@@ -90,7 +90,7 @@ class Senders(Metrics):
             "            LIMIT " + str(limit)
         return(self.db.ExecuteQuery(q))
 
-    def __get_sql__(self, evolutionary):
+    def _get_sql(self, evolutionary):
         fields = " COUNT(DISTINCT(nick)) AS senders "
         tables = " irclog i " + self.db.GetSQLReportFrom(self.filters.type_analysis)
         filters = self.db.GetSQLReportWhere(self.filters.type_analysis)
@@ -108,7 +108,7 @@ class Repositories(Metrics):
     desc = "Number of active repositories"
     data_source = IRC
 
-    def __get_sql__(self, evolutionary):
+    def _get_sql(self, evolutionary):
         fields = " COUNT(DISTINCT(channel_id)) AS repositories "
         tables = " irclog i " + self.db.GetSQLReportFrom(self.filters.type_analysis)
         filters = self.db.GetSQLReportWhere(self.filters.type_analysis)
@@ -117,6 +117,12 @@ class Repositories(Metrics):
                                tables, filters, evolutionary)
         return q
 
+    def get_list (self):
+        q = "SELECT name, count(i.id) AS total "+\
+            "  FROM irclog i, channels c "+\
+            "  WHERE i.channel_id=c.id "+\
+            "  GROUP BY name ORDER BY total DESC"
+        return(self.db.ExecuteQuery(q)['name'])
 
 # Examples of use
 if __name__ == '__main__':
