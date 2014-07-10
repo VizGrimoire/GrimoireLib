@@ -349,11 +349,12 @@ class TimesTickets(Analyses):
                        'avg_' + alias : avg_values}
         return time_opened
 
-
+    def get_ts (self, data_source):
+        return self.result(data_source)
 
     def result(self, data_source = None):
         from ITS import ITS
-        if data_source != ITS: return None
+        if data_source is not None and data_source != ITS: return None
         period = self.filters.period
         startdate = self.filters.startdate
         enddate = self.filters.enddate
