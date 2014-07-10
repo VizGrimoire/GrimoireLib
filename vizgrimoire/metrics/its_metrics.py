@@ -509,6 +509,24 @@ class Trackers(Metrics):
     desc = "Number of active trackers"
     data_source = ITS
 
+    def get_list(self):
+        # List the url of each of the repositories analyzed
+        # Those are order by the number of opened issues (desc order)
+        startdate = self.filters.startdate
+        enddate = self.filters.enddate
+
+        q = " SELECT t.url as name "+\
+                   "   FROM issues i, "+\
+                   "        trackers t "+\
+                   "   WHERE i.tracker_id=t.id and "+\
+                   "         i.submitted_on >= "+ startdate+ " and "+\
+                   "         i.submitted_on < "+ enddate+\
+                   "   GROUP BY t.url  "+\
+                   "   ORDER BY count(distinct(i.id)) DESC "
+        data = self.db.ExecuteQuery(q)
+        return (data)
+
+
     def __get_sql__(self, evolutionary):
         fields = " COUNT(DISTINCT(tracker_id)) AS trackers  "
         tables = " issues i " + self.db.GetSQLReportFrom(self.db.identities_db, self.filters.type_analysis)
@@ -526,6 +544,41 @@ class Companies(Metrics):
     name = "Organizations"
     desc = "Number of organizations (companies, etc.) with persons active in the ticketing system"
     data_source = ITS
+
+    def get_list(self):
+        from data_source import DataSource
+        from filter import Filter
+        bots = DataSource.get_filter_bots(Filter("company"))
+        fbots = ''
+        for bot in bots:
+            fbots += " c.name<>'"+bot+"' and "
+        startdate = self.filters.startdate
+        enddate = self.filters.enddate
+        closed_condition = ITS._get_closed_condition()
+
+        # list each of the companies analyzed
+        # those are order by number of closed issues
+        q = "select c.name "+\
+            "from issues i, "+\
+            "     changes ch, "+\
+            "     people_upeople pup, "+\
+            "     "+ self.db.identities_db+ ".upeople_companies upc, "+\
+            "     "+ self.db.identities_db+ ".companies c "+\
+            "where i.id = ch.issue_id and "+\
+            "      ch.changed_by = pup.people_id and "+\
+            "      pup.upeople_id = upc.upeople_id and "+\
+            "      upc.company_id = c.id and "+\
+            "      ch.changed_on >= "+ startdate+ " and "+\
+            "      ch.changed_on < "+ enddate+" and "+\
+            "      i.submitted_on >= upc.init and "+\
+            "      i.submitted_on < upc.end and "+\
+            "      "+ fbots  +\
+                   closed_condition +\
+            "      group by c.name  "+\
+            "      order by count(distinct(i.id)) desc"
+
+        data = self.db.ExecuteQuery(q)
+        return (data)
 
     def __get_sql__(self, evolutionary):
         q = self.db.GetSQLIssuesStudies(self.filters.period, self.filters.startdate, 
@@ -546,6 +599,30 @@ class Countries(Metrics):
                                            ['country', ''], evolutionary, 'countries')
         return q
 
+    def get_list(self):
+        startdate = self.filters.startdate
+        enddate = self.filters.enddate
+        closed_condition = ITS._get_closed_condition()
+
+        q = "select cou.name "+\
+            "from issues i, "+\
+            "     changes ch, "+\
+            "     people_upeople pup, "+\
+            "     "+ self.db.identities_db+ ".upeople_countries upc, "+\
+            "     "+ self.db.identities_db+ ".countries cou "+\
+            "where i.id = ch.issue_id and "+\
+            "      ch.changed_by = pup.people_id and "+\
+            "      pup.upeople_id = upc.upeople_id and "+\
+            "      upc.country_id = cou.id and "+\
+            "      ch.changed_on >= "+ startdate+ " and "+\
+            "      ch.changed_on < "+ enddate+" and "+\
+            "      "+ closed_condition+ " "+\
+            "      group by cou.name  "+\
+            "      order by count(distinct(i.id)) desc"
+
+        data = self.db.ExecuteQuery(q)
+        return (data)
+
 class Domains(Metrics):
     """ Domains metric class for issue tracking systems """
     id = "domains"
@@ -559,12 +636,70 @@ class Domains(Metrics):
                                            ['domain', ''], evolutionary, 'domains')
         return q
 
+    def get_list(self):
+        from data_source import DataSource
+        from filter import Filter
+        startdate = self.filters.startdate
+        enddate = self.filters.enddate
+        closed_condition = ITS._get_closed_condition()
+        bots = DataSource.get_filter_bots(Filter("domain"))
+        fbots = ''
+        for bot in bots:
+            fbots += " dom.name<>'"+bot+"' and "
+
+        tables = self.db.GetTablesDomains(self.db.identities_db)
+        tables += ","+self.db.identities_db+".domains dom"
+
+        q = "SELECT dom.name "+\
+            "FROM "+ tables + " "+\
+            "WHERE " + self.db.GetFiltersDomains() +" AND "+\
+            "       dom.id = upd.domain_id and "+\
+            "       "+ fbots +" "+\
+            "       c.changed_on >= "+ startdate+ " AND "+\
+            "       c.changed_on < "+ enddate+ " AND "+\
+            "       "+ closed_condition+" "+\
+            "GROUP BY dom.name "+\
+            "ORDER BY COUNT(DISTINCT(c.issue_id)) DESC"
+        data = self.db.ExecuteQuery(q)
+        return (data)
+
 class Projects(Metrics):
     """ Projects metric class for issue tracking systems """
     id = "projects"
     name = "Projects"
     desc = "Number of distinct projects active in the ticketing system"
     data_source = ITS
+
+    def get_list (self):
+        # Projects activity needs to include subprojects also
+        logging.info ("Getting projects list for ITS")
+        from metrics_filter import MetricFilters
+
+        q = "SELECT p.id AS name FROM  %s.projects p" % (self.db.identities_db)
+        projects = self.db.ExecuteQuery(q)
+        data = []
+
+        # Loop all projects getting reviews
+        for project in projects['name']:
+            type_analysis = ['project', project]
+
+            period = None
+            filter_com = MetricFilters(period, self.filters.startdate,
+                                       self.filters.enddate, type_analysis)
+            mclosed = ITS.get_metrics("closed", ITS)
+            mclosed.filters = filter_com
+            issues = mclosed.get_agg()
+
+            issues = issues['closed']
+            if (issues > 0):
+                data.append([issues,project])
+
+        # Order the list using reviews: https://wiki.python.org/moin/HowTo/Sorting
+        from operator import itemgetter
+        data_sort = sorted(data, key=itemgetter(0),reverse=True)
+        names = [name[1] for name in data_sort]
+
+        return({"name":names})
 
     def __get_sql__(self, evolutionary):
         # Not yet working
