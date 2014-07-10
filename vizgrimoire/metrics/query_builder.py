@@ -667,6 +667,44 @@ class MLSQuery(DSQuery):
 
         return q
 
+    def GetTablesCountries (self) :
+        return (self.GetTablesOwnUniqueIds()+', '+\
+                      self.identities_db+'.countries c, '+\
+                      self.identities_db+'.upeople_countries upc')
+
+
+    def GetFiltersCountries (self) :
+        return (self.GetFiltersOwnUniqueIds()+' AND '+\
+                  "pup.upeople_id = upc.upeople_id AND "+\
+                  'upc.country_id = c.id')
+
+
+    def GetTablesCompanies (self) :
+        return (self.GetTablesOwnUniqueIds()+', '+\
+                      self.identities_db+'.companies c, '+\
+                      self.identities_db+'.upeople_companies upc')
+
+
+    def GetFiltersCompanies (self) :
+        return (self.GetFiltersOwnUniqueIds()+' AND '+\
+                      "pup.upeople_id = upc.upeople_id AND "+\
+                      "upc.company_id = c.id AND "+\
+                      "m.first_date >= upc.init AND "+\
+                      'm.first_date < upc.end')
+
+
+    def GetTablesDomains (self) :
+        return (self.GetTablesOwnUniqueIds()+', '+\
+                      self.identities_db+'.domains d, '+\
+                      self.identities_db+'.upeople_domains upd')
+
+
+    def GetFiltersDomains (self) :
+        return (self.GetFiltersOwnUniqueIds()+' AND '+\
+                      "pup.upeople_id = upd.upeople_id AND "+\
+                      "upd.domain_id = d.id AND "+\
+                      "m.first_date >= upd.init AND "+\
+                      'm.first_date < upd.end')
 
 class SCRQuery(DSQuery):
     """ Specific query builders for source code review source"""

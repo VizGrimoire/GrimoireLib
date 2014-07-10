@@ -50,7 +50,7 @@ class Commits(Metrics):
                 "show_markers" : "true" }
     data_source = SCM
 
-    def __get_sql__(self, evolutionary):
+    def _get_sql(self, evolutionary):
         q_actions = " AND s.id IN (select distinct(a.commit_id) from actions a)"
 
         fields = " count(distinct(s.id)) as commits "
@@ -61,7 +61,7 @@ class Commits(Metrics):
                                    tables, filters, evolutionary)
         return query
 
-    def __get_sql__slow(self, evolutionary):
+    def _get_sqlslow(self, evolutionary):
         fields = " count(distinct(s.id)) as commits "
         tables = " scmlog s, actions a " + self.db.GetSQLReportFrom(self.filters.type_analysis)
         filters = self.db.GetSQLReportWhere(self.filters.type_analysis, "author") + " and s.id=a.commit_id "
@@ -82,7 +82,7 @@ class Authors(Metrics):
     action = "commits"
     data_source = SCM
 
-    def __get_sql__ (self, evolutionary):
+    def _get_sql (self, evolutionary):
         # This function contains basic parts of the query to count authors
         # That query is later built and executed
 
@@ -110,7 +110,7 @@ class Authors(Metrics):
         return q
 
 
-    def get_top_repository (self, metric_filters = None):
+    def _get_top_repository (self, metric_filters = None):
         if metric_filters == None:
             metric_filters = self.filters
         startdate = metric_filters.startdate
@@ -124,10 +124,11 @@ class Authors(Metrics):
         repos_where = " WHERE  " + self.db.GetSQLRepositoriesWhere(repo)[4:]
 
         fields =  "SELECT COUNT(DISTINCT(s.id)) as commits, u.id, u.identifier as authors "
-        fields += "FROM scmlog s, people_upeople pup, upeople u "
+        fields += "FROM actions a, scmlog s, people_upeople pup, upeople u "
         q = fields + repos_from + repos_where
         if filter_bots != "": q += " AND "+ filter_bots
         q += " AND pup.people_id = s.author_id AND u.id = pup.upeople_id "
+        q += " and s.id = a.commit_id "
         q += " AND s.date >= " + startdate + " and s.date < " + enddate
         q += " GROUP by u.id ORDER BY commits DESC, r.name"
         q += " limit " + str(self.filters.npeople)
@@ -136,7 +137,7 @@ class Authors(Metrics):
 
         return res
 
-    def get_top_company (self, metric_filters = None):
+    def _get_top_company (self, metric_filters = None):
         if metric_filters == None:
             metric_filters = self.filters
         startdate = metric_filters.startdate
@@ -163,7 +164,7 @@ class Authors(Metrics):
         data = self.db.ExecuteQuery(q)
         return (data)
 
-    def get_top_project(self, metric_filters = None):
+    def _get_top_project(self, metric_filters = None):
         if metric_filters == None:
             metric_filters = self.filters
         startdate = metric_filters.startdate
@@ -178,10 +179,11 @@ class Authors(Metrics):
         projects_where = " WHERE  " + self.db.GetSQLProjectWhere(project)[3:]
 
         fields =  "SELECT COUNT(DISTINCT(s.id)) as commits, u.id, u.identifier as authors "
-        fields += "FROM scmlog s, people_upeople pup, upeople u "
+        fields += "FROM actions a, scmlog s, people_upeople pup, upeople u "
         q = fields + projects_from + projects_where
         if filter_bots != "": q += " AND "+ filter_bots
         q += " AND pup.people_id = s.author_id AND u.id = pup.upeople_id "
+        q += " and a.commit_id = s.id "
         q += " AND s.date >= " + startdate + " and s.date < " + enddate
         q += " GROUP by u.id ORDER BY commits DESC, u.id"
         q += " limit " + str(self.filters.npeople)
@@ -190,7 +192,7 @@ class Authors(Metrics):
 
         return res
 
-    def get_top_global (self, days = 0, metric_filters = None, role = "author") :
+    def _get_top_global (self, days = 0, metric_filters = None, role = "author") :
         # This function returns the top people participating in the source code.
         # In addition, the number of days allows to limit the study to the last
         # X days specified in that parameter
@@ -228,7 +230,7 @@ class Authors(Metrics):
             if not isinstance(data[id], (list)): data[id] = [data[id]]
         return (data)
 
-    def get_top_supported_filters(self):
+    def _get_top_supported_filters(self):
         return ['repository','company','project']
 
 class Committers(Metrics):
@@ -241,7 +243,7 @@ class Committers(Metrics):
     action = "commits"
     data_source = SCM
 
-    def __get_sql__(self, evolutionary):
+    def _get_sql(self, evolutionary):
         # This function contains basic parts of the query to count committers
         fields = 'count(distinct(pup.upeople_id)) AS committers '
         tables = "scmlog s "
@@ -276,7 +278,7 @@ class Files(Metrics):
     desc = "Number of files 'touched' (added, modified, removed, ) by at least one commit"
     data_source = SCM
 
-    def __get_sql__(self, evolutionary):
+    def _get_sql(self, evolutionary):
         # This function contains basic parts of the query to count files
         fields = " count(distinct(a.file_id)) as files "
         tables = " scmlog s, actions a "
@@ -302,7 +304,7 @@ class Lines(Metrics):
     desc = "Number of added and/or removed lines"
     data_source = SCM
 
-    def __get_sql__(self, evolutionary):
+    def _get_sql(self, evolutionary):
         # This function contains basic parts of the query to count added and removed lines
         fields = "sum(cl.added) as added_lines, sum(cl.removed) as removed_lines"
         tables = "scmlog s, commits_lines cl "
@@ -321,7 +323,7 @@ class Lines(Metrics):
 
     def get_ts(self):
         #Specific needs for Added and Removed lines not considered in meta class Metrics
-        query = self.__get_sql__(True)
+        query = self._get_sql(True)
         data = self.db.ExecuteQuery(query)
 
         if not (isinstance(data['removed_lines'], list)): data['removed_lines'] = [data['removed_lines']]
@@ -372,7 +374,7 @@ class Branches(Metrics):
     desc = "Number of active branches"
     data_source = SCM
 
-    def __get_sql__(self, evolutionary):
+    def _get_sql(self, evolutionary):
         # Basic parts of the query needed when calculating branches
         fields = "count(distinct(a.branch_id)) as branches "
         tables = " scmlog s, actions a "
@@ -397,7 +399,7 @@ class Actions(Metrics):
     desc = "Actions performed on several files (add, remove, copy, ... each file)"
     data_source = SCM
 
-    def __get_sql__ (self, evolutionary):
+    def _get_sql (self, evolutionary):
         # Basic parts of the query needed when calculating actions
         fields = " count(distinct(a.id)) as actions "
         tables = " scmlog s, actions a "
@@ -419,7 +421,7 @@ class CommitsPeriod(Metrics):
     desc = "Average number of commits per period"
     data_source = SCM
 
-    def __get_sql__(self, evolutionary):
+    def _get_sql(self, evolutionary):
         # Basic parts of the query needed when calculating commits per period
 
         fields = " count(distinct(s.id))/timestampdiff("+self.filters.period+",min(s.date),max(s.date)) as avg_commits_"+self.filters.period
@@ -447,7 +449,7 @@ class FilesPeriod(Metrics):
     desc = "Average number of files per period"
     data_source = SCM
 
-    def __get_sql__(self, evolutionary):
+    def _get_sql(self, evolutionary):
         # Basic parts of the query needed when calculating commits per period
 
         fields = " count(distinct(a.file_id))/timestampdiff("+self.filters.period+",min(s.date),max(s.date)) as avg_files_"+self.filters.period
@@ -475,7 +477,7 @@ class CommitsAuthor(Metrics):
     desc = "Average number of commits per author"
     data_source = SCM
 
-    def __get_sql__(self, evolutionary):
+    def _get_sql(self, evolutionary):
         # Basic parts of the query needed when calculating commits per author
   
         fields = " count(distinct(s.id))/count(distinct(pup.upeople_id)) as avg_commits_author "
@@ -512,7 +514,7 @@ class AuthorsPeriod(Metrics):
     desc = "Average number of authors per period"
     data_source = SCM
 
-    def __get_sql__(self, evolutionary):
+    def _get_sql(self, evolutionary):
         # Basic parts of the query needed when calculating commits per period
 
         fields = " count(distinct(pup.upeople_id))/timestampdiff("+self.filters.period+",min(s.date),max(s.date)) as avg_authors_"+self.filters.period
@@ -554,7 +556,7 @@ class CommittersPeriod(Metrics):
     desc = "Average number of committers per period"
     data_source = SCM
 
-    def __get_sql__(self, evolutionary):
+    def _get_sql(self, evolutionary):
         # Basic parts of the query needed when calculating commits per period
 
         #TODO: the following three lines should be initialize in a __init__ method.
@@ -599,7 +601,7 @@ class FilesAuthor(Metrics):
     desc = "Average number of files per author"
     data_source = SCM
 
-    def __get_sql__(self, evolutionary):
+    def _get_sql(self, evolutionary):
         # Basic parts of the query needed when calculating files per author
 
         fields = " count(distinct(a.file_id))/count(distinct(pup.upeople_id)) as avg_files_author "
@@ -637,7 +639,7 @@ class Repositories(Metrics):
     envision = {"gtype" : "whiskers"}
     data_source = SCM
 
-    def __get_sql__(self, evolutionary):
+    def _get_sql(self, evolutionary):
         fields = "count(distinct(s.repository_id)) AS repositories "
         tables = "scmlog s "
 
@@ -674,7 +676,7 @@ class Companies(Metrics):
     desc = "Companies participating in the source code management system"
     data_source = SCM
 
-    def __get_sql__(self, evol):
+    def _get_sql(self, evol):
         fields = "count(distinct(upc.company_id)) as companies"
         tables = " scmlog s, people_upeople pup, upeople_companies upc"
         filters = "s.author_id = pup.people_id and "+\
@@ -686,7 +688,7 @@ class Companies(Metrics):
                                tables, filters, evol)
         return q
 
-    def get_top_project(self, fbots = None):
+    def _get_top_project(self, fbots = None):
 
         startdate = self.filters.startdate
         enddate = self.filters.enddate
@@ -709,7 +711,7 @@ class Companies(Metrics):
 
         return q
 
-    def get_top(self, fbots = None):
+    def _get_top(self, fbots = None):
         q = """
             select c.name, count(distinct(t.s_id)) as total
             from companies c,  (
@@ -741,10 +743,10 @@ class Companies(Metrics):
             self.filters = metric_filters
 
             if metric_filters.type_analysis[0] == "project":
-                q = self. get_top_project(fbots)
+                q = self._get_top_project(fbots)
 
         else:
-            q = self.get_top(fbots)
+            q = self._get_top(fbots)
 
         if metric_filters is not None: self.filters = metric_filters_orig
 
@@ -759,7 +761,7 @@ class Countries(Metrics):
     desc = "Countries participating in the source code management system"
     data_source = SCM
 
-    def __get_sql__(self, evol):
+    def _get_sql(self, evol):
         fields = "count(distinct(upc.country_id)) as countries"
         tables = "scmlog s, people_upeople pup, upeople_countries upc"
         filters = "s.author_id = pup.people_id and pup.upeople_id = upc.upeople_id"
@@ -798,7 +800,7 @@ class Domains(Metrics):
     desc = "Domains participating in the source code management system"
     data_source = SCM
 
-    def __get_sql__(self, evol):
+    def _get_sql(self, evol):
         fields = "COUNT(DISTINCT(upd.domain_id)) AS domains"
         tables = "scmlog s, people_upeople pup, upeople_domains upd"
         filters = "s.author_id = pup.people_id and pup.upeople_id = upd.upeople_id"

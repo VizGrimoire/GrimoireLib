@@ -134,34 +134,17 @@ class QAForums(DataSource):
         createJSON(data, top_file)
 
     @staticmethod
-    def tags_name(startdate, enddate):
-        # Returns list of tags
-        query = "select tag as name from tags"
-        query = """select t.tag as name, 
-                          count(distinct(qt.question_identifier)) as total 
-                   from tags t, 
-                        questionstags qt,
-                        questions q 
-                   where t.id=qt.tag_id and
-                         qt.question_identifier = q.question_identifier and
-                         q.added_at >= %s and
-                         q.added_at < %s
-                   group by t.tag 
-                   having total > 20
-                   order by total desc, name;""" % (startdate, enddate)
-        data = ExecuteQuery(query)
-        return data
-
-    @staticmethod
     def get_filter_items(filter_, startdate, enddate, identities_db, bots):
         items = None
         filter_name = filter_.get_name()
         #TODO: repository needs to be change to tag, once this is accepted as new
         #      data source in VizGrimoireJS-lib
         if (filter_name == "repository"):
-            items = QAForums.tags_name(startdate, enddate)
+            metric = DataSource.get_metrics("tags", QAForums)
+            # items = QAForums.tags_name(startdate, enddate)
+            items = metric.get_list()
         else:
-            logging.error(filter_name + "not supported")
+            logging.error("QAForums " + filter_name + " not supported")
 
         return items
 

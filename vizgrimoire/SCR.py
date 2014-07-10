@@ -225,17 +225,18 @@ class SCR(DataSource):
         filter_name = filter_.get_name()
 
         if (filter_name == "repository"):
-            items  = GetReposSCRName(startdate, enddate)
+            metric = DataSource.get_metrics("repositories", SCR)
         elif (filter_name == "company"):
-            items  = GetCompaniesSCRName(startdate, enddate, identities_db)
+            metric = DataSource.get_metrics("companies", SCR)
         elif (filter_name == "country"):
-            items = GetCountriesSCRName(startdate, enddate, identities_db)
-        elif (filter_name == "domain"):
-            logging.error("SCR " + filter_name + " not supported")
+            metric = DataSource.get_metrics("countries", SCR)
         elif (filter_name == "project"):
-            items = get_projects_scr_name(startdate, enddate, identities_db)
+            metric = DataSource.get_metrics("projects", SCR)
         else:
             logging.error("SCR " + filter_name + " not supported")
+            return items
+
+        items = metric.get_list()
         return items
 
     @staticmethod
@@ -466,87 +467,6 @@ def GetSQLReportWhereSCR (type_analysis, identities_db = None):
 #########
 # General functions
 #########
-
-def GetReposSCRName  (startdate, enddate, limit = 0):
-    limit_sql=""
-    if (limit > 0): limit_sql = " LIMIT " + str(limit)
-
-    q = "SELECT t.url as name, COUNT(DISTINCT(i.id)) AS issues "+\
-           " FROM  issues i, trackers t "+\
-           " WHERE i.tracker_id = t.id AND "+\
-           "  i.submitted_on >="+  startdate+ " AND "+\
-           "  i.submitted_on < "+ enddate +\
-           " GROUP BY t.url "+\
-           " ORDER BY issues DESC "+limit_sql
-    names = ExecuteQuery(q)
-    if not isinstance(names['name'], (list)): names['name'] = [names['name']]
-    return(names)
-
-def GetCompaniesSCRName  (startdate, enddate, identities_db, limit = 0):
-    limit_sql=""
-    if (limit > 0): limit_sql = " LIMIT " + str(limit)
-
-    q = "SELECT c.id as id, c.name as name, COUNT(DISTINCT(i.id)) AS total "+\
-               "FROM  "+identities_db+".companies c, "+\
-                       identities_db+".upeople_companies upc, "+\
-                "     people_upeople pup, "+\
-                "     issues i "+\
-               "WHERE i.submitted_by = pup.people_id AND "+\
-               "  upc.upeople_id = pup.upeople_id AND "+\
-               "  c.id = upc.company_id AND "+\
-               "  i.status = 'merged' AND "+\
-               "  i.submitted_on >="+  startdate+ " AND "+\
-               "  i.submitted_on < "+ enddate+ " "+\
-               "GROUP BY c.name "+\
-               "ORDER BY total DESC " + limit_sql
-    return(ExecuteQuery(q))
-
-def GetCountriesSCRName  (startdate, enddate, identities_db, limit = 0):
-    limit_sql=""
-    if (limit > 0): limit_sql = " LIMIT " + str(limit)
-
-    q = "SELECT c.name as name, COUNT(DISTINCT(i.id)) AS issues "+\
-           "FROM  "+identities_db+".countries c, "+\
-                   identities_db+".upeople_countries upc, "+\
-            "    people_upeople pup, "+\
-            "    issues i "+\
-           "WHERE i.submitted_by = pup.people_id AND "+\
-           "  upc.upeople_id = pup.upeople_id AND "+\
-           "  c.id = upc.country_id AND "+\
-           "  i.status = 'merged' AND "+\
-           "  i.submitted_on >="+  startdate+ " AND "+\
-           "  i.submitted_on < "+ enddate+ " "+\
-           "GROUP BY c.name "+\
-           "ORDER BY issues DESC "+limit_sql
-    return(ExecuteQuery(q))
-
-
-def get_projects_scr_name  (startdate, enddate, identities_db, limit = 0):
-    # Projects activity needs to include subprojects also
-    logging.info ("Getting projects list for SCR")
-
-    # Get all projects list
-    q = "SELECT p.id AS name FROM  %s.projects p" % (identities_db)
-    projects = ExecuteQuery(q)
-    data = []
-
-    # Loop all projects getting reviews
-    for project in projects['name']:
-        type_analysis = ['project', project]
-        period = None
-        evol = False
-        reviews = SCR.get_metrics("submitted", SCR).get_agg()
-        reviews = reviews['submitted']
-        if (reviews > 0):
-            data.append([reviews,project])
-
-    # Order the list using reviews: https://wiki.python.org/moin/HowTo/Sorting
-    from operator import itemgetter
-    data_sort = sorted(data, key=itemgetter(0),reverse=True)
-    names = [name[1] for name in data_sort]
-
-    if (limit > 0): names = names[:limit]
-    return({"name":names})
 
 # Nobody is using it yet
 def GetLongestReviews  (startdate, enddate, identities_db, type_analysis = []):

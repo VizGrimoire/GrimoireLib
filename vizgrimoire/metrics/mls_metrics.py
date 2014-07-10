@@ -20,6 +20,7 @@
 ##
 ## Authors:
 ##   Daniel Izquierdo-Cortazar <dizquierdo@bitergia.com>
+##   Alvaro del Castillo <acs@bitergia.com>
 ##
 
 
@@ -27,10 +28,12 @@ import logging
 
 from datetime import datetime
 
+from data_source import DataSource
 from GrimoireUtils import completePeriodIds, GetDates, GetPercentageDiff
 from GrimoireSQL import ExecuteQuery
-
+from filter import Filter
 from metrics import Metrics
+from metrics_filter import MetricFilters
 
 from MLS import MLS
 
@@ -43,7 +46,7 @@ class EmailsSent(Metrics):
     desc = "Emails sent to mailing lists"
     data_source = MLS
 
-    def __get_sql__(self, evolutionary):
+    def _get_sql(self, evolutionary):
         fields = " count(distinct(m.message_ID)) as sent "
         tables = " messages m " + self.db.GetSQLReportFrom(self.filters.type_analysis)
         filters = self.db.GetSQLReportWhere(self.filters.type_analysis)
@@ -62,7 +65,7 @@ class EmailsSenders(Metrics):
     desc = "People sending emails"
     data_source = MLS
 
-    def get_top_repository (self, metric_filters):
+    def _get_top_repository (self, metric_filters):
         startdate = metric_filters.startdate
         enddate = metric_filters.enddate
         repo = metric_filters.type_analysis[1]
@@ -84,7 +87,7 @@ class EmailsSenders(Metrics):
         data = ExecuteQuery(q)
         return (data)
 
-    def get_top_country (self, metric_filters):
+    def _get_top_country (self, metric_filters):
         startdate = metric_filters.startdate
         enddate = metric_filters.enddate
         country_name = metric_filters.type_analysis[1]
@@ -104,7 +107,7 @@ class EmailsSenders(Metrics):
         data = ExecuteQuery(q)
         return (data)
 
-    def get_top_company (self, metric_filters):
+    def _get_top_company (self, metric_filters):
         startdate = metric_filters.startdate
         enddate = metric_filters.enddate
         company_name = metric_filters.type_analysis[1]
@@ -124,7 +127,7 @@ class EmailsSenders(Metrics):
         data = ExecuteQuery(q)
         return (data)
 
-    def get_top_domain (self, metric_filters):
+    def _get_top_domain (self, metric_filters):
         startdate = metric_filters.startdate
         enddate = metric_filters.enddate
         domain_name = metric_filters.type_analysis[1]
@@ -145,7 +148,7 @@ class EmailsSenders(Metrics):
         return (data)
 
 
-    def get_top_global (self, days = 0, metric_filters = None):
+    def _get_top_global (self, days = 0, metric_filters = None):
         if metric_filters == None:
             metric_filters = self.filters
 
@@ -178,10 +181,10 @@ class EmailsSenders(Metrics):
         data = self.db.ExecuteQuery(q)
         return (data)
 
-    def get_top_supported_filters(self):
+    def _get_top_supported_filters(self):
         return ['repository','company','country','domain']
 
-    def __get_sql__ (self, evolutionary):
+    def _get_sql (self, evolutionary):
         fields = " count(distinct(pup.upeople_id)) as senders "
         tables = " messages m " + self.db.GetSQLReportFrom(self.filters.type_analysis)
         if (tables == " messages m "):
@@ -215,7 +218,7 @@ class SendersResponse(Metrics):
     desc = "People answering in a thread"
     data_source = MLS
 
-    def __get_sql__ (self, evolutionary):
+    def _get_sql (self, evolutionary):
         fields = " count(distinct(pup.upeople_id)) as senders_response "
         tables = " messages m " + self.db.GetSQLReportFrom(self.filters.type_analysis)
         if (tables == " messages m "):
@@ -247,7 +250,7 @@ class SendersInit(Metrics):
     desc = "People initiating threads"
     data_source = MLS
 
-    def __get_sql__(self, evolutionary):
+    def _get_sql(self, evolutionary):
         fields = " count(distinct(pup.upeople_id)) as senders_init "
         tables = " messages m " + self.db.GetSQLReportFrom(self.filters.type_analysis)
         if (tables == " messages m "):
@@ -279,7 +282,7 @@ class EmailsSentResponse(Metrics):
     desc = "Emails sent as response"
     data_source = MLS
 
-    def __get_sql__(self, evolutionary):
+    def _get_sql(self, evolutionary):
         fields = " count(distinct(m.message_ID)) as sent_response "
         tables = " messages m " + self.db.GetSQLReportFrom(self.filters.type_analysis)
         filters = self.db.GetSQLReportWhere(self.filters.type_analysis) + " and m.is_response_of is not null "
@@ -297,7 +300,7 @@ class EmailsSentInit(Metrics):
     desc = "Emails sent to start a thread"
     data_source = MLS
 
-    def __get_sql__(self, evolutionary):
+    def _get_sql(self, evolutionary):
         fields = " count(distinct(m.message_ID)) as sent_init"
         tables = " messages m " + self.db.GetSQLReportFrom(self.filters.type_analysis)
         filters = self.db.GetSQLReportWhere(self.filters.type_analysis) + " and m.is_response_of is null "
@@ -315,7 +318,7 @@ class Threads(Metrics):
     desc = "Number of threads"
     data_source = MLS
 
-    def __get_sql__(self, evolutionary):
+    def _get_sql(self, evolutionary):
         fields = " count(distinct(m.is_response_of)) as threads"
         tables = " messages m " + self.db.GetSQLReportFrom(self.filters.type_analysis)
         filters = self.db.GetSQLReportWhere(self.filters.type_analysis)
@@ -333,7 +336,7 @@ class Repositories(Metrics):
     desc = "Mailing lists with activity"
     data_source = MLS
 
-    def __get_sql__(self, evolutionary):
+    def _get_sql(self, evolutionary):
         #fields = " COUNT(DISTINCT(m."+rfield+")) AS repositories  "
         fields = " COUNT(DISTINCT(m.mailing_list_url)) AS repositories "
         tables = " messages m " + self.db.GetSQLReportFrom(self.filters.type_analysis)
@@ -343,6 +346,29 @@ class Repositories(Metrics):
                                    tables, filters, evolutionary)
         return query
 
+    def get_list (self) :
+        rfield = MLS.get_repo_field()
+        names = ""
+        if (rfield == "mailing_list_url") :
+            q = "SELECT ml.mailing_list_url, COUNT(message_ID) AS total "+\
+                   "FROM messages m, mailing_lists ml "+\
+                   "WHERE m.mailing_list_url = ml.mailing_list_url AND "+\
+                   "m.first_date >= "+self.filters.startdate+" AND "+\
+                   "m.first_date < "+self.filters.enddate+" "+\
+                   "GROUP BY ml.mailing_list_url ORDER by total desc"
+            mailing_lists = self.db.ExecuteQuery(q)
+            mailing_lists_files = self.db.ExecuteQuery(q)
+            names = mailing_lists_files[rfield]
+        else:
+            # TODO: not ordered yet by total messages
+            q = "SELECT DISTINCT(mailing_list) FROM messages m "+\
+                "WHERE m.first_date >= "+startdate+" AND "+\
+                "m.first_date < "+enddate
+            mailing_lists = ExecuteQuery(q)
+            names = mailing_lists
+        return (names)
+
+
 class Companies(Metrics):
     """ Companies participating in mailing lists """
 
@@ -351,10 +377,27 @@ class Companies(Metrics):
     desc = "Companies participating in mailing lists"
     data_source = MLS
 
-    def __get_sql__(self, evolutionary):
+    def _get_sql(self, evolutionary):
         return self.db.GetStudies(self.filters.period, self.filters.startdate, 
                                   self.filters.enddate, ['company', ''], evolutionary, 'companies')
 
+    def get_list (self):
+        filter_ = DataSource.get_filter_bots(Filter("company"))
+        filter_companies = ''
+        for company in filter_:
+            filter_companies += " c.name<>'"+company+"' AND "
+
+        q = "SELECT c.name as name, COUNT(DISTINCT(m.message_ID)) as sent "+\
+            "    FROM "+ self.db.GetTablesCompanies()+ " "+\
+            "    WHERE "+ self.db.GetFiltersCompanies()+ " AND "+\
+            "      "+ filter_companies+ " "+\
+            "      m.first_date >= "+self.filters.startdate+" AND "+\
+            "      m.first_date < "+self.filters.enddate+" "+\
+            "    GROUP BY c.name "+\
+            "    ORDER BY COUNT(DISTINCT(m.message_ID)) DESC"
+
+        data = self.db.ExecuteQuery(q)
+        return (data['name'])
 
 class Domains(Metrics):
     """ Domains found in the analysis of mailing lists """
@@ -364,23 +407,96 @@ class Domains(Metrics):
     desc = "Domains found in the analysis of mailing lists """
     data_source = MLS
 
-    def __get_sql__(self, evolutionary):
+    def _get_sql(self, evolutionary):
         return self.db.GetStudies(self.filters.period, self.filters.startdate,
                                   self.filters.enddate, ['domain', ''], evolutionary, 'domains')
 
+    def get_list  (self) :
+        filter_ = DataSource.get_filter_bots(Filter("domain"))
+        filter_domains = ""
+        for domain in filter_:
+            filter_domains += " d.name<>'"+ domain + "' AND "
+
+        q = "SELECT d.name as name, COUNT(DISTINCT(m.message_ID)) as sent "+\
+            "    FROM "+self.db.GetTablesDomains()+ " "+\
+            "    WHERE "+ self.db.GetFiltersDomains()+ " AND "+\
+            "    "+ filter_domains+ " "+\
+            "    m.first_date >= "+self.filters.startdate+" AND "+\
+            "    m.first_date < "+self.filters.enddate+\
+            "    GROUP BY d.name "+\
+            "    ORDER BY COUNT(DISTINCT(m.message_ID)) DESC "
+        data = self.db.ExecuteQuery(q)
+        return (data['name'])
 
 class Countries(Metrics):
     """ Countries participating in mailing lists """
 
     id = "countries"
     name = "Countries"
-    desc = "Countries participating in mailing lists """
+    desc = "Countries participating in mailing lists"
     data_source = MLS
 
-    def __get_sql__(self, evolutionary):
+    def _get_sql(self, evolutionary):
         return self.db.GetStudies(self.filters.period, self.filters.startdate,
                                   self.filters.enddate, ['country', ''], evolutionary, 'countries')
 
+    def get_list  (self):
+        filter_ = DataSource.get_filter_bots(Filter("country"))
+        filter_countries = ''
+        for country in filter_:
+            filter_countries += " c.name<>'"+country+"' AND "
+
+        q = "SELECT c.name as name, COUNT(m.message_ID) as sent "+\
+                "FROM "+ self.db.GetTablesCountries()+ " "+\
+                "WHERE "+ self.db.GetFiltersCountries()+ " AND "+\
+                "  "+ filter_countries+ " "+\
+                "  m.first_date >= "+self.filters.startdate+" AND "+\
+                "  m.first_date < "+self.filters.enddate+" "+\
+                "GROUP BY c.name "+\
+                "ORDER BY COUNT((m.message_ID)) DESC "
+        data = self.db.ExecuteQuery(q)
+        return(data['name'])
+
+
+class Projects(Metrics):
+    """ Projects existing in mailing lists """
+
+    id = "projects"
+    name = "Projects"
+    desc = "Projects existing in mailing lists"
+    data_source = MLS
+
+    def get_list(self):
+        # Projects activity needs to include subprojects also
+        logging.info ("Getting projects list for MLS")
+
+        # Get all projects list
+        q = "SELECT p.id AS name FROM  %s.projects p" % (self.db.identities_db)
+        projects = self.db.ExecuteQuery(q)
+        data = []
+
+        # Loop all projects getting reviews
+        for project in projects['name']:
+            type_analysis = ['project', project]
+            period = None
+            filter_com = MetricFilters(period, self.filters.startdate,
+                                       self.filters.enddate, type_analysis)
+            msent = MLS.get_metrics("sent", MLS)
+            # TODO: we should restore original filter
+            msent.filters = filter_com
+            sent = msent.get_agg()
+
+            sent = sent['sent']
+            if (sent > 0):
+                data.append([sent,project])
+
+        # Order the list using reviews: https://wiki.python.org/moin/HowTo/Sorting
+        from operator import itemgetter
+        data_sort = sorted(data, key=itemgetter(0),reverse=True)
+        names = [name[1] for name in data_sort]
+
+        # if (limit > 0): names = names[:limit]
+        return names
 
 class UnansweredPosts(Metrics):
     """ Unanswered posts in mailing lists """
@@ -399,11 +515,18 @@ class UnansweredPosts(Metrics):
         return (current)
 
     def __get_messages(self, from_date, to_date):
-        query = "SELECT message_ID, is_response_of "
-        query += "FROM messages m "
-        query += "WHERE m.first_date >= '" + str(from_date) + "' AND m.first_date < '" + str(to_date) + "' "
-        query += "AND m.first_date >= " + str(self.filters.startdate) + " AND m.first_date < " + str(self.filters.enddate) + " "
-        query += "ORDER BY m.first_date"
+        select = "SELECT message_ID, is_response_of "
+        tables = "FROM messages m "
+        where = "WHERE m.first_date >= '" + str(from_date) + "' AND m.first_date < '" + str(to_date) + "' "
+        where += "AND m.first_date >= " + str(self.filters.startdate) + " AND m.first_date < " + str(self.filters.enddate) + " "
+
+        if (self.filters.type_analysis and self.filters.type_analysis[0] in ("repository")):
+            tables += self.db.GetSQLReportFrom(self.filters.type_analysis)
+            where += "AND " + self.db.GetSQLReportWhere(self.filters.type_analysis)
+
+        where += "ORDER BY m.first_date"
+
+        query = select + tables + where
 
         results = self.db.ExecuteQuery(query)
 
@@ -421,6 +544,9 @@ class UnansweredPosts(Metrics):
         # are still unanswered. Returns the number of unanswered
         # posts on each month.
         period = self.filters.period
+
+        if (self.filters.type_analysis and self.filters.type_analysis[0] not in ("repository")):
+            return {}
 
         if (period != "month"):
             logging.error("Period not supported in " + self.id + " " + period)

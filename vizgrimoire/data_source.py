@@ -134,6 +134,10 @@ class DataSource(object):
         from report import Report
         bots = []
 
+        # If not using Report (automator) bots are not supported.
+        if Report.get_config() == None:
+            return bots
+
         if filter_.get_name_plural()+'_out' in Report.get_config()['r']:
             fbots = Report.get_config()['r'][filter_.get_name_plural()+'_out']
             bots = fbots.split(",")

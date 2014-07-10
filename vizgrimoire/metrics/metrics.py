@@ -57,7 +57,7 @@ class Metrics(object):
         """ Returns the family of the instance """
         return Metrics.data_source
 
-    def __get_sql__(self, evolutionary):
+    def _get_sql(self, evolutionary):
         """ Returns specific sql for the provided filters """
         raise NotImplementedError
 
@@ -66,14 +66,14 @@ class Metrics(object):
 
     def get_ts (self):
         """ Returns a time serie of values """
-        query = self.__get_sql__(True)
+        query = self._get_sql(True)
         ts = self.db.ExecuteQuery(query)
         return completePeriodIds(ts, self.filters.period, 
                                  self.filters.startdate, self.filters.enddate)
 
     def get_agg(self):
         """ Returns an aggregated value """
-        query = self.__get_sql__(False)
+        query = self._get_sql(False)
         return self.db.ExecuteQuery(query)
 
     def get_agg_diff_days(self, date, days):
@@ -100,28 +100,28 @@ class Metrics(object):
         self.filters = filters
         return (data)
 
-    def get_top_supported_filters(self):
+    def _get_top_supported_filters(self):
         return []
 
-    def get_top_global(self, days = 0, metric_filters = None):
+    def _get_top_global(self, days = 0, metric_filters = None):
         return {}
 
-    def get_top(self, metric_filters = None, days = 0):
+    def _get_top(self, metric_filters = None, days = 0):
         if metric_filters.type_analysis and metric_filters.type_analysis is not None:
-            if metric_filters.type_analysis[0] not in self.get_top_supported_filters():
+            if metric_filters.type_analysis[0] not in self._get_top_supported_filters():
                  return
             if metric_filters.type_analysis[0] == "repository":
-                alist = self.get_top_repository(metric_filters)
+                alist = self._get_top_repository(metric_filters)
             if metric_filters.type_analysis[0] == "company":
-                alist = self.get_top_company(metric_filters)
+                alist = self._get_top_company(metric_filters)
             if metric_filters.type_analysis[0] == "country":
-                alist = self.get_top_country(metric_filters)
+                alist = self._get_top_country(metric_filters)
             if metric_filters.type_analysis[0] == "domain":
-                alist = self.get_top_domain(metric_filters)
+                alist = self._get_top_domain(metric_filters)
             if metric_filters.type_analysis[0] == "project":
-                alist = self.get_top_project(metric_filters)
+                alist = self._get_top_project(metric_filters)
         else:
-            alist = self.get_top_global(days, metric_filters)
+            alist = self._get_top_global(days, metric_filters)
         return alist
 
     def get_list(self, metric_filters = None, days = 0):
@@ -132,7 +132,7 @@ class Metrics(object):
             metric_filters_orig = self.filters
             self.filters = metric_filters
 
-        mlist = self.get_top(self.filters, days)
+        mlist = self._get_top(self.filters, days)
 
         if metric_filters is not None: self.filters = metric_filters_orig
 

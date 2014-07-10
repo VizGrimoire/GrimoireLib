@@ -359,9 +359,14 @@ def compare_json_data(data1, data2, orig_file = "", new_file = "", skip_fields =
                     logging.warn("Different list size for " + name)
                     check = False
                     continue
-                for i in range(0, len(data1[name])): 
+                for i in range(0, len(data1[name])):
                     if isinstance(data1[name][i], float): data1[name][i] = round(data1[name][i],6)
                     if isinstance(data2[name][i], float): data2[name][i] = round(data2[name][i],6)
+                    if data1[name][i] != data2[name][i]:
+                        logging.warn ("'"+name + "' different in dicts\n" + str(data1[name]) + "\n" + str(data2[name]))
+                        logging.warn ("At position " + str(i))
+                        check = False
+                        break
             elif data1[name] != data2[name]:
                 if (data1[name] == "NA" and data2[name] == 0): continue
                 elif name in skip_fields:

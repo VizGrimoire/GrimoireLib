@@ -66,6 +66,7 @@ def barh_chart(title, yvalues, xvalues, file_name):
 
     #plt.barh(y_pos, xvalues)
     ppl.barh(y_pos, xvalues, grid='x')
+    ppl.barh(y_pos, xvalues, grid='x')
     plt.yticks(y_pos, yvalues)
     plt.savefig(file_name + ".eps")
     plt.close()
@@ -176,16 +177,20 @@ def scm_report(dbcon, filters):
     dataset["authors"] = authors.get_agg()["authors"]
 
     # tops authors activity
-    from top_authors_projects import TopAuthorsProjects
-    top_authors = TopAuthorsProjects(dbcon, filters)
-    createJSON(top_authors.result(), "./release/scm_top_authors_project_"+project_name+".json")
-    createCSV(top_authors.result(), "./release/scm_top_authors_project_"+project_name+".csv", ["id"])
+    #from top_authors_projects import TopAuthorsProjects
+    #top_authors = TopAuthorsProjects(dbcon, filters)
+    top_authors = authors.get_list()
+    createJSON(top_authors, "./release/scm_top_authors_project_"+project_name+".json")
+    createCSV(top_authors, "./release/scm_top_authors_project_"+project_name+".csv", ["id"])
 
     # top companies activity
     from top_companies_projects import TopCompaniesProjects
     top_companies = TopCompaniesProjects(dbcon, filters)
-    createJSON(top_companies.result(), "./release/scm_top_companies_project_"+project_name+".json")
-    createCSV(top_companies.result(), "./release/scm_top_companies_project_"+project_name+".csv")
+    top_companies = top_companies.result()
+    #companies = scm.Companies(dbcon, filters)
+    #top_companies = companies.get_list()
+    createJSON(top_companies, "./release/scm_top_companies_project_"+project_name+".json")
+    createCSV(top_companies, "./release/scm_top_companies_project_"+project_name+".csv")
 
     return dataset
 
@@ -354,10 +359,7 @@ def irc_report(dbcon, filters):
     dataset["sent"] = sent.get_agg()["sent"]
     dataset["senders"] = senders.get_agg()["senders"]
 
-    from IRC import GetTopSendersIRC
-    SetDBChannel(dbcon.user, dbcon.password, dbcon.database)
-    top_senders = GetTopSendersIRC(0, filters.startdate, filters.enddate, 
-                                   dbcon.identities_db, "", "10")
+    top_senders = senders.get_list()
     createJSON(top_senders, "./release/irc_top_senders.json")
     createCSV(top_senders, "./release/irc_top_senders.csv")
 
@@ -410,6 +412,69 @@ def projects(user, password, database):
     query = "select id from projects"
     return dbcon.ExecuteQuery(query)["id"]
 
+
+def general_info(opts, releases, people_out, affs_out):
+
+    # General info from MLS, IRC and QAForums.
+    emails = []
+    emails_senders =  []
+    emails_senders_init = []
+    questions = []
+    answers = []
+    comments = []
+    qsenders = []
+    irc_sent = []
+    irc_senders = []
+    releases_data = {}
+    for release in releases:
+        startdate = "'" + release[0] + "'"
+        enddate = "'" + release[1] + "'"
+        filters = MetricFilters("month", startdate, enddate, [], opts.npeople, people_out, affs_out)
+
+        # MLS info
+        mls_dbcon = MLSQuery(opts.dbuser, opts.dbpassword, opts.dbmlstats, opts.dbidentities)
+        dataset = mls_report(mls_dbcon, filters)
+        emails.append(dataset["sent"])
+        emails_senders.append(dataset["senders"])
+        emails_senders_init.append(dataset["senders_init"])
+
+        # QAForums info 
+        qaforums_dbcon = QAForumsQuery(opts.dbuser, opts.dbpassword, opts.dbqaforums, opts.dbidentities)
+        dataset = qaforums_report(qaforums_dbcon, filters)
+        questions.append(dataset["questions"])
+        answers.append(dataset["answers"])
+        comments.append(dataset["comments"])
+        qsenders.append(dataset["qsenders"])
+
+        # IRC info
+        irc_dbcon = IRCQuery(opts.dbuser, opts.dbpassword, opts.dbirc, opts.dbidentities)
+        dataset = irc_report(irc_dbcon, filters)
+        irc_sent.append(dataset["sent"])
+        irc_senders.append(dataset["senders"])
+
+
+    labels = ["2013-Q3", "2013-Q4", "2014-Q1", "2014-Q2"]
+    barh_chart("Emails sent", labels, emails, "emails")
+    createCSV({"labels":labels, "emails":emails}, "./release/emails.csv")
+    barh_chart("People sending emails", labels, emails_senders, "emails_senders")
+    createCSV({"labels":labels, "senders":emails_senders}, "./release/emails_senders.csv")
+    barh_chart("People initiating threads", labels, emails_senders_init, "emails_senders_init")
+    createCSV({"labels":labels, "senders":emails_senders_init}, "./release/emails_senders_init.csv")
+    barh_chart("Questions", labels, questions, "questions")
+    createCSV({"labels":labels, "questions":questions}, "./release/questions.csv")
+    barh_chart("Answers", labels, answers, "answers")
+    createCSV({"labels":labels, "answers":answers}, "./release/answers.csv")
+    barh_chart("Comments", labels, comments, "comments")
+    createCSV({"labels":labels, "comments":comments}, "./release/comments.csv")
+    barh_chart("People asking Questions", labels, qsenders, "question_senders")
+    createCSV({"labels":labels, "senders":qsenders}, "./release/question_senders.csv")
+    barh_chart("Messages in IRC channels", labels, irc_sent, "irc_sent")
+    createCSV({"labels":labels, "messages":irc_sent}, "./release/irc_sent.csv")
+    barh_chart("People in IRC channels", labels, irc_senders, "irc_senders")
+    createCSV({"labels":labels, "senders":irc_senders}, "./release/irc_senders.csv")
+
+
+
 if __name__ == '__main__':
 
     locale.setlocale(locale.LC_ALL, 'en_US')
@@ -437,6 +502,8 @@ if __name__ == '__main__':
 
     # Projects analysis. This includes SCM, SCR and ITS.
     projects_list = projects(opts.dbuser, opts.dbpassword, opts.dbidentities)
+    people_out = ["OpenStack Jenkins","Launchpad Translations on behalf of nova-core","Jenkins","OpenStack Hudson","gerrit2@review.openstack.org","linuxdatacenter@gmail.com","Openstack Project Creator","Openstack Gerrit","openstackgerrit"]
+    affs_out = ["-Bot","-Individual","-Unknown"]
 
     for project in projects_list:
         releases_data = {}
@@ -445,7 +512,8 @@ if __name__ == '__main__':
 
             startdate = "'" + release[0] + "'"
             enddate = "'" + release[1] + "'"
-            filters = MetricFilters("month", startdate, enddate, ["project", str(project)], opts.npeople)
+            filters = MetricFilters("month", startdate, enddate, ["project", str(project)], opts.npeople,
+                                    people_out, affs_out)
             scm_dbcon = SCMQuery(opts.dbuser, opts.dbpassword, opts.dbcvsanaly, opts.dbidentities)
             #SCM report
             dataset = scm_report(scm_dbcon, filters)
@@ -491,60 +559,22 @@ if __name__ == '__main__':
         labels = ["2013-Q3", "2013-Q4", "2014-Q1", "2014-Q2"]        
         project_name = project.replace(" ", "")
         barh_chart("Commits " + project, labels, commits, "commits"  + project_name)
-        barh_chart("Authors " + project, labels, commits, "authors" + project_name)
+        createCSV({"labels":labels, "commits":commits}, "./release/commits"+project_name+".csv")
+        barh_chart("Authors " + project, labels, authors, "authors" + project_name)
+        createCSV({"labels":labels, "authors":authors}, "./release/authors"+project_name+".csv")
         barh_chart("Opened tickets " +  project, labels, opened, "opened" + project_name)
+        createCSV({"labels":labels, "opened":opened}, "./release/opened"+project_name+".csv")
         barh_chart("Closed tickets " + project, labels, closed, "closed" + project_name)
+        createCSV({"labels":labels, "closed":closed}, "./release/closed"+project_name+".csv")
         barh_chart("Efficiency closing tickets " + project, labels, bmi, "bmi" + project_name)
+        createCSV({"labels":labels, "bmi":bmi}, "./release/bmi"+project_name+".csv")
         barh_chart("Submitted reviews " + project, labels, submitted, "submitted_reviews" + project_name)
+        createCSV({"labels":labels, "submitted":submitted}, "./release/submitted_reviews"+project_name+".csv")
         barh_chart("Merged reviews " + project, labels, merged, "merged_reviews" + project_name)
+        createCSV({"labels":labels, "merged":merged}, "./release/merged"+project_name+".csv")
         barh_chart("Abandoned reviews  " + project, labels, abandoned, "abandoned_reviews" + project_name)
+        createCSV({"labels":labels, "abandoned":abandoned}, "./release/abandoned"+project_name+".csv")
 
-    # General info from MLS, IRC and QAForums.
-    emails = []
-    emails_senders =  []
-    emails_senders_init = []
-    questions = []
-    answers = []
-    comments = []
-    qsenders = []
-    irc_sent = []
-    irc_senders = []
-    releases_data = {}
-    for release in releases:
-        startdate = "'" + release[0] + "'"
-        enddate = "'" + release[1] + "'"
-        filters = MetricFilters("month", startdate, enddate, [], opts.npeople)
-
-        # MLS info
-        mls_dbcon = MLSQuery(opts.dbuser, opts.dbpassword, opts.dbmlstats, opts.dbidentities)
-        dataset = mls_report(mls_dbcon, filters)
-        emails.append(dataset["sent"])
-        emails_senders.append(dataset["senders"])
-        emails_senders_init.append(dataset["senders_init"])
- 
-        # QAForums info - TBD
-        qaforums_dbcon = QAForumsQuery(opts.dbuser, opts.dbpassword, opts.dbqaforums, opts.dbidentities)
-        dataset = qaforums_report(qaforums_dbcon, filters)
-        questions.append(dataset["questions"])
-        answers.append(dataset["answers"])
-        comments.append(dataset["comments"])
-        qsenders.append(dataset["qsenders"])
-
-        # IRC info - TBD
-        irc_dbcon = IRCQuery(opts.dbuser, opts.dbpassword, opts.dbirc, opts.dbidentities)
-        dataset = irc_report(irc_dbcon, filters)
-        irc_sent.append(dataset["sent"])
-        irc_senders.append(dataset["senders"])
-
-
-    labels = ["2013-Q3", "2013-Q4", "2014-Q1", "2014-Q2"]
-    barh_chart("Emails sent", labels, emails, "emails")
-    barh_chart("People sending emails", labels, emails_senders, "emails_senders")
-    barh_chart("People initiating threads", labels, emails_senders_init, "emails_senders_init")
-    barh_chart("Questions", labels, questions, "questions")
-    barh_chart("Answers", labels, answers, "answers")
-    barh_chart("Comments", labels, comments, "comments")
-    barh_chart("People asking Questions", labels, qsenders, "question_senders")
-    barh_chart("Messages in IRC channels", labels, irc_sent, "irc_sent")
-    barh_chart("People in IRC channels", labels, irc_senders, "irc_senders")
+    # general info: mls, irc and qaforums
+    general_info(opts, releases, people_out, affs_out)
 

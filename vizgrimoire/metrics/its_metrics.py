@@ -43,7 +43,7 @@ class Opened(Metrics):
     envision =  {"y_labels" : "true", "show_markers" : "true"}
     data_source = ITS
 
-    def __get_sql__(self, evolutionary):
+    def _get_sql(self, evolutionary):
 
         fields = " count(distinct(i.id)) as opened "
         tables = " issues i "+ self.db.GetSQLReportFrom(self.db.identities_db, self.filters.type_analysis)
@@ -103,7 +103,7 @@ class Openers(Metrics):
                                fields, tables, filters, evolutionary)
         return q
 
-    def get_top_global(self, days = 0, metric_filters = None):
+    def _get_top_global(self, days = 0, metric_filters = None):
 
         if metric_filters == None:
             metric_filters = self.filters
@@ -137,7 +137,7 @@ class Openers(Metrics):
         data = self.db.ExecuteQuery(q)
         return (data)
 
-    def __get_sql__(self, evolutionary):
+    def _get_sql(self, evolutionary):
         if (self.filters.type_analysis is not None and (self.filters.type_analysis[0] in  ["repository","project"])):
             return self.__get_sql_trk_prj__(evolutionary)
         else:
@@ -152,18 +152,18 @@ class Closed(Metrics):
     desc = "Number of closed tickets"
     data_source = ITS
 
-    def __get_sql__(self, evolutionary):
+    def _get_sql(self, evolutionary):
         """ Implemented using Changed """
         close = True
         changed = ITS.get_metrics("changed", ITS)
         if changed is None:
             # We need to create changers metric
             changed = Changed(self.db, self.filters)
-            q = changed.__get_sql__(evolutionary, close)
+            q = changed._get_sql(evolutionary, close)
         else:
             cfilters = changed.filters
             changed.filters = self.filters
-            q = changed.__get_sql__(evolutionary, close)
+            q = changed._get_sql(evolutionary, close)
             changed.filters = cfilters
         return q
 
@@ -176,7 +176,7 @@ class Closers(Metrics):
     data_source = ITS
     envision = {"gtype" : "whiskers"}
 
-    def get_top_company (self, metric_filters) :
+    def _get_top_company (self, metric_filters) :
         startdate = metric_filters.startdate
         enddate = metric_filters.enddate
         company_name = metric_filters.type_analysis[1]
@@ -202,7 +202,7 @@ class Closers(Metrics):
         data = self.db.ExecuteQuery(q)
         return (data)
 
-    def get_top_domain (self, metric_filters):
+    def _get_top_domain (self, metric_filters):
         startdate = metric_filters.startdate
         enddate = metric_filters.enddate
         domain_name = metric_filters.type_analysis[1]
@@ -227,7 +227,7 @@ class Closers(Metrics):
         data = self.db.ExecuteQuery(q)
         return (data)
 
-    def get_top_repository (self, metric_filters):
+    def _get_top_repository (self, metric_filters):
         startdate = metric_filters.startdate
         enddate = metric_filters.enddate
         repo_name = metric_filters.type_analysis[1]
@@ -254,7 +254,7 @@ class Closers(Metrics):
         return (data)
 
 
-    def get_top(self, days = 0, metric_filters = None):
+    def _get_top(self, days = 0, metric_filters = None):
         if metric_filters == None:
             metric_filters = self.filters
 
@@ -303,29 +303,29 @@ class Closers(Metrics):
 
         if metric_filters.type_analysis and metric_filters.type_analysis is not None:
             if metric_filters.type_analysis[0] == "repository":
-                alist = self.get_top_repository(metric_filters)
+                alist = self._get_top_repository(metric_filters)
             if metric_filters.type_analysis[0] == "company":
-                alist = self.get_top_company(metric_filters)
+                alist = self._get_top_company(metric_filters)
             if metric_filters.type_analysis[0] == "domain":
-                alist = self.get_top_domain(metric_filters)
+                alist = self._get_top_domain(metric_filters)
         else:
-            alist = self.get_top(days)
+            alist = self._get_top(days)
 
         if metric_filters is not None: self.filters = metric_filters_orig
         return alist
 
-    def __get_sql__(self, evolutionary):
+    def _get_sql(self, evolutionary):
         """ Implemented using Changers (changed metric should exists first) """
         close = True
         changers = ITS.get_metrics("changers", ITS)
         if changers is None:
             # We need to create changers metric
             changers = Changers(self.db, self.filters)
-            q = changers.__get_sql__(evolutionary, close)
+            q = changers._get_sql(evolutionary, close)
         else:
             cfilters = changers.filters
             changers.filters = self.filters
-            q = changers.__get_sql__(evolutionary, close)
+            q = changers._get_sql(evolutionary, close)
             changers.filters = cfilters
         return q
 
@@ -386,7 +386,7 @@ class Changed(Metrics):
                                fields, tables, filters, evolutionary)
         return q
 
-    def __get_sql__(self, evolutionary, close = False):
+    def _get_sql(self, evolutionary, close = False):
         if (self.filters.type_analysis is not None
             and len(self.filters.type_analysis) == 2
             and (self.filters.type_analysis[0] in  ["repository","project"])):
@@ -463,7 +463,7 @@ class Changers(Metrics):
                                fields, tables, filters, evolutionary)
         return q
 
-    def __get_sql__(self, evolutionary, close = False):
+    def _get_sql(self, evolutionary, close = False):
         if (self.filters.type_analysis is not None and (self.filters.type_analysis[0] in  ["repository","project"])):
             return self.__get_sql_trk_prj__(evolutionary, close)
         else:
@@ -509,7 +509,25 @@ class Trackers(Metrics):
     desc = "Number of active trackers"
     data_source = ITS
 
-    def __get_sql__(self, evolutionary):
+    def get_list(self):
+        # List the url of each of the repositories analyzed
+        # Those are order by the number of opened issues (desc order)
+        startdate = self.filters.startdate
+        enddate = self.filters.enddate
+
+        q = " SELECT t.url as name "+\
+                   "   FROM issues i, "+\
+                   "        trackers t "+\
+                   "   WHERE i.tracker_id=t.id and "+\
+                   "         i.submitted_on >= "+ startdate+ " and "+\
+                   "         i.submitted_on < "+ enddate+\
+                   "   GROUP BY t.url  "+\
+                   "   ORDER BY count(distinct(i.id)) DESC "
+        data = self.db.ExecuteQuery(q)
+        return (data)
+
+
+    def _get_sql(self, evolutionary):
         fields = " COUNT(DISTINCT(tracker_id)) AS trackers  "
         tables = " issues i " + self.db.GetSQLReportFrom(self.db.identities_db, self.filters.type_analysis)
         filters = self.db.GetSQLReportWhere(self.filters.type_analysis, self.db.identities_db)
@@ -527,7 +545,42 @@ class Companies(Metrics):
     desc = "Number of organizations (companies, etc.) with persons active in the ticketing system"
     data_source = ITS
 
-    def __get_sql__(self, evolutionary):
+    def get_list(self):
+        from data_source import DataSource
+        from filter import Filter
+        bots = DataSource.get_filter_bots(Filter("company"))
+        fbots = ''
+        for bot in bots:
+            fbots += " c.name<>'"+bot+"' and "
+        startdate = self.filters.startdate
+        enddate = self.filters.enddate
+        closed_condition = ITS._get_closed_condition()
+
+        # list each of the companies analyzed
+        # those are order by number of closed issues
+        q = "select c.name "+\
+            "from issues i, "+\
+            "     changes ch, "+\
+            "     people_upeople pup, "+\
+            "     "+ self.db.identities_db+ ".upeople_companies upc, "+\
+            "     "+ self.db.identities_db+ ".companies c "+\
+            "where i.id = ch.issue_id and "+\
+            "      ch.changed_by = pup.people_id and "+\
+            "      pup.upeople_id = upc.upeople_id and "+\
+            "      upc.company_id = c.id and "+\
+            "      ch.changed_on >= "+ startdate+ " and "+\
+            "      ch.changed_on < "+ enddate+" and "+\
+            "      i.submitted_on >= upc.init and "+\
+            "      i.submitted_on < upc.end and "+\
+            "      "+ fbots  +\
+                   closed_condition +\
+            "      group by c.name  "+\
+            "      order by count(distinct(i.id)) desc"
+
+        data = self.db.ExecuteQuery(q)
+        return (data)
+
+    def _get_sql(self, evolutionary):
         q = self.db.GetSQLIssuesStudies(self.filters.period, self.filters.startdate, 
                                            self.filters.enddate, self.db.identities_db, 
                                            ['company', ''], evolutionary, 'companies')
@@ -540,11 +593,35 @@ class Countries(Metrics):
     desc = "Number of countries with persons active in the ticketing system"
     data_source = ITS
 
-    def __get_sql__(self, evolutionary):
+    def _get_sql(self, evolutionary):
         q = self.db.GetSQLIssuesStudies(self.filters.period, self.filters.startdate, 
                                            self.filters.enddate, self.db.identities_db, 
                                            ['country', ''], evolutionary, 'countries')
         return q
+
+    def get_list(self):
+        startdate = self.filters.startdate
+        enddate = self.filters.enddate
+        closed_condition = ITS._get_closed_condition()
+
+        q = "select cou.name "+\
+            "from issues i, "+\
+            "     changes ch, "+\
+            "     people_upeople pup, "+\
+            "     "+ self.db.identities_db+ ".upeople_countries upc, "+\
+            "     "+ self.db.identities_db+ ".countries cou "+\
+            "where i.id = ch.issue_id and "+\
+            "      ch.changed_by = pup.people_id and "+\
+            "      pup.upeople_id = upc.upeople_id and "+\
+            "      upc.country_id = cou.id and "+\
+            "      ch.changed_on >= "+ startdate+ " and "+\
+            "      ch.changed_on < "+ enddate+" and "+\
+            "      "+ closed_condition+ " "+\
+            "      group by cou.name  "+\
+            "      order by count(distinct(i.id)) desc"
+
+        data = self.db.ExecuteQuery(q)
+        return (data)
 
 class Domains(Metrics):
     """ Domains metric class for issue tracking systems """
@@ -553,11 +630,38 @@ class Domains(Metrics):
     desc = "Number of distinct email domains with persons active in the ticketing system"
     data_source = ITS
 
-    def __get_sql__(self, evolutionary):
+    def _get_sql(self, evolutionary):
         q = self.db.GetSQLIssuesStudies(self.filters.period, self.filters.startdate, 
                                            self.filters.enddate, self.db.identities_db, 
                                            ['domain', ''], evolutionary, 'domains')
         return q
+
+    def get_list(self):
+        from data_source import DataSource
+        from filter import Filter
+        startdate = self.filters.startdate
+        enddate = self.filters.enddate
+        closed_condition = ITS._get_closed_condition()
+        bots = DataSource.get_filter_bots(Filter("domain"))
+        fbots = ''
+        for bot in bots:
+            fbots += " dom.name<>'"+bot+"' and "
+
+        tables = self.db.GetTablesDomains(self.db.identities_db)
+        tables += ","+self.db.identities_db+".domains dom"
+
+        q = "SELECT dom.name "+\
+            "FROM "+ tables + " "+\
+            "WHERE " + self.db.GetFiltersDomains() +" AND "+\
+            "       dom.id = upd.domain_id and "+\
+            "       "+ fbots +" "+\
+            "       c.changed_on >= "+ startdate+ " AND "+\
+            "       c.changed_on < "+ enddate+ " AND "+\
+            "       "+ closed_condition+" "+\
+            "GROUP BY dom.name "+\
+            "ORDER BY COUNT(DISTINCT(c.issue_id)) DESC"
+        data = self.db.ExecuteQuery(q)
+        return (data)
 
 class Projects(Metrics):
     """ Projects metric class for issue tracking systems """
@@ -566,7 +670,38 @@ class Projects(Metrics):
     desc = "Number of distinct projects active in the ticketing system"
     data_source = ITS
 
-    def __get_sql__(self, evolutionary):
+    def get_list (self):
+        # Projects activity needs to include subprojects also
+        logging.info ("Getting projects list for ITS")
+        from metrics_filter import MetricFilters
+
+        q = "SELECT p.id AS name FROM  %s.projects p" % (self.db.identities_db)
+        projects = self.db.ExecuteQuery(q)
+        data = []
+
+        # Loop all projects getting reviews
+        for project in projects['name']:
+            type_analysis = ['project', project]
+
+            period = None
+            filter_com = MetricFilters(period, self.filters.startdate,
+                                       self.filters.enddate, type_analysis)
+            mclosed = ITS.get_metrics("closed", ITS)
+            mclosed.filters = filter_com
+            issues = mclosed.get_agg()
+
+            issues = issues['closed']
+            if (issues > 0):
+                data.append([issues,project])
+
+        # Order the list using reviews: https://wiki.python.org/moin/HowTo/Sorting
+        from operator import itemgetter
+        data_sort = sorted(data, key=itemgetter(0),reverse=True)
+        names = [name[1] for name in data_sort]
+
+        return({"name":names})
+
+    def _get_sql(self, evolutionary):
         # Not yet working
         return None
         q = self.db.GetSQLIssuesStudies(self.filters.period, self.filters.startdate, 
@@ -582,7 +717,7 @@ class AllParticipants(Metrics):
     desc = "Number of participants in all history in the ticketing system"
     data_source = ITS
 
-    def __get_sql__(self, evolutionary):
+    def _get_sql(self, evolutionary):
         q = "SELECT count(distinct(pup.upeople_id)) as allhistory_participants from people_upeople pup"
         return q
 
@@ -592,6 +727,6 @@ class AllParticipants(Metrics):
 
     def get_agg(self):
         if self.filters.type_analysis is None:
-            query = self.__get_sql__(False)
+            query = self._get_sql(False)
             return self.db.ExecuteQuery(query)
         else: return {}
