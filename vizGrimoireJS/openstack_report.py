@@ -22,7 +22,7 @@
 ##   Daniel Izquierdo-Cortazar <dizquierdo@bitergia.com>
 ##   Luis Cañas-Díaz <lcanas@bitergia.com>
 ##
-## python openstack_report.py -a dic_cvsanaly_openstack_2259 -d dic_bicho_openstack_gerrit_3392 -i dic_cvsanaly_openstack_2259 -r 2013-07-01,2013-10-01,2014-01-01,2014-04-01,2014-07-01 -c lcanas_bicho_openstack_1376 -b lcanas_mlstats_openstack_1376 -f dic_sibyl_openstack_3194_new -e dic_irc_openstack_3277
+## python openstack_report.py -a dic_cvsanaly_openstack_2259 -d dic_bicho_openstack_gerrit_3392_bis -i dic_cvsanaly_openstack_2259 -r 2013-07-01,2013-10-01,2014-01-01,2014-04-01,2014-07-01 -c lcanas_bicho_openstack_1376 -b lcanas_mlstats_openstack_1376 -f dic_sibyl_openstack_3194_new -e dic_irc_openstack_3277
 
 
 import imp, inspect
@@ -185,10 +185,10 @@ def scm_report(dbcon, filters):
 
     # top companies activity
     from top_companies_projects import TopCompaniesProjects
-    top_companies = TopCompaniesProjects(dbcon, filters)
-    top_companies = top_companies.result()
-    #companies = scm.Companies(dbcon, filters)
-    #top_companies = companies.get_list()
+    #top_companies = TopCompaniesProjects(dbcon, filters)
+    #top_companies = top_companies.result()
+    companies = scm.Companies(dbcon, filters)
+    top_companies = companies.get_list(filters)
     createJSON(top_companies, "./release/scm_top_companies_project_"+project_name+".json")
     createCSV(top_companies, "./release/scm_top_companies_project_"+project_name+".csv")
 
@@ -235,12 +235,17 @@ def scr_report(dbcon, filters):
     waiting4submitter = scr.ReviewsWaitingForSubmitter(dbcon, filters)
     createJSON(waiting4submitter.get_agg(), "./release/scr_waiting4submitter_"+project_name+".json")
 
+    filters.period = "month"
+    time2review = scr.TimeToReview(dbcon, filters)
+
     dataset = {}
     dataset["submitted"] = submitted.get_agg()["submitted"]
     dataset["merged"] = merged.get_agg()["merged"]
     dataset["abandoned"] = abandoned.get_agg()["abandoned"]
     dataset["waiting4reviewer"] = waiting4reviewer.get_agg()["ReviewsWaitingForReviewer"]
     dataset["waiting4submitter"] = waiting4submitter.get_agg()["ReviewsWaitingForSubmitter"]
+    dataset["review_time_days_median"] = time2review.get_agg()["review_time_days_median"]
+    dataset["review_time_days_avg"] = time2review.get_agg()["review_time_days_avg"]
 
     return dataset
 
@@ -302,6 +307,16 @@ def mls_report(dbcon, filters):
 
     return dataset
 
+
+def parse_urls(urls):
+    qs_aux = []
+    for url in urls:
+        url = url.replace("https://ask.openstack.org/en/question/", "")
+        url = url.replace("_", "\_")
+        qs_aux.append(url)
+    return qs_aux
+
+
 def qaforums_report(dbcon, filters):
     questions = qa.Questions(dbcon, filters)
     createJSON(questions.get_agg(), "./release/qaforums_questions.json")
@@ -326,19 +341,21 @@ def qaforums_report(dbcon, filters):
     commented = tops.top_commented()
     commented["qid"] = commented.pop("question_identifier")
     # Taking the last part of the URL
-    #commented["site"] = commented.pop("url").split("/")[-2:][1:]
-    commented["site"] = commented.pop("url")
+    commented["site"] = parse_urls(commented.pop("url"))
     createJSON(commented, "./release/qa_top_questions_commented.json")
     createCSV(commented, "./release/qa_top_questions_commented.csv")
 
     visited = tops.top_visited()
     visited["qid"] = visited.pop("question_identifier")
-    visited["site"] = visited.pop("url")
+    visited["site"] = parse_urls(visited.pop("url"))
+    #commented["site"] = commented.pop("url").split("/")[-2:][1:]
+    
     createJSON(visited, "./release/qa_top_questions_visited.json")
     createCSV(visited, "./release/qa_top_questions_visited.csv")
 
     crowded = tops.top_crowded()
     crowded["qid"] = crowded.pop("question_identifier")
+    crowded["site"] = parse_urls(crowded.pop("url"))
     createJSON(crowded, "./release/qa_top_questions_crowded.json")
     createCSV(crowded, "./release/qa_top_questions_crowded.csv")
 
@@ -539,6 +556,8 @@ if __name__ == '__main__':
         abandoned = []
         closed = []
         bmi = []
+        review_avg = []
+        review_median = []
         for release in releases:
             labels.append(release[1])
             #scm
@@ -555,6 +574,8 @@ if __name__ == '__main__':
             submitted.append(releases_data[release]["scr"]["submitted"])
             merged.append(releases_data[release]["scr"]["merged"])
             abandoned.append(releases_data[release]["scr"]["abandoned"])
+            review_avg.append(releases_data[release]["scr"]["review_time_days_avg"])
+            review_median.append(releases_data[release]["scr"]["review_time_days_median"])
         
         labels = ["2013-Q3", "2013-Q4", "2014-Q1", "2014-Q2"]        
         project_name = project.replace(" ", "")
@@ -574,6 +595,12 @@ if __name__ == '__main__':
         createCSV({"labels":labels, "merged":merged}, "./release/merged"+project_name+".csv")
         barh_chart("Abandoned reviews  " + project, labels, abandoned, "abandoned_reviews" + project_name)
         createCSV({"labels":labels, "abandoned":abandoned}, "./release/abandoned"+project_name+".csv")
+
+        barh_chart("Time to review (median)  " + project, labels, review_median, "timetoreview_median" + project_name)
+        createCSV({"labels":labels, "mediantime":review_median}, "./release/timetoreview_median"+project_name+".csv")
+
+        barh_chart("Time to review (mean)  " + project, labels, review_avg, "timetoreview_avg" + project_name)
+        createCSV({"labels":labels, "avgtime":review_avg}, "./release/timetoreview_avg"+project_name+".csv")
 
     # general info: mls, irc and qaforums
     general_info(opts, releases, people_out, affs_out)
