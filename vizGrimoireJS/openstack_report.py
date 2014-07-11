@@ -41,6 +41,31 @@ from prettyplotlib import brewer2mpl
 import numpy as np
 from datetime import datetime
 
+def bar_chart(title, labels, data1, file_name, data2 = None, legend=["", ""]):
+
+    colors = ["orange", "grey"]
+
+    fig, ax = plt.subplots(1)
+    xpos = np.arange(len(data1))
+    width = 0.35
+
+    plt.title(title)
+    y_pos = np.arange(len(data1))
+
+    if data2 is not None:
+        ppl.bar(xpos+width, data1, color="orange", width=0.35, annotate=True)
+        ppl.bar(xpos, data2, grid='y', width = 0.35, annotate=True)
+        plt.xticks(xpos+width, labels)
+        plt.legend(legend)
+
+    else:
+        ppl.bar(xpos, data1, grid='y', annotate=True)
+        plt.xticks(xpos+width, labels)
+
+    plt.savefig(file_name + ".eps")
+    plt.close()
+
+
 
 def ts_chart(title, unixtime_dates, data, file_name):
 
@@ -579,28 +604,24 @@ if __name__ == '__main__':
         
         labels = ["2013-Q3", "2013-Q4", "2014-Q1", "2014-Q2"]        
         project_name = project.replace(" ", "")
-        barh_chart("Commits " + project, labels, commits, "commits"  + project_name)
-        createCSV({"labels":labels, "commits":commits}, "./release/commits"+project_name+".csv")
-        barh_chart("Authors " + project, labels, authors, "authors" + project_name)
-        createCSV({"labels":labels, "authors":authors}, "./release/authors"+project_name+".csv")
-        barh_chart("Opened tickets " +  project, labels, opened, "opened" + project_name)
-        createCSV({"labels":labels, "opened":opened}, "./release/opened"+project_name+".csv")
-        barh_chart("Closed tickets " + project, labels, closed, "closed" + project_name)
-        createCSV({"labels":labels, "closed":closed}, "./release/closed"+project_name+".csv")
-        barh_chart("Efficiency closing tickets " + project, labels, bmi, "bmi" + project_name)
-        createCSV({"labels":labels, "bmi":bmi}, "./release/bmi"+project_name+".csv")
-        barh_chart("Submitted reviews " + project, labels, submitted, "submitted_reviews" + project_name)
-        createCSV({"labels":labels, "submitted":submitted}, "./release/submitted_reviews"+project_name+".csv")
-        barh_chart("Merged reviews " + project, labels, merged, "merged_reviews" + project_name)
-        createCSV({"labels":labels, "merged":merged}, "./release/merged"+project_name+".csv")
-        barh_chart("Abandoned reviews  " + project, labels, abandoned, "abandoned_reviews" + project_name)
-        createCSV({"labels":labels, "abandoned":abandoned}, "./release/abandoned"+project_name+".csv")
+        bar_chart("Commits and reviews" + project, labels, commits, "commits"  + project_name, submitted, ["commits", "reviews"])
+        createCSV({"labels":labels, "commits":commits, "submitted":submitted}, "./release/commits"+project_name+".csv")
 
-        barh_chart("Time to review (median)  " + project, labels, review_median, "timetoreview_median" + project_name)
+        bar_chart("Authors " + project, labels, authors, "authors" + project_name)
+        createCSV({"labels":labels, "authors":authors}, "./release/authors"+project_name+".csv")
+
+        bar_chart("Opened and closed tickets " + project, labels, opened, "closed" + project_name, closed, ["opened", "closed"])
+        createCSV({"labels":labels, "closed":closed, "opened":opened}, "./release/closed"+project_name+".csv")
+
+        bar_chart("Efficiency closing tickets " + project, labels, bmi, "bmi" + project_name)
+        createCSV({"labels":labels, "bmi":bmi}, "./release/bmi"+project_name+".csv")
+
+        bar_chart("Merged and abandoned reviews " + project, labels, merged, "submitted_reviews" + project_name, abandoned, ["merged", "abandoned"])
+        createCSV({"labels":labels, "merged":merged, "abandoned":abandoned}, "./release/submitted_reviews"+project_name+".csv")
+
+        bar_chart("Time to review (days)  " + project, labels, review_avg, "timetoreview_median" + project_name, review_median, ["mean", "median"])
         createCSV({"labels":labels, "mediantime":review_median}, "./release/timetoreview_median"+project_name+".csv")
 
-        barh_chart("Time to review (mean)  " + project, labels, review_avg, "timetoreview_avg" + project_name)
-        createCSV({"labels":labels, "avgtime":review_avg}, "./release/timetoreview_avg"+project_name+".csv")
 
     # general info: mls, irc and qaforums
     general_info(opts, releases, people_out, affs_out)
