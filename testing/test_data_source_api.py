@@ -25,7 +25,7 @@
 # import MySQLdb, os, random, string, sys
 # import data_source
 
-import json, os, sys, time, unittest
+import json, os, sys, time, traceback, unittest
 import logging
 from optparse import OptionParser
 
@@ -39,6 +39,31 @@ class DataSourceTest(unittest.TestCase):
     @staticmethod
     def close():
         logging.info("End Data Source")
+
+    def compareJSON(self, orig_file, new_file):
+        # Use assertEqual to compare JSON contents
+        compareEqual = True
+
+        try:
+            f1 = open(orig_file)
+            f2 = open(new_file)
+            data1 = json.load(f1)
+            data2 = json.load(f2)
+            f1.close()
+            f2.close()
+        except IOError, e:
+            print("Fail comparing JSON files:", orig_file, new_file)
+            raise e
+
+        try:
+            # self.maxDiff = 5012
+            self.assertEqual(data1, data2)
+        except AssertionError:
+            logging.error(orig_file + " " + new_file + " contents are different")
+            traceback.print_exc(file=sys.stdout, limit = 1)
+            compareEqual = False
+
+        return compareEqual
 
     def test_get_bots(self):
         for ds in Report.get_data_sources():
@@ -85,7 +110,7 @@ class DataSourceTest(unittest.TestCase):
             test_json = ds().get_evolutionary_filename()
             f_test_json = os.path.join("json", test_json)
 
-            self.assertTrue(DataSourceTest._compare_data(ds_data, f_test_json))
+            self.assertTrue(self._compare_data(ds_data, f_test_json))
 
     def test_create_evolutionary_report(self):
         opts = read_options()
@@ -106,10 +131,9 @@ class DataSourceTest(unittest.TestCase):
             f_test_json = os.path.join("json", ds_json)
             f_report_json = os.path.join(opts.destdir, ds_json)
 
-            self.assertTrue(compareJSON(f_test_json, f_report_json))
+            self.assertTrue(self.compareJSON(f_test_json, f_report_json))
 
-    @staticmethod
-    def _compare_data(data, json_file):
+    def _compare_data(self, data, json_file):
         # Create a temporary JSON file with data
         from tempfile import NamedTemporaryFile
         data_file = NamedTemporaryFile()
@@ -117,7 +141,7 @@ class DataSourceTest(unittest.TestCase):
         data_file.close()
         createJSON(data, data_file_name, check=False, skip_fields = [])
 
-        check = compareJSON(json_file, data_file_name)
+        check = self.compareJSON(json_file, data_file_name)
         if check: os.remove(data_file_name)
         return check
 
@@ -143,7 +167,7 @@ class DataSourceTest(unittest.TestCase):
 
             test_json = os.path.join("json",ds().get_agg_filename())
 
-            self.assertTrue(DataSourceTest._compare_data(ds_data, test_json))
+            self.assertTrue(self._compare_data(ds_data, test_json))
 
     def test_create_agg_report(self):
         opts = read_options()
@@ -164,7 +188,7 @@ class DataSourceTest(unittest.TestCase):
             f_test_json = os.path.join("json", ds_json)
             f_report_json = os.path.join(opts.destdir, ds_json)
 
-            self.assertTrue(compareJSON(f_test_json, f_report_json))
+            self.assertTrue(self.compareJSON(f_test_json, f_report_json))
 
 
     def test_get_agg_evol_filters_data(self):
@@ -204,13 +228,13 @@ class DataSourceTest(unittest.TestCase):
                     agg = ds.get_agg_data(period, startdate, enddate, identities_db, filter_item)
                     fn = item_file+"-"+ds.get_name()+"-"+filter_name_short+"-static.json"
                     test_json = os.path.join("json",fn)
-                    self.assertTrue(DataSourceTest._compare_data(agg, test_json))
+                    self.assertTrue(self._compare_data(agg, test_json))
 
                     logging.info(ds.get_name() +","+ filter_name+","+ item+","+ "evol")
                     evol = ds.get_evolutionary_data(period, startdate, enddate, identities_db, filter_item)
                     fn = item_file+"-"+ds.get_name()+"-"+filter_name_short+"-evolutionary.json"
                     test_json = os.path.join("json",fn)
-                    self.assertTrue(DataSourceTest._compare_data(evol, test_json))
+                    self.assertTrue(self._compare_data(evol, test_json))
 
     def test_get_filter_items(self):
         opts = read_options()
@@ -242,7 +266,7 @@ class DataSourceTest(unittest.TestCase):
                 if ds.get_name() not in ["scr"] :
                     # scr repos format is more complex and 
                     # is checked already in test_get_agg_evol_filters_data 
-                    self.assertTrue(compareJSON(test_json, new_json))
+                    self.assertTrue(self.compareJSON(test_json, new_json))
 
     def test_get_top_data (self):
         opts = read_options()
@@ -255,7 +279,7 @@ class DataSourceTest(unittest.TestCase):
             Report.connect_ds(ds)
             top = ds.get_top_data(startdate, enddate, identities_db, None, npeople)
             test_json = os.path.join("json",ds.get_name()+"-top.json")
-            self.assertTrue(DataSourceTest._compare_data(top, test_json))
+            self.assertTrue(self._compare_data(top, test_json))
 
     def test_create_top_report (self):
         opts = read_options()
@@ -271,7 +295,7 @@ class DataSourceTest(unittest.TestCase):
             test_json = os.path.join("json",fn)
             top_json = os.path.join(opts.destdir,fn)
 
-            self.assertTrue(compareJSON(test_json, top_json))
+            self.assertTrue(self.compareJSON(test_json, top_json))
 
     def test_get_filter_summary (self):
         opts = read_options()
@@ -290,7 +314,7 @@ class DataSourceTest(unittest.TestCase):
                     summary = ds.get_filter_summary(filter_, period, startdate,
                                           enddate, identities_db, 10)
                     test_json = os.path.join("json",filter_.get_summary_filename(ds))
-                    self.assertTrue(DataSourceTest._compare_data(summary, test_json))
+                    self.assertTrue(self._compare_data(summary, test_json))
 
     def test_get_filter_item_top (self):
         opts = read_options()
@@ -317,7 +341,7 @@ class DataSourceTest(unittest.TestCase):
                                           filter_item, npeople)
                     if top is None or top == {}: continue
                     test_json = os.path.join("json",filter_item.get_top_filename(ds()))
-                    self.assertTrue(DataSourceTest._compare_data(top, test_json))
+                    self.assertTrue(self._compare_data(top, test_json))
 
     # get_top_people, get_person_evol, get_person_agg tests included
     def test_create_people_report(self):
@@ -336,21 +360,21 @@ class DataSourceTest(unittest.TestCase):
             fpeople = ds.get_top_people_file(ds.get_name())
             people = ds.get_top_people(startdate, enddate, identities_db, opts.npeople)
             test_json = os.path.join("json",fpeople)
-            self.assertTrue(DataSourceTest._compare_data(people, test_json))
+            self.assertTrue(self._compare_data(people, test_json))
 
             for upeople_id in people :
                 evol_data = ds.get_person_evol(upeople_id, period, startdate, enddate,
                                                 identities_db, type_analysis = None)
                 fperson = ds().get_person_evol_file(upeople_id)
                 test_json = os.path.join("json",fperson)
-                self.assertTrue(DataSourceTest._compare_data(evol_data, test_json))
+                self.assertTrue(self._compare_data(evol_data, test_json))
 
 
                 agg = ds.get_person_agg(upeople_id, startdate, enddate,
                                          identities_db, type_analysis = None)
                 fperson = ds().get_person_agg_file(upeople_id)
                 test_json = os.path.join("json",fperson)
-                self.assertTrue(DataSourceTest._compare_data(agg, test_json))
+                self.assertTrue(self._compare_data(agg, test_json))
 
     def test_create_r_reports(self):
         # R black box generated reports. Can not test
@@ -391,16 +415,15 @@ class DataSourceTest(unittest.TestCase):
                                 # authors is a dict with revtime which changes every execution
                                 pass
                             else:
-                                self.assertTrue(compareJSON(f_test_json, f_report_json))
+                                self.assertTrue(self.compareJSON(f_test_json, f_report_json))
                     data = obj.result(ds)
                     if data is None: continue
                     test_json = os.path.join("json",ds.get_name()+"_"+obj.get_definition()['id']+".json")
                     if obj.get_definition()['id'] == "top_issues":
                         # Include time field which changes every execution
                         continue
-                    else: self.assertTrue(DataSourceTest._compare_data(data, test_json))
+                    else: self.assertTrue(self._compare_data(data, test_json))
                 except TypeError:
-                    import traceback, sys
                     traceback.print_exc(file=sys.stdout)
                     logging.info(study.id + " does no support complete standard API. Not used when no available.")
                     continue
@@ -474,7 +497,8 @@ if __name__ == '__main__':
     from filter import Filter
     from GrimoireUtils import getPeriod, read_main_conf
     from GrimoireUtils import compare_json_data, completePeriodIds
-    from GrimoireUtils import createJSON, compareJSON
+    # from GrimoireUtils import createJSON, compareJSON
+    from GrimoireUtils import createJSON
     from report import Report
 
     opts = read_options()
