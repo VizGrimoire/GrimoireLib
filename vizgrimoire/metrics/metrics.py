@@ -34,6 +34,7 @@ class Metrics(object):
     name = None
     desc = None
     data_source = None
+    domains_limit = 100
 
     def __init__(self, dbcon = None, filters = None):
         """db connection and filter to be used"""

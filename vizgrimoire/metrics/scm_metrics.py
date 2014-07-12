@@ -803,7 +803,7 @@ class Domains(Metrics):
     def _get_sql(self, evol):
         fields = "COUNT(DISTINCT(upd.domain_id)) AS domains"
         tables = "scmlog s, people_upeople pup, upeople_domains upd"
-        filters = "s.author_id = pup.people_id and pup.upeople_id = upd.upeople_id"
+        filters = "s.author_id = pup.people_id and pup.upeople_id = upd.upeople_id "
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                self.filters.enddate, " s.date ", fields,
                                tables, filters, evol)
@@ -826,7 +826,7 @@ class Domains(Metrics):
             "  s.date >="+ startdate+ " and "+\
             "  s.date < "+ enddate+ " "+\
             "GROUP BY d.name "+\
-            "ORDER BY commits desc"
+            "ORDER BY commits desc  LIMIT " + str(Metrics.domains_limit)
 
         return self.db.ExecuteQuery(q)
 
