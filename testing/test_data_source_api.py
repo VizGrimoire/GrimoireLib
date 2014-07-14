@@ -195,7 +195,6 @@ class DataSourceTest(unittest.TestCase):
         opts = read_options()
         period = getPeriod(opts.granularity)
 
-
         automator = read_main_conf(opts.config_file)
         identities_db = automator['generic']['db_identities']
 
@@ -206,7 +205,7 @@ class DataSourceTest(unittest.TestCase):
                 filter_name = filter_.get_name()
                 filter_name_short = filter_.get_name_short()
                 bots = ds.get_filter_bots(filter_)
-                items = ds.get_filter_items(filter_, startdate, enddate, identities_db, bots)
+                items = ds.get_filter_items(filter_, startdate, enddate, identities_db)
                 if items is None: continue
                 if (isinstance(items, dict)): items = items['name']
 
@@ -245,8 +244,7 @@ class DataSourceTest(unittest.TestCase):
         for ds in Report.get_data_sources():
             Report.connect_ds(ds)
             for filter_ in Report.get_filters():
-                bots = ds.get_filter_bots(filter_)
-                items = ds.get_filter_items(filter_, startdate, enddate, identities_db, bots)
+                items = ds.get_filter_items(filter_, startdate, enddate, identities_db)
                 if items is None: continue
                 if (isinstance(items, dict)): items = items['name']
                 if not isinstance(items, (list)): items = [items]
@@ -330,7 +328,7 @@ class DataSourceTest(unittest.TestCase):
             bots = ds.get_bots()
             for filter_ in Report.get_filters():
                 items = ds.get_filter_items(filter_, startdate, enddate,
-                                            identities_db, bots)
+                                            identities_db)
                 if items is None: continue
                 if (isinstance(items, dict)): items = items['name']
                 if not isinstance(items, (list)): items = [items]
