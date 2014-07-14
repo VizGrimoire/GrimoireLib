@@ -130,7 +130,7 @@ class Authors(Metrics):
         q += " AND pup.people_id = s.author_id AND u.id = pup.upeople_id "
         q += " and s.id = a.commit_id "
         q += " AND s.date >= " + startdate + " and s.date < " + enddate
-        q += " GROUP by u.id ORDER BY commits DESC, r.name"
+        q += " GROUP by u.id ORDER BY commits DESC, authors"
         q += " limit " + str(self.filters.npeople)
 
         res = self.db.ExecuteQuery(q)
@@ -157,7 +157,7 @@ class Authors(Metrics):
           s.date < upc.end AND upc.company_id = c.id AND
           s.date >=%s AND s.date < %s AND c.name =%s) t
         GROUP BY id
-        ORDER BY commits DESC
+        ORDER BY commits DESC, authors
         LIMIT %s
         """ % (filter_bots, startdate, enddate, company, limit)
 
@@ -185,7 +185,7 @@ class Authors(Metrics):
         q += " AND pup.people_id = s.author_id AND u.id = pup.upeople_id "
         q += " and a.commit_id = s.id "
         q += " AND s.date >= " + startdate + " and s.date < " + enddate
-        q += " GROUP by u.id ORDER BY commits DESC, u.id"
+        q += " GROUP by u.id ORDER BY commits DESC, authors"
         q += " limit " + str(self.filters.npeople)
 
         res = self.db.ExecuteQuery(q)

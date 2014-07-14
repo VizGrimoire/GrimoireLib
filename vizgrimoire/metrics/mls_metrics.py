@@ -82,7 +82,7 @@ class EmailsSenders(Metrics):
                 "  m.first_date < "+enddate+" AND "+\
                 "  m."+rfield+"="+ repo +\
                 " GROUP BY up.identifier "+\
-                " ORDER BY sent desc "+\
+                " ORDER BY sent desc, senders "+\
                 " LIMIT " + str(limit)
         data = ExecuteQuery(q)
         return (data)
