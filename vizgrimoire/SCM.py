@@ -132,7 +132,10 @@ class SCM(DataSource):
         period = None
         if filter_ is not None:
             if filter_.get_name() == "project":
-                mfilter = MetricFilters(period, startdate, enddate, filter_.get_type_analysis(), npeople)
+                # TODO missing companies_out
+                companies_out = mcompanies.filters.companies_out
+                people_out = None
+                mfilter = MetricFilters(period, startdate, enddate, filter_.get_type_analysis(), npeople, people_out, companies_out)
                 top = mcompanies.get_list(mfilter)
         return top
 
@@ -172,7 +175,7 @@ class SCM(DataSource):
         createJSON (data, destdir+"/"+SCM().get_top_filename())
 
     @staticmethod
-    def get_filter_items(filter_, startdate, enddate, identities_db, bots):
+    def get_filter_items(filter_, startdate, enddate, identities_db):
         items = None
         filter_name = filter_.get_name()
 
@@ -206,7 +209,6 @@ class SCM(DataSource):
         items = SCM.get_filter_items(filter_, startdate, enddate, identities_db, bots)
         if (items == None): return
         items = items['name']
-        print(items)
 
         filter_name = filter_.get_name()
 
