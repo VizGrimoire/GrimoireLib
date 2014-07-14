@@ -185,6 +185,24 @@ def build_releases(releases_dates):
 
     return releases
 
+def scm_general(dbcon, filters):
+    from onion_model import CommunityStructure
+    onion = CommunityStructure(dbcon, filters)
+    result = onion.result()
+
+    dataset = {}
+    dataset["core"] = result["core"]
+    dataset["regular"] = result["regular"]
+    dataset["occasional"] = result["occasional"]
+
+    authors_period = scm.AuthorsPeriod(dbcon, filters)
+    dataset["authorsperiod"] = authors_period.get_agg()["avg_authors_month"]
+
+    authors = scm.Authors(dbcon, filters)
+    top_authors = authors.get_list()
+    dataset["topauthors"] = top_authors
+
+    return dataset
 
 def scm_report(dbcon, filters):
 
@@ -225,10 +243,8 @@ def its_report(dbcon, filters):
 
     project_name = filters.type_analysis[1]
     project_name = project_name.replace(" ", "")
-
     opened = its.Opened(dbcon, filters)
     createJSON(opened.get_agg(), "./release/its_opened_"+project_name+".json")
-
     closed = its.Closed(dbcon, filters)
     createJSON(closed.get_agg(), "./release/its_closed_"+project_name+".json")
 
@@ -458,6 +474,11 @@ def projects(user, password, database):
 def general_info(opts, releases, people_out, affs_out):
 
     # General info from MLS, IRC and QAForums.
+    core = []
+    regular = []
+    occasional = []
+    authors_month = []
+
     emails = []
     emails_senders =  []
     emails_senders_init = []
@@ -472,7 +493,17 @@ def general_info(opts, releases, people_out, affs_out):
         startdate = "'" + release[0] + "'"
         enddate = "'" + release[1] + "'"
         filters = MetricFilters("month", startdate, enddate, [], opts.npeople, people_out, affs_out)
-
+        # SCM info
+        scm_dbcon = SCMQuery(opts.dbuser, opts.dbpassword, opts.dbcvsanaly, opts.dbidentities)
+        dataset = scm_general(scm_dbcon, filters)
+        core.append(dataset["core"])
+        regular.append(dataset["regular"])
+        occasional.append(dataset["occasional"])
+        authors_month.append(float(dataset["authorsperiod"]))
+        top_authors = dataset["topauthors"]
+        release_pos = releases.index(release)
+        createCSV(top_authors, "./release/top_authors_release" + str(release_pos)+ ".csv")
+  
         # MLS info
         mls_dbcon = MLSQuery(opts.dbuser, opts.dbpassword, opts.dbmlstats, opts.dbidentities)
         dataset = mls_report(mls_dbcon, filters)
@@ -495,6 +526,7 @@ def general_info(opts, releases, people_out, affs_out):
         irc_senders.append(dataset["senders"])
 
 
+    #labels = ["2012-Q3", "2012-Q4", "2013-Q1", "2013-Q2", "2013-Q3", "2013-Q4", "2014-Q1", "2014-Q2"]
     labels = ["2013-Q3", "2013-Q4", "2014-Q1", "2014-Q2"]
     barh_chart("Emails sent", labels, emails, "emails")
     createCSV({"labels":labels, "emails":emails}, "./release/emails.csv")
@@ -514,8 +546,11 @@ def general_info(opts, releases, people_out, affs_out):
     createCSV({"labels":labels, "messages":irc_sent}, "./release/irc_sent.csv")
     barh_chart("People in IRC channels", labels, irc_senders, "irc_senders")
     createCSV({"labels":labels, "senders":irc_senders}, "./release/irc_senders.csv")
-
-
+    
+    bar_chart("Community structure", labels, regular, "onion", core, ["regular", "core"])
+    createCSV({"labels":labels, "core":core, "regular":regular, "occasional":occasional}, "./release/onion_model.csv")
+    bar_chart("Developers per month", labels, authors_month, "authors_month")
+    createCSV({"labels":labels, "authormonth":authors_month}, "./release/authors_month.csv")
 
 if __name__ == '__main__':
 
@@ -602,11 +637,11 @@ if __name__ == '__main__':
             review_avg.append(releases_data[release]["scr"]["review_time_days_avg"])
             review_median.append(releases_data[release]["scr"]["review_time_days_median"])
         
-        labels = ["2013-Q3", "2013-Q4", "2014-Q1", "2014-Q2"]        
+        #labels = ["2012-Q3", "2012-Q4", "2013-Q1", "2013-Q2", "2013-Q3", "2013-Q4", "2014-Q1", "2014-Q2"]        
+        labels = ["2013-Q3", "2013-Q4", "2014-Q1", "2014-Q2"]
         project_name = project.replace(" ", "")
         bar_chart("Commits and reviews" + project, labels, commits, "commits"  + project_name, submitted, ["commits", "reviews"])
         createCSV({"labels":labels, "commits":commits, "submitted":submitted}, "./release/commits"+project_name+".csv")
-
         bar_chart("Authors " + project, labels, authors, "authors" + project_name)
         createCSV({"labels":labels, "authors":authors}, "./release/authors"+project_name+".csv")
 
@@ -620,9 +655,9 @@ if __name__ == '__main__':
         createCSV({"labels":labels, "merged":merged, "abandoned":abandoned}, "./release/submitted_reviews"+project_name+".csv")
 
         bar_chart("Time to review (days)  " + project, labels, review_avg, "timetoreview_median" + project_name, review_median, ["mean", "median"])
-        createCSV({"labels":labels, "mediantime":review_median}, "./release/timetoreview_median"+project_name+".csv")
+        createCSV({"labels":labels, "mediantime":review_median, "meantime":review_avg}, "./release/timetoreview_median"+project_name+".csv")
 
 
-    # general info: mls, irc and qaforums
+    # general info: scm, mls, irc and qaforums
     general_info(opts, releases, people_out, affs_out)
 
