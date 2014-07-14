@@ -618,7 +618,7 @@ class Countries(Metrics):
             "      ch.changed_on < "+ enddate+" and "+\
             "      "+ closed_condition+ " "+\
             "      group by cou.name  "+\
-            "      order by count(distinct(i.id)) desc"
+            "      order by count(distinct(i.id)) desc, cou.name"
 
         data = self.db.ExecuteQuery(q)
         return (data)

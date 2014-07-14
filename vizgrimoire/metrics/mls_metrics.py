@@ -424,7 +424,7 @@ class Domains(Metrics):
             "    m.first_date >= "+self.filters.startdate+" AND "+\
             "    m.first_date < "+self.filters.enddate+\
             "    GROUP BY d.name "+\
-            "    ORDER BY COUNT(DISTINCT(m.message_ID)) DESC LIMIT " + str(Metrics.domains_limit)
+            "    ORDER BY COUNT(DISTINCT(m.message_ID)) DESC, d.name LIMIT " + str(Metrics.domains_limit)
         data = self.db.ExecuteQuery(q)
         return (data['name'])
 
@@ -453,7 +453,7 @@ class Countries(Metrics):
                 "  m.first_date >= "+self.filters.startdate+" AND "+\
                 "  m.first_date < "+self.filters.enddate+" "+\
                 "GROUP BY c.name "+\
-                "ORDER BY COUNT((m.message_ID)) DESC "
+                "ORDER BY COUNT((m.message_ID)) DESC, name "
         data = self.db.ExecuteQuery(q)
         return(data['name'])
 

@@ -689,6 +689,7 @@ class Companies(Metrics):
         return q
 
     def _get_top_project(self, fbots = None):
+        if fbots is not None and fbots != '': fbots += " AND "
 
         startdate = self.filters.startdate
         enddate = self.filters.enddate
@@ -712,6 +713,7 @@ class Companies(Metrics):
         return q
 
     def _get_top(self, fbots = None):
+        if fbots is not None and fbots !='': fbots += " AND "
         q = """
             select c.name, count(distinct(t.s_id)) as total
             from companies c,  (
@@ -733,22 +735,26 @@ class Companies(Metrics):
     def get_list(self, metric_filters = None):
         from data_source import DataSource
         from filter import Filter
-        bots = DataSource.get_filter_bots(Filter("company"))
-        fbots = ''
-        for bot in bots:
-            fbots += " c.name<>'"+bot+"' and "
+        # bots = DataSource.get_filter_bots(Filter("company"))
 
-        if metric_filters is not None:
-            metric_filters_orig = self.filters
+        if metric_filters == None:
+            metric_filters = self.filters
+
+        # Store current filter to restore it
+        metric_filters_orig = self.filters
+        items_out = self.get_items_out_filter_sql("company", metric_filters)
+
+        if metric_filters is not None and metric_filters.type_analysis is not None:
             self.filters = metric_filters
 
             if metric_filters.type_analysis[0] == "project":
-                q = self._get_top_project(fbots)
+                q = self._get_top_project(items_out)
 
         else:
-            q = self._get_top(fbots)
+            q = self._get_top(items_out)
 
-        if metric_filters is not None: self.filters = metric_filters_orig
+        # Restore original filter for the metric
+        self.filters = metric_filters_orig
 
         return self.db.ExecuteQuery(q)
 

@@ -30,6 +30,7 @@ class Metrics(object):
     default_period = "month"
     default_start = "'2010-01-01'"
     default_end = "'2014-01-01'"
+    default_npeople = 10
     id = None
     name = None
     desc = None
@@ -41,10 +42,14 @@ class Metrics(object):
         self.db = dbcon
         self.filters = filters
         if filters == None:
+            people_out = None
+            companies_out = None
+            npeople = None
+            type_analysis = None
             self.filters = MetricFilters(Metrics.default_period,
-                                         Metrics.default_start, Metrics.default_end, 
-                                         None)
-
+                                         Metrics.default_start, Metrics.default_end,
+                                         type_analysis, 
+                                         npeople, people_out, companies_out)
 
     def get_definition(self):
         def_ = {
@@ -139,6 +144,22 @@ class Metrics(object):
 
         return mlist
 
+    def get_items_out_filter_sql (self, filter_, metric_filters = None):
+        # The items_out *must* come in metric_filters
+        filter_items = ''
+        if metric_filters is None:
+            metric_filters = self.filters
+
+        if filter_ == "company":
+            items_out = metric_filters.companies_out
+            if items_out is not None:
+                for item in items_out:
+                    filter_items += " c.name<>'"+item+"' AND "
+
+        if filter_items != '': filter_items = filter_items[:-4]
+        return filter_items
+
+    # TODO: Join with get_items_out_filter_sql once People is a filter
     def get_bots_filter_sql (self, metric_filters = None):
         bots = self.data_source.get_bots()
         if metric_filters is not None:
