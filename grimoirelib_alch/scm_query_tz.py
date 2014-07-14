@@ -1,0 +1,98 @@
+#! /usr/bin/python
+# -*- coding: utf-8 -*-
+
+## Copyright (C) 2014 Bitergia
+##
+## This program is free software; you can redistribute it and/or modify
+## it under the terms of the GNU General Public License as published by
+## the Free Software Foundation; either version 3 of the License, or
+## (at your option) any later version.
+##
+## This program is distributed in the hope that it will be useful,
+## but WITHOUT ANY WARRANTY; without even the implied warranty of
+## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+## GNU General Public License for more details.
+##
+## You should have received a copy of the GNU General Public License
+## along with this program; if not, write to the Free Software
+## Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+##
+## Package to deal with queries for SCM data from *Grimoire, related to
+##  timezones in dates (CVSAnalY databases)
+##
+## Authors:
+##   Jesus M. Gonzalez-Barahona <jgb@bitergia.com>
+##
+
+from sqlalchemy.sql import label
+from sqlalchemy import func
+from scm_query import SCMQuery, SCMLog
+
+class SCMTZQuery (SCMQuery):
+    """Class for dealing with SCM queries involving time zones"""
+
+    def select_tz (self):
+        """Select time zones and other related fields from database.
+
+        Selects count of commits, count of distinct authors,
+        time zone, and month / year for author_date.
+
+        Returns
+        -------
+
+        SCMTZQuery object
+
+        """
+
+        query = self.add_columns(
+            label("commits", func.count(SCMLog.id)),
+            label("authors", func.count(func.distinct(SCMLog.author_id))),
+            label("tz",
+                  ((SCMLog.author_date_tz.op('div')(3600) + 36) % 24) - 12))
+            # label("month",
+            #       func.month(SCMLog.author_date)),
+            # label("year",
+            #       func.year(SCMLog.author_date)))
+        return query
+
+    def group_by_tz (self):
+        """Group by timezone (field tz).
+
+        Returns
+        -------
+
+        SCMTZQuery object
+
+        """
+
+        return self.group_by ("tz")
+
+
+if __name__ == "__main__":
+
+    import sys
+    import codecs
+    from standalone import print_banner
+    from scm_query import buildSession
+    from datetime import datetime
+
+    # Trick to make the script work when using pipes
+    # (pipes confuse the interpreter, which sets codec to None)
+    # http://stackoverflow.com/questions/492483/setting-the-correct-encoding-when-piping-stdout-in-python
+    sys.stdout = codecs.getwriter('utf8')(sys.stdout)
+
+    session = buildSession(
+        database = 'mysql://jgb:XXX@localhost/oscon_opennebula_scm_tz',
+        cls = SCMTZQuery, echo = False)
+
+    #---------------------------------
+    print_banner ("Number of commits")
+    res = session.query().select_tz()
+#    res = res.filter_period(start=datetime(2013,1,1),
+#                            end=datetime(2014,2,1))
+    res = res.group_by_period()
+    res = res.group_by_tz()
+#    res = res.limit(10)
+
+    print res
+    print res.all()

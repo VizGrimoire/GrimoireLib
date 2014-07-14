@@ -36,19 +36,37 @@ from activity import ActivityList
 
 Base = declarative_base(cls=DeferredReflection)
 
-def buildSession(database, id_database = None, echo = False):
+def buildSession(database, id_database = None, cls = None, echo = False):
     """Create a session with the database
         
-    - database: string, url of the database, in the format
-       mysql://user:passwd@host:port/database
-    - echo: boolean, output SQL to stdout or not
-        
     Instantiatates an engine and a session to work with it
+
+    Parameters
+    ----------
+    
+    database: string
+       SQLAlchemy url of the database, in the format
+       mysql://user:passwd@host:port/database
+    id_database: string
+       SQLAlchemy url of the unique ids database, in the 
+       same format
+    cls: class in the SCMQuery hierarchy
+       Class to be used for queries. Default: SCMQuery.
+    echo: boolean
+       Output SQL to stdout or not
+
+    Returns
+    -------
+
+    SQLAlchemy session
+
     """
 
     # To set Unicode interaction with MySQL
     # http://docs.sqlalchemy.org/en/rel_0_9/dialects/mysql.html#unicode
     trailer = "?charset=utf8&use_unicode=0"
+    if cls is None:
+        cls = SCMQuery
     if id_database is None:
         id_database = database
     database = database + trailer
@@ -72,7 +90,7 @@ def buildSession(database, id_database = None, echo = False):
                 UPeople: id_engine}
     # Create a session linked to the SCMQuery class
     #Session = sessionmaker(bind=engine, query_cls=SCMQuery)
-    Session = sessionmaker(binds=bindings, query_cls=SCMQuery)
+    Session = sessionmaker(binds=bindings, query_cls=cls)
     session = Session()
     return (session)
 
