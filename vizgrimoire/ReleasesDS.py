@@ -117,8 +117,8 @@ class ReleasesDS(DataSource):
         return items
 
     @staticmethod
-    def create_filter_report(filter_, period, startdate, enddate, destdir, npeople, identities_db, bots):
-        items = ReleasesDS.get_filter_items(filter_, startdate, enddate, identities_db, bots)
+    def create_filter_report(filter_, period, startdate, enddate, destdir, npeople, identities_db):
+        items = ReleasesDS.get_filter_items(filter_, startdate, enddate, identities_db)
         if (items == None): return
 
     @staticmethod
