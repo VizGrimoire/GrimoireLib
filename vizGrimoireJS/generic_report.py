@@ -167,7 +167,7 @@ def read_options():
     parser.add_option("--dir",
                       action="store",
                       dest="output_dir",
-                      default="./")
+                      default="./report/")
     # TBD
     #parser.add_option("--list-metrics",
     #                  help="List available metrics")
@@ -191,7 +191,7 @@ def build_releases(releases_dates):
 
     return releases
 
-def scm_report(dbcon, filters):
+def scm_report(dbcon, filters, output_dir):
     # Basic activity and community metrics in source code
     # management systems
 
@@ -206,11 +206,12 @@ def scm_report(dbcon, filters):
     dataset["scm_occasional"] = result["occasional"]
 
     authors_period = scm.AuthorsPeriod(dbcon, filters)
-    dataset["scm_authorsperiod"] = authors_period.get_agg()["avg_authors_month"]
+    dataset["scm_authorsperiod"] = float(authors_period.get_agg()["avg_authors_month"])
 
-    #authors = scm.Authors(dbcon, filters)
-    #top_authors = authors.get_list()
-    #dataset["topauthors"] = top_authors
+    authors = scm.Authors(dbcon, filters)
+    top_authors = authors.get_list()
+    createJSON(top_authors, output_dir + "scm_top_authors.json")
+    createCSV(top_authors, output_dir + "scm_top_authors.csv")
 
     commits = scm.Commits(dbcon, filters)
     dataset["scm_commits"] = commits.get_agg()["commits"] 
@@ -220,6 +221,8 @@ def scm_report(dbcon, filters):
 
     #companies = scm.Companies(dbcon, filters)
     #top_companies = companies.get_list(filters)
+    #createJSON()
+    #createCSV()
 
     return dataset
 
@@ -294,7 +297,7 @@ def serialize_threads(threads, crowded, threads_object):
 
     return l_threads
 
-def mls_report(dbcon, filters):
+def mls_report(dbcon, filters, output_dir):
     
     dataset = {}
 
@@ -312,13 +315,13 @@ def mls_report(dbcon, filters):
     threads = Threads(filters.startdate, filters.enddate, dbcon.identities_db)
     top_longest_threads = threads.topLongestThread(10)
     top_longest_threads = serialize_threads(top_longest_threads, False, threads)
-    createJSON(top_longest_threads, "./release/mls_top_longest_threads.json")
-    createCSV(top_longest_threads, "./release/mls_top_longest_threads.csv")
+    createJSON(top_longest_threads, output_dir + "/mls_top_longest_threads.json")
+    createCSV(top_longest_threads, output_dir + "/mls_top_longest_threads.csv")
 
     top_crowded_threads = threads.topCrowdedThread(10)
     top_crowded_threads = serialize_threads(top_crowded_threads, True, threads)
-    createJSON(top_crowded_threads, "./release/mls_top_crowded_threads.json")
-    createCSV(top_crowded_threads, "./release/mls_top_crowded_threads.csv")
+    createJSON(top_crowded_threads, output_dir + "/mls_top_crowded_threads.json")
+    createCSV(top_crowded_threads, output_dir + "/mls_top_crowded_threads.csv")
 
     return dataset
 
@@ -332,7 +335,7 @@ def parse_urls(urls):
     return qs_aux
 
 
-def qaforums_report(dbcon, filters):
+def qaforums_report(dbcon, filters, output_dir):
     # basic metrics for qaforums
 
     dataset = {}
@@ -355,28 +358,28 @@ def qaforums_report(dbcon, filters):
     commented["qid"] = commented.pop("question_identifier")
     # Taking the last part of the URL
     commented["site"] = parse_urls(commented.pop("url"))
-    createJSON(commented, "./release/qa_top_questions_commented.json")
-    createCSV(commented, "./release/qa_top_questions_commented.csv")
+    createJSON(commented, output_dir + "/qa_top_questions_commented.json")
+    createCSV(commented, output_dir + "/qa_top_questions_commented.csv")
 
     visited = tops.top_visited()
     visited["qid"] = visited.pop("question_identifier")
     visited["site"] = parse_urls(visited.pop("url"))
-    createJSON(visited, "./release/qa_top_questions_visited.json")
-    createCSV(visited, "./release/qa_top_questions_visited.csv")
+    createJSON(visited, output_dir + "/qa_top_questions_visited.json")
+    createCSV(visited, output_dir + "/qa_top_questions_visited.csv")
 
     crowded = tops.top_crowded()
     crowded["qid"] = crowded.pop("question_identifier")
     crowded["site"] = parse_urls(crowded.pop("url"))
-    createJSON(crowded, "./release/qa_top_questions_crowded.json")
-    createCSV(crowded, "./release/qa_top_questions_crowded.csv")
+    createJSON(crowded, output_dir + "/qa_top_questions_crowded.json")
+    createCSV(crowded, output_dir + "./qa_top_questions_crowded.csv")
 
     filters.npeople = 15
-    createJSON(tops.top_tags(), "./release/qa_top_tags.json")
-    createCSV(tops.top_tags(), "./release/qa_top_tags.csv")
+    createJSON(tops.top_tags(), output_dir + "/qa_top_tags.json")
+    createCSV(tops.top_tags(), output_dir + "/qa_top_tags.csv")
     
     return dataset
 
-def irc_report(dbcon, filters):
+def irc_report(dbcon, filters, output_dir):
     # irc basic report
 
     dataset = {}
@@ -388,8 +391,8 @@ def irc_report(dbcon, filters):
     dataset["irc_senders"] = senders.get_agg()["senders"]
 
     top_senders = senders.get_list()
-    createJSON(top_senders, "./release/irc_top_senders.json")
-    createCSV(top_senders, "./release/irc_top_senders.csv")
+    createJSON(top_senders, output_dir + "/irc_top_senders.json")
+    createCSV(top_senders, output_dir  + "/irc_top_senders.csv")
 
     return dataset
 
@@ -436,13 +439,11 @@ def init_env():
     environ["R_LIBS"] = "../../r-lib"
 
 
-def draw(dataset, labels, report_name):
+def draw(dataset, labels, output_dir):
     # create charts and write down csv files with list of metrics
 
-    createJSON(dataset, report_name + ".json")
-
     for metric in dataset.keys():
-        bar_chart(metric, labels, dataset[metric], report_name + metric)
+        bar_chart(metric, labels, dataset[metric], output_dir + "/" + metric)
 
 
 def update_data(data, dataset):
@@ -499,7 +500,7 @@ if __name__ == '__main__':
 
         if opts.dbcvsanaly is not None:
             dbcon = SCMQuery(opts.dbuser, opts.dbpassword, opts.dbcvsanaly, opts.dbidentities)
-            dataset.update(scm_report(dbcon, filters))
+            dataset.update(scm_report(dbcon, filters, opts.output_dir))
 
         if opts.dbbicho is not None:
             dbcon = ITSQuery(opts.dbuser, opts.dbpassword, opts.dbbicho, opts.dbidentities)
@@ -511,17 +512,18 @@ if __name__ == '__main__':
 
         if opts.dbirc is not None:
             dbcon = IRCQuery(opts.dbuser, opts.dbpassword, opts.dbirc, opts.dbidentities)
-            dataset.update(irc_report(dbcon, filters))
+            dataset.update(irc_report(dbcon, filters, opts.output_dir))
   
         if opts.dbqaforums is not None:
             dbcon = QAForumsQuery(opts.dbuser, opts.dbpassword, opts.dbqaforums, opts.dbidentities)
-            dataset.update(qaforums_report(dbcon, filters))
+            dataset.update(qaforums_report(dbcon, filters, opts.output_dir))
 
         if opts.dbmlstats is not None:
             dbcon = MLSQuery(opts.dbuser, opts.dbpassword, opts.dbmlstats, opts.dbidentities)
-            dataset.update(mls_report(dbcon, filters))
+            dataset.update(mls_report(dbcon, filters, opts.output_dir))
 
         data = update_data(data, dataset)
 
-    draw(data, labels, opts.output_dir+"/report.json")
+    createJSON(dataset, opts.output_dir + "/report.json")
+    draw(data, labels, opts.output_dir)
     
