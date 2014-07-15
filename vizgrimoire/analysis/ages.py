@@ -25,14 +25,15 @@
 
 from analyses import Analyses
 from scm import PeriodCondition, NomergesCondition
-from demography import ActivityPersons, DurationPersons, \
+import its_conditions
+from demography import ActivityPersons, ActivityPersonsITS, DurationPersons, \
     SnapshotCondition, ActiveCondition
 from datetime import datetime, timedelta
 
-class Demography(Analyses):
+class Ages(Analyses):
 
-    id = "demography"
-    name = "Demography"
+    id = "ages"
+    name = "Ages"
     desc = "Age of developers in project"
 
     def __get_sql__(self):
@@ -57,8 +58,54 @@ class Demography(Analyses):
         nomerges = NomergesCondition()
         data = ActivityPersons (
             database = database,
-            var = "list_authors",
+            var = "list_uauthors",
             conditions = (period,nomerges))
+        # Birth has the ages of all actors, consiering enddate as
+        # current (snapshot) time
+        snapshot = SnapshotCondition (date = enddate)
+        birth = DurationPersons (var = "age",
+                                 conditions = (snapshot,),
+                                 activity = data.activity())
+        # "Aging" has the ages of those actors active during the 
+        # last half year (that is, the period from enddate - half year
+        # to enddate)
+        active_period = ActiveCondition (after = enddate - \
+                                             timedelta(days=182))
+        aging = DurationPersons (var = "age",
+                                 conditions = (snapshot, active_period),
+                                 activity = data.activity())
+        demos = {"birth": birth.durations(),
+                 "aging": aging.durations()}
+        return demos
+
+
+class AgesITS(Ages):
+
+    id = "ages_its"
+    name = "Ages ITS"
+    desc = "Age of developers in ITS repositories"
+
+    def result(self, data_source = None):
+
+        # Prepare the SQLAlchemy database url
+        database = 'mysql://' + self.db.user + ':' + \
+            self.db.password + '@' + self.db.host + '/'
+        schema = self.db.database
+        schema_id = self.db.identities_db
+        # Get startdate, endate as datetime objects
+        startdate = datetime.strptime(self.filters.startdate, "'%Y-%m-%d'")
+        enddate = datetime.strptime(self.filters.enddate, "'%Y-%m-%d'")
+        # Activity data (start time, end time for contributions) for
+        # all the actors, considering only actiivty during
+        # the startdate..enddate period (merges are not considered
+        # as activity)
+        period = its_conditions.PeriodCondition (start = startdate,
+                                                 end = enddate)
+        data = ActivityPersonsITS (
+            database = database,
+            schema = schema, schema_id = schema_id,
+            var = "list_changers",
+            conditions = (period,))
         # Birth has the ages of all actors, consiering enddate as
         # current (snapshot) time
         snapshot = SnapshotCondition (date = enddate)
@@ -89,18 +136,28 @@ if __name__ == '__main__':
     dbcon = DSQuery(user = "jgb", password = "XXX", 
                     database = "openstack_cvsanaly_2014-06-06",
                     identities_db = "openstack_cvsanaly_2014-06-06")
-    dem = Demography(dbcon, filters)
+    ages = Ages(dbcon, filters)
 
     # Produce pretty JSON output
     set_encoder_options('json', sort_keys=True, indent=4,
                         separators=(',', ': '),
                         ensure_ascii=False,
                         encoding="utf8")
-    print encode(dem.result(), unpicklable=False)
+    print encode(ages.result(), unpicklable=False)
 
     # Produce compact JSON output
     set_encoder_options('json', separators=(',', ': '),
                         ensure_ascii=False,
                         encoding="utf8")
-    print encode(dem.result(), unpicklable=False)
+    print encode(ages.result(), unpicklable=False)
 
+    dbcon = DSQuery(user = "jgb", password = "XXX", 
+                    database = "vizgrimoire_bicho",
+                    identities_db = "vizgrimoire_cvsanaly")
+    ages = AgesITS(dbcon, filters)
+    # Produce pretty JSON output
+    set_encoder_options('json', sort_keys=True, indent=4,
+                        separators=(',', ': '),
+                        ensure_ascii=False,
+                        encoding="utf8")
+    print encode(ages.result(), unpicklable=False)

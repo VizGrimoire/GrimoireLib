@@ -30,7 +30,6 @@ from datetime import datetime
 
 from data_source import DataSource
 from GrimoireUtils import completePeriodIds, GetDates, GetPercentageDiff
-from GrimoireSQL import ExecuteQuery
 from filter import Filter
 from metrics import Metrics
 from metrics_filter import MetricFilters
@@ -82,9 +81,9 @@ class EmailsSenders(Metrics):
                 "  m.first_date < "+enddate+" AND "+\
                 "  m."+rfield+"="+ repo +\
                 " GROUP BY up.identifier "+\
-                " ORDER BY sent desc "+\
+                " ORDER BY sent desc, senders "+\
                 " LIMIT " + str(limit)
-        data = ExecuteQuery(q)
+        data = self.db.ExecuteQuery(q)
         return (data)
 
     def _get_top_country (self, metric_filters):
@@ -104,7 +103,7 @@ class EmailsSenders(Metrics):
             "  m.first_date < "+enddate+\
             " GROUP BY up.identifier "+\
             " ORDER BY COUNT(DISTINCT(m.message_ID)) DESC LIMIT " + str(limit)
-        data = ExecuteQuery(q)
+        data = self.db.ExecuteQuery(q)
         return (data)
 
     def _get_top_company (self, metric_filters):
@@ -124,7 +123,7 @@ class EmailsSenders(Metrics):
             "  m.first_date < "+enddate+\
             " GROUP BY up.identifier "+\
             " ORDER BY COUNT(DISTINCT(m.message_ID)) DESC LIMIT " + str(limit)
-        data = ExecuteQuery(q)
+        data = self.db.ExecuteQuery(q)
         return (data)
 
     def _get_top_domain (self, metric_filters):
@@ -144,7 +143,7 @@ class EmailsSenders(Metrics):
             "  m.first_date < "+enddate+\
             " GROUP BY up.identifier "+\
             " ORDER BY COUNT(DISTINCT(m.message_ID)) DESC LIMIT "+ str(limit)
-        data = ExecuteQuery(q)
+        data = self.db.ExecuteQuery(q)
         return (data)
 
 
@@ -364,7 +363,7 @@ class Repositories(Metrics):
             q = "SELECT DISTINCT(mailing_list) FROM messages m "+\
                 "WHERE m.first_date >= "+startdate+" AND "+\
                 "m.first_date < "+enddate
-            mailing_lists = ExecuteQuery(q)
+            mailing_lists = self.db.ExecuteQuery(q)
             names = mailing_lists
         return (names)
 
@@ -424,7 +423,7 @@ class Domains(Metrics):
             "    m.first_date >= "+self.filters.startdate+" AND "+\
             "    m.first_date < "+self.filters.enddate+\
             "    GROUP BY d.name "+\
-            "    ORDER BY COUNT(DISTINCT(m.message_ID)) DESC "
+            "    ORDER BY COUNT(DISTINCT(m.message_ID)) DESC, d.name LIMIT " + str(Metrics.domains_limit)
         data = self.db.ExecuteQuery(q)
         return (data['name'])
 
@@ -453,7 +452,7 @@ class Countries(Metrics):
                 "  m.first_date >= "+self.filters.startdate+" AND "+\
                 "  m.first_date < "+self.filters.enddate+" "+\
                 "GROUP BY c.name "+\
-                "ORDER BY COUNT((m.message_ID)) DESC "
+                "ORDER BY COUNT((m.message_ID)) DESC, name "
         data = self.db.ExecuteQuery(q)
         return(data['name'])
 

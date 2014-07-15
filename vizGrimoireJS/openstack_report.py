@@ -22,7 +22,7 @@
 ##   Daniel Izquierdo-Cortazar <dizquierdo@bitergia.com>
 ##   Luis Cañas-Díaz <lcanas@bitergia.com>
 ##
-## python openstack_report.py -a dic_cvsanaly_openstack_2259 -d dic_bicho_openstack_gerrit_3392 -i dic_cvsanaly_openstack_2259 -r 2013-07-01,2013-10-01,2014-01-01,2014-04-01,2014-07-01 -c lcanas_bicho_openstack_1376 -b lcanas_mlstats_openstack_1376 -f dic_sibyl_openstack_3194_new -e dic_irc_openstack_3277
+## python openstack_report.py -a dic_cvsanaly_openstack_2259 -d dic_bicho_openstack_gerrit_3392_bis -i dic_cvsanaly_openstack_2259 -r 2013-07-01,2013-10-01,2014-01-01,2014-04-01,2014-07-01 -c lcanas_bicho_openstack_1376 -b lcanas_mlstats_openstack_1376 -f dic_sibyl_openstack_3194_new -e dic_irc_openstack_3277
 
 
 import imp, inspect
@@ -40,6 +40,31 @@ import prettyplotlib as ppl
 from prettyplotlib import brewer2mpl
 import numpy as np
 from datetime import datetime
+
+def bar_chart(title, labels, data1, file_name, data2 = None, legend=["", ""]):
+
+    colors = ["orange", "grey"]
+
+    fig, ax = plt.subplots(1)
+    xpos = np.arange(len(data1))
+    width = 0.35
+
+    plt.title(title)
+    y_pos = np.arange(len(data1))
+
+    if data2 is not None:
+        ppl.bar(xpos+width, data1, color="orange", width=0.35, annotate=True)
+        ppl.bar(xpos, data2, grid='y', width = 0.35, annotate=True)
+        plt.xticks(xpos+width, labels)
+        plt.legend(legend)
+
+    else:
+        ppl.bar(xpos, data1, grid='y', annotate=True)
+        plt.xticks(xpos+width, labels)
+
+    plt.savefig(file_name + ".eps")
+    plt.close()
+
 
 
 def ts_chart(title, unixtime_dates, data, file_name):
@@ -160,6 +185,24 @@ def build_releases(releases_dates):
 
     return releases
 
+def scm_general(dbcon, filters):
+    from onion_model import CommunityStructure
+    onion = CommunityStructure(dbcon, filters)
+    result = onion.result()
+
+    dataset = {}
+    dataset["core"] = result["core"]
+    dataset["regular"] = result["regular"]
+    dataset["occasional"] = result["occasional"]
+
+    authors_period = scm.AuthorsPeriod(dbcon, filters)
+    dataset["authorsperiod"] = authors_period.get_agg()["avg_authors_month"]
+
+    authors = scm.Authors(dbcon, filters)
+    top_authors = authors.get_list()
+    dataset["topauthors"] = top_authors
+
+    return dataset
 
 def scm_report(dbcon, filters):
 
@@ -185,10 +228,10 @@ def scm_report(dbcon, filters):
 
     # top companies activity
     from top_companies_projects import TopCompaniesProjects
-    top_companies = TopCompaniesProjects(dbcon, filters)
-    top_companies = top_companies.result()
-    #companies = scm.Companies(dbcon, filters)
-    #top_companies = companies.get_list()
+    #top_companies = TopCompaniesProjects(dbcon, filters)
+    #top_companies = top_companies.result()
+    companies = scm.Companies(dbcon, filters)
+    top_companies = companies.get_list(filters)
     createJSON(top_companies, "./release/scm_top_companies_project_"+project_name+".json")
     createCSV(top_companies, "./release/scm_top_companies_project_"+project_name+".csv")
 
@@ -200,10 +243,8 @@ def its_report(dbcon, filters):
 
     project_name = filters.type_analysis[1]
     project_name = project_name.replace(" ", "")
-
     opened = its.Opened(dbcon, filters)
     createJSON(opened.get_agg(), "./release/its_opened_"+project_name+".json")
-
     closed = its.Closed(dbcon, filters)
     createJSON(closed.get_agg(), "./release/its_closed_"+project_name+".json")
 
@@ -235,12 +276,17 @@ def scr_report(dbcon, filters):
     waiting4submitter = scr.ReviewsWaitingForSubmitter(dbcon, filters)
     createJSON(waiting4submitter.get_agg(), "./release/scr_waiting4submitter_"+project_name+".json")
 
+    filters.period = "month"
+    time2review = scr.TimeToReview(dbcon, filters)
+
     dataset = {}
     dataset["submitted"] = submitted.get_agg()["submitted"]
     dataset["merged"] = merged.get_agg()["merged"]
     dataset["abandoned"] = abandoned.get_agg()["abandoned"]
     dataset["waiting4reviewer"] = waiting4reviewer.get_agg()["ReviewsWaitingForReviewer"]
     dataset["waiting4submitter"] = waiting4submitter.get_agg()["ReviewsWaitingForSubmitter"]
+    dataset["review_time_days_median"] = time2review.get_agg()["review_time_days_median"]
+    dataset["review_time_days_avg"] = time2review.get_agg()["review_time_days_avg"]
 
     return dataset
 
@@ -302,6 +348,16 @@ def mls_report(dbcon, filters):
 
     return dataset
 
+
+def parse_urls(urls):
+    qs_aux = []
+    for url in urls:
+        url = url.replace("https://ask.openstack.org/en/question/", "")
+        url = url.replace("_", "\_")
+        qs_aux.append(url)
+    return qs_aux
+
+
 def qaforums_report(dbcon, filters):
     questions = qa.Questions(dbcon, filters)
     createJSON(questions.get_agg(), "./release/qaforums_questions.json")
@@ -326,19 +382,21 @@ def qaforums_report(dbcon, filters):
     commented = tops.top_commented()
     commented["qid"] = commented.pop("question_identifier")
     # Taking the last part of the URL
-    #commented["site"] = commented.pop("url").split("/")[-2:][1:]
-    commented["site"] = commented.pop("url")
+    commented["site"] = parse_urls(commented.pop("url"))
     createJSON(commented, "./release/qa_top_questions_commented.json")
     createCSV(commented, "./release/qa_top_questions_commented.csv")
 
     visited = tops.top_visited()
     visited["qid"] = visited.pop("question_identifier")
-    visited["site"] = visited.pop("url")
+    visited["site"] = parse_urls(visited.pop("url"))
+    #commented["site"] = commented.pop("url").split("/")[-2:][1:]
+    
     createJSON(visited, "./release/qa_top_questions_visited.json")
     createCSV(visited, "./release/qa_top_questions_visited.csv")
 
     crowded = tops.top_crowded()
     crowded["qid"] = crowded.pop("question_identifier")
+    crowded["site"] = parse_urls(crowded.pop("url"))
     createJSON(crowded, "./release/qa_top_questions_crowded.json")
     createCSV(crowded, "./release/qa_top_questions_crowded.csv")
 
@@ -416,6 +474,11 @@ def projects(user, password, database):
 def general_info(opts, releases, people_out, affs_out):
 
     # General info from MLS, IRC and QAForums.
+    core = []
+    regular = []
+    occasional = []
+    authors_month = []
+
     emails = []
     emails_senders =  []
     emails_senders_init = []
@@ -430,7 +493,17 @@ def general_info(opts, releases, people_out, affs_out):
         startdate = "'" + release[0] + "'"
         enddate = "'" + release[1] + "'"
         filters = MetricFilters("month", startdate, enddate, [], opts.npeople, people_out, affs_out)
-
+        # SCM info
+        scm_dbcon = SCMQuery(opts.dbuser, opts.dbpassword, opts.dbcvsanaly, opts.dbidentities)
+        dataset = scm_general(scm_dbcon, filters)
+        core.append(dataset["core"])
+        regular.append(dataset["regular"])
+        occasional.append(dataset["occasional"])
+        authors_month.append(float(dataset["authorsperiod"]))
+        top_authors = dataset["topauthors"]
+        release_pos = releases.index(release)
+        createCSV(top_authors, "./release/top_authors_release" + str(release_pos)+ ".csv")
+  
         # MLS info
         mls_dbcon = MLSQuery(opts.dbuser, opts.dbpassword, opts.dbmlstats, opts.dbidentities)
         dataset = mls_report(mls_dbcon, filters)
@@ -453,6 +526,7 @@ def general_info(opts, releases, people_out, affs_out):
         irc_senders.append(dataset["senders"])
 
 
+    #labels = ["2012-Q3", "2012-Q4", "2013-Q1", "2013-Q2", "2013-Q3", "2013-Q4", "2014-Q1", "2014-Q2"]
     labels = ["2013-Q3", "2013-Q4", "2014-Q1", "2014-Q2"]
     barh_chart("Emails sent", labels, emails, "emails")
     createCSV({"labels":labels, "emails":emails}, "./release/emails.csv")
@@ -472,8 +546,11 @@ def general_info(opts, releases, people_out, affs_out):
     createCSV({"labels":labels, "messages":irc_sent}, "./release/irc_sent.csv")
     barh_chart("People in IRC channels", labels, irc_senders, "irc_senders")
     createCSV({"labels":labels, "senders":irc_senders}, "./release/irc_senders.csv")
-
-
+    
+    bar_chart("Community structure", labels, regular, "onion", core, ["regular", "core"])
+    createCSV({"labels":labels, "core":core, "regular":regular, "occasional":occasional}, "./release/onion_model.csv")
+    bar_chart("Developers per month", labels, authors_month, "authors_month")
+    createCSV({"labels":labels, "authormonth":authors_month}, "./release/authors_month.csv")
 
 if __name__ == '__main__':
 
@@ -539,6 +616,8 @@ if __name__ == '__main__':
         abandoned = []
         closed = []
         bmi = []
+        review_avg = []
+        review_median = []
         for release in releases:
             labels.append(release[1])
             #scm
@@ -555,26 +634,30 @@ if __name__ == '__main__':
             submitted.append(releases_data[release]["scr"]["submitted"])
             merged.append(releases_data[release]["scr"]["merged"])
             abandoned.append(releases_data[release]["scr"]["abandoned"])
+            review_avg.append(releases_data[release]["scr"]["review_time_days_avg"])
+            review_median.append(releases_data[release]["scr"]["review_time_days_median"])
         
-        labels = ["2013-Q3", "2013-Q4", "2014-Q1", "2014-Q2"]        
+        #labels = ["2012-Q3", "2012-Q4", "2013-Q1", "2013-Q2", "2013-Q3", "2013-Q4", "2014-Q1", "2014-Q2"]        
+        labels = ["2013-Q3", "2013-Q4", "2014-Q1", "2014-Q2"]
         project_name = project.replace(" ", "")
-        barh_chart("Commits " + project, labels, commits, "commits"  + project_name)
-        createCSV({"labels":labels, "commits":commits}, "./release/commits"+project_name+".csv")
-        barh_chart("Authors " + project, labels, authors, "authors" + project_name)
+        bar_chart("Commits and reviews" + project, labels, commits, "commits"  + project_name, submitted, ["commits", "reviews"])
+        createCSV({"labels":labels, "commits":commits, "submitted":submitted}, "./release/commits"+project_name+".csv")
+        bar_chart("Authors " + project, labels, authors, "authors" + project_name)
         createCSV({"labels":labels, "authors":authors}, "./release/authors"+project_name+".csv")
-        barh_chart("Opened tickets " +  project, labels, opened, "opened" + project_name)
-        createCSV({"labels":labels, "opened":opened}, "./release/opened"+project_name+".csv")
-        barh_chart("Closed tickets " + project, labels, closed, "closed" + project_name)
-        createCSV({"labels":labels, "closed":closed}, "./release/closed"+project_name+".csv")
-        barh_chart("Efficiency closing tickets " + project, labels, bmi, "bmi" + project_name)
-        createCSV({"labels":labels, "bmi":bmi}, "./release/bmi"+project_name+".csv")
-        barh_chart("Submitted reviews " + project, labels, submitted, "submitted_reviews" + project_name)
-        createCSV({"labels":labels, "submitted":submitted}, "./release/submitted_reviews"+project_name+".csv")
-        barh_chart("Merged reviews " + project, labels, merged, "merged_reviews" + project_name)
-        createCSV({"labels":labels, "merged":merged}, "./release/merged"+project_name+".csv")
-        barh_chart("Abandoned reviews  " + project, labels, abandoned, "abandoned_reviews" + project_name)
-        createCSV({"labels":labels, "abandoned":abandoned}, "./release/abandoned"+project_name+".csv")
 
-    # general info: mls, irc and qaforums
+        bar_chart("Opened and closed tickets " + project, labels, opened, "closed" + project_name, closed, ["opened", "closed"])
+        createCSV({"labels":labels, "closed":closed, "opened":opened}, "./release/closed"+project_name+".csv")
+
+        bar_chart("Efficiency closing tickets " + project, labels, bmi, "bmi" + project_name)
+        createCSV({"labels":labels, "bmi":bmi}, "./release/bmi"+project_name+".csv")
+
+        bar_chart("Merged and abandoned reviews " + project, labels, merged, "submitted_reviews" + project_name, abandoned, ["merged", "abandoned"])
+        createCSV({"labels":labels, "merged":merged, "abandoned":abandoned}, "./release/submitted_reviews"+project_name+".csv")
+
+        bar_chart("Time to review (days)  " + project, labels, review_avg, "timetoreview_median" + project_name, review_median, ["mean", "median"])
+        createCSV({"labels":labels, "mediantime":review_median, "meantime":review_avg}, "./release/timetoreview_median"+project_name+".csv")
+
+
+    # general info: scm, mls, irc and qaforums
     general_info(opts, releases, people_out, affs_out)
 

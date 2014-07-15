@@ -25,6 +25,7 @@ import logging
 import SCM, ITS, MLS, SCR, Mediawiki, IRC, DownloadsDS, QAForums, ReleasesDS
 from filter import Filter
 from metrics import Metrics
+from metrics_filter import MetricFilters
 from analyses import Analyses
 from query_builder import DSQuery
 
@@ -85,6 +86,19 @@ class Report(object):
         db_identities = Report._automator['generic']['db_identities']
         dbuser = Report._automator['generic']['db_user']
         dbpass = Report._automator['generic']['db_password']
+        npeople = Metrics.default_npeople
+        people_out = None
+        if 'people_out' in Report._automator['r']:
+            people_out = Report._automator['r']['people_out'].split(",")
+        companies_out = None
+        if 'companies_out' in Report._automator['r']:
+            companies_out = Report._automator['r']['companies_out'].split(",")
+        type_analysis = None
+
+        metric_filters = MetricFilters(Metrics.default_period,
+                                       Metrics.default_start, Metrics.default_end,
+                                       type_analysis,
+                                       npeople, people_out, companies_out)
 
         metrics_mod = [ f for f in listdir(metrics_path) 
                        if isfile(join(metrics_path,f)) and f.endswith("_metrics.py")]
@@ -101,7 +115,7 @@ class Report(object):
                 if ds.get_db_name() not in Report._automator['generic']: continue
                 builder = ds.get_query_builder()
                 db = Report._automator['generic'][ds.get_db_name()]
-                metrics = metrics_class(builder(dbuser, dbpass, db, db_identities))
+                metrics = metrics_class(builder(dbuser, dbpass, db, db_identities), metric_filters)
                 ds.add_metrics(metrics, ds)
 
     @staticmethod

@@ -142,8 +142,10 @@ class SCMQuery (Query):
         Parameters
         ----------
 
-        entities:
-        session:
+        entities: list of SQLAlchemy entities
+           Entities (tables) to include in the query
+        session: SQLAlchemy session
+           SQLAlchemy session to use to connect to the database
 
         Attributes
         ----------
@@ -616,18 +618,12 @@ if __name__ == "__main__":
 
     import sys
     import codecs
+    from standalone import print_banner
+
     # Trick to make the script work when using pipes
     # (pipes confuse the interpreter, which sets codec to None)
     # http://stackoverflow.com/questions/492483/setting-the-correct-encoding-when-piping-stdout-in-python
     sys.stdout = codecs.getwriter('utf8')(sys.stdout)
-
-    def print_banner (banner):
-        """Print a simple banner for a kind of result"""
-
-        print
-        print "===================================="
-        print banner
-        print
 
     session = buildSession(
         database='mysql://jgb:XXX@localhost/vizgrimoire_cvsanaly',
