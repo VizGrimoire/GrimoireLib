@@ -30,7 +30,6 @@ from datetime import datetime
 
 from data_source import DataSource
 from GrimoireUtils import completePeriodIds, GetDates, GetPercentageDiff
-from GrimoireSQL import ExecuteQuery
 from filter import Filter
 from metrics import Metrics
 from metrics_filter import MetricFilters
@@ -84,7 +83,7 @@ class EmailsSenders(Metrics):
                 " GROUP BY up.identifier "+\
                 " ORDER BY sent desc, senders "+\
                 " LIMIT " + str(limit)
-        data = ExecuteQuery(q)
+        data = self.db.ExecuteQuery(q)
         return (data)
 
     def _get_top_country (self, metric_filters):
