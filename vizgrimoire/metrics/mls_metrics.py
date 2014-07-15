@@ -103,7 +103,7 @@ class EmailsSenders(Metrics):
             "  m.first_date < "+enddate+\
             " GROUP BY up.identifier "+\
             " ORDER BY COUNT(DISTINCT(m.message_ID)) DESC LIMIT " + str(limit)
-        data = ExecuteQuery(q)
+        data = self.db.ExecuteQuery(q)
         return (data)
 
     def _get_top_company (self, metric_filters):
@@ -123,7 +123,7 @@ class EmailsSenders(Metrics):
             "  m.first_date < "+enddate+\
             " GROUP BY up.identifier "+\
             " ORDER BY COUNT(DISTINCT(m.message_ID)) DESC LIMIT " + str(limit)
-        data = ExecuteQuery(q)
+        data = self.db.ExecuteQuery(q)
         return (data)
 
     def _get_top_domain (self, metric_filters):
@@ -143,7 +143,7 @@ class EmailsSenders(Metrics):
             "  m.first_date < "+enddate+\
             " GROUP BY up.identifier "+\
             " ORDER BY COUNT(DISTINCT(m.message_ID)) DESC LIMIT "+ str(limit)
-        data = ExecuteQuery(q)
+        data = self.db.ExecuteQuery(q)
         return (data)
 
 
@@ -363,7 +363,7 @@ class Repositories(Metrics):
             q = "SELECT DISTINCT(mailing_list) FROM messages m "+\
                 "WHERE m.first_date >= "+startdate+" AND "+\
                 "m.first_date < "+enddate
-            mailing_lists = ExecuteQuery(q)
+            mailing_lists = self.db.ExecuteQuery(q)
             names = mailing_lists
         return (names)
 
