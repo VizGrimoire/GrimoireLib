@@ -151,7 +151,7 @@ class DataSource(object):
         raise NotImplementedError
 
     @staticmethod
-    def create_filter_report(filter_, period, startdate, enddate, destdir, npeople, identities_db, bots):
+    def create_filter_report(filter_, period, startdate, enddate, destdir, npeople, identities_db):
         """Create all files related to all filters in all data sources"""
         raise NotImplementedError
 

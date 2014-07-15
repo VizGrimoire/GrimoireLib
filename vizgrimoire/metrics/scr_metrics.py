@@ -520,17 +520,30 @@ class Reviewers(Metrics):
             "        GROUP BY u.identifier "+\
             "        ORDER BY reviewed desc, reviewers "+\
             "        LIMIT " + str(limit)
+
         return(self.db.ExecuteQuery(q))
 
 
 
     def _get_sql(self, evolutionary):
         fields = " count(distinct(changed_by)) as reviewers "
-        tables = " changes c "
-        filters = ""
+        tables = " changes ch, issues i " + self.db.GetSQLReportFrom(self.db.identities_db, self.filters.type_analysis)
+        filters  = "ch.issue_id = i.id "
+        filters += self.db.GetSQLReportWhere(self.filters.type_analysis, self.db.identities_db)
+
+        if (self.filters.type_analysis is None or len (self.filters.type_analysis) != 2) :
+            #Specific case for the basic option where people_upeople table is needed
+            #and not taken into account in the initial part of the query
+            tables += ", people_upeople pup"
+            filters += " and ch.changed_by  = pup.people_id"
+        elif (self.filters.type_analysis[0] == "repository" or self.filters.type_analysis[0] == "project"):
+            #Adding people_upeople table
+            tables += ", people_upeople pup"
+            filters += " and ch.changed_by = pup.people_id "
+
 
         q = self.db.BuildQuery (self.filters.period, self.filters.startdate,
-                                self.filters.enddate, " c.changed_on",
+                                self.filters.enddate, " ch.changed_on",
                                 fields, tables, filters, evolutionary)
         return q
 
