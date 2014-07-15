@@ -134,7 +134,7 @@ class QAForums(DataSource):
         createJSON(data, top_file)
 
     @staticmethod
-    def get_filter_items(filter_, startdate, enddate, identities_db, bots):
+    def get_filter_items(filter_, startdate, enddate, identities_db):
         items = None
         filter_name = filter_.get_name()
         #TODO: repository needs to be change to tag, once this is accepted as new

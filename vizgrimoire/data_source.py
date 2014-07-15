@@ -125,7 +125,7 @@ class DataSource(object):
         raise NotImplementedError
 
     @staticmethod
-    def get_filter_items(filter_, period, startdate, enddate, identities_db, bots = None):
+    def get_filter_items(filter_, period, startdate, enddate, identities_db):
         """Get the items in the data source available for the filter"""
         raise NotImplementedError
 
@@ -332,12 +332,14 @@ class DataSource(object):
 
         for item in all_metrics:
             if item.id not in metrics_on: continue
+            mfilter_orig = item.filters
             item.filters = mfilter
-
             if evol: mvalue = item.get_ts()
             else:    mvalue = item.get_agg()
 
             data = dict(data.items() + mvalue.items())
+
+            item.filters = mfilter_orig
 
         if not evol:
             init_date = DS.get_date_init(startdate, enddate, identities_db, type_analysis)
@@ -355,7 +357,10 @@ class DataSource(object):
             for i in [7,30,365]:
                 for item in all_metrics:
                     if item.id not in metrics_trends: continue
+                    mfilter_orig = item.filters
+                    item.filters = mfilter
                     period_data = item.get_agg_diff_days(enddate, i)
+                    item.filters = mfilter_orig
                     data = dict(data.items() + period_data.items())
 
         return data

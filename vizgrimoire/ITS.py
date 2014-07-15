@@ -167,7 +167,7 @@ class ITS(DataSource):
         createJSON (data, destdir+"/"+ITS().get_top_filename())
 
     @staticmethod
-    def get_filter_items(filter_, startdate, enddate, identities_db, bots):
+    def get_filter_items(filter_, startdate, enddate, identities_db):
         items = None
         filter_name = filter_.get_name()
 

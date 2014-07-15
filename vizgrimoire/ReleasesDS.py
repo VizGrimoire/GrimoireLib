@@ -109,7 +109,7 @@ class ReleasesDS(DataSource):
         createJSON (data, top_file)
 
     @staticmethod
-    def get_filter_items(filter_, startdate, enddate, identities_db, bots):
+    def get_filter_items(filter_, startdate, enddate, identities_db):
         items = None
         filter_name = filter_.get_name()
 

@@ -130,7 +130,7 @@ class Authors(Metrics):
         q += " AND pup.people_id = s.author_id AND u.id = pup.upeople_id "
         q += " and s.id = a.commit_id "
         q += " AND s.date >= " + startdate + " and s.date < " + enddate
-        q += " GROUP by u.id ORDER BY commits DESC, r.name"
+        q += " GROUP by u.id ORDER BY commits DESC, authors"
         q += " limit " + str(self.filters.npeople)
 
         res = self.db.ExecuteQuery(q)
@@ -157,7 +157,7 @@ class Authors(Metrics):
           s.date < upc.end AND upc.company_id = c.id AND
           s.date >=%s AND s.date < %s AND c.name =%s) t
         GROUP BY id
-        ORDER BY commits DESC
+        ORDER BY commits DESC, authors
         LIMIT %s
         """ % (filter_bots, startdate, enddate, company, limit)
 
@@ -185,7 +185,7 @@ class Authors(Metrics):
         q += " AND pup.people_id = s.author_id AND u.id = pup.upeople_id "
         q += " and a.commit_id = s.id "
         q += " AND s.date >= " + startdate + " and s.date < " + enddate
-        q += " GROUP by u.id ORDER BY commits DESC, u.id"
+        q += " GROUP by u.id ORDER BY commits DESC, authors"
         q += " limit " + str(self.filters.npeople)
 
         res = self.db.ExecuteQuery(q)
@@ -689,6 +689,7 @@ class Companies(Metrics):
         return q
 
     def _get_top_project(self, fbots = None):
+        if fbots is not None and fbots != '': fbots += " AND "
 
         startdate = self.filters.startdate
         enddate = self.filters.enddate
@@ -712,6 +713,7 @@ class Companies(Metrics):
         return q
 
     def _get_top(self, fbots = None):
+        if fbots is not None and fbots !='': fbots += " AND "
         q = """
             select c.name, count(distinct(t.s_id)) as total
             from companies c,  (
@@ -733,22 +735,26 @@ class Companies(Metrics):
     def get_list(self, metric_filters = None):
         from data_source import DataSource
         from filter import Filter
-        bots = DataSource.get_filter_bots(Filter("company"))
-        fbots = ''
-        for bot in bots:
-            fbots += " c.name<>'"+bot+"' and "
+        # bots = DataSource.get_filter_bots(Filter("company"))
 
-        if metric_filters is not None:
-            metric_filters_orig = self.filters
+        if metric_filters == None:
+            metric_filters = self.filters
+
+        # Store current filter to restore it
+        metric_filters_orig = self.filters
+        items_out = self.get_items_out_filter_sql("company", metric_filters)
+
+        if metric_filters is not None and metric_filters.type_analysis is not None:
             self.filters = metric_filters
 
             if metric_filters.type_analysis[0] == "project":
-                q = self._get_top_project(fbots)
+                q = self._get_top_project(items_out)
 
         else:
-            q = self._get_top(fbots)
+            q = self._get_top(items_out)
 
-        if metric_filters is not None: self.filters = metric_filters_orig
+        # Restore original filter for the metric
+        self.filters = metric_filters_orig
 
         return self.db.ExecuteQuery(q)
 
@@ -803,7 +809,7 @@ class Domains(Metrics):
     def _get_sql(self, evol):
         fields = "COUNT(DISTINCT(upd.domain_id)) AS domains"
         tables = "scmlog s, people_upeople pup, upeople_domains upd"
-        filters = "s.author_id = pup.people_id and pup.upeople_id = upd.upeople_id"
+        filters = "s.author_id = pup.people_id and pup.upeople_id = upd.upeople_id "
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                self.filters.enddate, " s.date ", fields,
                                tables, filters, evol)
@@ -826,7 +832,7 @@ class Domains(Metrics):
             "  s.date >="+ startdate+ " and "+\
             "  s.date < "+ enddate+ " "+\
             "GROUP BY d.name "+\
-            "ORDER BY commits desc"
+            "ORDER BY commits desc  LIMIT " + str(Metrics.domains_limit)
 
         return self.db.ExecuteQuery(q)
 
