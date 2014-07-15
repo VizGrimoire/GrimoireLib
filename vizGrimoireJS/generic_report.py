@@ -20,7 +20,9 @@
 ##
 ## Authors:
 ##   Daniel Izquierdo-Cortazar <dizquierdo@bitergia.com>
-##   Luis Cañas-Díaz <lcanas@bitergia.com>
+##
+## This scripts aims at providing an easy way to obtain some figures and json/csv files
+## for a set of basic metrics per data source.
 ##
 ## python openstack_report.py -a dic_cvsanaly_openstack_2259 -d dic_bicho_openstack_gerrit_3392_bis -i dic_cvsanaly_openstack_2259 -r 2013-07-01,2013-10-01,2014-01-01,2014-04-01,2014-07-01 -c lcanas_bicho_openstack_1376 -b lcanas_mlstats_openstack_1376 -f dic_sibyl_openstack_3194_new -e dic_irc_openstack_3277
 
@@ -162,6 +164,10 @@ def read_options():
                       dest="npeople",
                       default="10",
                       help="Limit for people analysis")
+    parser.add_option("--dir",
+                      action="store",
+                      dest="output_dir",
+                      default="./")
     # TBD
     #parser.add_option("--list-metrics",
     #                  help="List available metrics")
@@ -185,108 +191,79 @@ def build_releases(releases_dates):
 
     return releases
 
-def scm_general(dbcon, filters):
+def scm_report(dbcon, filters):
+    # Basic activity and community metrics in source code
+    # management systems
+
+    dataset = {}
+
     from onion_model import CommunityStructure
     onion = CommunityStructure(dbcon, filters)
     result = onion.result()
 
-    dataset = {}
-    dataset["core"] = result["core"]
-    dataset["regular"] = result["regular"]
-    dataset["occasional"] = result["occasional"]
+    dataset["scm_core"] = result["core"]
+    dataset["scm_regular"] = result["regular"]
+    dataset["scm_occasional"] = result["occasional"]
 
     authors_period = scm.AuthorsPeriod(dbcon, filters)
-    dataset["authorsperiod"] = authors_period.get_agg()["avg_authors_month"]
+    dataset["scm_authorsperiod"] = authors_period.get_agg()["avg_authors_month"]
 
-    authors = scm.Authors(dbcon, filters)
-    top_authors = authors.get_list()
-    dataset["topauthors"] = top_authors
-
-    return dataset
-
-def scm_report(dbcon, filters):
-
-    project_name = filters.type_analysis[1]
-    project_name = project_name.replace(" ", "")
+    #authors = scm.Authors(dbcon, filters)
+    #top_authors = authors.get_list()
+    #dataset["topauthors"] = top_authors
 
     commits = scm.Commits(dbcon, filters)
-    createJSON(commits.get_agg(), "./release/scm_commits_"+project_name+".json")
+    dataset["scm_commits"] = commits.get_agg()["commits"] 
 
     authors = scm.Authors(dbcon, filters)
-    createJSON(authors.get_agg(), "./release/scm_authors_"+project_name+".json")
+    dataset["scm_authors"] = authors.get_agg()["authors"]
 
-    dataset = {}
-    dataset["commits"] = commits.get_agg()["commits"]
-    dataset["authors"] = authors.get_agg()["authors"]
-
-    # tops authors activity
-    #from top_authors_projects import TopAuthorsProjects
-    #top_authors = TopAuthorsProjects(dbcon, filters)
-    top_authors = authors.get_list()
-    createJSON(top_authors, "./release/scm_top_authors_project_"+project_name+".json")
-    createCSV(top_authors, "./release/scm_top_authors_project_"+project_name+".csv", ["id"])
-
-    # top companies activity
-    from top_companies_projects import TopCompaniesProjects
-    #top_companies = TopCompaniesProjects(dbcon, filters)
-    #top_companies = top_companies.result()
-    companies = scm.Companies(dbcon, filters)
-    top_companies = companies.get_list(filters)
-    createJSON(top_companies, "./release/scm_top_companies_project_"+project_name+".json")
-    createCSV(top_companies, "./release/scm_top_companies_project_"+project_name+".csv")
+    #companies = scm.Companies(dbcon, filters)
+    #top_companies = companies.get_list(filters)
 
     return dataset
 
 def its_report(dbcon, filters):
+    # basic metrics for ticketing systems
+
+    dataset = {}
+
     from ITS import ITS
     ITS.set_backend("launchpad")
 
-    project_name = filters.type_analysis[1]
-    project_name = project_name.replace(" ", "")
     opened = its.Opened(dbcon, filters)
-    createJSON(opened.get_agg(), "./release/its_opened_"+project_name+".json")
-    closed = its.Closed(dbcon, filters)
-    createJSON(closed.get_agg(), "./release/its_closed_"+project_name+".json")
+    dataset["its_opened"] = opened.get_agg()["opened"]
 
-    dataset = {}
-    dataset["opened"] = opened.get_agg()["opened"]
-    dataset["closed"] = closed.get_agg()["closed"]
+    closed = its.Closed(dbcon, filters)
+    dataset["its_closed"] = closed.get_agg()["closed"]
 
     return dataset
 
 
 def scr_report(dbcon, filters):
+    # review system basic set of metrics
 
-    project_name = filters.type_analysis[1]
-    project_name = project_name.replace(" ", "")
-
+    dataset = {}
 
     submitted = scr.Submitted(dbcon, filters)
-    createJSON(submitted.get_agg(), "./release/scr_submitted_"+project_name+".json")
+    dataset["scr_submitted"] = submitted.get_agg()["submitted"]
 
     merged = scr.Merged(dbcon, filters)
-    createJSON(merged.get_agg(), "./release/scr_merged.json_"+project_name+"")
+    dataset["scr_merged"] = merged.get_agg()["merged"]
 
     abandoned = scr.Abandoned(dbcon, filters)
-    createJSON(abandoned.get_agg(), "./release/scr_abandoned_"+project_name+".json")
+    dataset["scr_abandoned"] = abandoned.get_agg()["abandoned"]
 
     waiting4reviewer = scr.ReviewsWaitingForReviewer(dbcon, filters)
-    createJSON(waiting4reviewer.get_agg(), "./release/scr_waiting4reviewer_"+project_name+".json")
+    dataset["scr_waiting4reviewer"] = waiting4reviewer.get_agg()["ReviewsWaitingForReviewer"]
 
     waiting4submitter = scr.ReviewsWaitingForSubmitter(dbcon, filters)
-    createJSON(waiting4submitter.get_agg(), "./release/scr_waiting4submitter_"+project_name+".json")
+    dataset["scr_waiting4submitter"] = waiting4submitter.get_agg()["ReviewsWaitingForSubmitter"]
 
     filters.period = "month"
     time2review = scr.TimeToReview(dbcon, filters)
-
-    dataset = {}
-    dataset["submitted"] = submitted.get_agg()["submitted"]
-    dataset["merged"] = merged.get_agg()["merged"]
-    dataset["abandoned"] = abandoned.get_agg()["abandoned"]
-    dataset["waiting4reviewer"] = waiting4reviewer.get_agg()["ReviewsWaitingForReviewer"]
-    dataset["waiting4submitter"] = waiting4submitter.get_agg()["ReviewsWaitingForSubmitter"]
-    dataset["review_time_days_median"] = time2review.get_agg()["review_time_days_median"]
-    dataset["review_time_days_avg"] = time2review.get_agg()["review_time_days_avg"]
+    dataset["scr_review_time_days_median"] = round(time2review.get_agg()["review_time_days_median"], 2)
+    dataset["scr_review_time_days_avg"] = round(time2review.get_agg()["review_time_days_avg"], 2)
 
     return dataset
 
@@ -319,19 +296,16 @@ def serialize_threads(threads, crowded, threads_object):
 
 def mls_report(dbcon, filters):
     
+    dataset = {}
+
     emails = mls.EmailsSent(dbcon, filters)
-    createJSON(emails.get_agg(), "./release/mls_emailssent.json")
+    dataset["mls_sent"] = emails.get_agg()["sent"]
 
     senders = mls.EmailsSenders(dbcon, filters)
-    createJSON(senders.get_agg(), "./release/mls_emailssenders.json")
+    dataset["mls_senders"] = senders.get_agg()["senders"]
 
     senders_init = mls.SendersInit(dbcon, filters)
-    createJSON(senders_init.get_agg(), "./release/mls_sendersinit.json")
-
-    dataset = {}
-    dataset["sent"] = emails.get_agg()["sent"]
-    dataset["senders"] = senders.get_agg()["senders"]
-    dataset["senders_init"] = senders_init.get_agg()["senders_init"]
+    dataset["mls_senders_init"] = senders_init.get_agg()["senders_init"]
 
     from threads import Threads
     SetDBChannel(dbcon.user, dbcon.password, dbcon.database)
@@ -359,23 +333,21 @@ def parse_urls(urls):
 
 
 def qaforums_report(dbcon, filters):
-    questions = qa.Questions(dbcon, filters)
-    createJSON(questions.get_agg(), "./release/qaforums_questions.json")
-
-    answers = qa.Answers(dbcon, filters)
-    createJSON(answers.get_agg(), "./release/qaforums_answers.json")
-
-    comments = qa.Comments(dbcon, filters)
-    createJSON(comments.get_agg(), "./release/qaforums_comments.json")
-
-    q_senders = qa.QuestionSenders(dbcon, filters)
-    createJSON(q_senders.get_agg(), "./release/qaforums_question_senders.json")
+    # basic metrics for qaforums
 
     dataset = {}
-    dataset["questions"] = questions.get_agg()["qsent"]
-    dataset["answers"] = answers.get_agg()["asent"]
-    dataset["comments"] = comments.get_agg()["csent"]
-    dataset["qsenders"] = q_senders.get_agg()["qsenders"]
+
+    questions = qa.Questions(dbcon, filters)
+    dataset["qa_questions"] = questions.get_agg()["qsent"]
+
+    answers = qa.Answers(dbcon, filters)
+    dataset["qa_answers"] = answers.get_agg()["asent"]
+
+    comments = qa.Comments(dbcon, filters)
+    dataset["qa_comments"] = comments.get_agg()["csent"]
+
+    q_senders = qa.QuestionSenders(dbcon, filters)
+    dataset["qa_qsenders"] = q_senders.get_agg()["qsenders"]
 
     import top_questions_qaforums as top
     tops = top.TopQuestions(dbcon, filters)
@@ -389,8 +361,6 @@ def qaforums_report(dbcon, filters):
     visited = tops.top_visited()
     visited["qid"] = visited.pop("question_identifier")
     visited["site"] = parse_urls(visited.pop("url"))
-    #commented["site"] = commented.pop("url").split("/")[-2:][1:]
-    
     createJSON(visited, "./release/qa_top_questions_visited.json")
     createCSV(visited, "./release/qa_top_questions_visited.csv")
 
@@ -407,15 +377,15 @@ def qaforums_report(dbcon, filters):
     return dataset
 
 def irc_report(dbcon, filters):
-    sent = irc.Sent(dbcon, filters)
-    createJSON(sent.get_agg(), "./release/irc_sent.json")
-
-    senders = irc.Senders(dbcon, filters)
-    createJSON(senders.get_agg(), "./release/irc_senders.json")
+    # irc basic report
 
     dataset = {}
-    dataset["sent"] = sent.get_agg()["sent"]
-    dataset["senders"] = senders.get_agg()["senders"]
+
+    sent = irc.Sent(dbcon, filters)
+    dataset["irc_sent"] = sent.get_agg()["sent"]
+
+    senders = irc.Senders(dbcon, filters)
+    dataset["irc_senders"] = senders.get_agg()["senders"]
 
     top_senders = senders.get_list()
     createJSON(top_senders, "./release/irc_top_senders.json")
@@ -428,6 +398,7 @@ def irc_report(dbcon, filters):
 def createCSV(data, filepath, skip_fields = []):
     fd = open(filepath, "w")
     keys = list(set(data.keys()) - set(skip_fields))
+
     
     header = u''
     for k in keys:
@@ -465,92 +436,28 @@ def init_env():
     environ["R_LIBS"] = "../../r-lib"
 
 
-def projects(user, password, database):
-    dbcon = DSQuery(user, password, database, None)
-    query = "select id from projects"
-    return dbcon.ExecuteQuery(query)["id"]
+def draw(dataset, labels, report_name):
+    # create charts and write down csv files with list of metrics
+
+    createJSON(dataset, report_name + ".json")
+
+    for metric in dataset.keys():
+        bar_chart(metric, labels, dataset[metric], report_name + metric)
 
 
-def general_info(opts, releases, people_out, affs_out):
+def update_data(data, dataset):
+    # dataset is a list of metrics eg: {"metric":value2}
+    # data contains the same list of metrics, but with previous information
+    #  eg: {"metric":[value0, value1]}
+    # the output would be: {"metric":[value0, value1, value2]}
+         
+    for metric in dataset.keys():
+        if data.has_key(metric):
+            data[metric].append(dataset[metric])
+        else:
+            data[metric] = [dataset[metric]]
 
-    # General info from MLS, IRC and QAForums.
-    core = []
-    regular = []
-    occasional = []
-    authors_month = []
-
-    emails = []
-    emails_senders =  []
-    emails_senders_init = []
-    questions = []
-    answers = []
-    comments = []
-    qsenders = []
-    irc_sent = []
-    irc_senders = []
-    releases_data = {}
-    for release in releases:
-        startdate = "'" + release[0] + "'"
-        enddate = "'" + release[1] + "'"
-        filters = MetricFilters("month", startdate, enddate, [], opts.npeople, people_out, affs_out)
-        # SCM info
-        scm_dbcon = SCMQuery(opts.dbuser, opts.dbpassword, opts.dbcvsanaly, opts.dbidentities)
-        dataset = scm_general(scm_dbcon, filters)
-        core.append(dataset["core"])
-        regular.append(dataset["regular"])
-        occasional.append(dataset["occasional"])
-        authors_month.append(float(dataset["authorsperiod"]))
-        top_authors = dataset["topauthors"]
-        release_pos = releases.index(release)
-        createCSV(top_authors, "./release/top_authors_release" + str(release_pos)+ ".csv")
-  
-        # MLS info
-        mls_dbcon = MLSQuery(opts.dbuser, opts.dbpassword, opts.dbmlstats, opts.dbidentities)
-        dataset = mls_report(mls_dbcon, filters)
-        emails.append(dataset["sent"])
-        emails_senders.append(dataset["senders"])
-        emails_senders_init.append(dataset["senders_init"])
-
-        # QAForums info 
-        qaforums_dbcon = QAForumsQuery(opts.dbuser, opts.dbpassword, opts.dbqaforums, opts.dbidentities)
-        dataset = qaforums_report(qaforums_dbcon, filters)
-        questions.append(dataset["questions"])
-        answers.append(dataset["answers"])
-        comments.append(dataset["comments"])
-        qsenders.append(dataset["qsenders"])
-
-        # IRC info
-        irc_dbcon = IRCQuery(opts.dbuser, opts.dbpassword, opts.dbirc, opts.dbidentities)
-        dataset = irc_report(irc_dbcon, filters)
-        irc_sent.append(dataset["sent"])
-        irc_senders.append(dataset["senders"])
-
-
-    #labels = ["2012-Q3", "2012-Q4", "2013-Q1", "2013-Q2", "2013-Q3", "2013-Q4", "2014-Q1", "2014-Q2"]
-    labels = ["2013-Q3", "2013-Q4", "2014-Q1", "2014-Q2"]
-    barh_chart("Emails sent", labels, emails, "emails")
-    createCSV({"labels":labels, "emails":emails}, "./release/emails.csv")
-    barh_chart("People sending emails", labels, emails_senders, "emails_senders")
-    createCSV({"labels":labels, "senders":emails_senders}, "./release/emails_senders.csv")
-    barh_chart("People initiating threads", labels, emails_senders_init, "emails_senders_init")
-    createCSV({"labels":labels, "senders":emails_senders_init}, "./release/emails_senders_init.csv")
-    barh_chart("Questions", labels, questions, "questions")
-    createCSV({"labels":labels, "questions":questions}, "./release/questions.csv")
-    barh_chart("Answers", labels, answers, "answers")
-    createCSV({"labels":labels, "answers":answers}, "./release/answers.csv")
-    barh_chart("Comments", labels, comments, "comments")
-    createCSV({"labels":labels, "comments":comments}, "./release/comments.csv")
-    barh_chart("People asking Questions", labels, qsenders, "question_senders")
-    createCSV({"labels":labels, "senders":qsenders}, "./release/question_senders.csv")
-    barh_chart("Messages in IRC channels", labels, irc_sent, "irc_sent")
-    createCSV({"labels":labels, "messages":irc_sent}, "./release/irc_sent.csv")
-    barh_chart("People in IRC channels", labels, irc_senders, "irc_senders")
-    createCSV({"labels":labels, "senders":irc_senders}, "./release/irc_senders.csv")
-    
-    bar_chart("Community structure", labels, regular, "onion", core, ["regular", "core"])
-    createCSV({"labels":labels, "core":core, "regular":regular, "occasional":occasional}, "./release/onion_model.csv")
-    bar_chart("Developers per month", labels, authors_month, "authors_month")
-    createCSV({"labels":labels, "authormonth":authors_month}, "./release/authors_month.csv")
+    return data
 
 if __name__ == '__main__':
 
@@ -576,88 +483,45 @@ if __name__ == '__main__':
     # obtain list of releases by tuples [(date1, date2), (date2, date3), ...]
     releases = build_releases(opts.releases)
 
-
     # Projects analysis. This includes SCM, SCR and ITS.
-    projects_list = projects(opts.dbuser, opts.dbpassword, opts.dbidentities)
     people_out = ["OpenStack Jenkins","Launchpad Translations on behalf of nova-core","Jenkins","OpenStack Hudson","gerrit2@review.openstack.org","linuxdatacenter@gmail.com","Openstack Project Creator","Openstack Gerrit","openstackgerrit"]
     affs_out = ["-Bot","-Individual","-Unknown"]
 
-    for project in projects_list:
-        releases_data = {}
-        for release in releases:
-            releases_data[release] = {}
+    labels = ["2012-S2", "2013-S1", "2013-S2", "2014-S1"]
 
-            startdate = "'" + release[0] + "'"
-            enddate = "'" + release[1] + "'"
-            filters = MetricFilters("month", startdate, enddate, ["project", str(project)], opts.npeople,
-                                    people_out, affs_out)
-            scm_dbcon = SCMQuery(opts.dbuser, opts.dbpassword, opts.dbcvsanaly, opts.dbidentities)
-            #SCM report
-            dataset = scm_report(scm_dbcon, filters)
-            releases_data[release]["scm"] = dataset
+    data = {}
+    for release in releases:
 
-            #ITS report
-            its_dbcon = ITSQuery(opts.dbuser, opts.dbpassword, opts.dbbicho, opts.dbidentities)
-            dataset = its_report(its_dbcon, filters)
-            releases_data[release]["its"] = dataset
+        dataset = {}
+        startdate = "'" + release[0] + "'"
+        enddate = "'" + release[1] + "'"
+        filters = MetricFilters("month", startdate, enddate, [], opts.npeople, people_out, affs_out)
 
-            #SCR Report
-            scr_dbcon = SCRQuery(opts.dbuser, opts.dbpassword, opts.dbreview, opts.dbidentities)
-            dataset = scr_report(scr_dbcon, filters)
-            releases_data[release]["scr"] = dataset
+        if opts.dbcvsanaly is not None:
+            dbcon = SCMQuery(opts.dbuser, opts.dbpassword, opts.dbcvsanaly, opts.dbidentities)
+            dataset.update(scm_report(dbcon, filters))
 
+        if opts.dbbicho is not None:
+            dbcon = ITSQuery(opts.dbuser, opts.dbpassword, opts.dbbicho, opts.dbidentities)
+            dataset.update(its_report(dbcon, filters))
 
-        labels = []
-        commits = []
-        authors = []
-        opened = []
-        submitted = []
-        merged = []
-        abandoned = []
-        closed = []
-        bmi = []
-        review_avg = []
-        review_median = []
-        for release in releases:
-            labels.append(release[1])
-            #scm
-            commits.append(releases_data[release]["scm"]["commits"])
-            authors.append(releases_data[release]["scm"]["authors"])
-            #its
-            opened.append(releases_data[release]["its"]["opened"])
-            closed.append(releases_data[release]["its"]["closed"])
-            if releases_data[release]["its"]["opened"] > 0:
-                bmi.append(float(releases_data[release]["its"]["closed"])/float(releases_data[release]["its"]["opened"]))
-            else:
-                bmi.append(0)
-            #scr
-            submitted.append(releases_data[release]["scr"]["submitted"])
-            merged.append(releases_data[release]["scr"]["merged"])
-            abandoned.append(releases_data[release]["scr"]["abandoned"])
-            review_avg.append(releases_data[release]["scr"]["review_time_days_avg"])
-            review_median.append(releases_data[release]["scr"]["review_time_days_median"])
-        
-        #labels = ["2012-Q3", "2012-Q4", "2013-Q1", "2013-Q2", "2013-Q3", "2013-Q4", "2014-Q1", "2014-Q2"]        
-        labels = ["2013-Q3", "2013-Q4", "2014-Q1", "2014-Q2"]
-        project_name = project.replace(" ", "")
-        bar_chart("Commits and reviews" + project, labels, commits, "commits"  + project_name, submitted, ["commits", "reviews"])
-        createCSV({"labels":labels, "commits":commits, "submitted":submitted}, "./release/commits"+project_name+".csv")
-        bar_chart("Authors " + project, labels, authors, "authors" + project_name)
-        createCSV({"labels":labels, "authors":authors}, "./release/authors"+project_name+".csv")
+        if opts.dbreview is not None:
+            dbcon = SCRQuery(opts.dbuser, opts.dbpassword, opts.dbreview, opts.dbidentities)
+            dataset.update(scr_report(dbcon, filters))
 
-        bar_chart("Opened and closed tickets " + project, labels, opened, "closed" + project_name, closed, ["opened", "closed"])
-        createCSV({"labels":labels, "closed":closed, "opened":opened}, "./release/closed"+project_name+".csv")
+        if opts.dbirc is not None:
+            dbcon = IRCQuery(opts.dbuser, opts.dbpassword, opts.dbirc, opts.dbidentities)
+            dataset.update(irc_report(dbcon, filters))
+  
+        if opts.dbqaforums is not None:
+            dbcon = QAForumsQuery(opts.dbuser, opts.dbpassword, opts.dbqaforums, opts.dbidentities)
+            dataset.update(qaforums_report(dbcon, filters))
 
-        bar_chart("Efficiency closing tickets " + project, labels, bmi, "bmi" + project_name)
-        createCSV({"labels":labels, "bmi":bmi}, "./release/bmi"+project_name+".csv")
+        if opts.dbmlstats is not None:
+            dbcon = MLSQuery(opts.dbuser, opts.dbpassword, opts.dbmlstats, opts.dbidentities)
+            dataset.update(mls_report(dbcon, filters))
 
-        bar_chart("Merged and abandoned reviews " + project, labels, merged, "submitted_reviews" + project_name, abandoned, ["merged", "abandoned"])
-        createCSV({"labels":labels, "merged":merged, "abandoned":abandoned}, "./release/submitted_reviews"+project_name+".csv")
+        data = update_data(data, dataset)
 
-        bar_chart("Time to review (days)  " + project, labels, review_avg, "timetoreview_median" + project_name, review_median, ["mean", "median"])
-        createCSV({"labels":labels, "mediantime":review_median, "meantime":review_avg}, "./release/timetoreview_median"+project_name+".csv")
-
-
-    # general info: scm, mls, irc and qaforums
-    general_info(opts, releases, people_out, affs_out)
-
+    draw(data, labels, opts.output_dir+"/report.json")
+    
