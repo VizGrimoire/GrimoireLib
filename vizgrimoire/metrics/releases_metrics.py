@@ -46,7 +46,7 @@ class Releases(Metrics):
     desc = "Number of Releases done in a project"
     data_source = ReleasesDS
 
-    def __get_sql__(self, evolutionary):
+    def _get_sql(self, evolutionary):
 
         fields = "COUNT(DISTINCT(r.id)) AS releases"
         tables = "releases r, projects p"
@@ -64,7 +64,7 @@ class Modules(Metrics):
     desc = "Number of modules (projects)"
     data_source = ReleasesDS
 
-    def __get_sql__ (self, evolutionary):
+    def _get_sql (self, evolutionary):
         fields = "COUNT(*) AS modules"
         tables = "projects p"
         filters = ""
@@ -83,7 +83,7 @@ class Authors(Metrics):
     desc = "Number of people working in modules (projects) and releases"
     data_source = ReleasesDS
 
-    def __get_sql__ (self, evolutionary):
+    def _get_sql (self, evolutionary):
         fields = " COUNT(DISTINCT(pup.upeople_id)) as authors "
         # fields = "COUNT(DISTINCT(u.id)) AS authors"
         tables = "users u, releases r, projects p, people_upeople pup"
@@ -92,3 +92,37 @@ class Authors(Metrics):
                                self.filters.enddate, "r.created_on", fields,
                                tables, filters, evolutionary)
         return(q)
+
+    def _get_top_global (self, days = 0, metric_filters = None):
+        if metric_filters == None:
+            metric_filters = self.filters
+
+        startdate = metric_filters.startdate
+        enddate = metric_filters.enddate
+        limit = metric_filters.npeople
+
+        # Unique identities not supported yet
+
+        filter_bots = ''
+        bots = ReleasesDS.get_bots()
+        for bot in bots:
+            filter_bots = filter_bots + " username<>'"+bot+"' and "
+        # filter_bots = ''
+
+        # fields = "COUNT(r.id) as releases, username, u.id"
+        fields = "COUNT(r.id) as releases, pup.upeople_id AS id, username"
+        tables = "users u, releases r, projects p, people_upeople pup"
+        filters = filter_bots + "pup.people_id = u.id AND r.author_id = u.id AND r.project_id = p.id"
+        if (days > 0):
+            tables += ", (SELECT MAX(r.created_on) as last_date from releases r) t"
+            filters += " AND DATEDIFF (last_date, r.created_on) < %s" % (days)
+        filters += " AND r.created_on >= %s and r.created_on < %s " % (startdate, enddate)
+        filters += " GROUP by username"
+        filters += " ORDER BY releases DESC, r.name"
+        filters += " LIMIT %s" % (limit)
+
+        q = "SELECT %s FROM %s WHERE %s" % (fields, tables, filters)
+        data = self.db.ExecuteQuery(q)
+#        for id in data:
+#            if not isinstance(data[id], (list)): data[id] = [data[id]]
+        return(data)

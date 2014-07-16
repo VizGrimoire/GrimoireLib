@@ -30,20 +30,26 @@ class Metrics(object):
     default_period = "month"
     default_start = "'2010-01-01'"
     default_end = "'2014-01-01'"
+    default_npeople = 10
     id = None
     name = None
     desc = None
     data_source = None
+    domains_limit = 100
 
     def __init__(self, dbcon = None, filters = None):
         """db connection and filter to be used"""
         self.db = dbcon
         self.filters = filters
         if filters == None:
+            people_out = None
+            companies_out = None
+            npeople = None
+            type_analysis = None
             self.filters = MetricFilters(Metrics.default_period,
-                                         Metrics.default_start, Metrics.default_end, 
-                                         None)
-
+                                         Metrics.default_start, Metrics.default_end,
+                                         type_analysis, 
+                                         npeople, people_out, companies_out)
 
     def get_definition(self):
         def_ = {
@@ -57,7 +63,7 @@ class Metrics(object):
         """ Returns the family of the instance """
         return Metrics.data_source
 
-    def __get_sql__(self, evolutionary):
+    def _get_sql(self, evolutionary):
         """ Returns specific sql for the provided filters """
         raise NotImplementedError
 
@@ -66,14 +72,14 @@ class Metrics(object):
 
     def get_ts (self):
         """ Returns a time serie of values """
-        query = self.__get_sql__(True)
+        query = self._get_sql(True)
         ts = self.db.ExecuteQuery(query)
         return completePeriodIds(ts, self.filters.period, 
                                  self.filters.startdate, self.filters.enddate)
 
     def get_agg(self):
         """ Returns an aggregated value """
-        query = self.__get_sql__(False)
+        query = self._get_sql(False)
         return self.db.ExecuteQuery(query)
 
     def get_agg_diff_days(self, date, days):
@@ -100,6 +106,67 @@ class Metrics(object):
         self.filters = filters
         return (data)
 
-    def get_list(self):
-        """ Returns a list of items """
-        raise NotImplementedError
+    def _get_top_supported_filters(self):
+        return []
+
+    def _get_top_global(self, days = 0, metric_filters = None):
+        return {}
+
+    def _get_top(self, metric_filters = None, days = 0):
+        if metric_filters.type_analysis and metric_filters.type_analysis is not None:
+            if metric_filters.type_analysis[0] not in self._get_top_supported_filters():
+                 return
+            if metric_filters.type_analysis[0] == "repository":
+                alist = self._get_top_repository(metric_filters)
+            if metric_filters.type_analysis[0] == "company":
+                alist = self._get_top_company(metric_filters)
+            if metric_filters.type_analysis[0] == "country":
+                alist = self._get_top_country(metric_filters)
+            if metric_filters.type_analysis[0] == "domain":
+                alist = self._get_top_domain(metric_filters)
+            if metric_filters.type_analysis[0] == "project":
+                alist = self._get_top_project(metric_filters)
+        else:
+            alist = self._get_top_global(days, metric_filters)
+        return alist
+
+    def get_list(self, metric_filters = None, days = 0):
+        """ Returns a list of items. Mainly used for tops. """
+        mlist = {}
+
+        if metric_filters is not None:
+            metric_filters_orig = self.filters
+            self.filters = metric_filters
+
+        mlist = self._get_top(self.filters, days)
+
+        if metric_filters is not None: self.filters = metric_filters_orig
+
+        return mlist
+
+    def get_items_out_filter_sql (self, filter_, metric_filters = None):
+        # The items_out *must* come in metric_filters
+        filter_items = ''
+        if metric_filters is None:
+            metric_filters = self.filters
+
+        if filter_ == "company":
+            items_out = metric_filters.companies_out
+            if items_out is not None:
+                for item in items_out:
+                    filter_items += " c.name<>'"+item+"' AND "
+
+        if filter_items != '': filter_items = filter_items[:-4]
+        return filter_items
+
+    # TODO: Join with get_items_out_filter_sql once People is a filter
+    def get_bots_filter_sql (self, metric_filters = None):
+        bots = self.data_source.get_bots()
+        if metric_filters is not None:
+            if metric_filters.people_out is not None:
+                bots = metric_filters.people_out
+        filter_bots = ''
+        for bot in bots:
+            filter_bots = filter_bots + " u.identifier<>'"+bot+"' AND "
+        if filter_bots != '': filter_bots = filter_bots[:-4]
+        return filter_bots

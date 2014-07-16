@@ -62,8 +62,11 @@ class ITS(DataSource):
     @staticmethod
     def get_url():
         """Get the URL from which the data source was gathered"""
-        return TrackerURL()
-        pass
+
+        q = "SELECT url, name as type FROM trackers t JOIN "+\
+            "supported_trackers s ON t.type = s.id limit 1"
+
+        return(ExecuteQuery(q))
 
     @staticmethod
     def set_backend(its_name):
@@ -88,16 +91,11 @@ class ITS(DataSource):
     def get_evolutionary_data (period, startdate, enddate, identities_db, filter_ = None):
         closed_condition = ITS._get_closed_condition()
 
-        if (filter_ is not None):
-            type_analysis = [filter_.get_name(), "'"+filter_.get_item()+"'"]
-            evol = EvolITSInfo(period, startdate, enddate, identities_db, 
-                               type_analysis, closed_condition)
-
+        metrics = DataSource.get_metrics_data(ITS, period, startdate, enddate, identities_db, filter_, True)
+        if filter_ is not None: studies = {}
         else:
-            data = EvolITSInfo(period, startdate, enddate, identities_db, None, closed_condition)
-            evol = completePeriodIds(data, period, startdate, enddate)
-
-        return evol
+            studies = DataSource.get_studies_data(ITS, period, startdate, enddate, True)
+        return dict(metrics.items()+studies.items())
 
     @staticmethod
     def create_evolutionary_report (period, startdate, enddate, destdir, i_db, filter_ = None):
@@ -109,19 +107,15 @@ class ITS(DataSource):
     def get_agg_data (period, startdate, enddate, identities_db, filter_ = None):
         closed_condition = ITS._get_closed_condition()
 
-        if (filter_ is not None):
-            type_analysis = [filter_.get_name(), "'"+filter_.get_item()+"'"]
-            data = AggITSInfo(period, startdate, enddate, identities_db, type_analysis, closed_condition)
-            agg = data
-
+        metrics = DataSource.get_metrics_data(ITS, period, startdate, enddate, identities_db, filter_, False)
+        if filter_ is not None: studies = {}
         else:
-            agg = AggITSInfo(period, startdate, enddate, identities_db, None, closed_condition)
+            studies = DataSource.get_studies_data(ITS, period, startdate, enddate, False)
+        agg =  dict(metrics.items()+studies.items())
+
+        if filter_ is None:
             data = ITS.get_url()
             agg = dict(agg.items() +  data.items())
-#            # Last Activity: to be removed
-#            for i in [7,14,30,60,90,180,365,730]:
-#                period_activity = GetLastActivityITS(i, closed_condition)
-#                agg = dict(agg.items() + period_activity.items())
 
         return agg
 
@@ -136,28 +130,32 @@ class ITS(DataSource):
         bots = ITS.get_bots()
         closed_condition =  ITS._get_closed_condition()
         top = None
+        mopeners = DataSource.get_metrics("openers", ITS)
+        mclosers = DataSource.get_metrics("closers", ITS)
+        period = None
+        type_analysis = None
+        if filter_ is not None:
+            type_analysis = filter_.get_type_analysis()
+        mfilter = MetricFilters(period, startdate, enddate, type_analysis, npeople)
+
 
         if filter_ is None:
             top_closers_data = {}
-            top_closers_data['closers.']=GetTopClosers(0, startdate, enddate,identities_db, bots, closed_condition, npeople)
-            top_closers_data['closers.last year']=GetTopClosers(365, startdate, enddate,identities_db, bots, closed_condition, npeople)
-            top_closers_data['closers.last month']=GetTopClosers(31, startdate, enddate,identities_db, bots, closed_condition, npeople)
+            top_closers_data['closers.'] =  mclosers.get_list(mfilter, 0)
+            top_closers_data['closers.last month']= mclosers.get_list(mfilter, 31)
+            top_closers_data['closers.last year']= mclosers.get_list(mfilter, 365)
 
             top_openers_data = {}
-            top_openers_data['openers.']=GetTopOpeners(0, startdate, enddate,identities_db, bots, closed_condition, npeople)
-            top_openers_data['openers.last year']=GetTopOpeners(365, startdate, enddate,identities_db, bots, closed_condition, npeople)
-            top_openers_data['openers.last month']=GetTopOpeners(31, startdate, enddate,identities_db, bots, closed_condition, npeople)
+            top_openers_data['openers.'] = mopeners.get_list(mfilter, 0)
+            top_openers_data['openers.last month'] = mopeners.get_list(mfilter, 31)
+            top_openers_data['openers.last year'] = mopeners.get_list(mfilter, 365)
 
             top = dict(top_closers_data.items() + top_openers_data.items())
 
         else:
             filter_name = filter_.get_name()
-            item = "'"+filter_.get_item()+"'"
-
-            if (filter_name == "company"):
-                top = GetCompanyTopClosers(item, startdate, enddate, identities_db, bots, closed_condition, npeople)
-            elif (filter_name == "domain"):
-                top = GetDomainTopClosers(item, startdate, enddate, identities_db, bots, closed_condition, npeople)
+            if filter_name in ["company","domain","repository"]:
+                top = mclosers.get_list(mfilter)
             else:
                 top = None
 
@@ -169,22 +167,24 @@ class ITS(DataSource):
         createJSON (data, destdir+"/"+ITS().get_top_filename())
 
     @staticmethod
-    def get_filter_items(filter_, startdate, enddate, identities_db, bots):
+    def get_filter_items(filter_, startdate, enddate, identities_db):
         items = None
         filter_name = filter_.get_name()
 
         if (filter_name == "repository"):
-            items  = GetReposNameITS(startdate, enddate)
+            metric = DataSource.get_metrics("trackers", ITS)
         elif (filter_name == "company"):
-            items  = GetCompaniesNameITS(startdate, enddate, identities_db, ITS._get_closed_condition(), bots)
+            metric = DataSource.get_metrics("companies", ITS)
         elif (filter_name == "country"):
-            items = GetCountriesNamesITS(startdate, enddate, identities_db, ITS._get_closed_condition())
+            metric = DataSource.get_metrics("countries", ITS)
         elif (filter_name == "domain"):
-            items = GetDomainsNameITS(startdate, enddate, identities_db, ITS._get_closed_condition(), bots)
+            metric = DataSource.get_metrics("domains", ITS)
         elif (filter_name == "project"):
-            items = get_projects_name(startdate, enddate, identities_db, ITS._get_closed_condition())
+            metric = DataSource.get_metrics("projects", ITS)
         else:
             logging.error(filter_name + " not supported")
+
+        items = metric.get_list()
         return items
 
     @staticmethod
@@ -198,8 +198,8 @@ class ITS(DataSource):
         return summary
 
     @staticmethod
-    def create_filter_report(filter_, period, startdate, enddate, destdir, npeople, identities_db, bots):
-        items = ITS.get_filter_items(filter_, startdate, enddate, identities_db, bots)
+    def create_filter_report(filter_, period, startdate, enddate, destdir, npeople, identities_db):
+        items = ITS.get_filter_items(filter_, startdate, enddate, identities_db)
         if (items == None): return
         items = items['name']
 
@@ -229,12 +229,12 @@ class ITS(DataSource):
             fn = os.path.join(destdir, filter_item.get_static_filename(ITS()))
             createJSON(agg, fn)
 
-            if filter_name in ("domain", "company", "repository"):
+            if filter_name in ["domain", "company", "repository"]:
                 items_list['name'].append(item.replace('/', '_'))
                 items_list['closed_365'].append(agg['closed_365'])
                 items_list['closers_365'].append(agg['closers_365'])
 
-            if (filter_name in ["company","domain"]):
+            if filter_name in ["company","domain","repository"]:
                 top = ITS.get_top_data(startdate, enddate, identities_db, filter_item, npeople)
                 fn = os.path.join(destdir, filter_item.get_top_filename(ITS()))
                 createJSON(top, fn)
@@ -521,105 +521,6 @@ def GetITSSQLReportWhere (type_analysis, identities_db = None):
 
     return (where)
 
-##########
-# Meta functions to retrieve data
-##########
-
-def GetITSInfo (period, startdate, enddate, identities_db, type_analysis, closed_condition, evolutionary):
-    filter_ = None
-    if type_analysis is not None:
-        filter_ = Filter(type_analysis[0],type_analysis[1])
-    metrics = DataSource.get_metrics_data(ITS, period, startdate, enddate, identities_db, filter_, evolutionary)
-    if filter_ is not None: studies = {}
-    else:
-        studies = DataSource.get_studies_data(ITS, period, startdate, enddate, evolutionary)
-    return dict(metrics.items()+studies.items())
-
-def EvolITSInfo (period, startdate, enddate, identities_db, type_analysis, closed_condition):
-    #Evolutionary info all merged in a dataframe
-    return(GetITSInfo(period, startdate, enddate, identities_db, type_analysis, closed_condition, True))
-
-def AggITSInfo (period, startdate, enddate, identities_db, type_analysis, closed_condition):
-    #Agg info all merged in a dataframe
-    return(GetITSInfo(period, startdate, enddate, identities_db, type_analysis, closed_condition, False))
-
-
-####
-# DEPRECATED CODE only used in its-analysis.py
-##
-
-# Repositories
-def GetIssuesRepositories (period, startdate, enddate, identities_db, type_analysis, evolutionary):
-    # Generic function that counts repositories
-
-    fields = " COUNT(DISTINCT(tracker_id)) AS trackers  "
-    tables = " issues i " + GetITSSQLReportFrom(identities_db, type_analysis)
-    filters = GetITSSQLReportWhere(type_analysis, identities_db)
-
-    q = BuildQuery(period, startdate, enddate, " i.submitted_on ", fields, tables, filters, evolutionary)
-    return(ExecuteQuery(q))
-
-def EvolIssuesRepositories (period, startdate, enddate, identities_db, type_analysis = []):
-    # Evolution of trackers
-    return(GetIssuesRepositories(period, startdate, enddate, identities_db, type_analysis, True))
-
-def AggIssuesRepositories (period, startdate, enddate, identities_db, type_analysis = []):
-    # Evolution of trackers
-    return(GetIssuesRepositories(period, startdate, enddate, identities_db, type_analysis, False))
-
-def GetIssuesStudies (period, startdate, enddate, identities_db, type_analysis, evolutionary, study):
-    # Generic function that counts evolution/agg number of specific studies with similar
-    # database schema such as domains, companies and countries
-    fields = ' count(distinct(name)) as ' + study
-    tables = " issues i " + GetITSSQLReportFrom(identities_db, type_analysis)
-    filters = GetITSSQLReportWhere(type_analysis, identities_db)
-
-    #Filtering last part of the query, not used in this case
-    #filters = gsub("and\n( )+(d|c|cou|com).name =.*$", "", filters)
-
-    q = BuildQuery(period, startdate, enddate, " i.submitted_on ", fields, tables, filters, evolutionary)
-    q = re.sub(r'and (d|c|cou|com).name.*=', "", q)
-    data = ExecuteQuery(q)
-    return(data)
-
-def EvolIssuesDomains (period, startdate, enddate, identities_db):
-    # Evol number of domains used
-    return(GetIssuesStudies(period, startdate, enddate, identities_db, ['domain', ''], True, 'domains'))
-
-def EvolIssuesProjects (period, startdate, enddate, identities_db):
-    # Evol number of projects used
-    return(GetIssuesStudies(period, startdate, enddate, identities_db, ['project', ''], True, 'projects'))
-
-def EvolIssuesCountries (period, startdate, enddate, identities_db):
-    # Evol number of countries
-    return(GetIssuesStudies(period, startdate, enddate, identities_db, ['country', ''], True, 'countries'))
-
-def EvolIssuesCompanies (period, startdate, enddate, identities_db):
-    # Evol number of companies
-    data = GetIssuesStudies(period, startdate, enddate, identities_db, ['company', ''], True, 'companies')
-    return(data)
-
-def AggIssuesDomains (period, startdate, enddate, identities_db):
-    # Agg number of domains
-    return(GetIssuesStudies(period, startdate, enddate, identities_db, ['domain', ''], False, 'domains'))
-
-def AggIssuesProjects (period, startdate, enddate, identities_db):
-    # Agg number of projects
-    return(GetIssuesStudies(period, startdate, enddate, identities_db, ['project', ''], False, 'projects'))
-
-def AggIssuesCountries (period, startdate, enddate, identities_db):
-    # Agg number of countries
-    return(GetIssuesStudies(period, startdate, enddate, identities_db, ['country', ''], False, 'countries'))
-
-def AggIssuesCompanies (period, startdate, enddate, identities_db):
-    # Agg number of companies
-    return(GetIssuesStudies(period, startdate, enddate, identities_db, ['company', ''], False, 'companies'))
-
-####
-# END DEPRECATED CODE only used in its-analysis.py
-####
-
-
 
 def GetDate (startdate, enddate, identities_db, type_analysis, type):
     # date of submmitted issues (type= max or min)
@@ -643,37 +544,6 @@ def GetEndDate (startdate, enddate, identities_db, type_analysis):
     #End date of submitted issues
     return(GetDate(startdate, enddate, identities_db, type_analysis, "max"))
 
-##----------------------
-## Auxiliary functions querying the database
-##----------------------
-
-def get_timespan():
-    """Get timespan found in the ITS database.
-    
-    Returns
-    -------
-    startdate : datetime.datetime
-        Time of first activity in tickets
-    enddate : datetime.datetime
-        Time of last activity in tickets
-
-    Notes
-    -----
-
-    Looks for entries both in issues and changes tables.
-
-    """
-
-    q = """SELECT
-          DATE(MIN(DATE)) as startdate,
-          DATE(MAX(date)) as enddate
-      FROM
-          (SELECT submitted_on AS date FROM issues
-           UNION ALL
-           SELECT changed_on AS date FROM changes) AS dates"""
-    data = ExecuteQuery(q)
-    # Returns [first time, last_time]
-    return (data['startdate'], data['enddate'])
 
 ###############
 # Others
@@ -684,196 +554,6 @@ def AggAllParticipants (startdate, enddate):
     q = "SELECT count(distinct(pup.upeople_id)) as allhistory_participants from people_upeople pup"
 
     return(ExecuteQuery(q))
-
-
-def TrackerURL ():
-    # URL of the analyzed tracker
-    q = "SELECT url, name as type FROM trackers t JOIN "+\
-        "supported_trackers s ON t.type = s.id limit 1"
-
-    return(ExecuteQuery(q))
-
-###############
-# Lists of repositories, companies, countries and other analysis
-###############
-
-def GetReposNameITS (startdate, enddate) :
-    # List the url of each of the repositories analyzed
-    # Those are order by the number of opened issues (dec order)
-    q = " SELECT t.url as name "+\
-               "   FROM issues i, "+\
-               "        trackers t "+\
-               "   WHERE i.tracker_id=t.id and "+\
-               "         i.submitted_on >= "+ startdate+ " and "+\
-               "         i.submitted_on < "+ enddate+\
-               "   GROUP BY t.url  "+\
-               "   ORDER BY count(distinct(i.id)) DESC "
-
-    data = ExecuteQuery(q)
-    return (data)
-
-def get_projects_name (startdate, enddate, identities_db, closed_condition) :
-    # Projects activity needs to include subprojects also
-    logging.info ("Getting projects list for ITS")
-
-    # debug
-    if ITS.debug:
-        return {"name":['eclipse']}
-
-    # Get all projects list
-    q = "SELECT p.id AS name FROM  %s.projects p" % (identities_db)
-    projects = ExecuteQuery(q)
-    data = []
-
-    # Loop all projects getting reviews
-    for project in projects['name']:
-        type_analysis = ['project', project]
-
-        period = None
-        filter_com = MetricFilters(period, startdate, enddate, type_analysis)
-        mclosed = ITS.get_metrics("closed", ITS)
-        mclosed.filters = filter_com
-        issues = mclosed.get_agg()
-
-        issues = issues['closed']
-        if (issues > 0):
-            data.append([issues,project])
-
-    # Order the list using reviews: https://wiki.python.org/moin/HowTo/Sorting
-    from operator import itemgetter
-    data_sort = sorted(data, key=itemgetter(0),reverse=True)
-    names = [name[1] for name in data_sort]
-
-    return({"name":names})
-
-def GetTablesDomainsITS (i_db, table='') :
-    tables = GetTablesOwnUniqueIdsITS(table)
-    tables += ','+i_db+'.upeople_domains upd'
-    return(tables)
-
-def GetFiltersDomainsITS (table='') :
-    filters = GetFiltersOwnUniqueIdsITS(table)
-    filters += " AND pup.upeople_id = upd.upeople_id"
-    return(filters)
-
-def GetDomainsNameITS (startdate, enddate, identities_db, closed_condition, filter) :
-    affiliations = ""
-    for aff in filter:
-        affiliations += " dom.name<>'"+aff+"' and "
-
-    tables = GetTablesDomainsITS(identities_db)
-    tables += ","+identities_db+".domains dom"
-
-    q = "SELECT dom.name "+\
-        "FROM "+ tables + " "+\
-        "WHERE " + GetFiltersDomainsITS() +" AND "+\
-        "       dom.id = upd.domain_id and "+\
-        "       "+ affiliations +" "+\
-        "       c.changed_on >= "+ startdate+ " AND "+\
-        "       c.changed_on < "+ enddate+ " AND "+\
-        "       "+ closed_condition+" "+\
-        "GROUP BY dom.name "+\
-        "ORDER BY COUNT(DISTINCT(c.issue_id)) DESC"
-    data = ExecuteQuery(q)
-    return (data)
-
-def GetCountriesNamesITS (startdate, enddate, identities_db, closed_condition) :
-    # List each of the countries analyzed
-    # Those are order by number of closed issues
-    q = "select cou.name "+\
-        "from issues i, "+\
-        "     changes ch, "+\
-        "     people_upeople pup, "+\
-        "     "+ identities_db+ ".upeople_countries upc, "+\
-        "     "+ identities_db+ ".countries cou "+\
-        "where i.id = ch.issue_id and "+\
-        "      ch.changed_by = pup.people_id and "+\
-        "      pup.upeople_id = upc.upeople_id and "+\
-        "      upc.country_id = cou.id and "+\
-        "      ch.changed_on >= "+ startdate+ " and "+\
-        "      ch.changed_on < "+ enddate+" and "+\
-        "      "+ closed_condition+ " "+\
-        "      group by cou.name  "+\
-        "      order by count(distinct(i.id)) desc"
-
-    data = ExecuteQuery(q)
-    return (data)
-
-def GetCompaniesNameITS (startdate, enddate, identities_db, closed_condition, filter) :
-    affiliations = ""
-    for aff in filter:
-        affiliations += " c.name<>'"+aff+"' and "
-
-    # list each of the companies analyzed
-    # those are order by number of closed issues
-    q = "select c.name "+\
-        "from issues i, "+\
-        "     changes ch, "+\
-        "     people_upeople pup, "+\
-        "     "+ identities_db+ ".upeople_companies upc, "+\
-        "     "+ identities_db+ ".companies c "+\
-        "where i.id = ch.issue_id and "+\
-        "      ch.changed_by = pup.people_id and "+\
-        "      pup.upeople_id = upc.upeople_id and "+\
-        "      upc.company_id = c.id and "+\
-        "      ch.changed_on >= "+ startdate+ " and "+\
-        "      ch.changed_on < "+ enddate+" and "+\
-        "      i.submitted_on >= upc.init and "+\
-        "      i.submitted_on < upc.end and "+\
-        "      "+ affiliations  +\
-               closed_condition +\
-        "      group by c.name  "+\
-        "      order by count(distinct(i.id)) desc"
-
-    data = ExecuteQuery(q)
-    return (data)
-
-def GetLastActivityITS (days, closed_condition):
-    # opened issues
-    days = str(days)
-    q = "select count(*) as opened_"+days+" "+\
-        "from issues "+\
-        "where submitted_on >= ( "+\
-        "      select (max(submitted_on) - INTERVAL "+days+" day) "+\
-        "      from issues)"
-
-    data1 = ExecuteQuery(q)
-
-    # closed issues
-    q = "select count(distinct(issue_id)) as closed_"+days+" "+\
-        "from changes "+\
-        "where  "+closed_condition+" "+\
-        "and changed_on >= ( "+\
-        "      select (max(changed_on) - INTERVAL "+days+" day) "+\
-        "      from changes)"
-
-    data2 = ExecuteQuery(q)
-
-    # closers
-    q = "SELECT count(distinct(pup.upeople_id)) as closers_"+days+" "+\
-         "FROM changes, people_upeople pup "+\
-         "WHERE pup.people_id = changes.changed_by and "+\
-         "changed_on >= ( "+\
-         "    select (max(changed_on) - INTERVAL "+days+" day) "+\
-         "     from changes) AND "+ closed_condition
-
-
-    data3 = ExecuteQuery(q)
-
-    # people_involved    
-    q = "SELECT count(distinct(pup.upeople_id)) as changers_"+days+" "+\
-         "FROM changes, people_upeople pup "+\
-         "WHERE pup.people_id = changes.changed_by and "+\
-         "changed_on >= ( "+\
-         "    select (max(changed_on) - INTERVAL "+days+" day) "+\
-         "     from changes)"
-
-    data4 = ExecuteQuery(q)
-
-    agg_data = dict(data1.items()+data2.items())
-    agg_data = dict(agg_data.items()+data3.items())
-
-    return (agg_data)
 
 
 def GetActiveChangersITS(days, enddate):
@@ -968,137 +648,11 @@ def GetTablesOwnUniqueIdsITS (table='') :
     if (table == "issues"): tables = 'issues i, people_upeople pup'
     return (tables)
 
-def GetTablesCompaniesITS (i_db, table='') :
-    tables = GetTablesOwnUniqueIdsITS(table)
-    tables += ','+i_db+'.upeople_companies upc'
-    return (tables)
-
 def GetFiltersOwnUniqueIdsITS (table='') :
     filters = 'pup.people_id = c.changed_by'
     if (table == "issues"): filters = 'pup.people_id = i.submitted_by'
     return (filters)
 
-
-def GetFiltersCompaniesITS (table='') :
-    filters = GetFiltersOwnUniqueIdsITS(table)
-    filters += " AND pup.upeople_id = upc.upeople_id"
-    if (table == 'issues') :
-        filters += " AND submitted_on >= upc.init AND submitted_on < upc.end"
-    else :
-         filters += " AND changed_on >= upc.init AND changed_on < upc.end"
-    return (filters)
-
-def GetCompanyTopClosers (company_name, startdate, enddate,
-        identities_db, filter, closed_condition, limit) :
-    affiliations = ""
-    for aff in filter:
-        affiliations += " AND up.identifier<>'"+aff+"' "
-
-    q = "SELECT up.id as id, up.identifier as closers, "+\
-        "       COUNT(DISTINCT(c.id)) as closed "+\
-        "FROM "+GetTablesCompaniesITS(identities_db)+", "+\
-        "     "+identities_db+".companies com, "+\
-        "     "+identities_db+".upeople up "+\
-        "WHERE "+GetFiltersCompaniesITS()+" AND " + closed_condition + " "+\
-        "      AND pup.upeople_id = up.id "+\
-        "      AND upc.company_id = com.id "+\
-        "      AND com.name = "+ company_name +" "+\
-        "      AND changed_on >= "+startdate+" AND changed_on < "+enddate+\
-            affiliations +\
-        " GROUP BY up.identifier ORDER BY closed DESC, closers LIMIT " + limit
-
-    data = ExecuteQuery(q)
-    return (data)
-
-def GetTopClosers (days, startdate, enddate,
-        identities_db, bots, closed_condition, limit) :
-
-    filter_bots = ''
-    for bot in bots:
-        filter_bots = filter_bots + " up.identifier<>'"+bot+"' and "
-
-    tables = GetTablesOwnUniqueIdsITS()
-    filters = GetFiltersOwnUniqueIdsITS ()
-
-    dtables = dfilters = ""
-    if (days > 0):
-        dtables = ", (SELECT MAX(changed_on) as last_date from changes) t "
-        dfilters = " AND DATEDIFF (last_date, changed_on) < %s " % (days)
-
-    q = "SELECT up.id as id, up.identifier as closers, "+\
-        "       count(distinct(c.id)) as closed "+\
-        "FROM  "+tables+\
-        ",     "+identities_db+".upeople up "+ dtables +\
-        "WHERE "+filter_bots + filters + " and "+\
-        "      c.changed_by = pup.people_id and "+\
-        "      pup.upeople_id = up.id and "+\
-        "      c.changed_on >= "+ startdate+ " and "+\
-        "      c.changed_on < "+ enddate+ " and " +\
-        "      "+closed_condition + " " + dfilters+ " "+\
-        "GROUP BY up.identifier "+\
-        "ORDER BY closed desc, closers "+\
-        "LIMIT "+ limit
-
-    data = ExecuteQuery(q)
-
-    if not isinstance(data['id'], list):
-        data = {item: [data[item]] for item in data}
-
-    return (data)
-
-
-def GetDomainTopClosers (domain_name, startdate, enddate,
-        identities_db, filter, closed_condition, limit) :
-    affiliations = ""
-    for aff in filter:
-        affiliations += " AND up.identifier<>'"+aff+"' "
-
-    q = "SELECT up.id as id, up.identifier as closers, "+\
-        "COUNT(DISTINCT(c.id)) as closed "+\
-        "FROM "+GetTablesDomainsITS(identities_db)+", "+\
-        "     "+identities_db+".domains dom, "+\
-        "     "+identities_db+".upeople up "+\
-        "WHERE "+ GetFiltersDomainsITS()+" AND "+closed_condition+" "+\
-        "      AND pup.upeople_id = up.id "+\
-        "      AND upd.domain_id = dom.id "+\
-        "      AND dom.name = "+domain_name+" "+\
-        "      AND changed_on >= "+startdate+" AND changed_on < " +enddate +\
-              affiliations+ " "+\
-        "GROUP BY up.identifier ORDER BY closed DESC, closers LIMIT " + limit
-
-    data = ExecuteQuery(q)
-    return (data)
-
-
-def GetTopOpeners (days, startdate, enddate,
-        identities_db, bots, closed_condition, limit) :
-
-    filter_bots = ''
-    for bot in bots:
-        filter_bots = filter_bots + " up.identifier<>'"+bot+"' and "
-
-    tables = GetTablesOwnUniqueIdsITS("issues")
-    filters = GetFiltersOwnUniqueIdsITS ("issues")
-
-
-    dtables = dfilters = ""
-    if (days > 0):
-        dtables = ", (SELECT MAX(submitted_on) as last_date from issues) t "
-        dfilters = " AND DATEDIFF (last_date, submitted_on) < %s " % (days)
-
-    q = "SELECT up.id as id, up.identifier as openers, "+\
-        "    count(distinct(i.id)) as opened "+\
-        "FROM " +tables +\
-        " ,   "+identities_db+".upeople up "+ dtables + \
-        "WHERE "+filter_bots + filters +" and "+\
-        "    pup.upeople_id = up.id and "+\
-        "    i.submitted_on >= "+ startdate+ " and "+\
-        "    i.submitted_on < "+ enddate + dfilters +\
-        "    GROUP BY up.identifier "+\
-        "    ORDER BY opened desc, openers "+\
-        "    LIMIT " + limit
-    data = ExecuteQuery(q)
-    return (data)
 
 #################
 # People information, to be refactored
@@ -1179,7 +733,8 @@ def GetClosedSummaryCompanies (period, startdate, enddate, identities_db, closed
     count = 1
     first_companies = {}
 
-    companies = GetCompaniesNameITS(startdate, enddate, identities_db, closed_condition, ["-Bot", "-Individual", "-Unknown"])
+    metric = DataSource.get_metrics("companies", ITS)
+    companies = metric.get_list()
     companies = companies['name']
 
     for company in companies:

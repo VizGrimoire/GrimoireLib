@@ -46,7 +46,7 @@ class Reviews(Metrics):
     desc = "Reviews done in the Wiki (editions)"
     data_source = Mediawiki
 
-    def __get_sql__(self, evolutionary):
+    def _get_sql(self, evolutionary):
         fields = " count(distinct(rev_id)) as reviews "
         tables = " wiki_pages_revs " + self.db.GetSQLReportFrom(self.filters.type_analysis)
         filters = self.db.GetSQLReportWhere(self.filters.type_analysis)
@@ -64,7 +64,7 @@ class Pages(Metrics):
     desc = "Pages created in the Wiki"
     data_source = Mediawiki
 
-    def __get_sql__ (self, evolutionary):
+    def _get_sql (self, evolutionary):
         fields = "COUNT(page_id) as pages"
         tables = " ( "+\
                 "SELECT wiki_pages.page_id, MIN(date) as date FROM wiki_pages, wiki_pages_revs "+\
@@ -88,7 +88,37 @@ class Authors(Metrics):
     desc = "People editing the Wiki"
     data_source = Mediawiki
 
-    def __get_sql__ (self, evolutionary):
+    def _get_top_global (self, days = 0, metric_filters = None):
+        if metric_filters == None:
+            metric_filters = self.filters
+
+        startdate = metric_filters.startdate
+        enddate = metric_filters.enddate
+        limit = metric_filters.npeople
+        filter_bots = self.get_bots_filter_sql(metric_filters)
+        if filter_bots != "": filter_bots += " AND "
+        date_limit = ""
+
+        if (days != 0 ) :
+            self.db.ExecuteQuery("SELECT @maxdate:=max(date) from wiki_pages_revs limit 1")
+            date_limit = " AND DATEDIFF(@maxdate, date)<"+str(days)
+
+        q = "SELECT u.id as id, u.identifier as authors, "+\
+            "    count(wiki_pages_revs.id) as reviews "+\
+            "FROM wiki_pages_revs, people_upeople pup, "+self.db.identities_db+".upeople u "+\
+            "WHERE "+ filter_bots+ " "+\
+            "    wiki_pages_revs.user = pup.people_id and "+\
+            "    pup.upeople_id = u.id and "+\
+            "    date >= "+ startdate+ " and "+\
+            "    date  < "+ enddate+ " "+ date_limit+ " "+\
+            "    GROUP BY authors "+\
+            "    ORDER BY reviews desc, authors "+\
+            "    LIMIT "+ str(limit)
+
+        data = self.db.ExecuteQuery(q)
+        return (data)
+
+    def _get_sql (self, evolutionary):
         fields = " count(distinct(user)) as authors "
         tables = " wiki_pages_revs " + self.db.GetSQLReportFrom(self.filters.type_analysis)
         filters = self.db.GetSQLReportWhere(self.filters.type_analysis)

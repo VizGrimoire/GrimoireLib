@@ -63,6 +63,7 @@ def get_top_report(startdate, enddate, identities_db, npeople):
 
 def create_top_report(startdate, enddate, destdir, npeople, identities_db):
     for ds in Report.get_data_sources():
+        logging.info("Creating TOP for " + ds.get_name())
         Report.connect_ds(ds)
         ds.create_top_report (startdate, enddate, destdir, npeople, identities_db)
 
@@ -72,8 +73,7 @@ def create_reports_filters(period, startdate, enddate, destdir, npeople, identit
         logging.info("Creating filter reports for " + ds.get_name())
         for filter_ in Report.get_filters():
             logging.info("-> " + filter_.get_name())
-            bots = ds.get_filter_bots(filter_)
-            ds.create_filter_report(filter_, period, startdate, enddate, destdir, npeople, identities_db, bots)
+            ds.create_filter_report(filter_, period, startdate, enddate, destdir, npeople, identities_db)
 
 def create_report_people(startdate, enddate, destdir, npeople, identities_db):
     for ds in Report.get_data_sources():

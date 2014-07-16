@@ -344,55 +344,6 @@ class SCMQuery(DSQuery):
 
         return self.ExecuteQuery(q_people_num_evol)
 
-    def get_project_top_authors (self, project, startdate, enddate, npeople):
-        projects_from = self.GetSQLProjectFrom()
-
-        # Remove first and
-        projects_where = " WHERE  " + self.GetSQLProjectWhere(project)[3:]
-
-        fields =  "SELECT COUNT(DISTINCT(s.id)) as commits, u.id, u.identifier as authors "
-        fields += "FROM scmlog s, people_upeople pup, upeople u "
-        q = fields + projects_from + projects_where
-        q += " AND pup.people_id = s.author_id AND u.id = pup.upeople_id "
-        q += " GROUP by u.id ORDER BY commits DESC, u.id"
-
-        res = self.ExecuteQuery(q)
-
-        return res
-
-    def get_project_top_companies (self, project, startdate, enddate, npeople):
-
-        projects_from = self.GetSQLProjectFrom()
-        # Remove first and
-        projects_where = " WHERE  " + self.GetSQLProjectWhere(project)[3:]
-
-        fields =  "SELECT COUNT(DISTINCT(s.id)) as company_commits, c.name as companies "
-        fields += "FROM scmlog s, people_upeople pup, upeople u, upeople_companies upc, companies c "
-        q = fields + projects_from + projects_where
-        q += " AND pup.people_id = s.author_id AND u.id = pup.upeople_id "
-        q += " AND u.id = upc.upeople_id AND c.id = upc.company_id "
-        q += " GROUP by c.name ORDER BY company_commits DESC, c.name"
-
-        res = self.ExecuteQuery(q)
-
-        return res
-
-    def get_repository_top_authors (self, repo, startdate, enddate, npeople):
-        repo = "'"+repo+"'"
-        repos_from = self.GetSQLRepositoriesFrom()
-        # Remove first and
-        repos_where = " WHERE  " + self.GetSQLRepositoriesWhere(repo)[4:]
-
-        fields =  "SELECT COUNT(DISTINCT(s.id)) as commits, u.id, u.identifier as authors "
-        fields += "FROM scmlog s, people_upeople pup, upeople u "
-        q = fields + repos_from + repos_where
-        q += " AND pup.people_id = s.author_id AND u.id = pup.upeople_id "
-        q += " GROUP by u.id ORDER BY commits DESC, r.name"
-
-        res = self.ExecuteQuery(q)
-
-        return res
-
 class ITSQuery(DSQuery):
     """ Specific query builders for issue tracking system data source """
     def GetSQLRepositoriesFrom (self):
@@ -528,6 +479,42 @@ class ITSQuery(DSQuery):
 
         return (q)
 
+    # TODO: use this queries en GetSQLReportWhere and From
+    def GetTablesOwnUniqueIds (self, table='') :
+        tables = 'changes c, people_upeople pup'
+        if (table == "issues"): tables = 'issues i, people_upeople pup'
+        return (tables)
+
+    def GetFiltersOwnUniqueIds (self, table='') :
+        filters = 'pup.people_id = c.changed_by'
+        if (table == "issues"): filters = 'pup.people_id = i.submitted_by'
+        return (filters)
+
+    # TODO: Companies using unique ids
+    def GetTablesCompanies (self, table='') :
+        tables = self.GetTablesOwnUniqueIds(table)
+        tables += ','+self.identities_db+'.upeople_companies upc'
+        return (tables)
+
+    def GetFiltersCompanies (self, table='') :
+        filters = self.GetFiltersOwnUniqueIds(table)
+        filters += " AND pup.upeople_id = upc.upeople_id"
+        if (table == 'issues') :
+            filters += " AND submitted_on >= upc.init AND submitted_on < upc.end"
+        else :
+             filters += " AND changed_on >= upc.init AND changed_on < upc.end"
+        return (filters)
+
+    def GetTablesDomains (self, table='') :
+        tables = self.GetTablesOwnUniqueIds(table)
+        tables += ','+self.identities_db+'.upeople_domains upd'
+        return(tables)
+
+    def GetFiltersDomains (self, table='') :
+        filters = self.GetFiltersOwnUniqueIds(table)
+        filters += " AND pup.upeople_id = upd.upeople_id"
+        return(filters)
+
 class MLSQuery(DSQuery):
     """ Specific query builders for mailing lists data source """
     def GetSQLRepositoriesFrom (self):
@@ -607,10 +594,13 @@ class MLSQuery(DSQuery):
         return (repos  + " and ml.mailing_list_url = m.mailing_list_url")
 
     # Using senders only here!
-    def GetFiltersOwnUniqueIds  (self) :
+    def GetFiltersOwnUniqueIds  (self):
         return ('m.message_ID = mp.message_id AND '+\
                 ' mp.email_address = pup.people_id AND '+\
                 ' mp.type_of_recipient=\'From\'')
+    def GetTablesOwnUniqueIds (self):
+        return ('messages m, messages_people mp, people_upeople pup')
+
 
     ##########
     #Generic functions to obtain FROM and WHERE clauses per type of report
@@ -677,6 +667,44 @@ class MLSQuery(DSQuery):
 
         return q
 
+    def GetTablesCountries (self) :
+        return (self.GetTablesOwnUniqueIds()+', '+\
+                      self.identities_db+'.countries c, '+\
+                      self.identities_db+'.upeople_countries upc')
+
+
+    def GetFiltersCountries (self) :
+        return (self.GetFiltersOwnUniqueIds()+' AND '+\
+                  "pup.upeople_id = upc.upeople_id AND "+\
+                  'upc.country_id = c.id')
+
+
+    def GetTablesCompanies (self) :
+        return (self.GetTablesOwnUniqueIds()+', '+\
+                      self.identities_db+'.companies c, '+\
+                      self.identities_db+'.upeople_companies upc')
+
+
+    def GetFiltersCompanies (self) :
+        return (self.GetFiltersOwnUniqueIds()+' AND '+\
+                      "pup.upeople_id = upc.upeople_id AND "+\
+                      "upc.company_id = c.id AND "+\
+                      "m.first_date >= upc.init AND "+\
+                      'm.first_date < upc.end')
+
+
+    def GetTablesDomains (self) :
+        return (self.GetTablesOwnUniqueIds()+', '+\
+                      self.identities_db+'.domains d, '+\
+                      self.identities_db+'.upeople_domains upd')
+
+
+    def GetFiltersDomains (self) :
+        return (self.GetFiltersOwnUniqueIds()+' AND '+\
+                      "pup.upeople_id = upd.upeople_id AND "+\
+                      "upd.domain_id = d.id AND "+\
+                      "m.first_date >= upd.init AND "+\
+                      'm.first_date < upd.end')
 
 class SCRQuery(DSQuery):
     """ Specific query builders for source code review source"""
@@ -1112,7 +1140,7 @@ class IRCQuery(DSQuery):
 
     def GetSQLRepositoriesWhere(self, repository):
         # filters necessaries for repositories
-        return (" i.channel_id = c.id and c.name='" + repository + "'")
+        return (" i.channel_id = c.id and c.name=" + repository)
 
     def GetSQLCompaniesFrom(self):
         # tables necessary to companies analysis
@@ -1127,7 +1155,7 @@ class IRCQuery(DSQuery):
                "upc.company_id = c.id and "+\
                "i.submitted_on >= upc.init and "+\
                "i.submitted_on < upc.end and "+\
-               "c.name = '" + name + "'")
+               "c.name = " + name)
 
     def GetSQLCountriesFrom(self):
         # tables necessary to countries analysis
@@ -1140,7 +1168,7 @@ class IRCQuery(DSQuery):
         return(" i.nick = pup.people_id and "+\
                "pup.upeople_id = upc.upeople_id and "+\
                "upc.country_id = c.id and "+\
-               "c.name = '" + name + "'")
+               "c.name = " + name)
 
     def GetSQLDomainsFrom(self):
         # tables necessary to domains analysis
@@ -1153,7 +1181,7 @@ class IRCQuery(DSQuery):
         return(" i.nick = pup.people_id and "+\
                "pup.upeople_id = upd.upeople_id and "+\
                "upd.domain_id = d.id and "+\
-               "d.name = '" + name + "'")
+               "d.name = " + name)
 
     def GetTablesOwnUniqueIds (self) :
         tables = 'irclog, people_upeople pup'
@@ -1288,7 +1316,7 @@ class QAForumsQuery(DSQuery):
         #      data source in VizGrimoireJS-lib
         if report == "repository":
             where = shorttable + ".question_identifier = qt.question_identifier and " +\
-                    " qt.tag_id = t.id and t.tag = '" + value + "'"
+                    " qt.tag_id = t.id and t.tag = " + value
 
         return where
 
@@ -1431,6 +1459,57 @@ class QAForumsQuery(DSQuery):
 
         return q
 
+    def __get_date_field(self, table_name):
+        # the tables of the Sibyl tool are not coherent among them
+        #so we have different fields for the date of the different posts
+        if (table_name == "questions"):
+            return "added_at"
+        elif (table_name == "answers"):
+            return "submitted_on"
+        elif (table_name == "comments"):
+            return "submitted_on"
+        # FIXME add exceptions here
+
+    def __get_author_field(self, table_name):
+        # the tables of the Sibyl tool are not coherent among them
+        #so we have different fields for the author ids of the different posts
+        if (table_name == "questions"):
+            return "author_identifier"
+        elif (table_name == "answers"):
+            return "user_identifier"
+        elif (table_name == "comments"):
+            return "user_identifier"
+        # FIXME add exceptions here
+
+
+    def get_top_senders(self, days, startdate, enddate, limit, type_post):
+        # FIXME: neither using unique identities nor filtering bots
+        from QAForums import QAForums
+        table_name = type_post
+        date_field = self.__get_date_field(table_name)
+        author_field = self.__get_author_field(table_name)
+        date_limit = ""
+        bots = QAForums.get_bots()
+
+        filter_bots = ''
+        for bot in bots:
+            filter_bots = filter_bots + " p.username<>'"+bot+"' and "
+
+        if (days != 0):
+            sql = "SELECT @maxdate:=max(%s) from %s limit 1" % (date_field, table_name)
+            res = self.ExecuteQuery(sql)
+            date_limit = " AND DATEDIFF(@maxdate, %s) < %s" % (date_field, str(days))
+            #end if
+
+        select = "SELECT %s AS id, p.username AS senders, COUNT(%s.id) AS sent" % \
+          (author_field, table_name)
+        fromtable = " FROM %s, people p" % (table_name)
+        filters = " WHERE %s %s = p.identifier AND %s >= %s AND %s < %s " % \
+          (filter_bots, author_field, date_field, startdate, date_field, enddate)
+
+        tail = " GROUP BY senders ORDER BY sent DESC, senders LIMIT %s" % (limit)
+        q = select + fromtable + filters + date_limit + tail
+        return(self.ExecuteQuery(q))
 
 class DownloadsDSQuery(DSQuery):
     """ Specific query builders for downloads """

@@ -125,7 +125,7 @@ class DataSource(object):
         raise NotImplementedError
 
     @staticmethod
-    def get_filter_items(filter_, period, startdate, enddate, identities_db, bots = None):
+    def get_filter_items(filter_, period, startdate, enddate, identities_db):
         """Get the items in the data source available for the filter"""
         raise NotImplementedError
 
@@ -133,6 +133,10 @@ class DataSource(object):
     def get_filter_bots(filter_):
         from report import Report
         bots = []
+
+        # If not using Report (automator) bots are not supported.
+        if Report.get_config() == None:
+            return bots
 
         if filter_.get_name_plural()+'_out' in Report.get_config()['r']:
             fbots = Report.get_config()['r'][filter_.get_name_plural()+'_out']
@@ -147,7 +151,7 @@ class DataSource(object):
         raise NotImplementedError
 
     @staticmethod
-    def create_filter_report(filter_, period, startdate, enddate, destdir, npeople, identities_db, bots):
+    def create_filter_report(filter_, period, startdate, enddate, destdir, npeople, identities_db):
         """Create all files related to all filters in all data sources"""
         raise NotImplementedError
 
@@ -281,7 +285,8 @@ class DataSource(object):
                     res = obj.get_ts(ds)
                 else:
                     res = obj.get_agg(ds)
-                data = dict(res.items() + data.items())
+                if res is not None:
+                    data = dict(res.items() + data.items())
             except TypeError:
                 # logging.info(study.id + " does no support standard API. Not used.")
                 pass
@@ -308,7 +313,7 @@ class DataSource(object):
 
         type_analysis = None
         if filter_ is not None:
-            type_analysis = [filter_.get_name(), filter_.get_item()]
+            type_analysis = filter_.get_type_analysis()
 
         if DS.get_name()+"_startdate" in Report.get_config()['r']:
             startdate = Report.get_config()['r'][DS.get_name()+"_startdate"]
@@ -327,12 +332,14 @@ class DataSource(object):
 
         for item in all_metrics:
             if item.id not in metrics_on: continue
+            mfilter_orig = item.filters
             item.filters = mfilter
-
             if evol: mvalue = item.get_ts()
             else:    mvalue = item.get_agg()
 
             data = dict(data.items() + mvalue.items())
+
+            item.filters = mfilter_orig
 
         if not evol:
             init_date = DS.get_date_init(startdate, enddate, identities_db, type_analysis)
@@ -350,7 +357,10 @@ class DataSource(object):
             for i in [7,30,365]:
                 for item in all_metrics:
                     if item.id not in metrics_trends: continue
+                    mfilter_orig = item.filters
+                    item.filters = mfilter
                     period_data = item.get_agg_diff_days(enddate, i)
+                    item.filters = mfilter_orig
                     data = dict(data.items() + period_data.items())
 
         return data

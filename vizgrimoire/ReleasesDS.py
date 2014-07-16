@@ -84,41 +84,23 @@ class ReleasesDS(DataSource):
         createJSON (data, os.path.join(destdir, filename))
 
     @staticmethod
-    def get_top_authors (days_period, startdate, enddate, identities_db, bots, npeople):
-        # Unique identities not supported yet
-
-        filter_bots = ''
-        for bot in bots:
-            filter_bots = filter_bots + " username<>'"+bot+"' and "
-        # filter_bots = ''
-
-        # fields = "COUNT(r.id) as releases, username, u.id"
-        fields = "COUNT(r.id) as releases, pup.upeople_id AS id, username"
-        tables = "users u, releases r, projects p, people_upeople pup"
-        filters = filter_bots + "pup.people_id = u.id AND r.author_id = u.id AND r.project_id = p.id"
-        if (days_period > 0):
-            tables += ", (SELECT MAX(r.created_on) as last_date from releases r) t"
-            filters += " AND DATEDIFF (last_date, r.created_on) < %s" % (days_period)
-        filters += " GROUP by username"
-        filters += " ORDER BY releases DESC, r.name"
-        filters += " LIMIT %s" % (npeople)
-
-        q = "SELECT %s FROM %s WHERE %s" % (fields, tables, filters)
-        data = ExecuteQuery(q)
-#        for id in data:
-#            if not isinstance(data[id], (list)): data[id] = [data[id]]
-        return(data)
-
-    @staticmethod
     def get_top_data (startdate, enddate, identities_db, filter_, npeople):
-        bots = ReleasesDS.get_bots()
+        top = {}
+        mauthors = DataSource.get_metrics("authors", ReleasesDS)
+        period = None
+        type_analysis = None
+        if filter_ is not None:
+            type_analysis = filter_.get_type_analysis()
+        mfilter = MetricFilters(period, startdate, enddate, type_analysis, npeople)
 
-        top_authors = {}
-        top_authors['authors.'] = ReleasesDS.get_top_authors(0, startdate, enddate, identities_db, bots, npeople)
-        top_authors['authors.last month']= ReleasesDS.get_top_authors(31, startdate, enddate, identities_db, bots, npeople)
-        top_authors['authors.last year']= ReleasesDS.get_top_authors(365, startdate, enddate, identities_db, bots, npeople)
+        if filter_ is None:
+            top['authors.'] = mauthors.get_list(mfilter, 0)
+            top['authors.last month']= mauthors.get_list(mfilter, 31)
+            top['authors.last year']= mauthors.get_list(mfilter, 365)
+        else:
+            logging.info("ReleasesDS does not support yet top for filters.")
 
-        return(top_authors)
+        return(top)
 
     @staticmethod
     def create_top_report (startdate, enddate, destdir, npeople, i_db):
@@ -127,7 +109,7 @@ class ReleasesDS(DataSource):
         createJSON (data, top_file)
 
     @staticmethod
-    def get_filter_items(filter_, startdate, enddate, identities_db, bots):
+    def get_filter_items(filter_, startdate, enddate, identities_db):
         items = None
         filter_name = filter_.get_name()
 
@@ -135,8 +117,8 @@ class ReleasesDS(DataSource):
         return items
 
     @staticmethod
-    def create_filter_report(filter_, period, startdate, enddate, destdir, npeople, identities_db, bots):
-        items = ReleasesDS.get_filter_items(filter_, startdate, enddate, identities_db, bots)
+    def create_filter_report(filter_, period, startdate, enddate, destdir, npeople, identities_db):
+        items = ReleasesDS.get_filter_items(filter_, startdate, enddate, identities_db)
         if (items == None): return
 
     @staticmethod
