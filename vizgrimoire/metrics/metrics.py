@@ -117,15 +117,15 @@ class Metrics(object):
             if metric_filters.type_analysis[0] not in self._get_top_supported_filters():
                  return
             if metric_filters.type_analysis[0] == "repository":
-                alist = self._get_top_repository(metric_filters)
+                alist = self._get_top_repository(metric_filters, days)
             if metric_filters.type_analysis[0] == "company":
-                alist = self._get_top_company(metric_filters)
+                alist = self._get_top_company(metric_filters, days)
             if metric_filters.type_analysis[0] == "country":
-                alist = self._get_top_country(metric_filters)
+                alist = self._get_top_country(metric_filters, days)
             if metric_filters.type_analysis[0] == "domain":
-                alist = self._get_top_domain(metric_filters)
+                alist = self._get_top_domain(metric_filters, days)
             if metric_filters.type_analysis[0] == "project":
-                alist = self._get_top_project(metric_filters)
+                alist = self._get_top_project(metric_filters, days)
         else:
             alist = self._get_top_global(days, metric_filters)
         return alist

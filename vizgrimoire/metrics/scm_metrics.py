@@ -110,7 +110,7 @@ class Authors(Metrics):
         return q
 
 
-    def _get_top_repository (self, metric_filters = None):
+    def _get_top_repository (self, metric_filters = None, days = None):
         if metric_filters == None:
             metric_filters = self.filters
         startdate = metric_filters.startdate
@@ -137,7 +137,7 @@ class Authors(Metrics):
 
         return res
 
-    def _get_top_company (self, metric_filters = None):
+    def _get_top_company (self, metric_filters = None, days = None):
         if metric_filters == None:
             metric_filters = self.filters
         startdate = metric_filters.startdate
@@ -164,7 +164,7 @@ class Authors(Metrics):
         data = self.db.ExecuteQuery(q)
         return (data)
 
-    def _get_top_project(self, metric_filters = None):
+    def _get_top_project(self, metric_filters = None, days = None):
         if metric_filters == None:
             metric_filters = self.filters
         startdate = metric_filters.startdate
@@ -688,7 +688,7 @@ class Companies(Metrics):
                                tables, filters, evol)
         return q
 
-    def _get_top_project(self, fbots = None):
+    def _get_top_project(self, fbots = None, days = None):
         if fbots is not None and fbots != '': fbots += " AND "
 
         startdate = self.filters.startdate

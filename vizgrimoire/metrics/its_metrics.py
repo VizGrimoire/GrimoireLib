@@ -176,7 +176,7 @@ class Closers(Metrics):
     data_source = ITS
     envision = {"gtype" : "whiskers"}
 
-    def _get_top_company (self, metric_filters) :
+    def _get_top_company (self, metric_filters, days = None) :
         startdate = metric_filters.startdate
         enddate = metric_filters.enddate
         company_name = metric_filters.type_analysis[1]
@@ -202,7 +202,7 @@ class Closers(Metrics):
         data = self.db.ExecuteQuery(q)
         return (data)
 
-    def _get_top_domain (self, metric_filters):
+    def _get_top_domain (self, metric_filters, days = None):
         startdate = metric_filters.startdate
         enddate = metric_filters.enddate
         domain_name = metric_filters.type_analysis[1]
@@ -227,7 +227,7 @@ class Closers(Metrics):
         data = self.db.ExecuteQuery(q)
         return (data)
 
-    def _get_top_repository (self, metric_filters):
+    def _get_top_repository (self, metric_filters, days = None):
         startdate = metric_filters.startdate
         enddate = metric_filters.enddate
         repo_name = metric_filters.type_analysis[1]
@@ -303,11 +303,11 @@ class Closers(Metrics):
 
         if metric_filters.type_analysis and metric_filters.type_analysis is not None:
             if metric_filters.type_analysis[0] == "repository":
-                alist = self._get_top_repository(metric_filters)
+                alist = self._get_top_repository(metric_filters, days)
             if metric_filters.type_analysis[0] == "company":
-                alist = self._get_top_company(metric_filters)
+                alist = self._get_top_company(metric_filters, days)
             if metric_filters.type_analysis[0] == "domain":
-                alist = self._get_top_domain(metric_filters)
+                alist = self._get_top_domain(metric_filters, days)
         else:
             alist = self._get_top(days)
 

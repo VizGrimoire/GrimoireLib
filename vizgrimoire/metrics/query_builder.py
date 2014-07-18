@@ -1086,7 +1086,7 @@ class SCRQuery(DSQuery):
         tables = self.GetTablesOwnUniqueIds('issues') + ", people"
         filters = filter_bots
         filters += self.GetFiltersOwnUniqueIds('issues')+ " and people.id = pup.people_id"
-        filters += " GROUP BY id ORDER BY total desc"
+        filters += " GROUP BY id ORDER BY total desc, name"
         q = self.GetSQLGlobal('submitted_on', fields, tables, filters, startdate, enddate)
         return(self.ExecuteQuery(q))
 

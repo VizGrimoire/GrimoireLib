@@ -64,7 +64,7 @@ class EmailsSenders(Metrics):
     desc = "People sending emails"
     data_source = MLS
 
-    def _get_top_repository (self, metric_filters):
+    def _get_top_repository (self, metric_filters, days = None):
         startdate = metric_filters.startdate
         enddate = metric_filters.enddate
         repo = metric_filters.type_analysis[1]
@@ -86,7 +86,7 @@ class EmailsSenders(Metrics):
         data = self.db.ExecuteQuery(q)
         return (data)
 
-    def _get_top_country (self, metric_filters):
+    def _get_top_country (self, metric_filters, days = None):
         startdate = metric_filters.startdate
         enddate = metric_filters.enddate
         country_name = metric_filters.type_analysis[1]
@@ -102,11 +102,11 @@ class EmailsSenders(Metrics):
             "  m.first_date >= "+startdate+" AND "+\
             "  m.first_date < "+enddate+\
             " GROUP BY up.identifier "+\
-            " ORDER BY COUNT(DISTINCT(m.message_ID)) DESC LIMIT " + str(limit)
+            " ORDER BY COUNT(DISTINCT(m.message_ID)) DESC, senders LIMIT " + str(limit)
         data = self.db.ExecuteQuery(q)
         return (data)
 
-    def _get_top_company (self, metric_filters):
+    def _get_top_company (self, metric_filters, days = None):
         startdate = metric_filters.startdate
         enddate = metric_filters.enddate
         company_name = metric_filters.type_analysis[1]
@@ -126,7 +126,7 @@ class EmailsSenders(Metrics):
         data = self.db.ExecuteQuery(q)
         return (data)
 
-    def _get_top_domain (self, metric_filters):
+    def _get_top_domain (self, metric_filters, days = None):
         startdate = metric_filters.startdate
         enddate = metric_filters.enddate
         domain_name = metric_filters.type_analysis[1]
