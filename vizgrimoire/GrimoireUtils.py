@@ -546,3 +546,8 @@ def medianAndAvgByPeriod(period, dates, values):
             result['median'].append(get_median(period_values))
             result['avg'].append(get_avg(period_values))                        # Accumulated values
     return result
+
+def check_array_values(data):
+    for item in data:
+        if not isinstance(data[item], list): data[item] = [data[item]]
+    return data
