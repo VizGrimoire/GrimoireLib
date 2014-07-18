@@ -123,9 +123,15 @@ class Authors(Metrics):
         # Remove first and
         repos_where = " WHERE  " + self.db.GetSQLRepositoriesWhere(repo)[4:]
 
+        dtables = dfilters = ""
+        if (days > 0):
+            dtables = ", (SELECT MAX(date) as last_date from scmlog) dt"
+            dfilters = " AND DATEDIFF (last_date, date) < %s " % (days)
+
         fields =  "SELECT COUNT(DISTINCT(s.id)) as commits, u.id, u.identifier as authors "
-        fields += "FROM actions a, scmlog s, people_upeople pup, upeople u "
+        fields += "FROM actions a, scmlog s, people_upeople pup, upeople u " + dtables
         q = fields + repos_from + repos_where
+        q += dfilters
         if filter_bots != "": q += " AND "+ filter_bots
         q += " AND pup.people_id = s.author_id AND u.id = pup.upeople_id "
         q += " and s.id = a.commit_id "

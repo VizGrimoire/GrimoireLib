@@ -72,14 +72,19 @@ class EmailsSenders(Metrics):
         filter_bots = self.get_bots_filter_sql(metric_filters)
         rfield = MLS.get_repo_field()
 
+        dtables = dfilters = ""
+        if (days > 0):
+            dtables = ", (SELECT MAX(first_date) as last_date from messages) t"
+            dfilters = " AND DATEDIFF (last_date, first_date) < %s " % (days)
+
         q = "SELECT up.id as id, up.identifier as senders, "+\
                 " COUNT(m.message_id) as sent "+\
-                " FROM "+ self.db.GetTablesOwnUniqueIds()+ ","+self.db.identities_db+".upeople up "+\
+                " FROM "+ self.db.GetTablesOwnUniqueIds()+ ","+self.db.identities_db+".upeople up "+ dtables + \
                 " WHERE "+ self.db.GetFiltersOwnUniqueIds()+ " AND "+\
                 "  pup.upeople_id = up.id AND "+\
                 "  m.first_date >= "+startdate+" AND "+\
                 "  m.first_date < "+enddate+" AND "+\
-                "  m."+rfield+"="+ repo +\
+                "  m."+rfield+"="+ repo + " " + dfilters + \
                 " GROUP BY up.identifier "+\
                 " ORDER BY sent desc, senders "+\
                 " LIMIT " + str(limit)

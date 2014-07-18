@@ -236,10 +236,15 @@ class Closers(Metrics):
         closed_condition =  ITS._get_closed_condition()
         if filter_bots != '': filter_bots = " AND " + filter_bots
 
+        dtables = dfilters = ""
+        if (days > 0):
+            dtables = ", (SELECT MAX(changed_on) as last_date from changes) t "
+            dfilters = " AND DATEDIFF (last_date, changed_on) < %s " % (days)
+
         q = "SELECT u.id as id, u.identifier as closers, "+\
             "COUNT(DISTINCT(i.id)) as closed "+\
             "FROM issues i, changes c, trackers t, people_upeople pup, " +\
-            "     "+self.db.identities_db+".upeople u "+\
+            "     "+self.db.identities_db+".upeople u "+ dtables + \
             "WHERE "+closed_condition+" "+\
             "      AND pup.upeople_id = u.id "+\
             "      AND c.changed_by = pup.people_id "+\
@@ -247,9 +252,8 @@ class Closers(Metrics):
             "      AND i.tracker_id = t.id "+\
             "      AND t.url = "+repo_name+" "+\
             "      AND changed_on >= "+startdate+" AND changed_on < " +enddate +\
-            "      " + filter_bots +\
+            "      " + filter_bots + " " + dfilters + \
             " GROUP BY u.identifier ORDER BY closed DESC, closers LIMIT " + str(limit)
-
         data = self.db.ExecuteQuery(q)
         return (data)
 

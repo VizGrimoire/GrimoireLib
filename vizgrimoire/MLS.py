@@ -147,9 +147,10 @@ class MLS(DataSource):
         if filter_ is not None:
             type_analysis = filter_.get_type_analysis()
         mfilter = MetricFilters(period, startdate, enddate, type_analysis, npeople)
+        top = {}
 
         if filter_ is None:
-            top = {}
+
             top['senders.'] = msenders.get_list(mfilter, 0)
             top['senders.last month'] = msenders.get_list(mfilter, 31)
             top['senders.last year'] = msenders.get_list(mfilter, 365)
@@ -167,7 +168,12 @@ class MLS(DataSource):
             item = filter_.get_item()
 
             if filter_name in ["company","domain","repository","domain","country"]:
-                top = msenders.get_list(mfilter)
+                if filter_name == "repository":
+                    top['senders.'] = msenders.get_list(mfilter, 0)
+                    top['senders.last month'] = msenders.get_list(mfilter, 31)
+                    top['senders.last year'] = msenders.get_list(mfilter, 365)
+                else:
+                    top = msenders.get_list(mfilter)
             else:
                 top = None
 

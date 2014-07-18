@@ -155,7 +155,13 @@ class ITS(DataSource):
         else:
             filter_name = filter_.get_name()
             if filter_name in ["company","domain","repository"]:
-                top = mclosers.get_list(mfilter)
+                if filter_name == "repository":
+                    top = {}
+                    top['closers.'] =  mclosers.get_list(mfilter, 0)
+                    top['closers.last month']= mclosers.get_list(mfilter, 31)
+                    top['closers.last year']= mclosers.get_list(mfilter, 365)
+                else:
+                    top = mclosers.get_list(mfilter)
             else:
                 top = None
 
