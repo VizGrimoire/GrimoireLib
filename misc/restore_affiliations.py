@@ -103,7 +103,8 @@ def get_upeople_id(connector, dev):
 
    upeople_id = -1
 
-   query = "select distinct(upeople_id) from identities where identity like '%"+dev+"%';"
+   query = u"select distinct(upeople_id) from identities where identity like '%%%(dev)s%%'"
+   query = query % {'dev': dev.decode('UTF-8')}
    results = execute_query(connector, query)
    if len(results) > 0:
       upeople_id = int(results[0][0])
@@ -140,7 +141,7 @@ def main(database, affs_file):
    for developer in people_data:
       data = developer.split(";")
       originaldev = data[0]
-      dev = originaldev.replace("'", "")
+      dev = originaldev.replace("'", "''")
       company = data[1]
       init = data[2]
       end = data[3]
