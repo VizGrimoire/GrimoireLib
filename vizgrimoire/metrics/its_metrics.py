@@ -176,7 +176,7 @@ class Closers(Metrics):
     data_source = ITS
     envision = {"gtype" : "whiskers"}
 
-    def _get_top_company (self, metric_filters) :
+    def _get_top_company (self, metric_filters, days = None) :
         startdate = metric_filters.startdate
         enddate = metric_filters.enddate
         company_name = metric_filters.type_analysis[1]
@@ -202,7 +202,7 @@ class Closers(Metrics):
         data = self.db.ExecuteQuery(q)
         return (data)
 
-    def _get_top_domain (self, metric_filters):
+    def _get_top_domain (self, metric_filters, days = None):
         startdate = metric_filters.startdate
         enddate = metric_filters.enddate
         domain_name = metric_filters.type_analysis[1]
@@ -227,7 +227,7 @@ class Closers(Metrics):
         data = self.db.ExecuteQuery(q)
         return (data)
 
-    def _get_top_repository (self, metric_filters):
+    def _get_top_repository (self, metric_filters, days = None):
         startdate = metric_filters.startdate
         enddate = metric_filters.enddate
         repo_name = metric_filters.type_analysis[1]
@@ -236,10 +236,15 @@ class Closers(Metrics):
         closed_condition =  ITS._get_closed_condition()
         if filter_bots != '': filter_bots = " AND " + filter_bots
 
+        dtables = dfilters = ""
+        if (days > 0):
+            dtables = ", (SELECT MAX(changed_on) as last_date from changes) t "
+            dfilters = " AND DATEDIFF (last_date, changed_on) < %s " % (days)
+
         q = "SELECT u.id as id, u.identifier as closers, "+\
             "COUNT(DISTINCT(i.id)) as closed "+\
             "FROM issues i, changes c, trackers t, people_upeople pup, " +\
-            "     "+self.db.identities_db+".upeople u "+\
+            "     "+self.db.identities_db+".upeople u "+ dtables + \
             "WHERE "+closed_condition+" "+\
             "      AND pup.upeople_id = u.id "+\
             "      AND c.changed_by = pup.people_id "+\
@@ -247,9 +252,8 @@ class Closers(Metrics):
             "      AND i.tracker_id = t.id "+\
             "      AND t.url = "+repo_name+" "+\
             "      AND changed_on >= "+startdate+" AND changed_on < " +enddate +\
-            "      " + filter_bots +\
+            "      " + filter_bots + " " + dfilters + \
             " GROUP BY u.identifier ORDER BY closed DESC, closers LIMIT " + str(limit)
-
         data = self.db.ExecuteQuery(q)
         return (data)
 
@@ -303,11 +307,11 @@ class Closers(Metrics):
 
         if metric_filters.type_analysis and metric_filters.type_analysis is not None:
             if metric_filters.type_analysis[0] == "repository":
-                alist = self._get_top_repository(metric_filters)
+                alist = self._get_top_repository(metric_filters, days)
             if metric_filters.type_analysis[0] == "company":
-                alist = self._get_top_company(metric_filters)
+                alist = self._get_top_company(metric_filters, days)
             if metric_filters.type_analysis[0] == "domain":
-                alist = self._get_top_domain(metric_filters)
+                alist = self._get_top_domain(metric_filters, days)
         else:
             alist = self._get_top(days)
 

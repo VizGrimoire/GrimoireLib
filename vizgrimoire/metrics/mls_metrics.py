@@ -64,7 +64,7 @@ class EmailsSenders(Metrics):
     desc = "People sending emails"
     data_source = MLS
 
-    def _get_top_repository (self, metric_filters):
+    def _get_top_repository (self, metric_filters, days = None):
         startdate = metric_filters.startdate
         enddate = metric_filters.enddate
         repo = metric_filters.type_analysis[1]
@@ -72,21 +72,26 @@ class EmailsSenders(Metrics):
         filter_bots = self.get_bots_filter_sql(metric_filters)
         rfield = MLS.get_repo_field()
 
+        dtables = dfilters = ""
+        if (days > 0):
+            dtables = ", (SELECT MAX(first_date) as last_date from messages) t"
+            dfilters = " AND DATEDIFF (last_date, first_date) < %s " % (days)
+
         q = "SELECT up.id as id, up.identifier as senders, "+\
                 " COUNT(m.message_id) as sent "+\
-                " FROM "+ self.db.GetTablesOwnUniqueIds()+ ","+self.db.identities_db+".upeople up "+\
+                " FROM "+ self.db.GetTablesOwnUniqueIds()+ ","+self.db.identities_db+".upeople up "+ dtables + \
                 " WHERE "+ self.db.GetFiltersOwnUniqueIds()+ " AND "+\
                 "  pup.upeople_id = up.id AND "+\
                 "  m.first_date >= "+startdate+" AND "+\
                 "  m.first_date < "+enddate+" AND "+\
-                "  m."+rfield+"="+ repo +\
+                "  m."+rfield+"="+ repo + " " + dfilters + \
                 " GROUP BY up.identifier "+\
                 " ORDER BY sent desc, senders "+\
                 " LIMIT " + str(limit)
         data = self.db.ExecuteQuery(q)
         return (data)
 
-    def _get_top_country (self, metric_filters):
+    def _get_top_country (self, metric_filters, days = None):
         startdate = metric_filters.startdate
         enddate = metric_filters.enddate
         country_name = metric_filters.type_analysis[1]
@@ -102,11 +107,11 @@ class EmailsSenders(Metrics):
             "  m.first_date >= "+startdate+" AND "+\
             "  m.first_date < "+enddate+\
             " GROUP BY up.identifier "+\
-            " ORDER BY COUNT(DISTINCT(m.message_ID)) DESC LIMIT " + str(limit)
+            " ORDER BY COUNT(DISTINCT(m.message_ID)) DESC, senders LIMIT " + str(limit)
         data = self.db.ExecuteQuery(q)
         return (data)
 
-    def _get_top_company (self, metric_filters):
+    def _get_top_company (self, metric_filters, days = None):
         startdate = metric_filters.startdate
         enddate = metric_filters.enddate
         company_name = metric_filters.type_analysis[1]
@@ -122,11 +127,11 @@ class EmailsSenders(Metrics):
             "  m.first_date >= "+startdate+" AND "+\
             "  m.first_date < "+enddate+\
             " GROUP BY up.identifier "+\
-            " ORDER BY COUNT(DISTINCT(m.message_ID)) DESC LIMIT " + str(limit)
+            " ORDER BY COUNT(DISTINCT(m.message_ID)) DESC, senders LIMIT " + str(limit)
         data = self.db.ExecuteQuery(q)
         return (data)
 
-    def _get_top_domain (self, metric_filters):
+    def _get_top_domain (self, metric_filters, days = None):
         startdate = metric_filters.startdate
         enddate = metric_filters.enddate
         domain_name = metric_filters.type_analysis[1]

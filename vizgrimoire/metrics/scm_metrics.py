@@ -110,7 +110,7 @@ class Authors(Metrics):
         return q
 
 
-    def _get_top_repository (self, metric_filters = None):
+    def _get_top_repository (self, metric_filters = None, days = None):
         if metric_filters == None:
             metric_filters = self.filters
         startdate = metric_filters.startdate
@@ -123,9 +123,15 @@ class Authors(Metrics):
         # Remove first and
         repos_where = " WHERE  " + self.db.GetSQLRepositoriesWhere(repo)[4:]
 
+        dtables = dfilters = ""
+        if (days > 0):
+            dtables = ", (SELECT MAX(date) as last_date from scmlog) dt"
+            dfilters = " AND DATEDIFF (last_date, date) < %s " % (days)
+
         fields =  "SELECT COUNT(DISTINCT(s.id)) as commits, u.id, u.identifier as authors "
-        fields += "FROM actions a, scmlog s, people_upeople pup, upeople u "
+        fields += "FROM actions a, scmlog s, people_upeople pup, upeople u " + dtables
         q = fields + repos_from + repos_where
+        q += dfilters
         if filter_bots != "": q += " AND "+ filter_bots
         q += " AND pup.people_id = s.author_id AND u.id = pup.upeople_id "
         q += " and s.id = a.commit_id "
@@ -137,7 +143,7 @@ class Authors(Metrics):
 
         return res
 
-    def _get_top_company (self, metric_filters = None):
+    def _get_top_company (self, metric_filters = None, days = None):
         if metric_filters == None:
             metric_filters = self.filters
         startdate = metric_filters.startdate
@@ -164,7 +170,7 @@ class Authors(Metrics):
         data = self.db.ExecuteQuery(q)
         return (data)
 
-    def _get_top_project(self, metric_filters = None):
+    def _get_top_project(self, metric_filters = None, days = None):
         if metric_filters == None:
             metric_filters = self.filters
         startdate = metric_filters.startdate
@@ -688,7 +694,7 @@ class Companies(Metrics):
                                tables, filters, evol)
         return q
 
-    def _get_top_project(self, fbots = None):
+    def _get_top_project(self, fbots = None, days = None):
         if fbots is not None and fbots != '': fbots += " AND "
 
         startdate = self.filters.startdate
