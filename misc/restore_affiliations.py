@@ -72,7 +72,9 @@ def create_upeople_companies_table(connector):
            "company_id int(11) NOT NULL," + \
            "init datetime," + \
            "end datetime," + \
-           "PRIMARY KEY (id)" + \
+           "PRIMARY KEY (id)," + \
+           "KEY company_id (upeople_id)," + \
+           "KEY company (company_id)" + \
            ") ENGINE=MyISAM DEFAULT CHARSET=utf8"
    connector.execute(query)
    return
