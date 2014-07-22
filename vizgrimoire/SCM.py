@@ -197,6 +197,8 @@ class SCM(DataSource):
         else:
             logging.error(filter_name + " not supported")
 
+        metric.filters.startdate = startdate
+        metric.filters.enddate = enddate
         items = metric.get_list()
         return items
 
