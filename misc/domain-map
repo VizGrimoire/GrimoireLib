@@ -5,6 +5,7 @@ atomia.com Atomia
 att.com AT&T
 attinteractive.com AT&T
 au1.ibm.com IBM
+c12g.com C12G Labs
 ca.ibm.com IBM
 canonical.com Canonical
 cern.ch CERN
@@ -13,15 +14,19 @@ citrix.com Citrix
 cloud.com Citrix Systems
 cloudscaling.com Cloudscaling
 cn.ibm.com IBM
+corp.netease.com NetEase
+dacya.ucm.es Complutense University
 dell.com Dell
 denali-systems.com Denali Systems
 dreamhost.com DreamHost
 emc.com EMC
 enovance.com eNovance
 fathomdb.com FathomDB
+fdi.ucm.es Complutense University
 gluster.com Red Hat
 griddynamics.com Grid Dynamics
 hp.com HP
+huawei.com Huawei
 ibm.com IBM
 il.ibm.com IBM
 inktank.com Inktank
@@ -37,7 +42,6 @@ metacloud.com Metacloud
 midokura.com Midokura
 mirantis.com Mirantis
 nebula.com Nebula
-corp.netease.com NetEase
 nexenta.com Nexenta
 cq.jp.nec.com NEC
 da.jp.nec.com NEC
@@ -62,6 +66,7 @@ suse.de SUSE
 suse.com SUSE
 suse.cz SUSE
 swiftstack.com SwiftStack
+tesora.com Tesora
 unimelb.edu.au University of Melbourne
 us.ibm.com IBM
 valinux.co.jp VA Linux
@@ -71,8 +76,4 @@ virtualtech.jp VirtualTech
 wikimedia.org Wikimedia Foundation
 yahoo-inc.com Yahoo!
 zadarastorage.com Zadara Storage
-# OpenNebula
-c12g.com C12G Labs
-opennebula.org Open Nebula
-fdi.ucm.es Complutense University
-dacya.ucm.es Complutense University
+
