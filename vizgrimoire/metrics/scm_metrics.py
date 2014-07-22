@@ -665,7 +665,7 @@ class Repositories(Metrics):
             select count(distinct(sid)) as total, name
             from repositories r, (
               select distinct(s.id) as sid, repository_id from actions a, scmlog s
-              where s.id = a.commit_id  and s.date >%s and s.date <= %s) t
+              where s.id = a.commit_id  and s.date >=%s and s.date < %s) t
             WHERE repository_id = r.id
             group by repository_id   
             order by total desc,name
