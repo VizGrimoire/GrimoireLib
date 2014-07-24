@@ -885,3 +885,10 @@ class Projects(Metrics):
         names = [name[1] for name in data_sort]
 
         return({"name":names})
+
+
+if __name__ == '__main__':
+    filters = MetricFilters("week", "'2014-04-01'", "'2014-07-01'", ["project", "'nova'"])
+    dbcon = SCMQuery("root", "", "dic_cvsanaly_openstack_2259_tm", "dic_cvsanaly_openstack_2259_tm",)
+    os_sw = Companies(dbcon, filters)
+    print os_sw.get_list()

@@ -403,14 +403,14 @@ class SCM(DataSource):
 #
 
 def GetTablesOwnUniqueIdsSCM () :
-    return ('scmlog s, people_upeople pup')
+    return (' actions a, scmlog s, people_upeople pup')
 
 
 def GetFiltersOwnUniqueIdsSCM () :
-    return ('pup.people_id = s.author_id') 
+    return ('pup.people_id = s.author_id and s.id = a.commit_id ') 
 
 def GetPeopleListSCM (startdate, enddate) :
-    fields = "DISTINCT(pup.upeople_id) as pid, COUNT(s.id) as total"
+    fields = "DISTINCT(pup.upeople_id) as pid, COUNT(distinct(s.id)) as total"
     tables = GetTablesOwnUniqueIdsSCM()
     filters = GetFiltersOwnUniqueIdsSCM()
     filters +=" GROUP BY pid ORDER BY total desc, pid"
@@ -420,7 +420,7 @@ def GetPeopleListSCM (startdate, enddate) :
     return (data)
 
 def GetPeopleQuerySCM (developer_id, period, startdate, enddate, evol) :
-    fields ='COUNT(s.id) AS commits'
+    fields ='COUNT(distinct(s.id)) AS commits'
     tables = GetTablesOwnUniqueIdsSCM()
     filters = GetFiltersOwnUniqueIdsSCM()
     filters +=" AND pup.upeople_id="+str(developer_id)
@@ -453,8 +453,8 @@ def GetActiveAuthorsSCM(days, enddate):
     #return unique ids of active authors during "days" day
     # FIXME parameters should be: startdate and enddate
     q0 = "SELECT distinct(pup.upeople_id) as active_authors "+\
-        "FROM scmlog s, people_upeople pup " +\
-        "WHERE pup.people_id = s.author_id and " +\
+        "FROM actions a, scmlog s, people_upeople pup " +\
+        "WHERE pup.people_id = s.author_id and a.commit_id = s.id and " +\
         "s.date >= (%s - INTERVAL %s day)"
     q1 = q0 % (enddate, days)
     data = ExecuteQuery(q1)
@@ -464,8 +464,8 @@ def GetActiveCommittersSCM(days, enddate):
     #return unique ids of active committers during "days" day
     # FIXME parameters should be: startdate and enddate
     q0 = "SELECT distinct(pup.upeople_id) as active_committers "+\
-         "FROM scmlog s, people_upeople pup " +\
-         "WHERE pup.people_id = s.committer_id and " + \
+         "FROM actions a, scmlog s, people_upeople pup " +\
+         "WHERE pup.people_id = s.committer_id and s.id = a.commit_id and " + \
          "s.date >= (%s - INTERVAL %s day)"
     q1 = q0 % (enddate, days)
     data = ExecuteQuery(q1)

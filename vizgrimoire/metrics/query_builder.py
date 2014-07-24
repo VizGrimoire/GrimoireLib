@@ -294,9 +294,9 @@ class SCMQuery(DSQuery):
         return filters
 
     def GetPeopleQuerySCM (self, developer_id, period, startdate, enddate, evol) :
-        fields ='COUNT(s.id) AS commits'
-        tables = "scmlog s, people_upeople pup "
-        filters = "pup.people_id = s.author_id "
+        fields ='COUNT(distinct(s.id)) AS commits'
+        tables = " actions a, scmlog s, people_upeople pup "
+        filters = "pup.people_id = s.author_id and s.id = a.commit_id "
         filters +=" AND pup.upeople_id="+str(developer_id)
         if (evol) :
             q = self.GetSQLPeriod(period,'s.date', fields, tables, filters,
