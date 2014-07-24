@@ -323,9 +323,10 @@ class Threads(Metrics):
     data_source = MLS
 
     def _get_sql(self, evolutionary):
-        fields = " count(distinct(m.is_response_of)) as threads"
+        fields = " count(distinct(m.message_ID)) as threads"
         tables = " messages m " + self.db.GetSQLReportFrom(self.filters.type_analysis)
         filters = self.db.GetSQLReportWhere(self.filters.type_analysis)
+        filters += " and m.is_response_of is NULL"
 
         query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                    self.filters.enddate, " m.first_date ", fields,
@@ -591,3 +592,4 @@ class UnansweredPosts(Metrics):
 
         return completePeriodIds(num_unanswered, self.filters.period,
                                  self.filters.startdate, self.filters.enddate)
+
