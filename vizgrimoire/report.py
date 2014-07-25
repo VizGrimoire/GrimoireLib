@@ -21,7 +21,7 @@
 
 from GrimoireSQL import SetDBChannel
 from GrimoireUtils import read_main_conf
-import logging
+import logging, time
 import SCM, ITS, MLS, SCR, Mediawiki, IRC, DownloadsDS, QAForums, ReleasesDS
 from filter import Filter
 from metrics import Metrics
@@ -94,9 +94,15 @@ class Report(object):
         if 'companies_out' in Report._automator['r']:
             companies_out = Report._automator['r']['companies_out'].split(",")
         type_analysis = None
+        if 'start_date' not in Report._automator['r']:
+            raise Exception("Start date not configured in automator main.conf")
+        start_date = Report._automator['r']['start_date']
+        if 'end_date' in Report._automator['r']:
+            end_date = Report._automator['r']['end_date']
+        else:
+            end_date = time.strftime('%Y-%m-%d')
 
-        metric_filters = MetricFilters(Metrics.default_period,
-                                       Metrics.default_start, Metrics.default_end,
+        metric_filters = MetricFilters(Metrics.default_period, "'"+start_date+"'", "'"+end_date+"'",
                                        type_analysis,
                                        npeople, people_out, companies_out)
 

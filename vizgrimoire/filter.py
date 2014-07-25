@@ -121,5 +121,9 @@ class Filter(object):
 
     def get_type_analysis(self):
         """Old format for filtering"""
-        type_analysis = [self.get_name(), "'"+self.get_item()+"'"]
+        name = self.get_name()
+        item = self.get_item()
+        if item is not None: item =  "'"+self.get_item()+"'"
+
+        type_analysis = [name, item]
         return type_analysis
