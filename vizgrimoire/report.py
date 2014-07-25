@@ -57,7 +57,7 @@ class Report(object):
         reports = reports.replace("repositories","repos")
         filters = reports.split(",")
         # people not a filter yet
-        if 'people' in filters: filters.remove('people')
+        # if 'people' in filters: filters.remove('people')
         for name in filters:
             filter_ = Filter.get_filter_from_plural(name)
             if filter_ is not None:

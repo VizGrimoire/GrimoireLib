@@ -239,6 +239,44 @@ class Authors(Metrics):
     def _get_top_supported_filters(self):
         return ['repository','company','project']
 
+class People(Metrics):
+    """ People filter metric class for source code management systems """
+
+    id = "people"
+    name = "People"
+    desc = "People authoring commits (changes to source code)"
+    envision = {"gtype" : "whiskers"}
+    action = "commits"
+    data_source = SCM
+
+    def _get_sql (self, evolutionary):
+        """ Implemented using Authors """
+        authors = SCM.get_metrics("authors", SCM)
+        if authors is None:
+            authors = Authors(self.db, self.filters)
+            q = authors._get_sql(evolutionary)
+        else:
+            afilters = authors.filters
+            authors.filters = self.filters
+            q = authors._get_sql(evolutionary)
+            authors.filters = afilters
+        return q
+
+    def _get_top_global (self, days = 0, metric_filters = None):
+        """ Implemented using Authors """
+        top = None
+        authors = SCM.get_metrics("authors", SCM)
+        if authors is None:
+            authors = Authors(self.db, self.filters)
+            top = authors._get_top_global(days, metric_filters)
+        else:
+            afilters = authors.filters
+            authors.filters = self.filters
+            top = authors._get_top_global(days, metric_filters)
+            authors.filters = afilters
+        top['name'] = top.pop('authors')
+        return top
+
 class Committers(Metrics):
     """ Committers metric class for source code management system """
 
@@ -297,8 +335,8 @@ class Files(Metrics):
 
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                self.filters.enddate, " s.date ", fields,
-                               tables, filters, evolutionary)       
- 
+                               tables, filters, evolutionary)
+        print q
         return q
 
 

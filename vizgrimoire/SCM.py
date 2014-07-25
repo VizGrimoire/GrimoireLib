@@ -194,8 +194,11 @@ class SCM(DataSource):
             metric = DataSource.get_metrics("domains", SCM)
         elif (filter_name == "project"):
             metric = DataSource.get_metrics("projects", SCM)
+        elif (filter_name == "people"):
+            metric = DataSource.get_metrics("people", SCM)
         else:
             logging.error(filter_name + " not supported")
+            return items
 
         items = metric.get_list()
         return items

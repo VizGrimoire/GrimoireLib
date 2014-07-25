@@ -247,6 +247,17 @@ class SCMQuery(DSQuery):
                 "and upd.domain_id = d.id "+\
                 "and d.name ="+ domain)
 
+    def GetSQLPeopleFrom (self):
+        #tables necessaries for companies
+        return (" , people_upeople pup, " + self.identities_db + ".upeople up ")
+
+    def GetSQLPeopleWhere (self, name):
+         #fields necessaries to match info among tables
+        return ("AND s.author_id = pup.people_id " +
+                "AND up.id = pup.upeople_id " +
+                "AND up.identifier = "+name)
+
+
     def GetSQLReportFrom (self, type_analysis):
         #generic function to generate 'from' clauses
         #"type" is a list of two values: type of analysis and value of 
@@ -264,6 +275,8 @@ class SCMQuery(DSQuery):
         elif analysis == 'country': From = self.GetSQLCountriesFrom(self.identities_db)
         elif analysis == 'domain': From = self.GetSQLDomainsFrom(self.identities_db)
         elif analysis == 'project': From = self.GetSQLProjectFrom()
+        elif analysis == 'people': From = self.GetSQLPeopleFrom()
+        else: raise Exception( analysis + " not supported")
 
         return (From)
 
@@ -285,6 +298,8 @@ class SCMQuery(DSQuery):
         elif analysis == 'country': where = self.GetSQLCountriesWhere(value, role)
         elif analysis == 'domain': where = self.GetSQLDomainsWhere(value, role)
         elif analysis == 'project': where = self.GetSQLProjectWhere(value)
+        elif analysis == 'people': where = self.GetSQLPeopleWhere(value)
+        else: raise Exception( analysis + " not supported")
 
         return (where)
 

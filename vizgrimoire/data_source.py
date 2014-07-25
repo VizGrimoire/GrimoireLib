@@ -334,6 +334,7 @@ class DataSource(object):
             if item.id not in metrics_on: continue
             mfilter_orig = item.filters
             item.filters = mfilter
+            print(item)
             if evol: mvalue = item.get_ts()
             else:    mvalue = item.get_agg()
 

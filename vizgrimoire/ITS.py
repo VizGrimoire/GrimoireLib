@@ -189,6 +189,7 @@ class ITS(DataSource):
             metric = DataSource.get_metrics("projects", ITS)
         else:
             logging.error(filter_name + " not supported")
+            return items
 
         items = metric.get_list()
         return items
