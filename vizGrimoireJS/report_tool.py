@@ -139,7 +139,7 @@ def create_reports_studies(period, startdate, enddate, destdir):
         dbname = Report.get_config()['generic'][ds_dbname]
         dsquery = ds.get_query_builder()
         dbcon = dsquery(dbuser, dbpass, dbname, db_identities)
-        logging.info("Studies active " + str(studies))
+        # logging.info(ds.get_name() + " studies active " + str(studies))
         for study in studies:
             # logging.info("Creating report for " + study.id + " for " + ds.get_name())
             try:
