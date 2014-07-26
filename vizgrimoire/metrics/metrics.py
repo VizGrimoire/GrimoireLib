@@ -67,12 +67,22 @@ class Metrics(object):
         """ Returns specific sql for the provided filters """
         raise NotImplementedError
 
+    def _get_sql_filter_all (self, evolutionary):
+        """ Returns specific sql for the provided filters """
+        raise NotImplementedError
+
     def get_data_source(self):
         return self.data_source
 
     def get_ts (self):
-        """ Returns a time serie of values """
+        """ Returns a time series of values """
         query = self._get_sql(True)
+        ts = self.db.ExecuteQuery(query)
+        return completePeriodIds(ts, self.filters.period, 
+                                 self.filters.startdate, self.filters.enddate)
+    def get_filter_all_ts (self):
+        """ Returns a time series of values for all items in a filter """
+        query = self._get_sql_filter_all(True)
         ts = self.db.ExecuteQuery(query)
         return completePeriodIds(ts, self.filters.period, 
                                  self.filters.startdate, self.filters.enddate)
@@ -81,6 +91,12 @@ class Metrics(object):
         """ Returns an aggregated value """
         query = self._get_sql(False)
         return self.db.ExecuteQuery(query)
+
+    def get_filter_all_agg(self):
+        """ Returns an aggregated value for all items in a filter  """
+        query = self._get_sql_filter_all(False)
+        return self.db.ExecuteQuery(query)
+
 
     def get_agg_diff_days(self, date, days):
         """ Returns the trend metrics between now and now-days values """

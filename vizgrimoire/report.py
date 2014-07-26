@@ -56,8 +56,6 @@ class Report(object):
         # Hack because we use repos in filters
         reports = reports.replace("repositories","repos")
         filters = reports.split(",")
-        # people not a filter yet
-        # if 'people' in filters: filters.remove('people')
         for name in filters:
             filter_ = Filter.get_filter_from_plural(name)
             if filter_ is not None:

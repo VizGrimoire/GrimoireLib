@@ -322,6 +322,28 @@ class Files(Metrics):
     desc = "Number of files 'touched' (added, modified, removed, ) by at least one commit"
     data_source = SCM
 
+    def _get_sql_filter_all(self, evolutionary):
+        if self.filters.type_analysis is None:
+            return None
+        item = self.filters.type_analysis[0]
+        # This function contains basic parts of the query to count files
+        fields = " count(distinct(a.file_id)) as files "
+        tables = " scmlog s, actions a "
+        filters = " a.commit_id = s.id "
+
+        #specific parts of the query depending on the report needed
+        tables += self.db.GetSQLReportFilterAllFrom(self.filters.type_analysis)
+        #TODO: left "author" as generic option coming from parameters (this should be specified by command line)
+        filters += self.db.GetSQLReportFilterAllWhere(self.filters.type_analysis, "author")
+
+        q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
+                               self.filters.enddate, " s.date ", fields,
+                               tables, filters, evolutionary)
+        print(q)
+        raise Exception("STOP")
+        return q
+
+
     def _get_sql(self, evolutionary):
         # This function contains basic parts of the query to count files
         fields = " count(distinct(a.file_id)) as files "
@@ -336,7 +358,6 @@ class Files(Metrics):
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                self.filters.enddate, " s.date ", fields,
                                tables, filters, evolutionary)
-        print q
         return q
 
 

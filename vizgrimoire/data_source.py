@@ -294,7 +294,8 @@ class DataSource(object):
         return data
 
     @staticmethod
-    def get_metrics_data(DS, period, startdate, enddate, identities_db, filter_ = None, evol = False):
+    def get_metrics_data(DS, period, startdate, enddate, identities_db, 
+                         filter_ = None, evol = False):
         """ Get basic data from all core metrics """
         data = {}
 
@@ -334,11 +335,14 @@ class DataSource(object):
             if item.id not in metrics_on: continue
             mfilter_orig = item.filters
             item.filters = mfilter
-            print(item)
             if evol: mvalue = item.get_ts()
             else:    mvalue = item.get_agg()
 
             data = dict(data.items() + mvalue.items())
+
+            if item.id == "files1":
+                item.get_filter_all_agg()
+                item.get_filter_all_ts()
 
             item.filters = mfilter_orig
 
