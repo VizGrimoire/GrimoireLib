@@ -325,22 +325,19 @@ class Files(Metrics):
     def _get_sql_filter_all(self, evolutionary):
         if self.filters.type_analysis is None:
             return None
-        item = self.filters.type_analysis[0]
-        # This function contains basic parts of the query to count files
-        fields = " count(distinct(a.file_id)) as files "
+
+        fields = "count(distinct(a.file_id)) as files "
         tables = " scmlog s, actions a "
         filters = " a.commit_id = s.id "
 
-        #specific parts of the query depending on the report needed
-        tables += self.db.GetSQLReportAllFrom(self.filters.type_analysis)
-        #TODO: left "author" as generic option coming from parameters (this should be specified by command line)
-        filters += self.db.GetSQLReportAllWhere(self.filters.type_analysis)
+        tables += self.db.GetSQLReportFrom(self.filters.type_analysis)
+        filters += self.db.GetSQLReportWhere(self.filters.type_analysis)
 
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                self.filters.enddate, " s.date ", fields,
-                               tables, filters, evolutionary)
+                               tables, filters, evolutionary, self.filters)
         print(q)
-        raise Exception("STOP")
+
         return q
 
 

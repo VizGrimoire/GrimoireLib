@@ -55,7 +55,12 @@ class DSQuery(object):
         """ Basic indexes used in each data source """
         pass
 
-    def GetSQLGlobal(self, date, fields, tables, filters, start, end):
+    def GetSQLGlobal(self, date, fields, tables, filters, start, end, filter_all = None):
+        group_field = None
+        if filter_all:
+            group_field = self.get_group_field(filter_all.type_analysis)
+            fields = group_field + ", " + fields
+
         sql = 'SELECT '+ fields
         sql += ' FROM '+ tables
         sql += ' WHERE '+date+'>='+start+' AND '+date+'<'+end
@@ -63,10 +68,20 @@ class DSQuery(object):
         if (filters != ""):
             if (reg_and.match (filters.lower())) is not None: sql += " " + filters
             else: sql += ' AND '+filters
+
+        if filter_all:
+            sql += " GROUP BY " + group_field
+            sql += " ORDER BY files DESC," + group_field
+
         return(sql)
 
-    def GetSQLPeriod(self, period, date, fields, tables, filters, start, end):
-        # kind = ['year','month','week','day']
+    def GetSQLPeriod(self, period, date, fields, tables, filters, start, end,
+                     filter_all = None):
+        group_field = None
+        if filter_all:
+            group_field = self.get_group_field(filter_all.type_analysis)
+            fields = group_field + ", " + fields
+
         iso_8601_mode = 3
         if (period == 'day'):
             # Remove time so unix timestamp is start of day    
@@ -82,6 +97,7 @@ class DSQuery(object):
             sys.exit(1)
         # sql = paste(sql, 'DATE_FORMAT (',date,', \'%d %b %Y\') AS date, ')
         sql += fields
+        if filter_all: fields + ", " + group_field
         sql += ' FROM ' + tables
         sql = sql + ' WHERE '+date+'>='+start+' AND '+date+'<'+end
         reg_and = re.compile("^[ ]*and", re.IGNORECASE)
@@ -89,6 +105,10 @@ class DSQuery(object):
         if (filters != ""):
             if (reg_and.match (filters.lower())) is not None: sql += " " + filters
             else: sql += ' AND ' + filters
+
+        group_by = " GROUP BY "
+
+        if filter_all: group_by += group_field + ", "
 
         if (period == 'year'):
             sql += ' GROUP BY YEAR('+date+')'
@@ -108,16 +128,18 @@ class DSQuery(object):
         return(sql)
 
 
-    def BuildQuery (self, period, startdate, enddate, date_field, fields, tables, filters, evolutionary):
+    def BuildQuery (self, period, startdate, enddate, date_field, fields, 
+                    tables, filters, evolutionary, filter_all = None):
         # Select the way to evolutionary or aggregated dataset
+        # filter_all: get data for all tiems in a filter
         q = ""
 
         if (evolutionary):
             q = self.GetSQLPeriod(period, date_field, fields, tables, filters,
-                              startdate, enddate)
+                                  startdate, enddate, filter_all)
         else:
             q = self.GetSQLGlobal(date_field, fields, tables, filters,
-                              startdate, enddate)
+                                  startdate, enddate, filter_all)
 
         return(q)
 
@@ -174,6 +196,22 @@ class DSQuery(object):
         project_with_children_str = ','.join(str(x) for x in project_with_children)
 
         return  project_with_children_str
+
+    def get_group_field (self, type_analysis):
+        """ Return the name of the field to group by in filter all queries """
+
+        field = None
+
+        if (type_analysis is None or len(type_analysis) != 2): return field
+
+        supported = ['people2']
+
+        analysis = type_analysis[0]
+
+        if analysis not in supported: return field
+        if analysis == 'people2': field = "up.identifier"
+
+        return (field)
 
 class SCMQuery(DSQuery):
     """ Specific query builders for source code management system data source """
@@ -252,10 +290,11 @@ class SCMQuery(DSQuery):
         return (" , people_upeople pup, " + self.identities_db + ".upeople up ")
 
     def GetSQLPeopleWhere (self, name):
-         #fields necessaries to match info among tables
-        return ("AND s.author_id = pup.people_id " +
-                "AND up.id = pup.upeople_id " +
-                "AND up.identifier = "+name)
+        #fields necessaries to match info among tables
+        fields = " AND s.author_id = pup.people_id " + \
+                 " AND up.id = pup.upeople_id "
+        if name is not None: fields += " AND up.identifier = "+name
+        return fields
 
 
     def GetSQLReportFrom (self, type_analysis):
@@ -282,7 +321,9 @@ class SCMQuery(DSQuery):
         return (From)
 
     def GetSQLReportAllFrom (self, type_analysis):
-        return self.GetSQLReportFrom (type_analysis)
+        from_ = self.GetSQLReportFrom (type_analysis)
+        print from_
+        return from_
 
     def GetSQLReportWhere (self, type_analysis, role = "author"):
         #generic function to generate 'where' clauses
@@ -310,6 +351,7 @@ class SCMQuery(DSQuery):
 
     def GetSQLReportAllWhere (self, type_analysis):
         filters = self.GetSQLReportWhere (type_analysis)
+        print(filters)
         # Time to add the field name, GROUP BY and ORDER
         return filters
 
