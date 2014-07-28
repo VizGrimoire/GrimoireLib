@@ -276,11 +276,15 @@ class SCMQuery(DSQuery):
         elif analysis == 'domain': From = self.GetSQLDomainsFrom(self.identities_db)
         elif analysis == 'project': From = self.GetSQLProjectFrom()
         elif analysis == 'people': From = self.GetSQLPeopleFrom()
+        elif analysis == 'people2': From = self.GetSQLPeopleFrom()
         else: raise Exception( analysis + " not supported")
 
         return (From)
 
-    def GetSQLReportWhere (self, type_analysis, role):
+    def GetSQLReportAllFrom (self, type_analysis):
+        return self.GetSQLReportFrom (type_analysis)
+
+    def GetSQLReportWhere (self, type_analysis, role = "author"):
         #generic function to generate 'where' clauses
 
         #"type" is a list of two values: type of analysis and value of 
@@ -299,9 +303,15 @@ class SCMQuery(DSQuery):
         elif analysis == 'domain': where = self.GetSQLDomainsWhere(value, role)
         elif analysis == 'project': where = self.GetSQLProjectWhere(value)
         elif analysis == 'people': where = self.GetSQLPeopleWhere(value)
+        elif analysis == 'people2': where = self.GetSQLPeopleWhere(value)
         else: raise Exception( analysis + " not supported")
 
         return (where)
+
+    def GetSQLReportAllWhere (self, type_analysis):
+        filters = self.GetSQLReportWhere (type_analysis)
+        # Time to add the field name, GROUP BY and ORDER
+        return filters
 
     # To be used in the future for apply a generic filter to all queries
     def GetCommitsFiltered(self):

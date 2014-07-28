@@ -62,6 +62,7 @@ class Report(object):
                 Report._filters.append(filter_)
             else:
                 logging.error("Wrong filter " + name + ", review " + Report._automator_file)
+                raise Exception('Wrong automator config file')
 
     @staticmethod
     def _init_data_sources():

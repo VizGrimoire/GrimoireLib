@@ -340,7 +340,7 @@ class DataSource(object):
 
             data = dict(data.items() + mvalue.items())
 
-            if item.id == "files1":
+            if item.id == "files":
                 item.get_filter_all_agg()
                 item.get_filter_all_ts()
 

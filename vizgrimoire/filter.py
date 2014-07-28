@@ -29,7 +29,8 @@ class Filter(object):
                      ["repository","rep","repos"], ["company","com","companies"],
                      ["country","cou","countries"], ["domain","dom","domains"],
                      ["project","prj","projects"], ["tag", "tag", "tags"],
-                     ["people","people","people"]
+                     ["people","people","people"],
+                     ["people2","people2","people2"]
                     ]
 
     def __init__(self, name, item = None):

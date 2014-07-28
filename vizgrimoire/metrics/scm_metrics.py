@@ -242,7 +242,7 @@ class Authors(Metrics):
 class People(Metrics):
     """ People filter metric class for source code management systems """
 
-    id = "people"
+    id = "people2" # people is used yet for all partial filter
     name = "People"
     desc = "People authoring commits (changes to source code)"
     envision = {"gtype" : "whiskers"}
@@ -332,9 +332,9 @@ class Files(Metrics):
         filters = " a.commit_id = s.id "
 
         #specific parts of the query depending on the report needed
-        tables += self.db.GetSQLReportFilterAllFrom(self.filters.type_analysis)
+        tables += self.db.GetSQLReportAllFrom(self.filters.type_analysis)
         #TODO: left "author" as generic option coming from parameters (this should be specified by command line)
-        filters += self.db.GetSQLReportFilterAllWhere(self.filters.type_analysis, "author")
+        filters += self.db.GetSQLReportAllWhere(self.filters.type_analysis)
 
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                self.filters.enddate, " s.date ", fields,
