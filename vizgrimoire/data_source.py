@@ -340,13 +340,11 @@ class DataSource(object):
 
             data = dict(data.items() + mvalue.items())
 
-            if item.id == "files":
-                item.get_filter_all_agg()
-                item.get_filter_all_ts()
-
             item.filters = mfilter_orig
 
-        if not evol:
+        # type_analysis[1] = None is one SQL for all items in a filter. 
+        # Not yet supported here
+        if not evol and (type_analysis is None or type_analysis[1] is not None):
             init_date = DS.get_date_init(startdate, enddate, identities_db, type_analysis)
             end_date = DS.get_date_end(startdate, enddate, identities_db, type_analysis)
 

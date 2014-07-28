@@ -111,20 +111,22 @@ class DSQuery(object):
         if filter_all: group_by += group_field + ", "
 
         if (period == 'year'):
-            sql += ' GROUP BY YEAR('+date+')'
+            sql += group_by + ' YEAR('+date+')'
             sql += ' ORDER BY YEAR('+date+')'
         elif (period == 'month'):
-            sql += ' GROUP BY YEAR('+date+'),MONTH('+date+')'
+            sql += group_by + ' YEAR('+date+'),MONTH('+date+')'
             sql += ' ORDER BY YEAR('+date+'),MONTH('+date+')'
         elif (period == 'week'):
-            sql += ' GROUP BY YEARWEEK('+date+','+str(iso_8601_mode)+')'
+            sql += group_by + ' YEARWEEK('+date+','+str(iso_8601_mode)+')'
             sql += ' ORDER BY YEARWEEK('+date+','+str(iso_8601_mode)+')'
         elif (period == 'day'):
-            sql += ' GROUP BY YEAR('+date+'),DAYOFYEAR('+date+')'
+            sql += group_by + ' YEAR('+date+'),DAYOFYEAR('+date+')'
             sql += ' ORDER BY YEAR('+date+'),DAYOFYEAR('+date+')'
         else:
             logging.error("PERIOD: "+period+" not supported")
             sys.exit(1)
+
+        if filter_all: sql += "," + group_field
         return(sql)
 
 
@@ -204,14 +206,15 @@ class DSQuery(object):
 
         if (type_analysis is None or len(type_analysis) != 2): return field
 
-        supported = ['people2']
+        supported = ['people2','company']
 
         analysis = type_analysis[0]
 
         if analysis not in supported: return field
         if analysis == 'people2': field = "up.identifier"
+        elif analysis == "company": field = "c.name"
 
-        return (field)
+        return field
 
 class SCMQuery(DSQuery):
     """ Specific query builders for source code management system data source """
@@ -252,12 +255,13 @@ class SCMQuery(DSQuery):
 
     def GetSQLCompaniesWhere (self, company, role):
          #fields necessaries to match info among tables
-         return ("and s."+role+"_id = pup.people_id "+\
+         fields = "and s."+role+"_id = pup.people_id "+\
                  "  and pup.upeople_id = upc.upeople_id "+\
                  "  and s.date >= upc.init "+\
                  "  and s.date < upc.end "+\
-                 "  and upc.company_id = c.id "+\
-                 "  and c.name =" + company)
+                 "  and upc.company_id = c.id "
+         if company is not None: fields += " AND c.name =" + company
+         return fields
 
     def GetSQLCountriesFrom (self, identities_db):
         #tables necessaries for companies

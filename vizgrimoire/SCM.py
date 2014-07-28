@@ -85,7 +85,8 @@ class SCM(DataSource):
 
     @staticmethod
     def get_agg_data (period, startdate, enddate, identities_db, filter_= None):
-        metrics = DataSource.get_metrics_data(SCM, period, startdate, enddate, identities_db, filter_, False)
+        metrics = DataSource.get_metrics_data(SCM, period, startdate, enddate, 
+                                              identities_db, filter_, False)
         if filter_ is not None: studies = {}
         else:
             studies = DataSource.get_studies_data(SCM, period, startdate, enddate, False)
@@ -260,6 +261,14 @@ class SCM(DataSource):
         if (filter_name == "company"):
             summary =  SCM.get_filter_summary(filter_, period, startdate, enddate, identities_db, 10)
             createJSON (summary, destdir+"/"+ filter_.get_summary_filename(SCM))
+
+        # New API for getting all metrics with one query
+        if (filter_name == "people2" or filter_name == "company"):
+            filter_all = Filter(filter_name, None)
+            agg_all = SCM.get_agg_data(period, startdate, enddate,
+                                       identities_db, filter_all)
+            evol_all = SCM.get_evolutionary_data(period, startdate, enddate,
+                                             identities_db, filter_all)
 
     @staticmethod
     def get_top_people(startdate, enddate, identities_db, npeople):

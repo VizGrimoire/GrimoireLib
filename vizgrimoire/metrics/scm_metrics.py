@@ -326,23 +326,25 @@ class Files(Metrics):
         if self.filters.type_analysis is None:
             return None
 
+        type_analysis = [self.filters.type_analysis[0], None]
+
         fields = "count(distinct(a.file_id)) as files "
         tables = " scmlog s, actions a "
         filters = " a.commit_id = s.id "
 
-        tables += self.db.GetSQLReportFrom(self.filters.type_analysis)
-        filters += self.db.GetSQLReportWhere(self.filters.type_analysis)
+        tables += self.db.GetSQLReportFrom(type_analysis)
+        filters += self.db.GetSQLReportWhere(type_analysis)
 
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                self.filters.enddate, " s.date ", fields,
                                tables, filters, evolutionary, self.filters)
-        print(q)
-
         return q
 
 
     def _get_sql(self, evolutionary):
-        # This function contains basic parts of the query to count files
+        if self.filters.type_analysis:
+            if self.filters.type_analysis[1] == None:
+                return self._get_sql_filter_all(evolutionary)
         fields = " count(distinct(a.file_id)) as files "
         tables = " scmlog s, actions a "
         filters = " a.commit_id = s.id "
@@ -380,7 +382,8 @@ class Lines(Metrics):
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                self.filters.enddate, " s.date ", fields,
                                tables, filters, evolutionary)
-
+        print(self.filters.type_analysis)
+        print(q)
         return q
 
     def get_ts(self):
