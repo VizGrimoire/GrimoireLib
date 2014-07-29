@@ -100,6 +100,10 @@ class Metrics(object):
 
     def get_trends(self, date, days):
         """ Returns the trend metrics between now and now-days values """
+
+        if self.filters.type_analysis and self.filters.type_analysis[1] is None:
+            return self.get_trends_all_items(date, days)
+
         # Keeping state of origin filters
         filters = self.filters
 
@@ -124,28 +128,57 @@ class Metrics(object):
 
     def get_trends_all_items(self, date, days):
         """ Returns the trend metrics between now and now-days values """
+        from GrimoireUtils import check_array_values
         # Keeping state of origin filters
         filters = self.filters
 
         chardates = GetDates(date, days)
         self.filters = MetricFilters(filters.period,
                                      chardates[1], chardates[0], filters.type_analysis)
-        last = self.get_agg()
-        last = int(last[self.id])
+        last = check_array_values(self.get_agg())
+
+        # last = int(last[self.id])
         self.filters = MetricFilters(filters.period,
                                      chardates[2], chardates[1], filters.type_analysis)
-        prev = self.get_agg()
-        prev = int(prev[self.id])
+        prev = check_array_values(self.get_agg())
 
+        group_field = self.db.get_group_field(self.filters.type_analysis[0])
+        group_field = group_field.split('.')[1] # remove table name
+        field = prev.keys()[0]
+        if field == group_field: field = prev.keys()[1] 
+
+        # We need to build a new dict with trends
+        # First, we need to find all possible keys
+        items = list(set(prev[group_field] + last[group_field]))
+        # Complete prev and last adding missing (0) values
+        for item in items:
+            if item not in prev[group_field]:
+                prev[field].append(0)
+                prev[group_field].append(item)
+            if item not in last[group_field]:
+                last[field].append(0)
+                last[group_field].append(item)
+        # Recreate last so the items are in the same order than prev
+        last_ordered = {}
+        last_ordered[field] = []
+        last_ordered[group_field] = []
+        for item in prev[group_field]:
+            last_ordered[group_field].append(item)
+            pos = last[group_field].index(item)
+            last_ordered[field].append(last[field][pos])
+
+        # Create the dict with trend metrics
         data = {}
-        data['diff_net'+self.id+'_'+str(days)] = last - prev
-        data['percentage_'+self.id+'_'+str(days)] = GetPercentageDiff(prev, last)
-        data[self.id+'_'+str(days)] = last
+        data[group_field] = prev[group_field]
+        data[self.id+'_'+str(days)] = last[field]
+        data['diff_net'+self.id+'_'+str(days)] = \
+            [last_ordered[field][i] - prev[field][i] for i in range(0, len(prev[field]))]
+        data['percentage_'+self.id+'_'+str(days)] = \
+            [GetPercentageDiff(prev[field][i],last_ordered[field][i]) for i in range(0, len(prev[field]))]
 
         # Returning filters to their original value
         self.filters = filters
         return (data)
-
 
     def _get_top_supported_filters(self):
         return []

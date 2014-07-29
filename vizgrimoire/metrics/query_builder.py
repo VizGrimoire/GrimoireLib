@@ -57,8 +57,11 @@ class DSQuery(object):
 
     def GetSQLGlobal(self, date, fields, tables, filters, start, end, all_items = None):
         group_field = None
+        count_field = None
         if all_items:
             group_field = self.get_group_field(all_items)
+            # Expected format: " count(distinct(pup.upeople_id)) AS authors"
+            count_field = fields.split(" ")[3]
             fields = group_field + ", " + fields
 
         sql = 'SELECT '+ fields
@@ -71,7 +74,7 @@ class DSQuery(object):
 
         if all_items:
             sql += " GROUP BY " + group_field
-            sql += " ORDER BY files DESC," + group_field
+            sql += " ORDER BY " + count_field + " DESC," + group_field
 
         return(sql)
 
@@ -151,8 +154,6 @@ class DSQuery(object):
             q = self.GetSQLGlobal(date_field, fields, tables, filters,
                                   startdate, enddate, all_items)
 
-        if all_items: print(q)
-
         return(q)
 
     def __SetDBChannel__ (self, user=None, password=None, database=None,
@@ -212,6 +213,7 @@ class DSQuery(object):
     def get_group_field (self, filter_type):
         """ Return the name of the field to group by in filter all queries """
 
+        field = None
         supported = ['people2','company']
 
         analysis = filter_type

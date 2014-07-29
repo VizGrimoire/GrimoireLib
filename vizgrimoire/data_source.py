@@ -344,7 +344,8 @@ class DataSource(object):
 
         # type_analysis[1] = None is one SQL for all items in a filter. 
         # Not yet supported here
-        if not evol and (type_analysis is None or type_analysis[1] is not None):
+        # if not evol and (type_analysis is None or type_analysis[1] is not None):
+        if not evol:
             init_date = DS.get_date_init(startdate, enddate, identities_db, type_analysis)
             end_date = DS.get_date_end(startdate, enddate, identities_db, type_analysis)
 

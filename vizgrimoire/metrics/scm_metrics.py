@@ -58,7 +58,7 @@ class Commits(Metrics):
         filters = self.db.GetSQLReportWhere(self.filters.type_analysis, "author") + q_actions
         query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                    self.filters.enddate, " s.date ", fields,
-                                   tables, filters, evolutionary)
+                                   tables, filters, evolutionary, self.filters.type_analysis)
         return query
 
     def _get_sqlslow(self, evolutionary):
@@ -106,7 +106,7 @@ class Authors(Metrics):
 
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                self.filters.enddate, " s.date ", fields,
-                               tables, filters, evolutionary)
+                               tables, filters, evolutionary, self.filters.type_analysis)
         return q
 
 
