@@ -324,7 +324,7 @@ class DataSource(object):
         metrics_reports = DS.get_metrics_core_reports()
         all_metrics = DS.get_metrics_set(DS)
 
-        # Reports = filters not available inside filters
+        # Reports = filters metrics not available inside filters
         if type_analysis is None:
             from report import Report
             reports_on = Report.get_config()['r']['reports'].split(",")
@@ -362,7 +362,7 @@ class DataSource(object):
                     if item.id not in metrics_trends: continue
                     mfilter_orig = item.filters
                     item.filters = mfilter
-                    period_data = item.get_agg_diff_days(enddate, i)
+                    period_data = item.get_trends(enddate, i)
                     item.filters = mfilter_orig
                     data = dict(data.items() + period_data.items())
 

@@ -263,7 +263,7 @@ class SCM(DataSource):
             createJSON (summary, destdir+"/"+ filter_.get_summary_filename(SCM))
 
         # New API for getting all metrics with one query
-        if (filter_name == "people2" or filter_name == "company"):
+        if filter_name == "people2" or filter_name == "company":
             filter_all = Filter(filter_name, None)
             agg_all = SCM.get_agg_data(period, startdate, enddate,
                                        identities_db, filter_all)

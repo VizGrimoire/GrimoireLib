@@ -98,7 +98,7 @@ class Metrics(object):
         return self.db.ExecuteQuery(query)
 
 
-    def get_agg_diff_days(self, date, days):
+    def get_trends(self, date, days):
         """ Returns the trend metrics between now and now-days values """
         # Keeping state of origin filters
         filters = self.filters
@@ -121,6 +121,31 @@ class Metrics(object):
         # Returning filters to their original value
         self.filters = filters
         return (data)
+
+    def get_trends_all_items(self, date, days):
+        """ Returns the trend metrics between now and now-days values """
+        # Keeping state of origin filters
+        filters = self.filters
+
+        chardates = GetDates(date, days)
+        self.filters = MetricFilters(filters.period,
+                                     chardates[1], chardates[0], filters.type_analysis)
+        last = self.get_agg()
+        last = int(last[self.id])
+        self.filters = MetricFilters(filters.period,
+                                     chardates[2], chardates[1], filters.type_analysis)
+        prev = self.get_agg()
+        prev = int(prev[self.id])
+
+        data = {}
+        data['diff_net'+self.id+'_'+str(days)] = last - prev
+        data['percentage_'+self.id+'_'+str(days)] = GetPercentageDiff(prev, last)
+        data[self.id+'_'+str(days)] = last
+
+        # Returning filters to their original value
+        self.filters = filters
+        return (data)
+
 
     def _get_top_supported_filters(self):
         return []

@@ -55,10 +55,10 @@ class DSQuery(object):
         """ Basic indexes used in each data source """
         pass
 
-    def GetSQLGlobal(self, date, fields, tables, filters, start, end, filter_all = None):
+    def GetSQLGlobal(self, date, fields, tables, filters, start, end, all_items = None):
         group_field = None
-        if filter_all:
-            group_field = self.get_group_field(filter_all.type_analysis)
+        if all_items:
+            group_field = self.get_group_field(all_items)
             fields = group_field + ", " + fields
 
         sql = 'SELECT '+ fields
@@ -69,17 +69,17 @@ class DSQuery(object):
             if (reg_and.match (filters.lower())) is not None: sql += " " + filters
             else: sql += ' AND '+filters
 
-        if filter_all:
+        if all_items:
             sql += " GROUP BY " + group_field
             sql += " ORDER BY files DESC," + group_field
 
         return(sql)
 
     def GetSQLPeriod(self, period, date, fields, tables, filters, start, end,
-                     filter_all = None):
+                     all_items = None):
         group_field = None
-        if filter_all:
-            group_field = self.get_group_field(filter_all.type_analysis)
+        if all_items :
+            group_field = self.get_group_field(all_items)
             fields = group_field + ", " + fields
 
         iso_8601_mode = 3
@@ -97,7 +97,7 @@ class DSQuery(object):
             sys.exit(1)
         # sql = paste(sql, 'DATE_FORMAT (',date,', \'%d %b %Y\') AS date, ')
         sql += fields
-        if filter_all: fields + ", " + group_field
+        if all_items: fields + ", " + group_field
         sql += ' FROM ' + tables
         sql = sql + ' WHERE '+date+'>='+start+' AND '+date+'<'+end
         reg_and = re.compile("^[ ]*and", re.IGNORECASE)
@@ -108,7 +108,7 @@ class DSQuery(object):
 
         group_by = " GROUP BY "
 
-        if filter_all: group_by += group_field + ", "
+        if all_items: group_by += group_field + ", "
 
         if (period == 'year'):
             sql += group_by + ' YEAR('+date+')'
@@ -126,22 +126,32 @@ class DSQuery(object):
             logging.error("PERIOD: "+period+" not supported")
             sys.exit(1)
 
-        if filter_all: sql += "," + group_field
+        if all_items: sql += "," + group_field
         return(sql)
 
 
-    def BuildQuery (self, period, startdate, enddate, date_field, fields, 
-                    tables, filters, evolutionary, filter_all = None):
+    def BuildQuery (self, period, startdate, enddate, date_field, fields,
+                    tables, filters, evolutionary, type_analysis = None):
         # Select the way to evolutionary or aggregated dataset
-        # filter_all: get data for all tiems in a filter
+        # filter_all: get data for all items in a filter
         q = ""
+
+        # if all_items build a query for getting all items in one query
+        all_items = None
+        if type_analysis:
+            all_items = type_analysis[0]
+            if type_analysis[1] is not None:
+                # all_items only used for global filter, not for items filter
+                all_items = None 
 
         if (evolutionary):
             q = self.GetSQLPeriod(period, date_field, fields, tables, filters,
-                                  startdate, enddate, filter_all)
+                                  startdate, enddate, all_items)
         else:
             q = self.GetSQLGlobal(date_field, fields, tables, filters,
-                                  startdate, enddate, filter_all)
+                                  startdate, enddate, all_items)
+
+        if all_items: print(q)
 
         return(q)
 
@@ -199,16 +209,12 @@ class DSQuery(object):
 
         return  project_with_children_str
 
-    def get_group_field (self, type_analysis):
+    def get_group_field (self, filter_type):
         """ Return the name of the field to group by in filter all queries """
-
-        field = None
-
-        if (type_analysis is None or len(type_analysis) != 2): return field
 
         supported = ['people2','company']
 
-        analysis = type_analysis[0]
+        analysis = filter_type
 
         if analysis not in supported: return field
         if analysis == 'people2': field = "up.identifier"

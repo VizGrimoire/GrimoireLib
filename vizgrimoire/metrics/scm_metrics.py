@@ -322,41 +322,19 @@ class Files(Metrics):
     desc = "Number of files 'touched' (added, modified, removed, ) by at least one commit"
     data_source = SCM
 
-    def _get_sql_filter_all(self, evolutionary):
-        if self.filters.type_analysis is None:
-            return None
-
-        type_analysis = [self.filters.type_analysis[0], None]
-
-        fields = "count(distinct(a.file_id)) as files "
-        tables = " scmlog s, actions a "
-        filters = " a.commit_id = s.id "
-
-        tables += self.db.GetSQLReportFrom(type_analysis)
-        filters += self.db.GetSQLReportWhere(type_analysis)
-
-        q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
-                               self.filters.enddate, " s.date ", fields,
-                               tables, filters, evolutionary, self.filters)
-        return q
-
-
     def _get_sql(self, evolutionary):
-        if self.filters.type_analysis:
-            if self.filters.type_analysis[1] == None:
-                return self._get_sql_filter_all(evolutionary)
         fields = " count(distinct(a.file_id)) as files "
         tables = " scmlog s, actions a "
         filters = " a.commit_id = s.id "
 
-        #specific parts of the query depending on the report needed
         tables += self.db.GetSQLReportFrom(self.filters.type_analysis)
-        #TODO: left "author" as generic option coming from parameters (this should be specified by command line)
+        # TODO: left "author" as generic option coming from parameters 
+        # (this should be specified by command line)
         filters += self.db.GetSQLReportWhere(self.filters.type_analysis, "author")
 
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                self.filters.enddate, " s.date ", fields,
-                               tables, filters, evolutionary)
+                               tables, filters, evolutionary, self.filters.type_analysis)
         return q
 
 
@@ -374,7 +352,6 @@ class Lines(Metrics):
         tables = "scmlog s, commits_lines cl "
         filters = "cl.commit_id = s.id "
 
-        # specific parts of the query depending on the report needed
         tables += self.db.GetSQLReportFrom(self.filters.type_analysis)
         #TODO: left "author" as generic option coming from parameters (this should be specified by command line)
         filters += self.db.GetSQLReportWhere(self.filters.type_analysis, "author")
@@ -382,8 +359,8 @@ class Lines(Metrics):
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                self.filters.enddate, " s.date ", fields,
                                tables, filters, evolutionary)
-        print(self.filters.type_analysis)
-        print(q)
+        # print(self.filters.type_analysis)
+        # print(q)
         return q
 
     def get_ts(self):
@@ -400,14 +377,14 @@ class Lines(Metrics):
         return completePeriodIds(data, self.filters.period,
                                  self.filters.startdate, self.filters.enddate)
 
-    def get_agg_diff_days(self, date, days):
+    def get_trends(self, date, days):
         #Specific needs for Added and Removed lines not considered in meta class Metrics
         filters = self.filters
 
         chardates = GetDates(date, days)
 
         self.filters = MetricFilters(Metrics.default_period,
-                                     chardates[1], chardates[0], None)        
+                                     chardates[1], chardates[0], None)
         last = self.get_agg()
         last_added = int(last['added_lines'])
         last_removed = int(last['removed_lines'])
