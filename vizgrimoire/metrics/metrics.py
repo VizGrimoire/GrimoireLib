@@ -23,6 +23,7 @@
 
 
 from GrimoireUtils import completePeriodIds, GetDates, GetPercentageDiff
+from query_builder import DSQuery
 from metrics_filter import MetricFilters
 
 class Metrics(object):
@@ -74,27 +75,52 @@ class Metrics(object):
     def get_data_source(self):
         return self.data_source
 
+    @staticmethod
+    def convert_group_to_ts(data, id_field):
+        """ Convert a dict with mixed ts to individual ts """
+        ts = {}
+        if id_field not in data: return data
+        # all fields
+        fields = data.keys()
+        fields.remove(id_field)
+        # Create a ts for each unique id_field
+
+        # Create empty structure
+        id_fields = list(set(data[id_field]))
+        ts[id_field] = id_fields
+        for field in fields: 
+            ts[field]  = []
+            for id in id_fields:
+                ts[field].append([])
+
+        # Fill items data
+        for i in range(0, len(data[id_field])):
+            item = data[id_field][i]
+            pos = id_fields.index(item)
+            for field in fields:
+                ts[field][pos].append(data[field][i])
+
+        # Now we need to complete the time series 
+        # And now share the date series
+
+        # print data
+        # print ts
+        return data
+
     def get_ts (self):
         """ Returns a time series of values """
         query = self._get_sql(True)
         ts = self.db.ExecuteQuery(query)
-        return completePeriodIds(ts, self.filters.period, 
-                                 self.filters.startdate, self.filters.enddate)
-    def get_filter_all_ts (self):
-        """ Returns a time series of values for all items in a filter """
-        query = self._get_sql_filter_all(True)
-        ts = self.db.ExecuteQuery(query)
+        if self.filters.type_analysis and self.filters.type_analysis[1] is None:
+            id_field = DSQuery.get_group_field(self.filters.type_analysis[0])
+            id_field = id_field.split('.')[1] # remove table name
+            ts = Metrics.convert_group_to_ts(ts, id_field)
         return completePeriodIds(ts, self.filters.period, 
                                  self.filters.startdate, self.filters.enddate)
 
     def get_agg(self):
         """ Returns an aggregated value """
         query = self._get_sql(False)
-        return self.db.ExecuteQuery(query)
-
-    def get_filter_all_agg(self):
-        """ Returns an aggregated value for all items in a filter  """
-        query = self._get_sql_filter_all(False)
         return self.db.ExecuteQuery(query)
 
 

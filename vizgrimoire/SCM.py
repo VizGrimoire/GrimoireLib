@@ -270,9 +270,10 @@ class SCM(DataSource):
             filter_all = Filter(filter_name, None)
             agg_all = SCM.get_agg_data(period, startdate, enddate,
                                        identities_db, filter_all)
-            print(agg_all)
+            # print(agg_all)
             evol_all = SCM.get_evolutionary_data(period, startdate, enddate,
                                                  identities_db, filter_all)
+            print(evol_all)
 
     @staticmethod
     def get_top_people(startdate, enddate, identities_db, npeople):
