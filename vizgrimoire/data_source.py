@@ -294,6 +294,44 @@ class DataSource(object):
         return data
 
     @staticmethod
+    def fill_items(items, data):
+        """ Complete data dict identifier key using identities filling 
+            all not identifier fields  with 0 """
+        fields = data.keys()
+        if 'identifier' not in fields: return data
+        fields.remove('identifier')
+        for id in items:
+            if id not in data['identifier']:
+                data['identifier'].append(id)
+                for field in fields:
+                    data[field].append(0)
+        return data
+
+    @staticmethod
+    def order_items(items, data):
+        """ Reorder data identities using identities ordering """
+        fields = data.keys()
+        if 'identifier' not in fields: return data
+        data_ordered = {}
+        for field in fields:
+            data_ordered[field] = []
+
+        fields.remove('identifier')
+        for id in items:
+            data_ordered['identifier'].append(id)
+            pos = data['identifier'].index(id)
+            for field in fields:
+                data_ordered[field].append(data[field][pos])
+
+        return data_ordered
+
+    @staticmethod
+    def fill_and_order_items(items, data):
+        # The only identities that will appear  
+        data = DataSource.fill_items(items, data)
+        return DataSource.order_items(items, data)
+
+    @staticmethod
     def get_metrics_data(DS, period, startdate, enddate, identities_db, 
                          filter_ = None, evol = False):
         """ Get basic data from all core metrics """
@@ -315,6 +353,10 @@ class DataSource(object):
         type_analysis = None
         if filter_ is not None:
             type_analysis = filter_.get_type_analysis()
+
+        if type_analysis and type_analysis[1] is None:
+            items = DS.get_filter_items(filter_, startdate, enddate, identities_db)
+            items = items.pop('name')
 
         if DS.get_name()+"_startdate" in Report.get_config()['r']:
             startdate = Report.get_config()['r'][DS.get_name()+"_startdate"]
@@ -338,17 +380,18 @@ class DataSource(object):
             if evol: mvalue = item.get_ts()
             else:    mvalue = item.get_agg()
 
+            if type_analysis and type_analysis[1] is None:
+                mvalue = DataSource.fill_and_order_items(items, mvalue)
+
             data = dict(data.items() + mvalue.items())
 
             item.filters = mfilter_orig
 
-        # type_analysis[1] = None is one SQL for all items in a filter. 
-        # Not yet supported here
-        # if not evol and (type_analysis is None or type_analysis[1] is not None):
         if not evol:
             init_date = DS.get_date_init(startdate, enddate, identities_db, type_analysis)
             end_date = DS.get_date_end(startdate, enddate, identities_db, type_analysis)
 
+            # TODO: grouped items metrics support
             data = dict(data.items() + init_date.items() + end_date.items())
 
             # Tendencies
@@ -358,6 +401,7 @@ class DataSource(object):
             if automator_metrics in automator['r']:
                 metrics_trends = automator['r'][automator_metrics].split(",")
 
+            identifiers = data['identifier']
             for i in [7,30,365]:
                 for item in all_metrics:
                     if item.id not in metrics_trends: continue
@@ -365,6 +409,11 @@ class DataSource(object):
                     item.filters = mfilter
                     period_data = item.get_trends(enddate, i)
                     item.filters = mfilter_orig
+
+                    if type_analysis and type_analysis[1] is None:
+                        period_data = DataSource.fill_and_order_items(items, period_data)
+                        # print(period_data)
+
                     data = dict(data.items() + period_data.items())
 
         return data

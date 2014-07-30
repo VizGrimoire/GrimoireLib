@@ -262,13 +262,17 @@ class SCM(DataSource):
             summary =  SCM.get_filter_summary(filter_, period, startdate, enddate, identities_db, 10)
             createJSON (summary, destdir+"/"+ filter_.get_summary_filename(SCM))
 
+    @staticmethod
+    def create_filter_report_all(filter_, period, startdate, enddate, destdir, npeople, identities_db):
         # New API for getting all metrics with one query
+        filter_name = filter_.get_name()
         if filter_name == "people2" or filter_name == "company":
             filter_all = Filter(filter_name, None)
             agg_all = SCM.get_agg_data(period, startdate, enddate,
                                        identities_db, filter_all)
+            print(agg_all)
             evol_all = SCM.get_evolutionary_data(period, startdate, enddate,
-                                             identities_db, filter_all)
+                                                 identities_db, filter_all)
 
     @staticmethod
     def get_top_people(startdate, enddate, identities_db, npeople):
