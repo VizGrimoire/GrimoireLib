@@ -129,6 +129,7 @@ class Metrics(object):
     def get_trends_all_items(self, date, days):
         """ Returns the trend metrics between now and now-days values """
         from GrimoireUtils import check_array_values
+        from query_builder import DSQuery
         # Keeping state of origin filters
         filters = self.filters
 
@@ -142,7 +143,7 @@ class Metrics(object):
                                      chardates[2], chardates[1], filters.type_analysis)
         prev = check_array_values(self.get_agg())
 
-        group_field = self.db.get_group_field(self.filters.type_analysis[0])
+        group_field = DSQuery.get_group_field(self.filters.type_analysis[0])
         group_field = group_field.split('.')[1] # remove table name
         field = prev.keys()[0]
         if field == group_field: field = prev.keys()[1] 

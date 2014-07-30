@@ -25,6 +25,7 @@
     support for Grimoire supported data sources """ 
 
 import logging, os
+from query_builder import DSQuery
 from GrimoireUtils import createJSON
 from metrics_filter import MetricFilters
 
@@ -294,42 +295,41 @@ class DataSource(object):
         return data
 
     @staticmethod
-    def fill_items(items, data):
-        """ Complete data dict identifier key using identities filling 
-            all not identifier fields  with 0 """
+    def fill_items(items, data, id_field):
+        """ Complete data dict items filling with 0 not existing items """
         fields = data.keys()
-        if 'identifier' not in fields: return data
-        fields.remove('identifier')
+        if id_field not in fields: return data
+        fields.remove(id_field)
         for id in items:
-            if id not in data['identifier']:
-                data['identifier'].append(id)
+            if id not in data[id_field]:
+                data[id_field].append(id)
                 for field in fields:
                     data[field].append(0)
         return data
 
     @staticmethod
-    def order_items(items, data):
+    def order_items(items, data, id_field):
         """ Reorder data identities using identities ordering """
         fields = data.keys()
-        if 'identifier' not in fields: return data
+        if id_field not in fields: return data
         data_ordered = {}
         for field in fields:
             data_ordered[field] = []
 
-        fields.remove('identifier')
+        fields.remove(id_field)
         for id in items:
-            data_ordered['identifier'].append(id)
-            pos = data['identifier'].index(id)
+            data_ordered[id_field].append(id)
+            pos = data[id_field].index(id)
             for field in fields:
                 data_ordered[field].append(data[field][pos])
 
         return data_ordered
 
     @staticmethod
-    def fill_and_order_items(items, data):
-        # The only identities that will appear  
-        data = DataSource.fill_items(items, data)
-        return DataSource.order_items(items, data)
+    def fill_and_order_items(items, data, id_field):
+        # Only items will appear for a filter  
+        data = DataSource.fill_items(items, data, id_field)
+        return DataSource.order_items(items, data, id_field)
 
     @staticmethod
     def get_metrics_data(DS, period, startdate, enddate, identities_db, 
@@ -381,7 +381,9 @@ class DataSource(object):
             else:    mvalue = item.get_agg()
 
             if type_analysis and type_analysis[1] is None:
-                mvalue = DataSource.fill_and_order_items(items, mvalue)
+                id_field = DSQuery.get_group_field(type_analysis[0])
+                id_field = id_field.split('.')[1] # remove table name
+                mvalue = DataSource.fill_and_order_items(items, mvalue, id_field)
 
             data = dict(data.items() + mvalue.items())
 
@@ -401,7 +403,6 @@ class DataSource(object):
             if automator_metrics in automator['r']:
                 metrics_trends = automator['r'][automator_metrics].split(",")
 
-            identifiers = data['identifier']
             for i in [7,30,365]:
                 for item in all_metrics:
                     if item.id not in metrics_trends: continue
@@ -411,8 +412,9 @@ class DataSource(object):
                     item.filters = mfilter_orig
 
                     if type_analysis and type_analysis[1] is None:
-                        period_data = DataSource.fill_and_order_items(items, period_data)
-                        # print(period_data)
+                        id_field = DSQuery.get_group_field(type_analysis[0])
+                        id_field = id_field.split('.')[1] # remove table name
+                        period_data = DataSource.fill_and_order_items(items, period_data, id_field)
 
                     data = dict(data.items() + period_data.items())
 

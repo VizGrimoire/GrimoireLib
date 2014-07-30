@@ -210,7 +210,8 @@ class DSQuery(object):
 
         return  project_with_children_str
 
-    def get_group_field (self, filter_type):
+    @staticmethod
+    def get_group_field (filter_type):
         """ Return the name of the field to group by in filter all queries """
 
         field = None
