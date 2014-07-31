@@ -308,8 +308,8 @@ class DataSource(object):
         return data
 
     @staticmethod
-    def _order_items(items, data, id_field):
-        """ Reorder data identities using identities ordering """
+    def _order_items(items, data, id_field, evol = False, period = None):
+        """ Reorder data identities using items ordering """
         fields = data.keys()
         if id_field not in fields: return data
         data_ordered = {}
@@ -317,6 +317,13 @@ class DataSource(object):
             data_ordered[field] = []
 
         fields.remove(id_field)
+
+        if evol:
+            evol_fields = [period, 'unixtime','date']
+            for evol_field in evol_fields:
+                fields.remove(evol_field)
+                data_ordered[evol_field] = data[evol_field]
+
         for id in items:
             data_ordered[id_field].append(id)
             pos = data[id_field].index(id)
@@ -326,10 +333,11 @@ class DataSource(object):
         return data_ordered
 
     @staticmethod
-    def _fill_and_order_items(items, data, id_field):
-        # Only items will appear for a filter  
-        data = DataSource._fill_items(items, data, id_field)
-        return DataSource._order_items(items, data, id_field)
+    def _fill_and_order_items(items, data, id_field, evol = False, period = None):
+        # Only items will appear for a filter
+        if not evol: # evol is already filled (complete data)
+            data = DataSource._fill_items(items, data, id_field)
+        return DataSource._order_items(items, data, id_field, evol, period)
 
     @staticmethod
     def get_metrics_data(DS, period, startdate, enddate, identities_db, 
@@ -383,8 +391,8 @@ class DataSource(object):
             if type_analysis and type_analysis[1] is None:
                 id_field = DSQuery.get_group_field(type_analysis[0])
                 id_field = id_field.split('.')[1] # remove table name
-                mvalue = DataSource._fill_and_order_items(items, mvalue, id_field)
-
+                mvalue = DataSource._fill_and_order_items(items, mvalue, id_field, 
+                                                          evol, period)
             data = dict(data.items() + mvalue.items())
 
             item.filters = mfilter_orig

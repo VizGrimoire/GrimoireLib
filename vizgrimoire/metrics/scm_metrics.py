@@ -68,7 +68,7 @@ class Commits(Metrics):
 
         query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                    self.filters.enddate, " s.date ", fields,
-                                   tables, filters, evolutionary)
+                                   tables, filters, evolutionary, self.filters.type_analysis)
         return query
 
 
@@ -289,7 +289,7 @@ class Committers(Metrics):
 
     def _get_sql(self, evolutionary):
         # This function contains basic parts of the query to count committers
-        fields = 'count(distinct(pup.upeople_id)) AS committers '
+        fields = ' count(distinct(pup.upeople_id)) AS committers '
         tables = "scmlog s "
         filters = self.db.GetSQLReportWhere(self.filters.type_analysis, "committer")
 
@@ -309,7 +309,7 @@ class Committers(Metrics):
 
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate, 
                                self.filters.enddate, " s.date ", fields, 
-                               tables, filters, evolutionary)
+                               tables, filters, evolutionary, self.filters.type_analysis)
 
         return q
 
@@ -358,7 +358,7 @@ class Lines(Metrics):
 
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                self.filters.enddate, " s.date ", fields,
-                               tables, filters, evolutionary)
+                               tables, filters, evolutionary, self.filters.type_analysis)
         # print(self.filters.type_analysis)
         # print(q)
         return q
@@ -407,6 +407,55 @@ class Lines(Metrics):
         self.filters = filters
         return (data) 
 
+class AddedLines(Metrics):
+    """ Added lines for source code management system """
+
+    id = "added_lines"
+    name = "Added Lines"
+    desc = "Number of added lines"
+    data_source = SCM
+
+    def _get_sql(self, evolutionary):
+        # This function contains basic parts of the query to count added and removed lines
+        fields = " sum(cl.added) as added_lines"
+        tables = "scmlog s, commits_lines cl "
+        filters = "cl.commit_id = s.id "
+
+        tables += self.db.GetSQLReportFrom(self.filters.type_analysis)
+        #TODO: left "author" as generic option coming from parameters (this should be specified by command line)
+        filters += self.db.GetSQLReportWhere(self.filters.type_analysis, "author")
+
+        q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
+                               self.filters.enddate, " s.date ", fields,
+                               tables, filters, evolutionary, self.filters.type_analysis)
+        # print(self.filters.type_analysis)
+        # print(q)
+        return q
+
+class RemovedLines(Metrics):
+    """ Added and Removed lines for source code management system """
+
+    id = "removed_lines"
+    name = "Removed Lines"
+    desc = "Number of removed lines"
+    data_source = SCM
+
+    def _get_sql(self, evolutionary):
+        # This function contains basic parts of the query to count added and removed lines
+        fields = " sum(cl.removed) as removed_lines"
+        tables = "scmlog s, commits_lines cl "
+        filters = "cl.commit_id = s.id "
+
+        tables += self.db.GetSQLReportFrom(self.filters.type_analysis)
+        #TODO: left "author" as generic option coming from parameters (this should be specified by command line)
+        filters += self.db.GetSQLReportWhere(self.filters.type_analysis, "author")
+
+        q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
+                               self.filters.enddate, " s.date ", fields,
+                               tables, filters, evolutionary, self.filters.type_analysis)
+        # print(self.filters.type_analysis)
+        # print(q)
+        return q
 
 class Branches(Metrics):
     """ Branches metric class for source code management system """
@@ -418,7 +467,7 @@ class Branches(Metrics):
 
     def _get_sql(self, evolutionary):
         # Basic parts of the query needed when calculating branches
-        fields = "count(distinct(a.branch_id)) as branches "
+        fields = " count(distinct(a.branch_id)) as branches "
         tables = " scmlog s, actions a "
         filters = " a.commit_id = s.id "
 
@@ -429,7 +478,7 @@ class Branches(Metrics):
 
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                self.filters.enddate, " s.date ", fields,
-                               tables, filters, evolutionary)
+                               tables, filters, evolutionary, self.filters.type_analysis)
         return q
 
 
@@ -452,7 +501,7 @@ class Actions(Metrics):
 
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                self.filters.enddate, " s.date ", fields,
-                               tables, filters, evolutionary)
+                               tables, filters, evolutionary, self.filters.type_analysis)
         return q
 
 class CommitsPeriod(Metrics):
@@ -475,7 +524,7 @@ class CommitsPeriod(Metrics):
 
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                self.filters.enddate, " s.date ", fields,
-                               tables, filters, evolutionary)
+                               tables, filters, evolutionary, self.filters.type_analysis)
         return q
 
     def get_ts(self):
@@ -503,7 +552,7 @@ class FilesPeriod(Metrics):
 
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                self.filters.enddate, " s.date ", fields,
-                               tables, filters, evolutionary)
+                               tables, filters, evolutionary, self.filters.type_analysis)
         return q
 
     def get_ts(self):
@@ -544,7 +593,7 @@ class CommitsAuthor(Metrics):
 
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                self.filters.enddate, " s.date ", fields,
-                               tables, filters, evolutionary)
+                               tables, filters, evolutionary, self.filters.type_analysis)
         return q
 
 
@@ -581,7 +630,7 @@ class AuthorsPeriod(Metrics):
 
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                self.filters.enddate, " s.date ", fields,
-                               tables, filters, evolutionary)
+                               tables, filters, evolutionary, self.filters.type_analysis)
         return q
 
 
@@ -627,7 +676,7 @@ class CommittersPeriod(Metrics):
             filters += " and s.committer_id = pup.people_id "
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                self.filters.enddate, " s.date ", fields,
-                               tables, filters, evolutionary)
+                               tables, filters, evolutionary, self.filters.type_analysis)
         return q
 
     def get_ts(self):
@@ -668,7 +717,7 @@ class FilesAuthor(Metrics):
 
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                self.filters.enddate, " s.date ", fields,
-                               tables, filters, evolutionary)
+                               tables, filters, evolutionary, self.filters.type_analysis)
         return q
 
 class Repositories(Metrics):
@@ -682,7 +731,7 @@ class Repositories(Metrics):
     data_source = SCM
 
     def _get_sql(self, evolutionary):
-        fields = "count(distinct(s.repository_id)) AS repositories "
+        fields = " count(distinct(s.repository_id)) AS repositories "
         tables = "scmlog s "
 
         # specific parts of the query depending on the report needed
@@ -692,7 +741,7 @@ class Repositories(Metrics):
 
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                self.filters.enddate, " s.date ", fields,
-                               tables, filters, evolutionary)
+                               tables, filters, evolutionary, self.filters.type_analysis)
         return q
 
     def get_list(self):
@@ -719,7 +768,7 @@ class Companies(Metrics):
     data_source = SCM
 
     def _get_sql(self, evol):
-        fields = "count(distinct(upc.company_id)) as companies"
+        fields = " count(distinct(upc.company_id)) as companies"
         tables = " scmlog s, people_upeople pup, upeople_companies upc"
         filters = "s.author_id = pup.people_id and "+\
                "pup.upeople_id = upc.upeople_id and "+\
@@ -727,7 +776,7 @@ class Companies(Metrics):
                "s.date < upc.end"
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                self.filters.enddate, " s.date ", fields, 
-                               tables, filters, evol)
+                               tables, filters, evol, self.filters.type_analysis)
         return q
 
     def _get_top_project(self, fbots = None, days = None):
@@ -810,12 +859,12 @@ class Countries(Metrics):
     data_source = SCM
 
     def _get_sql(self, evol):
-        fields = "count(distinct(upc.country_id)) as countries"
+        fields = " count(distinct(upc.country_id)) as countries"
         tables = "scmlog s, people_upeople pup, upeople_countries upc"
         filters = "s.author_id = pup.people_id and pup.upeople_id = upc.upeople_id"
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                self.filters.enddate, " s.date ", fields,
-                               tables, filters, evol)
+                               tables, filters, evol, self.filters.type_analysis)
         return q
 
     def get_list(self): 
@@ -854,7 +903,7 @@ class Domains(Metrics):
         filters = "s.author_id = pup.people_id and pup.upeople_id = upd.upeople_id "
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                self.filters.enddate, " s.date ", fields,
-                               tables, filters, evol)
+                               tables, filters, evol, self.filters.type_analysis)
         return q
 
     def get_list(self):

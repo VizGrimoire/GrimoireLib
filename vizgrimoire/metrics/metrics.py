@@ -80,12 +80,12 @@ class Metrics(object):
         """ Convert a dict with mixed ts to individual ts """
         ts = {}
         if id_field not in data:
-            return data 
             raise Exception(id_field + " not in " + str(data))
-        # all fields
+
         fields = data.keys()
         fields.remove(id_field)
-        # Create a ts for each unique id_field
+
+        # Create a unique ts for each id_field
 
         # Create empty structure
         id_fields = list(set(data[id_field]))
@@ -109,7 +109,6 @@ class Metrics(object):
         # Complete the time series and share the date series
         metrics = data.keys()
         if id_field not in data:
-            return data 
             raise Exception(id_field + " not in " + str(data))
 
         metrics.remove(id_field)

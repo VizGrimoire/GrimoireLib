@@ -270,10 +270,10 @@ class SCM(DataSource):
             filter_all = Filter(filter_name, None)
             agg_all = SCM.get_agg_data(period, startdate, enddate,
                                        identities_db, filter_all)
-            # print(agg_all)
             evol_all = SCM.get_evolutionary_data(period, startdate, enddate,
                                                  identities_db, filter_all)
-            print(evol_all)
+        else:
+            raise Exception(filter_name +" does not support yet group by items sql queries")
 
     @staticmethod
     def get_top_people(startdate, enddate, identities_db, npeople):
@@ -400,13 +400,15 @@ class SCM(DataSource):
 
     @staticmethod
     def get_metrics_core_agg():
-        m  = ['commits','authors','committers','branches','files','actions','lines','repositories']
+        m  = ['commits','authors','committers','branches','files','actions']
+        m += ['added_lines','removed_lines', 'repositories']
         m += ['avg_commits', 'avg_files', 'avg_commits_author', 'avg_files_author']
         return m
 
     @staticmethod
     def get_metrics_core_ts():
-        m  = ['commits','authors','committers','branches','files','lines','repositories']
+        m  = ['commits','authors','committers','branches','files']
+        m += ['added_lines','removed_lines','repositories']
         return m
 
     @staticmethod
