@@ -75,7 +75,6 @@ def create_reports_filters(period, startdate, enddate, destdir, npeople, identit
             logging.info("-> " + filter_.get_name())
             if filter_.get_name() in ["people2","company"]:
                 logging.info("---> Using new filter API")
-                print(filter_.get_type_analysis())
                 ds.create_filter_report_all(filter_, period, startdate, enddate, 
                                             destdir, npeople, identities_db)
             else:

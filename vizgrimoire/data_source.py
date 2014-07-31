@@ -295,7 +295,7 @@ class DataSource(object):
         return data
 
     @staticmethod
-    def fill_items(items, data, id_field):
+    def _fill_items(items, data, id_field):
         """ Complete data dict items filling with 0 not existing items """
         fields = data.keys()
         if id_field not in fields: return data
@@ -308,7 +308,7 @@ class DataSource(object):
         return data
 
     @staticmethod
-    def order_items(items, data, id_field):
+    def _order_items(items, data, id_field):
         """ Reorder data identities using identities ordering """
         fields = data.keys()
         if id_field not in fields: return data
@@ -326,10 +326,10 @@ class DataSource(object):
         return data_ordered
 
     @staticmethod
-    def fill_and_order_items(items, data, id_field):
+    def _fill_and_order_items(items, data, id_field):
         # Only items will appear for a filter  
-        data = DataSource.fill_items(items, data, id_field)
-        return DataSource.order_items(items, data, id_field)
+        data = DataSource._fill_items(items, data, id_field)
+        return DataSource._order_items(items, data, id_field)
 
     @staticmethod
     def get_metrics_data(DS, period, startdate, enddate, identities_db, 
@@ -383,7 +383,7 @@ class DataSource(object):
             if type_analysis and type_analysis[1] is None:
                 id_field = DSQuery.get_group_field(type_analysis[0])
                 id_field = id_field.split('.')[1] # remove table name
-                mvalue = DataSource.fill_and_order_items(items, mvalue, id_field)
+                mvalue = DataSource._fill_and_order_items(items, mvalue, id_field)
 
             data = dict(data.items() + mvalue.items())
 
@@ -414,7 +414,7 @@ class DataSource(object):
                     if type_analysis and type_analysis[1] is None:
                         id_field = DSQuery.get_group_field(type_analysis[0])
                         id_field = id_field.split('.')[1] # remove table name
-                        period_data = DataSource.fill_and_order_items(items, period_data, id_field)
+                        period_data = DataSource._fill_and_order_items(items, period_data, id_field)
 
                     data = dict(data.items() + period_data.items())
 

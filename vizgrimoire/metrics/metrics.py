@@ -76,10 +76,12 @@ class Metrics(object):
         return self.data_source
 
     @staticmethod
-    def convert_group_to_ts(data, id_field):
+    def _convert_group_to_ts(data, id_field):
         """ Convert a dict with mixed ts to individual ts """
         ts = {}
-        if id_field not in data: return data
+        if id_field not in data:
+            return data 
+            raise Exception(id_field + " not in " + str(data))
         # all fields
         fields = data.keys()
         fields.remove(id_field)
@@ -99,13 +101,35 @@ class Metrics(object):
             pos = id_fields.index(item)
             for field in fields:
                 ts[field][pos].append(data[field][i])
+        return ts
 
-        # Now we need to complete the time series 
-        # And now share the date series
+    @staticmethod
+    def _complete_period_ids_items(data, id_field, period, startdate, enddate):
+        ts = {}
+        # Complete the time series and share the date series
+        metrics = data.keys()
+        if id_field not in data:
+            return data 
+            raise Exception(id_field + " not in " + str(data))
 
-        # print data
-        # print ts
-        return data
+        metrics.remove(id_field)
+        metrics.remove(period)
+        ts[id_field] = data[id_field]
+        for metric in metrics:
+            ts[metric] = []
+
+        for i in range (0, len(ts[id_field])):
+            for metric in metrics:
+                # Standard time series for each metric and convert
+                metric_ts = {}
+                metric_ts[metric] = data[metric][i]
+                metric_ts[period] = data[period][i]
+                metric_ts = completePeriodIds(metric_ts, period, startdate, enddate)
+                ts[metric].append(metric_ts[metric])
+                # Add additional time series fields: unixtime
+                metric_ts.pop(metric) # just time series generic fields
+                ts = dict(ts.items()+metric_ts.items())
+        return ts
 
     def get_ts (self):
         """ Returns a time series of values """
@@ -114,9 +138,13 @@ class Metrics(object):
         if self.filters.type_analysis and self.filters.type_analysis[1] is None:
             id_field = DSQuery.get_group_field(self.filters.type_analysis[0])
             id_field = id_field.split('.')[1] # remove table name
-            ts = Metrics.convert_group_to_ts(ts, id_field)
-        return completePeriodIds(ts, self.filters.period, 
-                                 self.filters.startdate, self.filters.enddate)
+            ts = Metrics._convert_group_to_ts(ts, id_field)
+            ts = Metrics._complete_period_ids_items(ts, id_field, self.filters.period,
+                                                   self.filters.startdate, self.filters.enddate)
+        else:
+            ts = completePeriodIds(ts, self.filters.period, 
+                                   self.filters.startdate, self.filters.enddate)
+        return ts
 
     def get_agg(self):
         """ Returns an aggregated value """
