@@ -263,8 +263,29 @@ class SCM(DataSource):
             createJSON (summary, destdir+"/"+ filter_.get_summary_filename(SCM))
 
     @staticmethod
+    def _check_people_data(data, filter_, startdate, enddate, idb, 
+                           evol = False, period = None):
+        # Check per item data with group by people data
+        items = SCM.get_filter_items(filter_, startdate, enddate, idb)
+        for i in range(0,len(items['id'])):
+            upeople_id = items['id'][i]
+            name = items['name'][i]
+            type_analysis = ['people', upeople_id]
+            pos = data['identifier'].index(name)
+            if not evol:
+                agg = SCM.get_person_agg(upeople_id, startdate, enddate, 
+                                         idb, type_analysis)
+                assert agg['commits' ] == data['commits'][pos]
+            else:
+                ts = SCM.get_person_evol(upeople_id, period, startdate, enddate, 
+                                         idb, type_analysis)
+                assert ts['commits'] == data['commits'][pos]
+
+
+    @staticmethod
     def create_filter_report_all(filter_, period, startdate, enddate, destdir, npeople, identities_db):
         # New API for getting all metrics with one query
+        check = False # activate to debug issues
         filter_name = filter_.get_name()
         if filter_name == "people2" or filter_name == "company":
             filter_all = Filter(filter_name, None)
@@ -272,6 +293,11 @@ class SCM(DataSource):
                                        identities_db, filter_all)
             evol_all = SCM.get_evolutionary_data(period, startdate, enddate,
                                                  identities_db, filter_all)
+            if check:
+                SCM._check_people_data(evol_all, filter_, startdate, enddate, 
+                                       identities_db, True, period)
+                SCM._check_people_data(agg_all, filter_, startdate, enddate, 
+                                       identities_db, False, period)
         else:
             raise Exception(filter_name +" does not support yet group by items sql queries")
 
