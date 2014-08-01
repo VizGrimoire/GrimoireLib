@@ -818,9 +818,8 @@ class Companies(Metrics):
                 %s s.date >=%s and s.date < %s) t
             where c.id = t.company_id
             group by c.name
-            order by count(distinct(t.s_id)) desc
+            order by total desc, c.name
         """ % (fbots, self.filters.startdate, self.filters.enddate)
-
         return q
 
     def get_list(self, metric_filters = None):
