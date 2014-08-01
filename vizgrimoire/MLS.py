@@ -202,6 +202,7 @@ class MLS(DataSource):
             metric = DataSource.get_metrics("projects", MLS)
         else:
             logging.error(filter_name + " not supported")
+            return items
 
         items = metric.get_list()
         return items

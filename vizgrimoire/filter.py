@@ -25,9 +25,13 @@ import logging
 
 class Filter(object):
 
-    _filters_data = [["repository","rep","repos"], ["company","com","companies"],
-                    ["country","cou","countries"], ["domain","dom","domains"],
-                    ["project","prj","projects"], ["tag", "tag", "tags"]]
+    _filters_data = [
+                     ["repository","rep","repos"], ["company","com","companies"],
+                     ["country","cou","countries"], ["domain","dom","domains"],
+                     ["project","prj","projects"], ["tag", "tag", "tags"],
+                     ["people","people","people"],
+                     ["people2","people2","people2"]
+                    ]
 
     def __init__(self, name, item = None):
         self.name = name
@@ -58,6 +62,9 @@ class Filter(object):
     def get_filename (self, ds):
         return ds.get_name()+"-"+self.get_name_plural()+".json"
 
+    def get_evolutionary_filename_all (self, ds):
+        return ds.get_name()+"-"+self.get_name_short()+"-all-evolutionary.json"
+
     def get_evolutionary_filename (self, ds):
         name  = None
 
@@ -69,6 +76,9 @@ class Filter(object):
             name = item+"-"+ds.get_name()+"-"+selfname_short+"-evolutionary.json"
 
         return name
+
+    def get_static_filename_all (self, ds):
+        return ds.get_name()+"-"+self.get_name_short()  +"-all-static.json"
 
     def get_static_filename (self, ds):
         name  = None

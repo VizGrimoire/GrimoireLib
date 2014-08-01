@@ -256,6 +256,8 @@ def removeDecimals(data):
         for i in range(0,len(data)):
             if (isinstance(data[i], Decimal)):
                 data[i] = float(data[i])
+            if (isinstance(data[i], list)):
+                data[i] = removeDecimals(data[i])
     return data
 
 def convertDatetime(data):

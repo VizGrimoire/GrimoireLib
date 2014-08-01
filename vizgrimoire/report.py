@@ -56,14 +56,13 @@ class Report(object):
         # Hack because we use repos in filters
         reports = reports.replace("repositories","repos")
         filters = reports.split(",")
-        # people not a filter yet
-        if 'people' in filters: filters.remove('people')
         for name in filters:
             filter_ = Filter.get_filter_from_plural(name)
             if filter_ is not None:
                 Report._filters.append(filter_)
             else:
                 logging.error("Wrong filter " + name + ", review " + Report._automator_file)
+                raise Exception('Wrong automator config file')
 
     @staticmethod
     def _init_data_sources():

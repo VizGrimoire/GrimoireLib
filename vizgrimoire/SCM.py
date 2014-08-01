@@ -85,7 +85,8 @@ class SCM(DataSource):
 
     @staticmethod
     def get_agg_data (period, startdate, enddate, identities_db, filter_= None):
-        metrics = DataSource.get_metrics_data(SCM, period, startdate, enddate, identities_db, filter_, False)
+        metrics = DataSource.get_metrics_data(SCM, period, startdate, enddate, 
+                                              identities_db, filter_, False)
         if filter_ is not None: studies = {}
         else:
             studies = DataSource.get_studies_data(SCM, period, startdate, enddate, False)
@@ -194,8 +195,11 @@ class SCM(DataSource):
             metric = DataSource.get_metrics("domains", SCM)
         elif (filter_name == "project"):
             metric = DataSource.get_metrics("projects", SCM)
+        elif (filter_name == "people2"):
+            metric = DataSource.get_metrics("people2", SCM)
         else:
             logging.error(filter_name + " not supported")
+            return items
 
         items = metric.get_list()
         return items
@@ -257,6 +261,67 @@ class SCM(DataSource):
         if (filter_name == "company"):
             summary =  SCM.get_filter_summary(filter_, period, startdate, enddate, identities_db, 10)
             createJSON (summary, destdir+"/"+ filter_.get_summary_filename(SCM))
+
+    @staticmethod
+    def _check_report_all_data(data, filter_, startdate, enddate, idb,
+                               evol = False, period = None):
+        # Check per item data with group by people data
+        items = SCM.get_filter_items(filter_, startdate, enddate, idb)
+        id_field = DSQuery.get_group_field(filter_.get_name())
+        id_field = id_field.split('.')[1] # remove table name
+        for i in range(0,len(items['name'])):
+            name = items['name'][i]
+            if filter_.get_name() == "people2":
+                upeople_id = items['id'][i]
+                item = upeople_id
+            else:
+                item = name
+            pos = data[id_field].index(name)
+
+            type_analysis = [filter_.get_name(), item]
+            filter_item = Filter(filter_.get_name(), item)
+
+            if not evol:
+                if filter_.get_name() == "people2":
+                    agg = SCM.get_person_agg(upeople_id, startdate, enddate,
+                                             idb, type_analysis)
+                else:
+                    agg = SCM.get_agg_data(period, startdate, enddate,
+                                           idb, filter_item)
+                assert agg['commits' ] == data['commits'][pos]
+            else:
+                if filter_.get_name() == "people2":
+                    ts = SCM.get_person_evol(upeople_id, period,
+                                             startdate, enddate, idb, type_analysis)
+                else:
+                    ts = SCM.get_evolutionary_data(period, startdate, enddate,
+                                                   idb , filter_item)
+                assert ts['commits'] == data['commits'][pos]
+
+    @staticmethod
+    def create_filter_report_all(filter_, period, startdate, enddate, destdir, npeople, identities_db):
+        # New API for getting all metrics with one query
+        check = True # activate to debug issues
+        filter_name = filter_.get_name()
+        if filter_name == "people2" or filter_name == "company":
+            filter_all = Filter(filter_name, None)
+            agg_all = SCM.get_agg_data(period, startdate, enddate,
+                                       identities_db, filter_all)
+            fn = os.path.join(destdir, filter_.get_static_filename_all(SCM()))
+            createJSON(agg_all, fn)
+
+            evol_all = SCM.get_evolutionary_data(period, startdate, enddate,
+                                                 identities_db, filter_all)
+            fn = os.path.join(destdir, filter_.get_evolutionary_filename_all(SCM()))
+            createJSON(evol_all, fn)
+
+            if check:
+                SCM._check_report_all_data(evol_all, filter_, startdate, enddate,
+                                           identities_db, True, period)
+                SCM._check_report_all_data(agg_all, filter_, startdate, enddate,
+                                           identities_db, False, period)
+        else:
+            raise Exception(filter_name +" does not support yet group by items sql queries")
 
     @staticmethod
     def get_top_people(startdate, enddate, identities_db, npeople):
@@ -383,13 +448,15 @@ class SCM(DataSource):
 
     @staticmethod
     def get_metrics_core_agg():
-        m  = ['commits','authors','committers','branches','files','actions','lines','repositories']
+        m  = ['commits','authors','committers','branches','files','actions']
+        m += ['added_lines','removed_lines', 'repositories']
         m += ['avg_commits', 'avg_files', 'avg_commits_author', 'avg_files_author']
         return m
 
     @staticmethod
     def get_metrics_core_ts():
-        m  = ['commits','authors','committers','branches','files','lines','repositories']
+        m  = ['commits','authors','committers','branches','files']
+        m += ['added_lines','removed_lines','repositories']
         return m
 
     @staticmethod

@@ -163,7 +163,7 @@ class SCR(DataSource):
             for i in [7,30,365]:
                 for item in all_metrics:
                     if item.id not in metrics_trends: continue
-                    period_data = item.get_agg_diff_days(enddate, i)
+                    period_data = item.get_trends(enddate, i)
                     data = dict(data.items() +  period_data.items())
 
         if filter_ is not None: studies_data = {}
