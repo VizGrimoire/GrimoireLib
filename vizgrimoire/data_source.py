@@ -319,7 +319,7 @@ class DataSource(object):
         fields.remove(id_field)
 
         if evol:
-            evol_fields = [period, 'unixtime','date']
+            evol_fields = [period, 'id', 'unixtime','date']
             for evol_field in evol_fields:
                 fields.remove(evol_field)
                 data_ordered[evol_field] = data[evol_field]
