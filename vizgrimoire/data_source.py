@@ -406,6 +406,7 @@ class DataSource(object):
             else:    mvalue = item.get_agg()
 
             if type_analysis and type_analysis[1] is None:
+                logging.info(item.id)
                 id_field = DSQuery.get_group_field(type_analysis[0])
                 id_field = id_field.split('.')[1] # remove table name
                 mvalue = DataSource._fill_and_order_items(items, mvalue, id_field, 
