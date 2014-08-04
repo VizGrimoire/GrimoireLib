@@ -97,7 +97,7 @@ class DSQuery(object):
             sql = 'SELECT YEAR('+date+')*12 AS year, '
         else:
             logging.error("PERIOD: "+period+" not supported")
-            sys.exit(1)
+            raise Exception
         # sql = paste(sql, 'DATE_FORMAT (',date,', \'%d %b %Y\') AS date, ')
         sql += fields
         if all_items: fields + ", " + group_field
@@ -129,7 +129,11 @@ class DSQuery(object):
             logging.error("PERIOD: "+period+" not supported")
             sys.exit(1)
 
-        if all_items: sql += "," + group_field
+        if all_items:
+            sql += "," + group_field
+            # logging.info("GROUP sql")
+            # print sql
+
         return(sql)
 
 
@@ -333,11 +337,6 @@ class SCMQuery(DSQuery):
 
         return (From)
 
-    def GetSQLReportAllFrom (self, type_analysis):
-        from_ = self.GetSQLReportFrom (type_analysis)
-        print from_
-        return from_
-
     def GetSQLReportWhere (self, type_analysis, role = "author"):
         #generic function to generate 'where' clauses
 
@@ -361,12 +360,6 @@ class SCMQuery(DSQuery):
         else: raise Exception( analysis + " not supported")
 
         return (where)
-
-    def GetSQLReportAllWhere (self, type_analysis):
-        filters = self.GetSQLReportWhere (type_analysis)
-        print(filters)
-        # Time to add the field name, GROUP BY and ORDER
-        return filters
 
     # To be used in the future for apply a generic filter to all queries
     def GetCommitsFiltered(self):

@@ -359,8 +359,6 @@ class Lines(Metrics):
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                self.filters.enddate, " s.date ", fields,
                                tables, filters, evolutionary, self.filters.type_analysis)
-        # print(self.filters.type_analysis)
-        # print(q)
         return q
 
     def get_ts(self):
@@ -428,8 +426,6 @@ class AddedLines(Metrics):
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                self.filters.enddate, " s.date ", fields,
                                tables, filters, evolutionary, self.filters.type_analysis)
-        # print(self.filters.type_analysis)
-        # print(q)
         return q
 
 class RemovedLines(Metrics):
@@ -453,8 +449,6 @@ class RemovedLines(Metrics):
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                self.filters.enddate, " s.date ", fields,
                                tables, filters, evolutionary, self.filters.type_analysis)
-        # print(self.filters.type_analysis)
-        # print(q)
         return q
 
 class Branches(Metrics):

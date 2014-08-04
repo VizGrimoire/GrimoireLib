@@ -295,8 +295,14 @@ class DataSource(object):
         return data
 
     @staticmethod
-    def _fill_items(items, data, id_field):
+    def _fill_items(items, data, id_field, evol = False,
+                    period = None, startdate = None, enddate = None):
         """ Complete data dict items filling with 0 not existing items """
+        from GrimoireUtils import completePeriodIds
+
+        if evol:
+            zero_ts = completePeriodIds({id_field:[],period:[]},
+                                        period, startdate, enddate)[id_field]
         fields = data.keys()
         if id_field not in fields: return data
         fields.remove(id_field)
@@ -304,7 +310,10 @@ class DataSource(object):
             if id not in data[id_field]:
                 data[id_field].append(id)
                 for field in fields:
-                    data[field].append(0)
+                    if not evol:
+                        data[field].append(0)
+                    if evol:
+                        data[field].append(zero_ts)
         return data
 
     @staticmethod
@@ -326,17 +335,25 @@ class DataSource(object):
 
         for id in items:
             data_ordered[id_field].append(id)
-            pos = data[id_field].index(id)
+            try:
+                pos = data[id_field].index(id)
+            except:
+                print items
+                print data[id_field]
+                raise
             for field in fields:
                 data_ordered[field].append(data[field][pos])
 
         return data_ordered
 
     @staticmethod
-    def _fill_and_order_items(items, data, id_field, evol = False, period = None):
+    def _fill_and_order_items(items, data, id_field, evol = False,
+                              period = None, startdate = None, enddate = None):
         # Only items will appear for a filter
-        if not evol: # evol is already filled (complete data)
+        if not evol: # evol is already filled (complete data) for a company, but not all companies
             data = DataSource._fill_items(items, data, id_field)
+        if evol: data = DataSource._fill_items(items, data, id_field,
+                                               evol, period, startdate, enddate)
         return DataSource._order_items(items, data, id_field, evol, period)
 
     @staticmethod
@@ -392,7 +409,7 @@ class DataSource(object):
                 id_field = DSQuery.get_group_field(type_analysis[0])
                 id_field = id_field.split('.')[1] # remove table name
                 mvalue = DataSource._fill_and_order_items(items, mvalue, id_field, 
-                                                          evol, period)
+                                                          evol, period, startdate, enddate)
             data = dict(data.items() + mvalue.items())
 
             item.filters = mfilter_orig

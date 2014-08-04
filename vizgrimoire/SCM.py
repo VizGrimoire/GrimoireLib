@@ -271,6 +271,7 @@ class SCM(DataSource):
         id_field = id_field.split('.')[1] # remove table name
         for i in range(0,len(items['name'])):
             name = items['name'][i]
+            logging.info("Checking " + name + " " + str(i) + "/" + str(len(items['name'])))
             if filter_.get_name() == "people2":
                 upeople_id = items['id'][i]
                 item = upeople_id
@@ -301,7 +302,7 @@ class SCM(DataSource):
     @staticmethod
     def create_filter_report_all(filter_, period, startdate, enddate, destdir, npeople, identities_db):
         # New API for getting all metrics with one query
-        check = True # activate to debug issues
+        check = False # activate to debug issues
         filter_name = filter_.get_name()
         if filter_name == "people2" or filter_name == "company":
             filter_all = Filter(filter_name, None)
