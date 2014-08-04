@@ -490,12 +490,19 @@ class SCMQuery (Query):
     def filter_persons (self, list, kind = "all"):
         """Fiter for a certain list of persons (committers, authors)
 
-        - list: list of People.id
-        - kind: kind of person to select
-           authors: authors of commits
-           committers: committers of commits
-           all: authors and committers
-        Returns a SCMQuery object.
+        Parameters
+        ----------
+
+        list: list of People.id
+           List of people to include
+        kind: {'committers', 'authors', 'all'}
+           kind of person to select (all: authors and committers)
+
+        Returns
+        -------
+        
+        SCMQuery object.
+
         """
 
         query = self
@@ -508,6 +515,39 @@ class SCMQuery (Query):
                                      SCMLog.committer_id.in_(list)))
         else:
             raise Exception ("filter_persons: Unknown kind %s." \
+                             % kind)
+
+    def filterout_persons (self, list, kind = "all"):
+        """Filter out a list of people ids (committers, authors)
+
+        Parameters
+        ----------
+
+        Parameters
+        ----------
+
+        list: list of People.id
+           List of people to exclude
+        kind: {'committers', 'authors', 'all'}
+           kind of person to select (all: authors and committers)
+
+        Returns
+        -------
+        
+        SCMQuery object.
+
+        """
+
+        query = self
+        if kind == "authors":
+            return query.filter (~SCMLog.author_id.in_(list))    
+        elif kind == "committers":
+            return query.filter (~SCMLog.committer_id.in_(list))    
+        elif kind == "all":
+            return query.filter (and_(~SCMLog.author_id.in_(list),
+                                     ~SCMLog.committer_id.in_(list)))
+        else:
+            raise Exception ("filterout_persons: Unknown kind %s." \
                              % kind)
 
 

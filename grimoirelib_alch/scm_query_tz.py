@@ -45,10 +45,10 @@ class SCMTZQuery (SCMQuery):
         """
 
         query = self.add_columns(
-            label("commits", func.count(SCMLog.id)),
-            label("authors", func.count(func.distinct(SCMLog.author_id))),
             label("tz",
-                  ((SCMLog.author_date_tz.op('div')(3600) + 36) % 24) - 12))
+                  ((SCMLog.author_date_tz.op('div')(3600) + 36) % 24) - 12),
+            label("commits", func.count(func.distinct(SCMLog.id))),
+            label("authors", func.count(func.distinct(SCMLog.author_id))))
             # label("month",
             #       func.month(SCMLog.author_date)),
             # label("year",
@@ -75,6 +75,8 @@ if __name__ == "__main__":
     from standalone import print_banner
     from scm_query import buildSession
     from datetime import datetime
+    import jsonpickle
+    import csv
 
     # Trick to make the script work when using pipes
     # (pipes confuse the interpreter, which sets codec to None)
@@ -88,11 +90,19 @@ if __name__ == "__main__":
     #---------------------------------
     print_banner ("Number of commits")
     res = session.query().select_tz()
-#    res = res.filter_period(start=datetime(2013,1,1),
-#                            end=datetime(2014,2,1))
-    res = res.group_by_period()
+    res = res.filter_period(start=datetime(2014,1,1),
+                            end=datetime(2014,7,1))
+#    res = res.group_by_period()
     res = res.group_by_tz()
 #    res = res.limit(10)
 
     print res
     print res.all()
+
+    print jsonpickle.encode(res.all(), unpicklable=False)
+
+    with open ('/tmp/tz.csv', 'wb') as csvfile:
+        tz_writer = csv.writer(csvfile, delimiter=' ',
+                               quotechar='|', quoting=csv.QUOTE_MINIMAL)
+        for row in res.all():
+            tz_writer.writerow (row)
