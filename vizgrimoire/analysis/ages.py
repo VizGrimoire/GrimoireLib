@@ -29,10 +29,13 @@ import its_conditions
 from demography import ActivityPersons, ActivityPersonsITS, DurationPersons, \
     SnapshotCondition, ActiveCondition
 from datetime import datetime, timedelta
+from jsonpickle import encode, set_encoder_options
+import codecs
+import logging
 
 class Ages(Analyses):
 
-    id = "ages"
+    id = "ages_scm"
     name = "Ages"
     desc = "Age of developers in project"
 
@@ -76,8 +79,23 @@ class Ages(Analyses):
                                  activity = data.activity())
         demos = {"birth": birth.durations(),
                  "aging": aging.durations()}
+        logging.info("Aging")
         return demos
 
+    def create_report(self, data_source, destdir):
+
+        demos = self.result(data_source)
+        # Produce pretty JSON output
+        set_encoder_options('json', sort_keys=True, indent=4,
+                            separators=(',', ': '),
+                            ensure_ascii=False,
+                            encoding="utf8")
+        birth_json = encode(demos["birth"], unpicklable=False)
+        aging_json = encode(demos["aging"], unpicklable=False)
+        with codecs.open(destdir + "/scm-demographics-birth.json", "w", "utf-8") as file:
+            file.write(birth_json)
+        with codecs.open(destdir + "/scm-demographics-aging.json", "w", "utf-8") as file:
+            file.write(aging_json)
 
 class AgesITS(Ages):
 
