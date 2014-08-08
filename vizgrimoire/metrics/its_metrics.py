@@ -506,6 +506,29 @@ class Changers(Metrics):
 
         return q
 
+class People(Metrics):
+    """ Tickets People metric class for issue tracking systems """
+    id = "people2"
+    name = "Tickets people"
+    desc = "People working in tickets"
+    data_source = ITS
+
+    def _get_top_global (self, days = 0, metric_filters = None):
+        """ Implemented using Closers """
+        top = None
+        closers = ITS.get_metrics("closers", ITS)
+        if closers is None:
+            closers = Closers(self.db, self.filters)
+            top = closers._get_top_global(days, metric_filters)
+        else:
+            afilters = closers.filters
+            closers.filters = self.filters
+            top = closers._get_top(days, metric_filters)
+            closers.filters = afilters
+
+        top['name'] = top.pop('closers')
+        return top
+
 class Trackers(Metrics):
     """ Trackers metric class for issue tracking systems """
     id = "trackers"

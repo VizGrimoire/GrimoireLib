@@ -514,6 +514,8 @@ class ITSQuery(DSQuery):
         elif analysis == 'country': From = self.GetSQLCountriesFrom(identities_db)
         elif analysis == 'domain': From = self.GetSQLDomainsFrom(identities_db)
         elif analysis == 'project': From = self.GetSQLProjectsFrom()
+        # else: raise Exception( analysis + " not supported")
+
 
         return (From)
 
@@ -534,6 +536,7 @@ class ITSQuery(DSQuery):
         elif analysis == 'country': where = self.GetSQLCountriesWhere(value)
         elif analysis == 'domain': where = self.GetSQLDomainsWhere(value)
         elif analysis == 'project': where = self.GetSQLProjectsWhere(value, identities_db)
+        # else: raise Exception( analysis + " not supported")
 
         return (where)
 
