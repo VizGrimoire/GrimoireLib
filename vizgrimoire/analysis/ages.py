@@ -53,6 +53,12 @@ def produce_json (filename, data, compact = True):
         file.write(data_json)
 
 class Ages(Analyses):
+    """Clase for calculating the Ages analysis.
+
+    Produces data about aging and birth in a project, suitable to
+    produce aging dempgraphic pyramids.
+
+    """
 
     id = "ages"
     name = "Ages"
@@ -63,6 +69,22 @@ class Ages(Analyses):
         raise NotImplementedError
 
     def result(self, data_source = None):
+        """Produce result data for the analysis
+
+        Parameters
+        ----------
+
+        data_source: SCM.SCM | ITS.ITS
+
+        Returns
+        -------
+
+        dictionary: birth and aging data.
+          The dictionary has two entries, keyed "birth" and "data".
+          For each of them, information about the duration of all actors
+          in the project is included.
+
+        """
 
         logging.info("Producing data for study: Aging")
         if data_source is None:
@@ -78,7 +100,7 @@ class Ages(Analyses):
         if data_source == SCM:
             logging.info("Analyzing aging for SCM")
             # Activity data (start time, end time for contributions) for
-            # all the actors, considering only actiivty during
+            # all the actors, considering only activty during
             # the startdate..enddate period (merges are not considered
             # as activity)
             period = PeriodCondition (start = startdate, end = enddate)
@@ -87,31 +109,13 @@ class Ages(Analyses):
                 database = database,
                 var = "list_uauthors",
                 conditions = (period,nomerges))
-            # Birth has the ages of all actors, consiering enddate as
-            # current (snapshot) time
-            snapshot = SnapshotCondition (date = enddate)
-            birth = DurationPersons (var = "age",
-                                     conditions = (snapshot,),
-                                     activity = data.activity())
-            # "Aging" has the ages of those actors active during the 
-            # last half year (that is, the period from enddate - half year
-            # to enddate)
-            active_period = ActiveCondition (after = enddate - \
-                                                 timedelta(days=182))
-            aging = DurationPersons (var = "age",
-                                     conditions = (snapshot, active_period),
-                                     activity = data.activity())
-            demos = {"birth": birth.durations(),
-                     "aging": aging.durations()}
-            return demos
         if data_source == ITS:
             logging.info("Analyzing aging for ITS")
             schema = self.db.database
             schema_id = self.db.identities_db
             # Activity data (start time, end time for contributions) for
-            # all the actors, considering only actiivty during
-            # the startdate..enddate period (merges are not considered
-            # as activity)
+            # all the actors, considering only activty during
+            # the startdate..enddate period
             period = its_conditions.PeriodCondition (start = startdate,
                                                      end = enddate)
             data = ActivityPersonsITS (
@@ -119,6 +123,7 @@ class Ages(Analyses):
                 schema = schema, schema_id = schema_id,
                 var = "list_uchangers",
                 conditions = (period,))
+        if data_source in (ITS, SCM):
             # Birth has the ages of all actors, consiering enddate as
             # current (snapshot) time
             snapshot = SnapshotCondition (date = enddate)
@@ -140,7 +145,22 @@ class Ages(Analyses):
         return {"birth": {},
                 "aging": {}}
 
+
     def create_report(self, data_source, destdir):
+        """Create report for the analysis.
+
+        Creates JSON files with the results of the report for birth and aging:
+         ds-demographics-birth.json, ds-demographics-aging.json,
+         with ds being "scm" or "its".
+        Only works for SCM or ITS data sources.
+        
+        Parameters
+        ----------
+
+        data_source: SCM.SCM | ITS.ITS
+        destdir: name of directory for writing JSON files
+
+        """
 
         logging.info("Producing report for study: Aging")
         if data_source == SCM:

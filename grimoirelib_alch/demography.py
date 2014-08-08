@@ -185,7 +185,6 @@ class ActivityPersonsITS (ActivityPersons):
             .group_by_person()
         for condition in conditions:
             self.query = condition.filter(self.query)
-        print self.query
 
 class DurationCondition ():
     """Root of all conditions for DurationPersons objects
