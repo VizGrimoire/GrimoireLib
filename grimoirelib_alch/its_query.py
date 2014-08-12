@@ -24,19 +24,17 @@
 ##   Jesus M. Gonzalez-Barahona <jgb@bitergia.com>
 ##
 
-from sqlalchemy import create_engine, func, Column, Integer, ForeignKey, or_
+from sqlalchemy import func, Column, Integer, ForeignKey, or_
 from sqlalchemy.ext.declarative import declarative_base, DeferredReflection
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.orm.query import Query
 from sqlalchemy.schema import ForeignKeyConstraint
 from sqlalchemy.sql import label
 from datetime import datetime
 from timeseries import TimeSeries
 from activity import ActivityList
-from common_query import table_factory
+from common_query import table_factory, GrimoireDatabase, GrimoireQuery
 
 
-class ITSDatabase():
+class ITSDatabase(GrimoireDatabase):
     """Class for dealing with ITS (Bicho) databases.
 
     """
@@ -93,116 +91,9 @@ class ITSDatabase():
                                 tablename = 'upeople',
                                 schemaname = schema_id)
 
-    def build_session(self, echo = False):
-        """Create a session with the database
 
-        Instantiatates an engine and a session to work with it.
-
-        Parameters
-        ----------
-        
-        echo: boolean
-           Output SQL to stdout or not
-        
-        """
-        
-        # To set Unicode interaction with MySQL
-        # http://docs.sqlalchemy.org/en/rel_0_9/dialects/mysql.html#unicode
-        trailer = "?charset=utf8&use_unicode=0"
-        database = self.database + trailer
-        engine = create_engine(database,
-                               convert_unicode=True, encoding='utf8',
-                               echo=echo)
-        self.Base.prepare(engine)
-        Session = sessionmaker(bind=engine, query_cls=ITSQuery)
-        session = Session()
-        return (session)
-
-# class Changes(Base):
-#     """changes table"""
-
-#     __tablename__ = 'changes'
-#     issue_id = Column(Integer, ForeignKey('issues.id'))
-
-# class Issues (Base):
-#     """issues table"""
-
-#     __tablename__ = 'issues'
-#     changed_by = Column(Integer, ForeignKey('people.id'))
-
-# class People(Base):
-#     """people table"""
-
-#     __tablename__ = 'people'
-
-# class PeopleUPeople(Base):
-#     """people_upeople table"""
-
-#     __tablename__ = 'people_upeople'
-#     upeople_id = Column(Integer, ForeignKey('upeople.id'))
-
-# class Trackers(Base):
-#     """repositories table"""
-
-#     __tablename__ = 'trackers'
-
-# class UPeople(BaseId):
-#     """upeople table"""
-
-#     __tablename__ = 'upeople'
-
-class ITSQuery (Query):
+class ITSQuery (GrimoireQuery):
     """Class for dealing with ITS queries"""
-
-    def __init__ (self, entities, session):
-        """Create an ITSQuery.
-
-        Parameters
-        ----------
-
-        entities: list of SQLAlchemy entities
-           Entities (tables) to include in the query
-        session: SQLAlchemy session
-           SQLAlchemy session to use to connect to the database
-
-        Attributes
-        ----------
-
-        self.start: datetime.datetime
-           Start of the period to consider for commits. Default: None
-           (start from the first commit)
-        self.end: datetime.datetime
-           End of the period to consider for commits. Default: None
-           (end in the last commit)
-
-        """
-
-        self.start = None
-        self.end = None
-        # Keep an accounting of which tables have been joined, to avoid
-        # undesired repeated joins
-        self.joined = []
-        Query.__init__(self, entities, session)
-
-
-    def __repr__ (self):
-
-        if self.start is not None:
-            start = self.start.isoformat()
-        else:
-            start = "ever"
-        if self.end is not None:
-            end = self.end.isoformat()
-        else:
-            end = "ever"
-        repr = "ITSQuery from %s to %s\n" % (start, end)
-        repr = "  Joined: %s\n" % str(self.joined)
-        repr += Query.__str__(self)
-        return repr
-
-    def __str__ (self):
-
-        return self.__repr__()
 
 
     def select_personsdata(self, kind):
@@ -415,7 +306,7 @@ if __name__ == "__main__":
     ITSDB = ITSDatabase(database = 'mysql://jgb:XXX@localhost/',
                         schema = 'vizgrimoire_bicho',
                         schema_id = 'vizgrimoire_cvsanaly')
-    session = ITSDB.build_session(echo = False)
+    session = ITSDB.build_session(ITSQuery, echo = False)
 
     #---------------------------------
     print_banner ("List of openers")

@@ -24,19 +24,17 @@
 ##   Jesus M. Gonzalez-Barahona <jgb@bitergia.com>
 ##
 
-from sqlalchemy import create_engine, func, Column, String, Integer, ForeignKey, and_
+from sqlalchemy import func, Column, String, Integer, ForeignKey, and_
 from sqlalchemy.ext.declarative import declarative_base, DeferredReflection
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.orm.query import Query
 from sqlalchemy.schema import ForeignKeyConstraint
 from sqlalchemy.sql import label
 from datetime import datetime
 from timeseries import TimeSeries
 from activity import ActivityList
-from common_query import table_factory
+from common_query import table_factory, GrimoireDatabase, GrimoireQuery
 
 
-class MLSDatabase():
+class MLSDatabase(GrimoireDatabase):
     """Class for dealing with MLS (MLStats) databases.
 
     """
@@ -47,7 +45,7 @@ class MLSDatabase():
         Parameters
         ----------
 
-        database: string
+        database: string        # ;:
            SQLAlchemy url for the database to be used, such as
            mysql://user:passwd@host:port/
         schema: string
@@ -100,84 +98,9 @@ class MLSDatabase():
                                 tablename = 'upeople',
                                 schemaname = schema_id)
 
-    def build_session(self, echo = False):
-        """Create a session with the database
 
-        Instantiatates an engine and a session to work with it.
-
-        Parameters
-        ----------
-        
-        echo: boolean
-           Output SQL to stdout or not
-        
-        """
-        
-        # To set Unicode interaction with MySQL
-        # http://docs.sqlalchemy.org/en/rel_0_9/dialects/mysql.html#unicode
-        trailer = "?charset=utf8&use_unicode=0"
-        database = self.database + trailer
-        engine = create_engine(database,
-                               convert_unicode=True, encoding='utf8',
-                               echo=echo)
-        self.Base.prepare(engine)
-        Session = sessionmaker(bind=engine, query_cls=MLSQuery)
-        session = Session()
-        return (session)
-
-
-class MLSQuery (Query):
+class MLSQuery (GrimoireQuery):
     """Class for dealing with MLS queries"""
-
-    def __init__ (self, entities, session):
-        """Create an MLSQuery.
-
-        Parameters
-        ----------
-
-        entities: list of SQLAlchemy entities
-           Entities (tables) to include in the query
-        session: SQLAlchemy session
-           SQLAlchemy session to use to connect to the database
-
-        Attributes
-        ----------
-
-        self.start: datetime.datetime
-           Start of the period to consider for commits. Default: None
-           (start from the first commit)
-        self.end: datetime.datetime
-           End of the period to consider for commits. Default: None
-           (end in the last commit)
-
-        """
-
-        self.start = None
-        self.end = None
-        # Keep an accounting of which tables have been joined, to avoid
-        # undesired repeated joins
-        self.joined = []
-        Query.__init__(self, entities, session)
-
-
-    def __repr__ (self):
-
-        if self.start is not None:
-            start = self.start.isoformat()
-        else:
-            start = "ever"
-        if self.end is not None:
-            end = self.end.isoformat()
-        else:
-            end = "ever"
-        repr = "MLSQuery from %s to %s\n" % (start, end)
-        repr = "  Joined: %s\n" % str(self.joined)
-        repr += Query.__str__(self)
-        return repr
-
-    def __str__ (self):
-
-        return self.__repr__()
 
 
     def select_personsdata(self, kind):
@@ -394,7 +317,7 @@ if __name__ == "__main__":
     MLSDB = MLSDatabase(database = 'mysql://jgb:XXX@localhost/',
                         schema = 'oscon_openstack_mls',
                         schema_id = 'oscon_openstack_scm')
-    session = MLSDB.build_session(echo = False)
+    session = MLSDB.build_session(MLSQuery, echo = False)
 
     #---------------------------------
     print_banner ("List of senders")

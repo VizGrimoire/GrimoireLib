@@ -24,6 +24,10 @@
 ##   Jesus M. Gonzalez-Barahona <jgb@bitergia.com>
 ##
 
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm.query import Query
+
 def table_factory (bases, name, tablename, schemaname, columns = {}):
     """Factory for building table classes.
 
@@ -60,3 +64,96 @@ def table_factory (bases, name, tablename, schemaname, columns = {}):
         attr[key] = columns[key]
     table_class = type(name, bases, attr)
     return table_class
+
+
+class GrimoireDatabase:
+    """Class for dealing with Grimoire databases.
+
+    """
+
+    def build_session(self, query_cls, echo = False):
+        """Create a session with the database
+
+        Instantiatates an engine and a session to work with it.
+
+        Parameters
+        ----------
+        
+        query_cls: class
+           Query class (MLSQuery, etc.)
+        echo: boolean
+           Output SQL to stdout or not
+        
+        """
+        
+        # To set Unicode interaction with MySQL
+        # http://docs.sqlalchemy.org/en/rel_0_9/dialects/mysql.html#unicode
+        trailer = "?charset=utf8&use_unicode=0"
+        database = self.database + trailer
+        engine = create_engine(database,
+                               convert_unicode=True, encoding='utf8',
+                               echo=echo)
+        self.Base.prepare(engine)
+        Session = sessionmaker(bind=engine, query_cls=query_cls)
+        session = Session()
+        return (session)
+
+
+class GrimoireQuery (Query):
+    """Class for dealing with Grimiore queries
+
+    In fact, this is the root of the hierarchy of classes, not
+    intended for direct use.
+
+    """
+
+    def __init__ (self, entities, session):
+        """Create a GrimoreQuery.
+
+        Parameters
+        ----------
+
+        entities: list of SQLAlchemy entities
+           Entities (tables) to include in the query
+        session: SQLAlchemy session
+           SQLAlchemy session to use to connect to the database
+
+        Attributes
+        ----------
+
+        self.start: datetime.datetime
+           Start of the period to consider for commits. Default: None
+           (start from the first commit)
+        self.end: datetime.datetime
+           End of the period to consider for commits. Default: None
+           (end in the last commit)
+
+        """
+
+        self.start = None
+        self.end = None
+        # Keep an accounting of which tables have been joined, to avoid
+        # undesired repeated joins
+        self.joined = []
+        Query.__init__(self, entities, session)
+
+
+    def __repr__ (self):
+
+        if self.start is not None:
+            start = self.start.isoformat()
+        else:
+            start = "ever"
+        if self.end is not None:
+            end = self.end.isoformat()
+        else:
+            end = "ever"
+        repr = "Query from %s to %s\n" % (start, end)
+        repr = "  Joined: %s\n" % str(self.joined)
+        repr += Query.__str__(self)
+        return repr
+
+    def __str__ (self):
+
+        return self.__repr__()
+
