@@ -17,14 +17,14 @@
 ## along with this program; if not, write to the Free Software
 ## Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 ##
-## Package to deal with queries for ITS data from *Grimoire
-##  (Bicho databases)
+## Package to deal with queries for MLS data from *Grimoire
+##  (MLStats databases)
 ##
 ## Authors:
 ##   Jesus M. Gonzalez-Barahona <jgb@bitergia.com>
 ##
 
-from sqlalchemy import create_engine, func, Column, Integer, ForeignKey, or_
+from sqlalchemy import create_engine, func, Column, String, Integer, ForeignKey, and_
 from sqlalchemy.ext.declarative import declarative_base, DeferredReflection
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm.query import Query
@@ -36,8 +36,8 @@ from activity import ActivityList
 from common_query import table_factory
 
 
-class ITSDatabase():
-    """Class for dealing with ITS (Bicho) databases.
+class MLSDatabase():
+    """Class for dealing with MLS (MLStats) databases.
 
     """
 
@@ -57,24 +57,31 @@ class ITSDatabase():
         
         """
 
-        global Changes, Issues, People, PeopleUPeople, Trackers
+        global Messages, MessagesPeople, People, PeopleUPeople, MailingLists
         global UPeople
         self.database = database
         Base = declarative_base(cls=DeferredReflection)
         self.Base = Base
-        Changes = table_factory (bases = (Base,), name = 'Changes',
-                                 tablename = 'changes',
-                                 schemaname = schema,
-                                 columns = dict (
-                issue_id = Column(Integer,
-                                  ForeignKey(schema + '.' + 'issues.id'))
+        Messages = table_factory (
+            bases = (Base,), name = 'Messages',
+            tablename = 'messages',
+            schemaname = schema,
+            columns = dict (
+                mailing_list_url = Column(
+                    String,
+                    ForeignKey(schema + '.' + 'mailing_lists.mailing_list_url'))
                 ))
-        Issues = table_factory (bases = (Base,), name = 'Issues',
-                                tablename = 'issues',
-                                schemaname = schema,
-                                columns = dict (
-                changed_by = Column(Integer,
-                                    ForeignKey(schema + '.' + 'people.id'))     
+        MessagesPeople = table_factory (
+            bases = (Base,), name = 'MessagesPeople',
+            tablename = 'messages_people',
+            schemaname = schema,
+            columns = dict (
+                mailing_list_url = Column(
+                    String,
+                    ForeignKey(schema + '.' + 'mailing_lists.mailing_list_url')),
+                message_id = Column(
+                    String,
+                    ForeignKey(schema + '.' + 'messages.message_ID'))     
                 ))
         People = table_factory (bases = (Base,), name = 'People',
                                 tablename = 'people',
@@ -86,8 +93,8 @@ class ITSDatabase():
                 upeople_id = Column(Integer,
                                     ForeignKey(schema + '.' + 'upeople.id'))
                 ))
-        Trackers = table_factory (bases = (Base,), name = 'Trackers',
-                                tablename = 'trackers',
+        MailingLists = table_factory (bases = (Base,), name = 'MailingLists',
+                                tablename = 'mailing_lists',
                                 schemaname = schema)
         UPeople = table_factory (bases = (Base,), name = 'UPeople',
                                 tablename = 'upeople',
@@ -114,48 +121,16 @@ class ITSDatabase():
                                convert_unicode=True, encoding='utf8',
                                echo=echo)
         self.Base.prepare(engine)
-        Session = sessionmaker(bind=engine, query_cls=ITSQuery)
+        Session = sessionmaker(bind=engine, query_cls=MLSQuery)
         session = Session()
         return (session)
 
-# class Changes(Base):
-#     """changes table"""
 
-#     __tablename__ = 'changes'
-#     issue_id = Column(Integer, ForeignKey('issues.id'))
-
-# class Issues (Base):
-#     """issues table"""
-
-#     __tablename__ = 'issues'
-#     changed_by = Column(Integer, ForeignKey('people.id'))
-
-# class People(Base):
-#     """people table"""
-
-#     __tablename__ = 'people'
-
-# class PeopleUPeople(Base):
-#     """people_upeople table"""
-
-#     __tablename__ = 'people_upeople'
-#     upeople_id = Column(Integer, ForeignKey('upeople.id'))
-
-# class Trackers(Base):
-#     """repositories table"""
-
-#     __tablename__ = 'trackers'
-
-# class UPeople(BaseId):
-#     """upeople table"""
-
-#     __tablename__ = 'upeople'
-
-class ITSQuery (Query):
-    """Class for dealing with ITS queries"""
+class MLSQuery (Query):
+    """Class for dealing with MLS queries"""
 
     def __init__ (self, entities, session):
-        """Create an ITSQuery.
+        """Create an MLSQuery.
 
         Parameters
         ----------
@@ -195,7 +170,7 @@ class ITSQuery (Query):
             end = self.end.isoformat()
         else:
             end = "ever"
-        repr = "ITSQuery from %s to %s\n" % (start, end)
+        repr = "MLSQuery from %s to %s\n" % (start, end)
         repr = "  Joined: %s\n" % str(self.joined)
         repr += Query.__str__(self)
         return repr
@@ -208,42 +183,38 @@ class ITSQuery (Query):
     def select_personsdata(self, kind):
         """Adds columns with persons data to select clause.
 
-        Adds people.user, people.email to the select clause of query.
-        Does not join new tables.
+        Adds person_id, name, email, to the select clause of query.
+        Joins MessagesPeople if not already joined
 
         Parameters
         ----------
 
-        kind: {"openers", "closers", "changers"}
+        kind: {"senders", "starters", "followers"}
            Kind of person to select
 
         Returns
         -------
 
-        SCMObject: Result query, with new fields: id, name, email        
+        MLSQuery: Result query, with new fields: person_id, name, email        
 
         """
 
-        query = self.add_columns (label("person_id", People.id),
-                                  label("name", People.user_id),
-                                  label('email', People.email))
-        if kind == "openers":
-            person = Issues.submitted_by
-            table = Issues
-        elif kind == "changers":
-            person = Changes.changed_by
-            table = Changes
-        elif kind == "closers":
+        query = self.add_columns (label('person_id', People.email_address),
+                                  label("name", People.name),
+                                  label('email', People.email_address))
+        if kind == "senders":
+            if MessagesPeople not in self.joined:
+                query = query.join (MessagesPeople)
+                self.joined.append (MessagesPeople)
+            query = query.filter (
+                and_(MessagesPeople.type_of_recipient == "From"))
+        elif kind == "starters":
+            raise Exception ("select_personsdata: Not yet implemented")
+        elif kind == "followers":
             raise Exception ("select_personsdata: Not yet implemented")
         else:
             raise Exception ("select_personsdata: Unknown kind %s." \
                              % kind)
-
-        if table in self.joined:
-            query = query.filter (People.id == person)
-        else:
-            self.joined.append (table)
-            query = query.join (table, People.id == person)
         return query
 
 
@@ -252,113 +223,121 @@ class ITSQuery (Query):
 
         Adds person_id, name, to the select clause of query,
         having unique identities into account.
-        Joins with PeopleUPeople, UPeople, and Changes / Isues if they
+        Joins with PeopleUPeople, UPeople, and MessagesPeople if they
         are not already joined.
         Relationships: UPeople.id == PeopleUPeople.upeople_id,
-        PeopleUPeople.people_id == person
+          PeopleUPeople.people_id == MessagesPeople.email_address
+          MessagesPeople.type_of_recipient == "From"
 
         Parameters
         ----------
 
-        kind: {"openers", "closers", "changers"}
+        kind: {"senders", "starters", "followers"}
            Kind of person to select
 
         Returns
         -------
 
-        SCMObject: Result query, with new fields: id, name, email        
+        MLSQuery: Result query, with new fields: person_id, name, email        
 
         """
 
         query = self.add_columns (label("person_id", UPeople.id),
                                   label("name", UPeople.identifier))
-        if kind == "openers":
-            person = Issues.submitted_by
-            table = Issues
-        elif kind == "changers":
-            person = Changes.changed_by
-            table = Changes
-        elif kind == "closers":
+        self.joined.append (UPeople)
+        if kind == "senders":
+            if PeopleUPeople not in self.joined:
+                query = query.join (
+                    PeopleUPeople,
+                    UPeople.id == PeopleUPeople.upeople_id)
+                self.joined.append (PeopleUPeople)
+            if MessagesPeople not in self.joined:
+                query = query.join (
+                    MessagesPeople,
+                    MessagesPeople.email_address == PeopleUPeople.people_id)
+                self.joined.append (MessagesPeople)
+            query = query.filter (MessagesPeople.type_of_recipient == "From")
+        elif kind == "starters":
+            raise Exception ("select_personsdata: Not yet implemented")
+        elif kind == "followers":
             raise Exception ("select_personsdata: Not yet implemented")
         else:
             raise Exception ("select_personsdata: Unknown kind %s." \
                              % kind)
-        if not self.joined:
-            # First table, UPeople is in FROM
-            self.joined.append (UPeople)
-        if not self.joined or UPeople in self.joined:
-            # First table, UPeople is in FROM, or we have UPeople
-            if PeopleUPeople not in self.joined:
-                self.joined.append (PeopleUPeople)
-                query = query.join (PeopleUPeople,
-                                    UPeople.id == PeopleUPeople.upeople_id)
-            if table in self.joined:
-                query = query.filter (PeopleUPeople.people_id == person)
-            else:
-                self.joined.append (table)
-                query = query.join (table, PeopleUPeople.people_id == person)
-        elif PeopleUPeople in self.joined:
-            # We have PeopleUPeople (table should be joined), no UPeople
-            if table not in self.joined:
-                raise Exception ("select_personsdata_uid: " + \
-                                     "If PeopleUPeople is joined, " + \
-                                     str(table) + " should be joined too")
-            self.joined.append (UPeople)
-            query = query.join (UPeople,
-                                UPeople.id == PeopleUPeople.upeople_id)
-        elif table in self.joined:
-            # We have table, and no PeopleUPeople, no UPeople
-            self.joined.append (PeopleUPeople)
-            query = query.join (PeopleUPeople,
-                                PeopleUPeople.people_id == person)
-            self.joined.append (UPeople)
-            query = query.join (UPeople,
-                                UPeople.id == PeopleUPeople.upeople_id)
-        else:
-            # No table, no PeopleUPeople, no UPeople but some other table
-            raise Exception ("select_personsdata_uid: " + \
-                                 "Unknown table to join to")
         return query
 
 
-    def select_changesperiod(self):
-        """Add to select the period of the changed tickets.
+    def select_activeperiod(self, date = "arrival"):
+        """Add to select the activity period of messages sent.
 
-        Adds min(changes.changed_on) and max(changes.changed_on)
-        for selected commits.
-        
+        Adds min(messages.*_date) and max(messages.*_date)
+        for selected messages.
+
+        Parameters
+        ----------
+
+        date: {"arrival"|"first"}
+           consider either arrival date or first date (default: arrival)
+
         Returns
         -------
 
-        SCMObject: Result query, with two new fields: firstdate, lastdate
+        MLSQuery: Result query, with two new fields: firstdate, lastdate
 
         """
 
-        query = self.add_columns (label('firstdate',
-                                        func.min(Changes.changed_on)),
-                                  label('lastdate',
-                                        func.max(Changes.changed_on)))
-        return query
-
-
-    def filter_period(self, start = None, end = None, date = "change"):
-        """Filter variable for a period
-
-        - start: datetime, starting date
-        - end: datetime, end date
-        - date: "change"
-
-        Commits considered are between starting date and end date
-        (exactly: start <= date < end)
-        """
-
-        query = self
-        if date == "change":
-            date_field = Changes.changed_on
+        if date == "arrival":
+            date_field = Messages.arrival_date
+        elif date == "first":
+            date_field = Messages.first_date
         else:
             raise Exception ("filter_period: Unknown kind of date: %s." \
                                  % date)
+        query = self.add_columns (label('firstdate',
+                                        func.min(date_field)),
+                                  label('lastdate',
+                                        func.max(date_field)))
+        query = query.filter (Messages.message_ID == MessagesPeople.message_id)
+        return query
 
+    def filter_period(self, start = None, end = None, date = "arrival"):
+        """Filter for a period, according to message dates
+
+        Filter query, considering only messages in the corresponding period.
+        Messages considered are between starting date and end date
+        (exactly: start <= date < end)
+
+        Parameters
+        ----------
+
+        start: datetime
+           starting date
+        end: datetime
+           end date
+        date: {"arrival"|"first"}
+           consider either arrival date or first date (default: arrival)
+
+        Returns
+        -------
+
+        MLSQuery: Resulting query
+
+        """
+
+        if (start is None) and (end is None):
+            # No period, do nothing
+            return self
+        query = self
+        if Messages not in self.joined:
+            query = query.join(Messages)
+            self.joined.append (Messages)
+        if date == "arrival":
+            date_field = Messages.arrival_date
+        elif date == "first":
+            date_field = Messages.first_date
+        else:
+            raise Exception ("filter_period: Unknown kind of date: %s." \
+                                 % date)
         if start is not None:
             self.start = start
             query = query.filter(date_field >= start.isoformat())
@@ -412,35 +391,78 @@ if __name__ == "__main__":
     # http://stackoverflow.com/questions/492483/setting-the-correct-encoding-when-piping-stdout-in-python
     sys.stdout = codecs.getwriter('utf8')(sys.stdout)
 
-    ITSDB = ITSDatabase(database = 'mysql://jgb:XXX@localhost/',
-                        schema = 'vizgrimoire_bicho',
-                        schema_id = 'vizgrimoire_cvsanaly')
-    session = ITSDB.build_session(echo = False)
+    MLSDB = MLSDatabase(database = 'mysql://jgb:XXX@localhost/',
+                        schema = 'oscon_openstack_mls',
+                        schema_id = 'oscon_openstack_scm')
+    session = MLSDB.build_session(echo = False)
 
     #---------------------------------
-    print_banner ("List of openers")
+    print_banner ("List of senders")
     res = session.query() \
-        .select_personsdata("openers") \
+        .select_personsdata("senders")
+    print res
+    for row in res.limit(10).all():
+        print row.name, row.email
+
+    #---------------------------------
+    print_banner ("List of senders for a period")
+    res = session.query() \
+        .select_personsdata("senders") \
+        .filter_period(start=datetime(2013,9,1),
+                       end=datetime(2014,1,1))
+    print res
+    for row in res.limit(10).all():
+        print row.name, row.email
+
+    #---------------------------------
+    print_banner ("List of senders for a period (uid)")
+    res = session.query() \
+        .select_personsdata_uid("senders") \
+        .filter_period(start=datetime(2013,9,1),
+                       end=datetime(2014,1,1))
+    print res
+    for row in res.limit(10).all():
+        print row.name
+
+    #---------------------------------
+    print_banner ("List of (grouped) senders for a period")
+    res = session.query() \
+        .select_personsdata("senders") \
+        .filter_period(start=datetime(2013,12,15),
+                       end=datetime(2014,1,1)) \
         .group_by_person()
     print res
     for row in res.limit(10).all():
-        print row.person_id, row.name, row.email
+        print row.name, row.email
+    print res.count()
 
     #---------------------------------
-    print_banner ("Activity period for changers")
+    print_banner ("List of (grouped) senders for a period (uid)")
     res = session.query() \
-        .select_personsdata("changers") \
-        .select_changesperiod() \
+        .select_personsdata_uid("senders") \
+        .filter_period(start=datetime(2013,12,15),
+                       end=datetime(2014,1,1)) \
+        .group_by_person()
+    print res
+    for row in res.limit(10).all():
+        print row.name
+    print res.count()
+
+    #---------------------------------
+    print_banner ("Activity period for senders")
+    res = session.query() \
+        .select_personsdata("senders") \
+        .select_activeperiod() \
         .group_by_person()
     print res
     for row in res.limit(10).all():
         print row.person_id, row.name, row.email, row.firstdate, row.lastdate
 
     #---------------------------------
-    print_banner ("Activity period for changers (uid)")
+    print_banner ("Activity period for senders (uid)")
     res = session.query() \
-        .select_personsdata_uid("changers") \
-        .select_changesperiod() \
+        .select_personsdata_uid("senders") \
+        .select_activeperiod() \
         .group_by_person()
     print res
     for row in res.limit(10).all():
