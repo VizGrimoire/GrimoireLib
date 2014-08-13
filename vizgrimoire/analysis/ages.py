@@ -25,11 +25,13 @@
 
 from analyses import Analyses
 from scm import PeriodCondition, NomergesCondition
-import its_conditions
-from demography import ActivityPersons, ActivityPersonsITS, DurationPersons, \
-    SnapshotCondition, ActiveCondition
+import its
+import mls
+from demography import SCMActivityPersons, ITSActivityPersons, \
+    MLSActivityPersons, DurationPersons, SnapshotCondition, ActiveCondition
 from SCM import SCM
 from ITS import ITS
+from MLS import MLS
 from datetime import datetime, timedelta
 from jsonpickle import encode, set_encoder_options
 import codecs
@@ -74,7 +76,7 @@ class Ages(Analyses):
         Parameters
         ----------
 
-        data_source: SCM.SCM | ITS.ITS
+        data_source: { SCM.SCM | ITS.ITS | MLS.MLS }
 
         Returns
         -------
@@ -105,7 +107,7 @@ class Ages(Analyses):
             # as activity)
             period = PeriodCondition (start = startdate, end = enddate)
             nomerges = NomergesCondition()
-            data = ActivityPersons (
+            data = SCMActivityPersons (
                 database = database,
                 var = "list_uauthors",
                 conditions = (period,nomerges))
@@ -116,14 +118,28 @@ class Ages(Analyses):
             # Activity data (start time, end time for contributions) for
             # all the actors, considering only activty during
             # the startdate..enddate period
-            period = its_conditions.PeriodCondition (start = startdate,
-                                                     end = enddate)
-            data = ActivityPersonsITS (
+            period = its.PeriodCondition (start = startdate,
+                                          end = enddate)
+            data = ITSActivityPersons (
                 database = database,
                 schema = schema, schema_id = schema_id,
                 var = "list_uchangers",
                 conditions = (period,))
-        if data_source in (ITS, SCM):
+        if data_source == MLS:
+            logging.info("Analyzing aging for MLS")
+            schema = self.db.database
+            schema_id = self.db.identities_db
+            # Activity data (start time, end time for contributions) for
+            # all the actors, considering only activty during
+            # the startdate..enddate period
+            period = mls.PeriodCondition (start = startdate,
+                                          end = enddate)
+            data = MLSActivityPersons (
+                database = database,
+                schema = schema, schema_id = schema_id,
+                var = "list_usenders",
+                conditions = (period,))
+        if data_source in (SCM, ITS, MLS):
             # Birth has the ages of all actors, consiering enddate as
             # current (snapshot) time
             snapshot = SnapshotCondition (date = enddate)
@@ -157,7 +173,7 @@ class Ages(Analyses):
         Parameters
         ----------
 
-        data_source: SCM.SCM | ITS.ITS
+        data_source: { SCM.SCM | ITS.ITS | MLS.MLS }
         destdir: name of directory for writing JSON files
 
         """
@@ -167,6 +183,8 @@ class Ages(Analyses):
             prefix = "scm"
         elif data_source == ITS:
             prefix = "its"
+        elif data_source == MLS:
+            prefix = "mls"
         else:
             logging.info("Error: data_source not supported for Aging")
             return
@@ -213,3 +231,14 @@ if __name__ == '__main__':
                         ensure_ascii=False,
                         encoding="utf8")
     print encode(ages.result(ITS), unpicklable=False)
+
+    dbcon = DSQuery(user = "jgb", password = "XXX", 
+                    database = "oscon_openstack_mls",
+                    identities_db = "oscon_openstack_scm")
+    ages = Ages(dbcon, filters)
+    # Produce pretty JSON output
+    set_encoder_options('json', sort_keys=True, indent=4,
+                        separators=(',', ': '),
+                        ensure_ascii=False,
+                        encoding="utf8")
+    print encode(ages.result(MLS), unpicklable=False)

@@ -54,7 +54,7 @@ class PeriodCondition (Condition):
                                    end = self.end,
                                    date = self.date)
 
-    def __init__ (self, start = None, end = None, date = "change"):
+    def __init__ (self, start = None, end = None, date = "arrival"):
         """Instatiation of the object.
 
         - start (datetime): start of the period
@@ -70,31 +70,4 @@ class PeriodCondition (Condition):
 
 if __name__ == "__main__":
 
-    from datetime import datetime
-
-    data = SCM (database = 'mysql://jgb:XXX@localhost/vizgrimoire_cvsanaly',
-                var = "ncommits")
-    print data.timeseries()
-    print data.total()
-
-    period = PeriodCondition (start = datetime(2013,1,1), end = None)
-
-    data = SCM (database = 'mysql://jgb:XXX@localhost/vizgrimoire_cvsanaly',
-                var = "ncommits", conditions = (period,))
-    print data.timeseries()
-    print data.total()
-
-    data = SCM (database = 'mysql://jgb:XXX@localhost/vizgrimoire_cvsanaly',
-                var = "listcommits")
-    print data.list()
-
-    data = SCM (database = 'mysql://jgb:XXX@localhost/vizgrimoire_cvsanaly',
-                var = "nauthors", conditions = (period,))
-    print data.timeseries()
-    print data.total()
-
-    branches = BranchesCondition (branches = ("master",))
-    data = SCM (database = 'mysql://jgb:XXX@localhost/vizgrimoire_cvsanaly',
-                var = "nauthors", conditions = (period, branches))
-    print data.timeseries()
-    print data.total()
+    print "Nothing to be done (yet)"

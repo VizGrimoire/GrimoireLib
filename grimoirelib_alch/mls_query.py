@@ -215,7 +215,7 @@ class MLSQuery (GrimoireQuery):
         elif date == "first":
             date_field = Messages.first_date
         else:
-            raise Exception ("filter_period: Unknown kind of date: %s." \
+            raise Exception ("select_activeperiod: Unknown kind of date: %s." \
                                  % date)
         query = self.add_columns (label('firstdate',
                                         func.min(date_field)),
