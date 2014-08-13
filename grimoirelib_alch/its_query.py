@@ -60,6 +60,7 @@ class ITSDatabase(GrimoireDatabase):
         self.database = database
         Base = declarative_base(cls=DeferredReflection)
         self.Base = Base
+        self.query_cls = ITSQuery
         Changes = table_factory (bases = (Base,), name = 'Changes',
                                  tablename = 'changes',
                                  schemaname = schema,
@@ -111,7 +112,7 @@ class ITSQuery (GrimoireQuery):
         Returns
         -------
 
-        SCMObject: Result query, with new fields: id, name, email        
+        ITSQuery: Result query, with new fields: id, name, email        
 
         """
 
@@ -291,6 +292,7 @@ class ITSQuery (GrimoireQuery):
 
         list = self.all()
         return ActivityList(list)
+
 
 if __name__ == "__main__":
 

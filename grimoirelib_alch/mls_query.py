@@ -60,6 +60,7 @@ class MLSDatabase(GrimoireDatabase):
         self.database = database
         Base = declarative_base(cls=DeferredReflection)
         self.Base = Base
+        self.query_cls = MLSQuery
         Messages = table_factory (
             bases = (Base,), name = 'Messages',
             tablename = 'messages',

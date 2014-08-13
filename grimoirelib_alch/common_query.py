@@ -71,7 +71,7 @@ class GrimoireDatabase:
 
     """
 
-    def build_session(self, query_cls, echo = False):
+    def build_session(self, query_cls = None, echo = False):
         """Create a session with the database
 
         Instantiatates an engine and a session to work with it.
@@ -79,10 +79,12 @@ class GrimoireDatabase:
         Parameters
         ----------
         
-        query_cls: class
-           Query class (MLSQuery, etc.)
+        query_cls: Class in GrimoireQuery hierarchy
+           Query class (Default: None)
+           None means the "canonical query class", defined by the subclass,
+           such as ITSQuery for ITSDatabase.
         echo: boolean
-           Output SQL to stdout or not
+           Output SQL to stdout or not.
         
         """
         
@@ -94,6 +96,8 @@ class GrimoireDatabase:
                                convert_unicode=True, encoding='utf8',
                                echo=echo)
         self.Base.prepare(engine)
+        if query_cls is None:
+            query_cls = self.query_cls
         Session = sessionmaker(bind=engine, query_cls=query_cls)
         session = Session()
         return (session)
