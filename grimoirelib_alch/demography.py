@@ -32,7 +32,10 @@ from sqlalchemy.orm.session import Session
 
 class ActivityPersons:
     """High level interface to variables related to activity of persons.
-    
+
+    Root of ahierarchy of classes for the different data sources
+    (SCM, ITS, MLS, etc.).
+
     Objects of this class are instantiated with a SQLAlchemy url
     (or a SQLAlchemy session), a variable to be obtained from it,
     and a list of conditions.
@@ -51,7 +54,8 @@ class ActivityPersons:
 
         Instantiation can be specified with an SQLAlchemy url or
         with an SQLAlchemy session.
-
+        Uses _produce_query(), which should be produced by child classes.
+ 
         Parameters
         ----------
         
@@ -79,13 +83,41 @@ class ActivityPersons:
         else:
             raise Exception ("ActivityPersons: Either a session or a " + \
                                  "database must be specified")
+        self.query = self.session.query()
+        self._produce_query(var)
+        for condition in conditions:
+            self.query = condition.filter(self.query)
+
+
+class SCMActivityPersons (ActivityPersons):
+    """Interface to variables related to activity of persons in SCM.
+    
+
+    """
+
+    def _produce_query (self, var):
+        """Produce the base query to obtain activity per person.
+
+        This function assumes that self.query was already initialized.
+        The produced query replaces self.query.
+        Conditions will be applied (as filters) later to the query
+        produced by this function.
+
+        Parameters
+        ----------
+        
+        var: {"list_authors" | "list_committers" |
+           "list_uauthors" | "list_ucommitters"}
+           Variable
+
+        """
+
         if var in ("list_authors", "list_uauthors"):
             persons = "authors"
         elif var in ("list_committers", "list_ucommitters"):
             persons = "committers"
         else:
             raise Exception ("ActivityPersons: Unknown variable %s." % var)
-        self.query = self.session.query()
         if var in ("list_authors", "list_committers"):
             self.query = self.query.select_personsdata(persons)
         elif var in ("list_uauthors", "list_ucommitters"):
@@ -95,8 +127,7 @@ class ActivityPersons:
         self.query = self.query \
             .select_commitsperiod() \
             .group_by_person()
-        for condition in conditions:
-            self.query = condition.filter(self.query)
+
 
     def activity (self):
         """Obtain the activity list (ActivityList object).
@@ -113,17 +144,9 @@ class ActivityPersons:
 
         return self.query.activity()
 
-class ActivityPersonsITS (ActivityPersons):
+class ITSActivityPersons (SCMActivityPersons):
     """Interface to variables related to activity of persons in ITS
     
-    Objects of this class are instantiated with a SQLAlchemy url
-    (or a SQLAlchemy session), a variable to be obtained from it,
-    and a list of conditions.
-    
-    Objects of this class provide the function activity() to
-    obtain an ActivityList object. From this ActivityList, ages or
-    idle period for actors can be obtained.
-
     """
 
     def __init__ (self, var, conditions = (), 
@@ -159,7 +182,7 @@ class ActivityPersonsITS (ActivityPersons):
             self.session = session
         elif database is not None:
             if schema is None or schema_id is None:
-                raise Exception ("ActivityPersonsITS: if database is a " + \
+                raise Exception ("ITSActivityPersons: if database is a " + \
                                      "parameter, both schema and schema_id " + \
                                      "should be parameters too.")
             ITSDB = its_query.ITSDatabase (database = database,
@@ -167,24 +190,44 @@ class ActivityPersonsITS (ActivityPersons):
                                            schema_id = schema_id)
             self.session = ITSDB.build_session(echo=echo)
         else:
-            raise Exception ("ActivityPersons: Either a session or a " + \
+            raise Exception ("ITSActivityPersons: Either a session or a " + \
                                  "database must be specified")
+        self._produce_query(var)
+        for condition in conditions:
+            self.query = condition.filter(self.query)
+
+
+    def _produce_query (self, var):
+        """Produce the base query to obtain activity per person.
+
+        This function assumes that self.query was already initialized.
+        The produced query replaces self.query.
+        Conditions will be applied (as filters) later to the query
+        produced by this function.
+
+        Parameters
+        ----------
+        
+        var: {"list_changers" | "list_uchangers"}
+           Variable
+
+        """
+
         if var in ("list_changers", "list_uchangers"):
             persons = "changers"
         else:
-            raise Exception ("ActivityPersons: Unknown variable %s." % var)
+            raise Exception ("ITSActivityPersons: Unknown variable %s." % var)
         self.query = self.session.query()
         if var in ("list_changers"):
             self.query = self.query.select_personsdata(persons)
         elif var in ("list_uchangers"):
             self.query = self.query.select_personsdata_uid(persons)
         else:
-            raise Exception ("ActivityPersons: Unknown variable %s." % var)
+            raise Exception ("ITSActivityPersons: Unknown variable %s." % var)
         self.query = self.query \
             .select_changesperiod() \
             .group_by_person()
-        for condition in conditions:
-            self.query = condition.filter(self.query)
+
 
 class DurationCondition ():
     """Root of all conditions for DurationPersons objects
@@ -359,7 +402,7 @@ if __name__ == "__main__":
 
     #---------------------------------
     print_banner("List of activity for each author")
-    data = ActivityPersons (
+    data = SCMActivityPersons (
         database = 'mysql://jgb:XXX@localhost/vizgrimoire_cvsanaly',
         var = "list_authors")
     activity = data.activity()
@@ -379,7 +422,7 @@ if __name__ == "__main__":
     period = PeriodCondition (start = datetime(2014,1,1), end = None)
     nomerges = NomergesCondition()
 
-    data = ActivityPersons (
+    data = SCMActivityPersons (
         database = 'mysql://jgb:XXX@localhost/vizgrimoire_cvsanaly',
         var = "list_authors", conditions = (period,nomerges))
     activity = data.activity()
@@ -399,7 +442,7 @@ if __name__ == "__main__":
     session = buildSession(
         database = 'mysql://jgb:XXX@localhost/vizgrimoire_cvsanaly',
         echo = False)
-    data = ActivityPersons (var = "list_ucommitters",
+    data = SCMActivityPersons (var = "list_ucommitters",
                             conditions = (nomerges,),
                             session = session)
     print data.activity()
@@ -427,7 +470,7 @@ if __name__ == "__main__":
     
     #---------------------------------
     print_banner("List of activity for each changer")
-    data = ActivityPersonsITS (
+    data = ITSActivityPersons (
         database = 'mysql://jgb:XXX@localhost/',
         schema = 'vizgrimoire_bicho',
         schema_id = 'vizgrimoire_cvsanaly',
@@ -439,7 +482,7 @@ if __name__ == "__main__":
     print_banner("List of activity for each changer, with period condition")
     period = its_conditions.PeriodCondition (start = datetime(2014,1,1),
                                              end = None)
-    data = ActivityPersonsITS (
+    data = ITSActivityPersons (
         database = 'mysql://jgb:XXX@localhost/',
         schema = 'vizgrimoire_bicho',
         schema_id = 'vizgrimoire_cvsanaly',
@@ -450,7 +493,7 @@ if __name__ == "__main__":
 
     #---------------------------------
     print_banner("List of activity for each changer (unique ids)")
-    data = ActivityPersonsITS (
+    data = ITSActivityPersons (
         database = 'mysql://jgb:XXX@localhost/',
         schema = 'vizgrimoire_bicho',
         schema_id = 'vizgrimoire_cvsanaly',
