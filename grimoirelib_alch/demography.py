@@ -26,6 +26,7 @@
 
 from scm_query import buildSession, SCMQuery
 import its_query
+import mls_query
 from scm import PeriodCondition, NomergesCondition
 import its_conditions
 from sqlalchemy.orm.session import Session
@@ -226,6 +227,91 @@ class ITSActivityPersons (SCMActivityPersons):
             raise Exception ("ITSActivityPersons: Unknown variable %s." % var)
         self.query = self.query \
             .select_changesperiod() \
+            .group_by_person()
+
+
+class MLSActivityPersons (SCMActivityPersons):
+    """Interface to variables related to activity of persons in ITS
+    
+    """
+
+    def __init__ (self, var, conditions = (), 
+                  session = None,
+                  database = None, schema = None, schema_id = None,
+                  echo = False):
+        """Instantiation of the object.
+
+        Instantiation can be specified with an SQLAlchemy url or
+        with an SQLAlchemy session.
+
+        Parameters
+        ----------
+        
+        var: {"list_changers"}
+           Variable
+        conditions: list of Condition objects
+           Conditions to be applied to get the values
+        session: sqlalchemy.orm.session.Session
+           SQLAlchemy session
+        database: string
+           SQLAlchemy url for the database to be used, such as
+           mysql://user:passwd@host:port/
+        schema: string
+           Schema name for the ITS data
+        schema_id: string
+           Schema name for the unique ids data
+        echo: boolean
+           Write SQL queries to output stream
+        """
+
+        if session is not None:
+            self.session = session
+        elif database is not None:
+            if schema is None or schema_id is None:
+                raise Exception ("MLSActivityPersons: if database is a " + \
+                                     "parameter, both schema and schema_id " + \
+                                     "should be parameters too.")
+            MLSDB = mls_query.MLSDatabase (database = database,
+                                           schema = schema,
+                                           schema_id = schema_id)
+            self.session = MLSDB.build_session(echo=echo)
+        else:
+            raise Exception ("MLSActivityPersons: Either a session or a " + \
+                                 "database must be specified")
+        self._produce_query(var)
+        for condition in conditions:
+            self.query = condition.filter(self.query)
+
+
+    def _produce_query (self, var):
+        """Produce the base query to obtain activity per person.
+
+        This function assumes that self.query was already initialized.
+        The produced query replaces self.query.
+        Conditions will be applied (as filters) later to the query
+        produced by this function.
+
+        Parameters
+        ----------
+        
+        var: {"list_senders" | "list_usenders"}
+           Variable
+
+        """
+
+        if var in ("list_senders", "list_usenders"):
+            persons = "senders"
+        else:
+            raise Exception ("MLSActivityPersons: Unknown variable %s." % var)
+        self.query = self.session.query()
+        if var in ("list_senderss"):
+            self.query = self.query.select_personsdata(persons)
+        elif var in ("list_usenders"):
+            self.query = self.query.select_personsdata_uid(persons)
+        else:
+            raise Exception ("MLSActivityPersons: Unknown variable %s." % var)
+        self.query = self.query \
+            .select_activeperiod() \
             .group_by_person()
 
 
@@ -498,6 +584,26 @@ if __name__ == "__main__":
         schema = 'vizgrimoire_bicho',
         schema_id = 'vizgrimoire_cvsanaly',
         var = "list_uchangers")
+    activity = data.activity()
+    print activity
+
+    #---------------------------------
+    print_banner("List of activity for each sender")
+    data = MLSActivityPersons (
+        database = 'mysql://jgb:XXX@localhost/',
+        schema = 'oscon_openstack_mls',
+        schema_id = 'oscon_openstack_scm',
+        var = "list_senders")
+    activity = data.activity()
+    print activity
+
+    #---------------------------------
+    print_banner("List of activity for each sender (unique ids)")
+    data = MLSActivityPersons (
+        database = 'mysql://jgb:XXX@localhost/',
+        schema = 'oscon_openstack_mls',
+        schema_id = 'oscon_openstack_scm',
+        var = "list_usenders")
     activity = data.activity()
     print activity
 
