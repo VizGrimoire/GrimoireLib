@@ -22,47 +22,24 @@
 ##   Jesus M. Gonzalez-Barahona <jgb@bitergia.com>
 ##
 
-# from scm_query import buildSession, SCMLog
 from scm_query import SCMDatabase, SCMQuery
 from datetime import datetime
 from timeseries import TimeSeries
 import unittest
 
-# db_prefix = 'mysql://jgb:XXX@localhost/'
-# Set UTF-8, and avoid the DBAPI Unicode support, to use SQLAlchemy's,
-# which is said to be more efficient
-# db_suffix = '?charset=utf8&use_unicode=0'
-# database = db_prefix + "vizgrimoire_cvsanaly" + db_suffix
-# database_id = db_prefix + "vizgrimoire_cvsanaly" + db_suffix
-#database = db_prefix + "cp_cvsanaly_GrimoireLibTests" + db_suffix
-#database_id = db_prefix + "cp_cvsanaly_GrimoireLibTests" + db_suffix
 database = 'mysql://jgb:XXX@localhost/'
 schema = 'vizgrimoire_cvsanaly'
 schema_id = 'vizgrimoire_cvsanaly'
-
-# class TestBuildSession (unittest.TestCase):
-
-
-#     def test_get_session (self):
-
-        # session = buildSession(database=self.database,
-        #                        id_database = self.database_id,
-        #                        echo=False)
+start = datetime(2013,11,13)
+end = datetime(2014,2,1)
 
 class TestSCMQuery (unittest.TestCase):
 
     def setUp (self):
-        self.database = database
-        self.schema = schema
-        self.schema_id = schema_id
-        DB = SCMDatabase(database = self.database,
-                         schema = self.schema,
-                         schema_id = self.schema_id)
+        DB = SCMDatabase(database = database,
+                         schema = schema,
+                         schema_id = schema_id)
         self.session = DB.build_session(SCMQuery, echo = False)
-
-#        self.session = buildSession(database=self.database, echo=False)
-        self.start = datetime(2013,11,13)
-        self.end = datetime(2014,2,1)
 
     def _test_select_nscmlog (self, variables, results):
         """Test select_nscmlog with different variables
@@ -103,18 +80,18 @@ class TestSCMQuery (unittest.TestCase):
 
         # Test for variable (count)
         res = self.session.query().select_nscmlog(variables) \
-            .filter_period(start=self.start,end=self.end).all()
+            .filter_period(start=start,end=end).all()
         self.assertEqual (res, results[0])
         # Test for variable (count) considering only commits "touch files"
         #  (that is, merges are excluded)
         res = self.session.query().select_nscmlog(variables) \
             .filter_nomerges() \
-            .filter_period(start=self.start, end=self.end) \
+            .filter_period(start=start, end=end) \
             .all()
         self.assertEqual (res, results[1])
         # Test for variable (count), using authoring date for commits
         res = self.session.query().select_nscmlog(variables) \
-            .filter_period(start=self.start, end=self.end, date="author") \
+            .filter_period(start=start, end=end, date="author") \
             .all()
         self.assertEqual (res, results[2])
 
@@ -142,7 +119,7 @@ class TestSCMQuery (unittest.TestCase):
         else:
             res = self.session.query() \
                 .select_listpersons(kind)
-        res = res.filter_period(start=self.start, end=self.end) \
+        res = res.filter_period(start=start, end=end) \
             .limit(5).all()
         self.assertEqual (res, correct)
 
@@ -217,7 +194,7 @@ class TestSCMQuery (unittest.TestCase):
         res = self.session.query().select_nbranches()
         self.assertEqual (res.all(), correct[0])
         res = res.join(SCMLog) \
-            .filter_period(start=self.start, end=self.end)
+            .filter_period(start=start, end=end)
         self.assertEqual (res.all(), correct[1])
         res = res.group_by_period().timeseries()
         self.assertEqual (res, correct[2])
@@ -241,7 +218,7 @@ class TestSCMQuery (unittest.TestCase):
         res = self.session.query().select_listbranches()
         self.assertEqual (res.all(), correct[0])
         res = res.join(SCMLog) \
-            .filter_period(start=self.start, end=self.end)
+            .filter_period(start=start, end=end)
         self.assertEqual (res.all(), correct[1])
 
 
@@ -316,7 +293,7 @@ class TestSCMQuery (unittest.TestCase):
 
         res = self.session.query().select_nscmlog(["commits",]) \
             .group_by_repo(names=True).group_by_period() \
-            .filter_period(start=self.start, end=self.end)
+            .filter_period(start=start, end=end)
         self.assertEqual (res.all(), correct[0])
 
     def test_chains (self):

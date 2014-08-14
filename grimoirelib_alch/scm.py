@@ -23,7 +23,8 @@
 ##   Jesus M. Gonzalez-Barahona <jgb@bitergia.com>
 ##
 
-from scm_query import buildSession, SCMQuery
+from common import DatabaseDefinition
+from scm_query import SCMDatabase, SCMQuery
 
 
 class SCM:
@@ -49,17 +50,41 @@ class SCM:
 
         return self.query.limit(limit).all()
 
-    def __init__ (self, database, var, conditions = (), echo = False):
+    def __init__ (self, var, conditions = (),
+                  session = None,
+                  database = None,
+                  echo = False):
         """Instantiation of the object.
 
-        - var (string): variable ("commits", "listcommits")
-        - conditions (list of Condition hierarchy): conditions
-        - echo: write SQL queries to output stream
+        Instantiation can be specified with a DatabaseDefinition
+        or with an SQLAlchemy session.
+        Uses _produce_query(), which should be produced by child classes.
+
+        Parameters
+        ----------
+
+        session: SQLAlchemy session
+           Session for working with an SQLAlchemy database
+        database: Common.DatabaseDefinition
+           Names defining the database. If session is not None,
+           database is silently ignored, and session is used instead.
+        var: {"commits", "listcommits"}
+           Variable
+        conditions: list of Condition objects
+           Conditions to be applied to provide context to variable
+        echo: Boolean
+           Write SQL queries to output stream or not
+
         """
 
-        self.session = buildSession(
-            database=database,
-            echo=echo)
+        if session is None:
+            # Create a session using info in database
+            DB = SCMDatabase(database = database.url,
+                             schema = database.schema,
+                             schema_id = database.schema_id)
+            self.session = DB.build_session(SCMQuery, echo = echo)
+        else:
+            self.session = session
         if var == "ncommits":
             self.query = self.session.query().select_nscmlog(["commits",])
         elif var == "listcommits":
@@ -163,29 +188,32 @@ if __name__ == "__main__":
 
     from datetime import datetime
 
-    data = SCM (database = 'mysql://jgb:XXX@localhost/vizgrimoire_cvsanaly',
+    database = DatabaseDefinition (url = "mysql://jgb:XXX@localhost/",
+                                   schema = "vizgrimoire_cvsanaly",
+                                   schema_id = "vizgrimoire_cvsanaly")
+    data = SCM (database = database,
                 var = "ncommits")
     print data.timeseries()
     print data.total()
 
     period = PeriodCondition (start = datetime(2013,1,1), end = None)
 
-    data = SCM (database = 'mysql://jgb:XXX@localhost/vizgrimoire_cvsanaly',
+    data = SCM (database = database,
                 var = "ncommits", conditions = (period,))
     print data.timeseries()
     print data.total()
 
-    data = SCM (database = 'mysql://jgb:XXX@localhost/vizgrimoire_cvsanaly',
+    data = SCM (database = database,
                 var = "listcommits")
     print data.list()
 
-    data = SCM (database = 'mysql://jgb:XXX@localhost/vizgrimoire_cvsanaly',
+    data = SCM (database = database,
                 var = "nauthors", conditions = (period,))
     print data.timeseries()
     print data.total()
 
     branches = BranchesCondition (branches = ("master",))
-    data = SCM (database = 'mysql://jgb:XXX@localhost/vizgrimoire_cvsanaly',
+    data = SCM (database = database,
                 var = "nauthors", conditions = (period, branches))
     print data.timeseries()
     print data.total()
