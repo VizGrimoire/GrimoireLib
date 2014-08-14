@@ -24,6 +24,7 @@
 
 from datetime import datetime
 from common import DatabaseDefinition
+from scm_query import SCMDatabase, SCMQuery
 from scm import SCM, NomergesCondition, BranchesCondition, PeriodCondition
 import unittest
 
@@ -38,6 +39,10 @@ class TestSCM (unittest.TestCase):
         self.database = DatabaseDefinition (url = url,
                                             schema = schema,
                                             schema_id = schema_id)
+        DB = SCMDatabase(database = self.database.url,
+                         schema = self.database.schema,
+                         schema_id = self.database.schema_id)
+        self.session = DB.build_session(SCMQuery, echo = False)
         self.start = datetime(2013,11,13)
         self.end = datetime(2014,2,1)
 
@@ -95,18 +100,18 @@ class TestSCM (unittest.TestCase):
         branches = BranchesCondition (branches = ("master",))
         period = PeriodCondition (start = self.start, end = self.end,
                                   date = "author")
-        data = SCM (database = self.database, var = "ncommits",
+        data = SCM (session = self.session, var = "ncommits",
                     conditions = (branches,period))
         self.assertEqual (data.total(), 647)
-        data = SCM (database = self.database, var = "ncommits",
+        data = SCM (session = self.session, var = "ncommits",
                     conditions = (period, branches))
         self.assertEqual (data.total(), 647)
         # Branches, period and merges (in several orders)
         nomerges = NomergesCondition ()
-        data = SCM (database = self.database, var = "ncommits",
+        data = SCM (session = self.session, var = "ncommits",
                     conditions = (nomerges, period, branches))
         self.assertEqual (data.total(), 647)
-        data = SCM (database = self.database, var = "ncommits",
+        data = SCM (session = self.session, var = "ncommits",
                     conditions = (branches, nomerges, period))
         self.assertEqual (data.total(), 647)
 
