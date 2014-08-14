@@ -22,38 +22,45 @@
 ##   Jesus M. Gonzalez-Barahona <jgb@bitergia.com>
 ##
 
-from scm_query import buildSession, SCMLog
+# from scm_query import buildSession, SCMLog
+from scm_query import SCMDatabase, SCMQuery
 from datetime import datetime
 from timeseries import TimeSeries
 import unittest
 
-db_prefix = 'mysql://jgb:XXX@localhost/'
+# db_prefix = 'mysql://jgb:XXX@localhost/'
 # Set UTF-8, and avoid the DBAPI Unicode support, to use SQLAlchemy's,
 # which is said to be more efficient
-db_suffix = '?charset=utf8&use_unicode=0'
-database = db_prefix + "vizgrimoire_cvsanaly" + db_suffix
-database_id = db_prefix + "vizgrimoire_cvsanaly" + db_suffix
+# db_suffix = '?charset=utf8&use_unicode=0'
+# database = db_prefix + "vizgrimoire_cvsanaly" + db_suffix
+# database_id = db_prefix + "vizgrimoire_cvsanaly" + db_suffix
 #database = db_prefix + "cp_cvsanaly_GrimoireLibTests" + db_suffix
 #database_id = db_prefix + "cp_cvsanaly_GrimoireLibTests" + db_suffix
+database = 'mysql://jgb:XXX@localhost/'
+schema = 'vizgrimoire_cvsanaly'
+schema_id = 'vizgrimoire_cvsanaly'
 
-class TestBuildSession (unittest.TestCase):
+# class TestBuildSession (unittest.TestCase):
 
-    def setUp (self):
-        self.database = database
-        self.database_id = database_id
 
-    def test_get_session (self):
+#     def test_get_session (self):
 
-        session = buildSession(database=self.database,
-                               id_database = self.database_id,
-                               echo=False)
+        # session = buildSession(database=self.database,
+        #                        id_database = self.database_id,
+        #                        echo=False)
 
 class TestSCMQuery (unittest.TestCase):
 
     def setUp (self):
-
         self.database = database
-        self.session = buildSession(database=self.database, echo=False)
+        self.schema = schema
+        self.schema_id = schema_id
+        DB = SCMDatabase(database = self.database,
+                         schema = self.schema,
+                         schema_id = self.schema_id)
+        self.session = DB.build_session(SCMQuery, echo = False)
+
+#        self.session = buildSession(database=self.database, echo=False)
         self.start = datetime(2013,11,13)
         self.end = datetime(2014,2,1)
 
@@ -196,6 +203,8 @@ class TestSCMQuery (unittest.TestCase):
     def test_select_nbranches (self):
         """Test select_nbranches"""
 
+        from scm_query import SCMLog
+
         correct = [[(17L,)],
                    [(5L,)],
                    TimeSeries ("months",
@@ -215,6 +224,8 @@ class TestSCMQuery (unittest.TestCase):
 
     def test_select_listbranches (self):
         """Test select_listbranches"""
+
+        from scm_query import SCMLog
 
         correct = [
             [(1L, 'master'), (2L, 'tinycolor'), (3L, 'webkit-companies'),

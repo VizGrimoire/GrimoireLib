@@ -24,165 +24,115 @@
 ##   Jesus M. Gonzalez-Barahona <jgb@bitergia.com>
 ##
 
-from sqlalchemy import create_engine, func, Column, Integer, ForeignKey, or_
+from sqlalchemy import func, Column, Integer, ForeignKey, or_
 from sqlalchemy.ext.declarative import declarative_base, DeferredReflection
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.orm.query import Query
-from sqlalchemy.schema import ForeignKeyConstraint
 from sqlalchemy.sql import label
 from datetime import datetime
 from timeseries import TimeSeries
 from activity import ActivityList
+from common_query import table_factory, GrimoireDatabase, GrimoireQuery
 
-Base = declarative_base(cls=DeferredReflection)
-
-def buildSession(database, id_database = None, cls = None, echo = False):
-    """Create a session with the database
-        
-    Instantiatates an engine and a session to work with it
-
-    Parameters
-    ----------
-    
-    database: string
-       SQLAlchemy url of the database, in the format
-       mysql://user:passwd@host:port/database
-    id_database: string
-       SQLAlchemy url of the unique ids database, in the 
-       same format
-    cls: class in the SCMQuery hierarchy
-       Class to be used for queries. Default: SCMQuery.
-    echo: boolean
-       Output SQL to stdout or not
-
-    Returns
-    -------
-
-    SQLAlchemy session
+class SCMDatabase(GrimoireDatabase):
+    """Class for dealing with SCM (CVSAnalY) databases.
 
     """
-
-    # To set Unicode interaction with MySQL
-    # http://docs.sqlalchemy.org/en/rel_0_9/dialects/mysql.html#unicode
-    trailer = "?charset=utf8&use_unicode=0"
-    if cls is None:
-        cls = SCMQuery
-    if id_database is None:
-        id_database = database
-    database = database + trailer
-    id_database = id_database + trailer
-    engine = create_engine(database,
-                           convert_unicode=True, encoding='utf8',
-                           echo=echo)
-    id_engine = create_engine(id_database,
-                              convert_unicode=True, encoding='utf8',
-                              echo=echo)
-    Base.prepare(engine)
-    Base.prepare(id_engine)
-    bindings = {Actions: engine,
-                Branches: engine,
-                Files: engine,
-                FileLinks: engine,
-                People: engine,
-                PeopleUPeople: id_engine,
-                Repositories: engine,
-                SCMLog: engine,
-                UPeople: id_engine}
-    # Create a session linked to the SCMQuery class
-    #Session = sessionmaker(bind=engine, query_cls=SCMQuery)
-    Session = sessionmaker(binds=bindings, query_cls=cls)
-    session = Session()
-    return (session)
-
-
-class Actions(Base):
-    """actions table"""
-
-    __tablename__ = 'actions'
-    commit_id = Column(Integer, ForeignKey('scmlog.id'))
-    branch_id = Column(Integer, ForeignKey('branches.id'))
-    file_id =  Column(Integer, ForeignKey('files.id'))
-
-class Branches(Base):
-    """branches table"""
-
-    __tablename__ = 'branches'
-
-class Files(Base):
-    """files table"""
-
-    __tablename__ = 'files'
-    repository_id =  Column(Integer, ForeignKey('repositories.id'))
-
-class FileLinks(Base):
-    """file_links table"""
-
-    __tablename__ = 'file_links'
-    file_id =  Column(Integer, ForeignKey('files.id'))
-
-class People(Base):
-    """upeople table"""
-
-    __tablename__ = 'people'
-
-class PeopleUPeople(Base):
-    """people_upeople table"""
-
-    __tablename__ = 'people_upeople'
-    upeople_id = Column(Integer, ForeignKey('upeople.id'))
-
-class Repositories(Base):
-    """repositories table"""
-
-    __tablename__ = 'repositories'
-
-class SCMLog(Base):
-    """scmlog table"""
-    __tablename__ = 'scmlog'
-    author_id = Column(Integer, ForeignKey('people_upeople.people_id'))
-    author_id = Column(Integer, ForeignKey('people.id'))
-    committer_id = Column(Integer, ForeignKey('people_upeople.people_id'))
-    committer_id = Column(Integer, ForeignKey('people.id'))
-    repository_id = Column(Integer, ForeignKey('repositories.id'))
-
-class UPeople(Base):
-    """upeople"""
-
-    __tablename__ = 'upeople'
-
-
-class SCMQuery (Query):
-    """Class for dealing with SCM queries"""
-
-    def __init__ (self, entities, session):
-        """Create an SCMQuery.
+ 
+    def __init__(self, database, schema, schema_id):
+        """Instatiation.
 
         Parameters
         ----------
 
-        entities: list of SQLAlchemy entities
-           Entities (tables) to include in the query
-        session: SQLAlchemy session
-           SQLAlchemy session to use to connect to the database
-
-        Attributes
-        ----------
-
-        self.start: datetime.datetime
-           Start of the period to consider for commits. Default: None
-           (start from the first commit)
-        self.end: datetime.datetime
-           End of the period to consider for commits. Default: None
-           (end in the last commit)
-
+        database: string
+           SQLAlchemy url for the database to be used, such as
+           mysql://user:passwd@host:port/
+        schema: string
+           Schema name for the ITS data
+        schema_id: string
+           Schema name for the unique ids data
+        
         """
 
-        self.start = None
-        self.end = None
-        # Keep an accounting of which tables have been joined, to avoid
-        # undesired repeated joins
-        self.joined = []
-        Query.__init__(self, entities, session)
+        global Actions, Branches, Files, FileLinks, People, PeopleUPeople
+        global Repositories, SCMLog
+        global UPeople
+        self.database = database
+        Base = declarative_base(cls=DeferredReflection)
+        self.Base = Base
+        self.query_cls = SCMQuery
+        Actions = table_factory (bases = (Base,), name = 'Actions',
+                                 tablename = 'actions',
+                                 schemaname = schema,
+                                 columns = dict (
+                commit_id = Column(Integer,
+                                   ForeignKey(schema + '.' + 'scmlog.id')
+                                  ),
+                branch_id = Column(Integer,
+                                   ForeignKey(schema + '.' + 'branches.id')
+                                   ),
+                file_id = Column(Integer,
+                                 ForeignKey(schema + '.' + 'files.id')
+                                 )
+                ))
+        Branches = table_factory (bases = (Base,), name = 'Branches',
+                                  tablename = 'branches',
+                                  schemaname = schema
+                                  )
+        Files = table_factory (bases = (Base,), name = 'Files',
+                                 tablename = 'files',
+                                 schemaname = schema,
+                                 columns = dict (
+                repository_id = Column(Integer,
+                                       ForeignKey(schema + '.' + 
+                                                  'repositories.id')
+                                       )
+                ))
+        FileLinks = table_factory (bases = (Base,), name = 'FileLinks',
+                                 tablename = 'file_links',
+                                 schemaname = schema,
+                                 columns = dict (
+                file_id = Column(Integer,
+                                 ForeignKey(schema + '.' + 'files.id')
+                                 )
+                ))
+        People = table_factory (bases = (Base,), name = 'People',
+                                 tablename = 'people',
+                                 schemaname = schema
+                                )
+        PeopleUPeople = table_factory (bases = (Base,), name = 'PeopleUPeople',
+                                       tablename = 'people_upeople',
+                                       schemaname = schema,
+                                       columns = dict (
+                upeople_id = Column(Integer,
+                                    ForeignKey(schema_id + '.' + 'upeople.id')
+                                    )
+                ))
+        Repositories = table_factory (bases = (Base,), name = 'Repositories',
+                                      tablename = 'repositories',
+                                      schemaname = schema,
+                                      )
+        SCMLog = table_factory (bases = (Base,), name = 'SCMLog',
+                                tablename = 'scmlog',
+                                schemaname = schema,
+                                columns = dict (
+                author_id = Column(Integer,
+                                   ForeignKey(schema_id + '.' + 'people.id')
+                                   ),
+                committer_id = Column(Integer,
+                                      ForeignKey(schema_id + '.' + 'people.id')
+                                      ),
+                repository_id = Column(Integer,
+                                       ForeignKey(schema_id + '.' + 
+                                                  'repositories.id')
+                                      ),
+                ))
+        UPeople = table_factory (bases = (Base,), name = 'UPeople',
+                                tablename = 'upeople',
+                                schemaname = schema_id)
+
+
+class SCMQuery (GrimoireQuery):
+    """Class for dealing with SCM queries"""
 
 
     def select_nscmlog(self, variables):
@@ -683,10 +633,11 @@ if __name__ == "__main__":
     # http://stackoverflow.com/questions/492483/setting-the-correct-encoding-when-piping-stdout-in-python
     sys.stdout = codecs.getwriter('utf8')(sys.stdout)
 
-    session = buildSession(
-        database='mysql://jgb:XXX@localhost/vizgrimoire_cvsanaly',
-        echo=False)
-
+    SCMDB = SCMDatabase(database = 'mysql://jgb:XXX@localhost/',
+                        schema = 'vizgrimoire_cvsanaly',
+                        schema_id = 'vizgrimoire_cvsanaly')
+    session = SCMDB.build_session(SCMQuery, echo = False)
+    
     #---------------------------------
     print_banner ("Number of commits")
     res = session.query().select_nscmlog(["commits",]) \

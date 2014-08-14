@@ -24,9 +24,8 @@
 ##   Jesus M. Gonzalez-Barahona <jgb@bitergia.com>
 ##
 
-from sqlalchemy import func, Column, Integer, ForeignKey, or_
+from sqlalchemy import func, Column, Integer, ForeignKey
 from sqlalchemy.ext.declarative import declarative_base, DeferredReflection
-from sqlalchemy.schema import ForeignKeyConstraint
 from sqlalchemy.sql import label
 from datetime import datetime
 from timeseries import TimeSeries
@@ -38,7 +37,7 @@ class ITSDatabase(GrimoireDatabase):
     """Class for dealing with ITS (Bicho) databases.
 
     """
-
+ 
     def __init__(self, database, schema, schema_id):
         """Instatiation.
 
@@ -83,7 +82,7 @@ class ITSDatabase(GrimoireDatabase):
                                 schemaname = schema,
                                 columns = dict (
                 upeople_id = Column(Integer,
-                                    ForeignKey(schema + '.' + 'upeople.id'))
+                                    ForeignKey(schema_id + '.' + 'upeople.id'))
                 ))
         Trackers = table_factory (bases = (Base,), name = 'Trackers',
                                 tablename = 'trackers',

@@ -608,6 +608,40 @@ if __name__ == "__main__":
     print activity
 
     #---------------------------------
+    print_banner("MLS: Birth")
+    data = MLSActivityPersons (
+        database = 'mysql://jgb:XXX@localhost/',
+        schema = 'oscon_openstack_mls',
+        schema_id = 'oscon_openstack_scm',
+        var = "list_usenders")
+    # Birth has the ages of all actors, consiering enddate as
+    # current (snapshot) time
+    enddate = datetime(2014,7,1)
+    snapshot = SnapshotCondition (date = enddate)
+    birth = DurationPersons (var = "age",
+                             conditions = (snapshot,),
+                             activity = data.activity())
+    print birth
+
+    #---------------------------------
+    print_banner("MLS: Aging")
+    data = MLSActivityPersons (
+        database = 'mysql://jgb:XXX@localhost/',
+        schema = 'oscon_openstack_mls',
+        schema_id = 'oscon_openstack_scm',
+        var = "list_usenders")
+    # "Aging" has the ages of those actors active during the 
+    # last half year (that is, the period from enddate - half year
+    # to enddate)
+    active_period = ActiveCondition (after = enddate - \
+                                         timedelta(days=182))
+    aging = DurationPersons (var = "age",
+                             conditions = (snapshot, active_period),
+                             activity = data.activity())
+    print aging
+
+
+    #---------------------------------
     # print_banner("List of activity for each committer (OpenStack)")
     # session = buildSession(
     #     database = 'mysql://jgb:XXX@localhost/openstack_cvsanaly_2014-06-06',
