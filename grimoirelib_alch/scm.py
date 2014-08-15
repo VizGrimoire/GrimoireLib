@@ -23,16 +23,22 @@
 ##   Jesus M. Gonzalez-Barahona <jgb@bitergia.com>
 ##
 
-from common import DatabaseDefinition
+from common import DatabaseDefinition, Variable
 from scm_query import SCMDatabase, SCMQuery
 
 
-class SCM:
+class SCM (Variable):
     """High level interface to variables from the SCM (CVSAnalY database).
 
     The variable to be managed is specified when instantiating.
     The class provides functions to return different kinds of aggeregation
-    (timeseries, total, list) and selection (dates, etc.)
+    (timeseries, total, list) and selection (dates, etc.).
+    When instantiated, a session is created, which can be reused for
+    further objects of this class, thus reusing the underlying
+    SQLAlchemy session.
+
+    Valid variables: {"commits", "listcommits"}
+
     """
 
     def timeseries (self):
@@ -50,59 +56,20 @@ class SCM:
 
         return self.query.limit(limit).all()
 
-    def get_session (self):
-        """Obtain the session being used.
 
-        This session could be reused in further queries for variables.
-
-        Returns
-        -------
-
-        SQLAlchemy session: session.
-
-        """
-
-        return self.session
-
-    def __init__ (self, var = None, conditions = (),
-                  session = None,
-                  database = None,
-                  echo = False):
-        """Instantiation of the object.
-
-        Instantiation can be specified with a DatabaseDefinition
-        or with an SQLAlchemy session. The resulting object can be
-        used to obtain databa about a variable, or just to get
-        a session suitable to be used in the creation of further objects
-        of this class.
-        Uses _produce_query(), which should be produced by child classes.
+    def _init (self, var, conditions):
+        """Initialize everything, once a session is ready.
 
         Parameters
         ----------
 
         var: {"commits", "listcommits"}
-           Variable (default: None)
+           Variable
         conditions: list of Condition objects
            Conditions to be applied to provide context to variable
-           (default: empty list)
-        session: SQLAlchemy session
-           Session for working with an SQLAlchemy database
-        database: Common.DatabaseDefinition
-           Names defining the database. If session is not None,
-           database is silently ignored, and session is used instead.
-        echo: Boolean
-           Write SQL queries to output stream or not
 
         """
 
-        if session is None:
-            # Create a session using info in database
-            DB = SCMDatabase(database = database.url,
-                             schema = database.schema,
-                             schema_id = database.schema_id)
-            self.session = DB.build_session(SCMQuery, echo = echo)
-        else:
-            self.session = session
         if var == "ncommits":
             self.query = self.session.query().select_nscmlog(["commits",])
         elif var == "listcommits":
@@ -113,6 +80,29 @@ class SCM:
             self.query = self.session.query().select_listauthors()
         for condition in conditions:
             self.query = condition.filter(self.query)
+
+    def _create_session (self, database, echo):
+        """Creates a session given a database definition.
+
+        Parameters
+        ----------
+
+        database: Common.DatabaseDefinition
+           Names defining the database.
+        echo: Boolean
+           Write SQL queries to output stream or not.
+
+        Returns
+        -------
+
+        session: SQLAlchemy session suitable for querying.
+
+        """
+
+        DB = SCMDatabase(database = database.url,
+                         schema = database.schema,
+                         schema_id = database.schema_id)
+        return DB.build_session(SCMQuery, echo = echo)
 
 
 class Condition ():
