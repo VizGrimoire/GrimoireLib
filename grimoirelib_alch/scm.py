@@ -23,61 +23,66 @@
 ##   Jesus M. Gonzalez-Barahona <jgb@bitergia.com>
 ##
 
-from common import DatabaseDefinition, Variable
+from common import DatabaseDefinition, Family
 from scm_query import SCMDatabase, SCMQuery
 
 
-class SCM (Variable):
-    """High level interface to variables from the SCM (CVSAnalY database).
+class SCM (Family):
+    """Entities of the SCM family.
 
-    The variable to be managed is specified when instantiating.
-    The class provides functions to return different kinds of aggeregation
+    This class can be used to instantiate entities from the SCM
+    fammily: direct entities obtained querying a CVSAnalY database.
+
+    The entity to be instantiated is specified using its name, and
+    a set of zero or more conditions that provide context.
+
+    This class provides functions to return different kinds of aggregation
     (timeseries, total, list) and selection (dates, etc.).
-    When instantiated, a session is created, which can be reused for
-    further objects of this class, thus reusing the underlying
-    SQLAlchemy session.
 
-    Valid variables: {"commits", "listcommits"}
+    Valid entity names: "ncommits", "listcommits", "nauthors", "listauthors"
 
     """
 
     def timeseries (self):
-        """Return a timeseries for the specified variable"""
+        """Return a timeseries for the entity"""
 
         return self.query.group_by_period().timeseries()
 
     def total (self):
-        """Return the total count for the specified variable"""
+        """Return the total count for the entity"""
 
         return self.query.scalar()
 
     def list (self, limit = 10):
-        """Return a list for the specified variable"""
+        """Return a list for the specified entity"""
 
         return self.query.limit(limit).all()
 
 
-    def _init (self, var, conditions):
-        """Initialize everything, once a session is ready.
+    def _init (self, name, conditions):
+        """Initialize the entity, once a session is ready.
 
         Parameters
         ----------
 
-        var: {"commits", "listcommits"}
-           Variable
+        name: {"ncommits", "listcommits", "nauthors", "listauthors"}
+           Entity name.
         conditions: list of Condition objects
-           Conditions to be applied to provide context to variable
+           Conditions to be applied to provide context to the entity.
 
         """
 
-        if var == "ncommits":
+        if name == "ncommits":
             self.query = self.session.query().select_nscmlog(["commits",])
-        elif var == "listcommits":
+        elif name == "listcommits":
             self.query = self.session.query().select_listcommits()
-        elif var == "nauthors":
+        elif name == "nauthors":
             self.query = self.session.query().select_nscmlog(["authors",])
-        elif var == "listauthors":
+        elif name == "listauthors":
             self.query = self.session.query().select_listauthors()
+        else:
+            raise Exception ("No valid entity name for this family: " + \
+                                 name)
         for condition in conditions:
             self.query = condition.filter(self.query)
 
@@ -121,7 +126,7 @@ class Condition ():
 
 
 class NomergesCondition (Condition):
-    """No merges Condition for qualifying a variable
+    """No merges Condition for qualifying an entity
 
     Specifies that only "no merges" commits are to be considered,
     that is, commits that touch files"""
@@ -142,7 +147,7 @@ class NomergesCondition (Condition):
 
 
 class BranchesCondition (Condition):
-    """Branches Condition for qualifying a variable
+    """Branches Condition for qualifying an entity.
 
     Specifies the branches to be considered"""
 
@@ -164,9 +169,9 @@ class BranchesCondition (Condition):
 
 
 class PeriodCondition (Condition):
-    """Period Condition for qualifying a variable
+    """Period Condition for qualifying an entity.
 
-    Specifies the period when the variable has to be considered"""
+    Specifies the period when the entity has to be considered"""
 
     def filter (self, query):
         """Filter to apply for this condition
@@ -200,30 +205,30 @@ if __name__ == "__main__":
                                    schema = "vizgrimoire_cvsanaly",
                                    schema_id = "vizgrimoire_cvsanaly")
     data = SCM (database = database,
-                var = "ncommits")
+                name = "ncommits")
     print data.timeseries()
     print data.total()
 
     period = PeriodCondition (start = datetime(2013,1,1), end = None)
 
     data = SCM (database = database,
-                var = "ncommits", conditions = (period,))
+                name = "ncommits", conditions = (period,))
     print data.timeseries()
     print data.total()
 
     data = SCM (database = database,
-                var = "listcommits")
+                name = "listcommits")
     print data.list()
 
     session = data.get_session()
 
     data = SCM (session = session,
-                var = "nauthors", conditions = (period,))
+                name = "nauthors", conditions = (period,))
     print data.timeseries()
     print data.total()
 
     branches = BranchesCondition (branches = ("master",))
     data = SCM (session = session,
-                var = "nauthors", conditions = (period, branches))
+                name = "nauthors", conditions = (period, branches))
     print data.timeseries()
     print data.total()

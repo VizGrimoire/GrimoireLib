@@ -47,7 +47,7 @@ class TestSCM (unittest.TestCase):
     def test_no_condition (self):
         """Test SCM object with no conditions"""
 
-        data = SCM (database = self.database, var = "ncommits")
+        data = SCM (database = self.database, name = "ncommits")
         self.assertEqual (data.total(), 4465)
 
 
@@ -55,7 +55,7 @@ class TestSCM (unittest.TestCase):
         """Test SCM object with a no merges condition"""
 
         nomerges = NomergesCondition ()
-        data = SCM (database = self.database, var = "ncommits",
+        data = SCM (database = self.database, name = "ncommits",
                     conditions = (nomerges,))
         self.assertEqual (data.total(), 4206)
 
@@ -65,7 +65,7 @@ class TestSCM (unittest.TestCase):
 
         # Master branch
         branches = BranchesCondition (branches = ("master",))
-        data = SCM (database = self.database, var = "ncommits",
+        data = SCM (database = self.database, name = "ncommits",
                     conditions = (branches,))
         self.assertEqual (data.total(), 3685)
 
@@ -74,18 +74,18 @@ class TestSCM (unittest.TestCase):
 
         # Only start for period
         period = PeriodCondition (start = self.start, end = None)
-        data = SCM (database = self.database, var = "ncommits",
+        data = SCM (database = self.database, name = "ncommits",
                     conditions = (period,))
         self.assertEqual (data.total(), 839)
         # Start and end
         period = PeriodCondition (start = self.start, end = self.end)
-        data = SCM (database = self.database, var = "ncommits",
+        data = SCM (database = self.database, name = "ncommits",
                     conditions = (period,))
         self.assertEqual (data.total(), 730)
         # Start and end, authoring date
         period = PeriodCondition (start = self.start, end = self.end,
                                   date = "author")
-        data = SCM (database = self.database, var = "ncommits",
+        data = SCM (database = self.database, name = "ncommits",
                     conditions = (period,))
         self.assertEqual (data.total(), 728)
 
@@ -97,18 +97,18 @@ class TestSCM (unittest.TestCase):
         branches = BranchesCondition (branches = ("master",))
         period = PeriodCondition (start = self.start, end = self.end,
                                   date = "author")
-        data = SCM (session = self.session, var = "ncommits",
+        data = SCM (session = self.session, name = "ncommits",
                     conditions = (branches,period))
         self.assertEqual (data.total(), 647)
-        data = SCM (session = self.session, var = "ncommits",
+        data = SCM (session = self.session, name = "ncommits",
                     conditions = (period, branches))
         self.assertEqual (data.total(), 647)
         # Branches, period and merges (in several orders)
         nomerges = NomergesCondition ()
-        data = SCM (session = self.session, var = "ncommits",
+        data = SCM (session = self.session, name = "ncommits",
                     conditions = (nomerges, period, branches))
         self.assertEqual (data.total(), 647)
-        data = SCM (session = self.session, var = "ncommits",
+        data = SCM (session = self.session, name = "ncommits",
                     conditions = (branches, nomerges, period))
         self.assertEqual (data.total(), 647)
 
