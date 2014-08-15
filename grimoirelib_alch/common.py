@@ -23,7 +23,7 @@
 ##   Jesus M. Gonzalez-Barahona <jgb@bitergia.com>
 ##
 
-
+    
 class DatabaseDefinition:
     """Class for defining a Grimoire database.
 
@@ -77,9 +77,6 @@ class DatabaseDefinition:
 class Family:
     """Root of hierarchy of families of entities.
 
-    Methods _create_session and _init should be provided when defining
-    a child in this hierarchy.
-
     An entity is an abstract item, with a unique name, representing
     some property or measurement of the analyzed project, with some
     specific semantics. An entity can be an specific measurement
@@ -101,6 +98,40 @@ class Family:
     When a family class is instantiated into an entity object, a session
     is created, which can be reused for further entities of the same class,
     thus reusing the underlying SQLAlchemy session.
+
+    """
+
+    def __init__ (self, name, conditions = (), datasource = None):
+        """Instantiation of an entity of the family.
+
+        This method should be provided by each child in the hierarchy.
+        name are conditions are always present, datasource will be
+        dependent on how the value for the entity is computed
+        (eg, from a database, from an object, etc.)
+
+        Parameters
+        ----------
+        
+        name: string
+           Entity name.
+        conditions: list of Condition objects
+           Conditions to be applied to provide context to the entity.
+           (default: empty list).
+        datasource: database, object, etc.
+           Definition of the data source used to compute values for
+           the entity.
+
+        """
+
+        raise Exception ("__init__ should be provided by child classes")
+
+class DBFamily:
+    """Root of hierarchy of families using a database as data source.
+
+    Families of entities that produce data by querying a Grimoire database.
+
+    Methods _create_session and _init should be provided when defining
+    a child in this hierarchy.
 
     """
 

@@ -24,7 +24,7 @@
 ##   Jesus M. Gonzalez-Barahona <jgb@bitergia.com>
 ##
 
-from common import DatabaseDefinition, Family
+from common import DatabaseDefinition, Family, DBFamily
 from scm_query import SCMDatabase, SCMQuery
 from its_query import ITSDatabase, ITSQuery
 from mls_query import MLSDatabase, MLSQuery
@@ -32,7 +32,7 @@ from scm import PeriodCondition as SCMPeriodCondition
 from scm import NomergesCondition as SCMNomergesCondition
 from its_conditions import PeriodCondition as ITSPeriodCondition
 
-class ActivityPersons (Family):
+class ActivityPersons (DBFamily):
     """Root constructor of entities in the ActivityPersons family.
 
     This class can be used to instantiate entities from the ActivityPersons
@@ -355,39 +355,46 @@ class ActiveCondition (DurationCondition):
                                                    before = self.before))
     
 
-class DurationPersons:
-    """High level interface to entities related to duration of persons.
+class DurationPersons (Family):
+    """Constructor of entities in the DurationPersons family.
+
+    This class can be used to instantiate entities from the DurationPersons
+    family: those related to duration of persons.
     
-    Duration can be different periods, such as age or idle time.
-    Objects of this class are instantiated with an ActivityPersons
-    object, and some relevant dates.
+    Duration can be periods of different kinds, such as age or idle time.
     
     Objects of this class provide the functions durations() to
     obtain an ActorsDuration object.
 
     """
 
-    def __init__ (self, var, activity, conditions = ()):
-        """Instantiation of the object.
+    def __init__ (self, name, conditions = (), activity = None):
+        """Instantiation of an entity of the family.
 
         Instantiation can be specified with an ActivityPersons object.
 
         Parameters
         ----------
         
-        var: {"age" | "idle"}
-           Variable
-        conditions: list of DurationCondition objects
-           Conditions to be applied to get the values
+        name: {"age" | "idle"}
+           Enitity name.
+        conditions: list of Condition objects
+           Conditions to be applied to provide context to the entity.
+           (default: empty list).
         activity: ActivityPersons
            ActivityPersons object with the activity of persons to consider.
 
         """
 
+        if activity is None:
+            raise Exception ("DurationPersons: " + \
+                                 "acitivity parameter is needed.")
         self.activity = activity
-        if var not in ("age", "idle"):
-            raise Exception ("Not a valid variable: " + self.var)
-        self.var = var
+        if name not in ("age", "idle"):
+            raise Exception ("DurationPersons: " + \
+                                 "Invalid entity name for this family: " + \
+                                 name)
+        self.name = name
         self.snapshot = None
         for condition in conditions:
             condition.modify(self)
@@ -421,7 +428,7 @@ class DurationPersons:
         self.activity = activity
 
     def durations (self):
-       """Durations for each person (age, idle,...) depending on variable
+       """Durations for each person (age, idle,...) depending on entity
 
        """
 
@@ -429,9 +436,9 @@ class DurationPersons:
            snapshot = self.activity.maxend()
        else:
            snapshot = self.snapshot
-       if self.var == "age":
+       if self.name == "age":
            durations = self.activity.age(date = snapshot)
-       elif self.var == "idle":
+       elif self.name == "idle":
            durations = self.activity.idle(date = snapshot)
        return durations
 
@@ -498,17 +505,17 @@ if __name__ == "__main__":
         .age(datetime(2014,1,1)).json()
 
     #---------------------------------
-    print_banner("Age, using variables")
-    age = DurationPersons (var = "age",
+    print_banner("Age, using entity")
+    age = DurationPersons (name = "age",
                            activity = data.activity())
     print age.durations().json()
 
     #---------------------------------
-    print_banner("Age, using variables and conditions")
+    print_banner("Age, using entity and conditions")
     snapshot = SnapshotCondition (date = datetime (2014,1,1))
     active_period = ActiveCondition (after = datetime(2014,1,1) - \
                                          timedelta(days=10))
-    age = DurationPersons (var = "age",
+    age = DurationPersons (name = "age",
                            conditions = (snapshot, active_period),
                            activity = data.activity())
     print age.durations().json()
@@ -575,7 +582,7 @@ if __name__ == "__main__":
     # current (snapshot) time
     enddate = datetime(2014,7,1)
     snapshot = SnapshotCondition (date = enddate)
-    birth = DurationPersons (var = "age",
+    birth = DurationPersons (name = "age",
                              conditions = (snapshot,),
                              activity = data.activity())
     print birth.durations()
@@ -590,7 +597,7 @@ if __name__ == "__main__":
     # to enddate)
     active_period = ActiveCondition (after = enddate - \
                                          timedelta(days=182))
-    aging = DurationPersons (var = "age",
+    aging = DurationPersons (name = "age",
                              conditions = (snapshot, active_period),
                              activity = data.activity())
     print aging.durations()

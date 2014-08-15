@@ -23,12 +23,12 @@
 ##   Jesus M. Gonzalez-Barahona <jgb@bitergia.com>
 ##
 
-from common import DatabaseDefinition, Family
+from common import DatabaseDefinition, DBFamily
 from scm_query import SCMDatabase, SCMQuery
 
 
-class SCM (Family):
-    """Entities of the SCM family.
+class SCM (DBFamily):
+    """Constructor of entities in the SCM family.
 
     This class can be used to instantiate entities from the SCM
     fammily: direct entities obtained querying a CVSAnalY database.
@@ -81,7 +81,7 @@ class SCM (Family):
         elif name == "listauthors":
             self.query = self.session.query().select_listauthors()
         else:
-            raise Exception ("No valid entity name for this family: " + \
+            raise Exception ("SCM: Invalid entity name for this family, " + \
                                  name)
         for condition in conditions:
             self.query = condition.filter(self.query)
