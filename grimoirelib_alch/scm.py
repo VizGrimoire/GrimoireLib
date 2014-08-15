@@ -50,28 +50,46 @@ class SCM:
 
         return self.query.limit(limit).all()
 
-    def __init__ (self, var, conditions = (),
+    def get_session (self):
+        """Obtain the session being used.
+
+        This session could be reused in further queries for variables.
+
+        Returns
+        -------
+
+        SQLAlchemy session: session.
+
+        """
+
+        return self.session
+
+    def __init__ (self, var = None, conditions = (),
                   session = None,
                   database = None,
                   echo = False):
         """Instantiation of the object.
 
         Instantiation can be specified with a DatabaseDefinition
-        or with an SQLAlchemy session.
+        or with an SQLAlchemy session. The resulting object can be
+        used to obtain databa about a variable, or just to get
+        a session suitable to be used in the creation of further objects
+        of this class.
         Uses _produce_query(), which should be produced by child classes.
 
         Parameters
         ----------
 
+        var: {"commits", "listcommits"}
+           Variable (default: None)
+        conditions: list of Condition objects
+           Conditions to be applied to provide context to variable
+           (default: empty list)
         session: SQLAlchemy session
            Session for working with an SQLAlchemy database
         database: Common.DatabaseDefinition
            Names defining the database. If session is not None,
            database is silently ignored, and session is used instead.
-        var: {"commits", "listcommits"}
-           Variable
-        conditions: list of Condition objects
-           Conditions to be applied to provide context to variable
         echo: Boolean
            Write SQL queries to output stream or not
 
@@ -207,13 +225,15 @@ if __name__ == "__main__":
                 var = "listcommits")
     print data.list()
 
-    data = SCM (database = database,
+    session = data.get_session()
+
+    data = SCM (session = session,
                 var = "nauthors", conditions = (period,))
     print data.timeseries()
     print data.total()
 
     branches = BranchesCondition (branches = ("master",))
-    data = SCM (database = database,
+    data = SCM (session = session,
                 var = "nauthors", conditions = (period, branches))
     print data.timeseries()
     print data.total()

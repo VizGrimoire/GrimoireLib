@@ -39,10 +39,7 @@ class TestSCM (unittest.TestCase):
         self.database = DatabaseDefinition (url = url,
                                             schema = schema,
                                             schema_id = schema_id)
-        DB = SCMDatabase(database = self.database.url,
-                         schema = self.database.schema,
-                         schema_id = self.database.schema_id)
-        self.session = DB.build_session(SCMQuery, echo = False)
+        self.session = SCM (database = self.database).get_session()
         self.start = datetime(2013,11,13)
         self.end = datetime(2014,2,1)
 
