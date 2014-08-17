@@ -282,94 +282,6 @@ class ActiveCondition (DurationCondition):
                                                    before = self.before))
     
 
-# class DurationPersons (Family):
-#     """Constructor of entities in the DurationPersons family.
-
-#     This class can be used to instantiate entities from the DurationPersons
-#     family: those related to duration of persons.
-    
-#     Duration can be periods of different kinds, such as age or idle time.
-    
-#     Objects of this class provide the functions durations() to
-#     obtain an ActorsDuration object.
-
-#     """
-
-#     def __init__ (self, name, conditions = (), activity = None):
-#         """Instantiation of an entity of the family.
-
-#         Instantiation can be specified with an ActivityPersons object.
-
-#         Parameters
-#         ----------
-        
-#         name: {"age" | "idle"}
-#            Enitity name.
-#         conditions: list of Condition objects
-#            Conditions to be applied to provide context to the entity.
-#            (default: empty list).
-#         activity: ActivityPersons
-#            ActivityPersons object with the activity of persons to consider.
-
-#         """
-
-#         if activity is None:
-#             raise Exception ("DurationPersons: " + \
-#                                  "acitivity parameter is needed.")
-#         self.activity = activity
-#         if name not in ("age", "idle"):
-#             raise Exception ("DurationPersons: " + \
-#                                  "Invalid entity name for this family: " + \
-#                                  name)
-#         self.name = name
-#         self.snapshot = None
-#         for condition in conditions:
-#             condition.modify(self)
-
-#     def set_snapshot (self, time):
-#         """Define a snapshot time for durations.
-
-#         Durations (age, idle) are to be calculated from the time
-#         specified.
-
-#         Parameters
-#         ----------
-
-#         time: datetime.datetime
-#            Time of snapshot.
-#         """
-
-#         self.snapshot = time
-
-#     def set_activity (self, activity):
-#         """Change the activity considered by the object.
-
-#         Parameters
-#         ---------
-
-#         activity: ActivityPersons
-#            New list of activity per person to be used.
-
-#         """
-
-#         self.activity = activity
-
-#     def durations (self):
-#        """Durations for each person (age, idle,...) depending on entity
-
-#        """
-
-#        if self.snapshot is None:
-#            snapshot = self.activity.maxend()
-#        else:
-#            snapshot = self.snapshot
-#        if self.name == "age":
-#            durations = self.activity.age(date = snapshot)
-#        elif self.name == "idle":
-#            durations = self.activity.idle(date = snapshot)
-#        return durations
-
-
 if __name__ == "__main__":
 
     from standalone import stdout_utf8, print_banner
@@ -437,22 +349,6 @@ if __name__ == "__main__":
     print data.activity() \
         .active(after = datetime(2014,1,1) - timedelta(days=183)) \
         .age(datetime(2014,1,1)).json()
-
-    # #---------------------------------
-    # print_banner("Age, using entity")
-    # age = DurationPersons (name = "age",
-    #                        activity = data.activity())
-    # print age.durations().json()
-
-    # #---------------------------------
-    # print_banner("Age, using entity and conditions")
-    # snapshot = SnapshotCondition (date = datetime (2014,1,1))
-    # active_period = ActiveCondition (after = datetime(2014,1,1) - \
-    #                                      timedelta(days=10))
-    # age = DurationPersons (name = "age",
-    #                        conditions = (snapshot, active_period),
-    #                        activity = data.activity())
-    # print age.durations().json()
     
     # ITS database
     database = ITSDatabaseDefinition (url = "mysql://jgb:XXX@localhost/",
@@ -507,52 +403,3 @@ if __name__ == "__main__":
     activity = data.activity()
     print activity
 
-    # #---------------------------------
-    # print_banner("MLS: Birth")
-    # data = MLSActivityPersons (
-    #     datasource = database,
-    #     name = "list_usenders")
-    # # Birth has the ages of all actors, considering enddate as
-    # # current (snapshot) time
-    # enddate = datetime(2014,7,1)
-    # snapshot = SnapshotCondition (date = enddate)
-    # birth = DurationPersons (name = "age",
-    #                          conditions = (snapshot,),
-    #                          activity = data.activity())
-    # print birth.durations()
-
-    # #---------------------------------
-    # print_banner("MLS: Aging")
-    # data = MLSActivityPersons (
-    #     datasource = database,
-    #     name = "list_usenders")
-    # # "Aging" has the ages of those actors active during the 
-    # # last half year (that is, the period from enddate - half year
-    # # to enddate)
-    # active_period = ActiveCondition (after = enddate - \
-    #                                      timedelta(days=182))
-    # aging = DurationPersons (name = "age",
-    #                          conditions = (snapshot, active_period),
-    #                          activity = data.activity())
-    # print aging.durations()
-
-
-    #---------------------------------
-    # print_banner("List of activity for each committer (OpenStack)")
-    # session = buildSession(
-    #     database = 'mysql://jgb:XXX@localhost/openstack_cvsanaly_2014-06-06',
-    #     echo = False)
-    # data = ActivityPersons (var = "list_committers",
-    #                         session = session)
-    # print data.activity()
-    # #---------------------------------
-    # print_banner("Age for each committer (OpenStack)")
-    # print data.activity().age(datetime(2014,6,6)).json()
-    # #---------------------------------
-    # print_banner("Time idle for each committer (OpenStack)")
-    # print data.activity().idle(datetime(2014,6,6)).json()
-    # #---------------------------------
-    # print_banner("Age for committers active during a period (OpenStack)")
-    # print data.activity() \
-    #     .active(after = datetime(2014,6,6) - timedelta(days=180)) \
-    #     .age(datetime(2014,6,6)).json()
