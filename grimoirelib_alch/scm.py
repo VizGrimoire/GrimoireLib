@@ -61,6 +61,35 @@ class SCM (DBFamily):
 
     """
 
+    def _produce_query (self, name):
+        """Produce the base query to obtain activity per person.
+
+        This function assumes that self.query was already initialized.
+        The produced query replaces self.query.
+        Conditions will be applied (as filters) later to the query
+        produced by this function.
+
+        Parameters
+        ----------
+        
+        name: {"list_authors" | "list_committers" |
+           "list_uauthors" | "list_ucommitters"}
+           Entity name.
+
+        """
+
+        if name == "ncommits":
+            self.query = self.query.select_nscmlog(["commits",])
+        elif name == "listcommits":
+            self.query = self.query.select_listcommits()
+        elif name == "nauthors":
+            self.query = self.query.select_nscmlog(["authors",])
+        elif name == "listauthors":
+            self.query = self.query.select_listauthors()
+        else:
+            raise Exception ("SCM: Invalid entity name for this family, " + \
+                                 name)
+
     def timeseries (self):
         """Return a timeseries for the entity"""
 
@@ -75,34 +104,6 @@ class SCM (DBFamily):
         """Return a list for the specified entity"""
 
         return self.query.limit(limit).all()
-
-
-    def _init (self, name, conditions):
-        """Initialize the entity, once a session is ready.
-
-        Parameters
-        ----------
-
-        name: {"ncommits", "listcommits", "nauthors", "listauthors"}
-           Entity name.
-        conditions: list of Condition objects
-           Conditions to be applied to provide context to the entity.
-
-        """
-
-        if name == "ncommits":
-            self.query = self.session.query().select_nscmlog(["commits",])
-        elif name == "listcommits":
-            self.query = self.session.query().select_listcommits()
-        elif name == "nauthors":
-            self.query = self.session.query().select_nscmlog(["authors",])
-        elif name == "listauthors":
-            self.query = self.session.query().select_listauthors()
-        else:
-            raise Exception ("SCM: Invalid entity name for this family, " + \
-                                 name)
-        for condition in conditions:
-            self.query = condition.filter(self.query)
 
 
 class Condition ():

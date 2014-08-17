@@ -50,38 +50,23 @@ class ActivityPersons (DBFamily):
 
     """
 
-    def _datasource_cls(self):
-        """Return classes related to datasource.
+    def _produce_query (self, name):
+        """Produce the base query to obtain activity per person.
 
-        Returns:
-        --------
+        This function assumes that self.query was already initialized.
+        The produced query replaces self.query.
+        Conditions will be applied (as filters) later to the query
+        produced by this function.
 
-        common_query.GrimoireDatabase: subclass for Grimoire database to use
-        common_query.GrimoireQuery: subclass for Grimoire Query to use
-
-        """
-
-        raise Exception ("_datasource_cls should be provided by child class")
-
-    def _init (self, name, conditions):
-        """Initialize everything, once a session is ready.
-
-        Uses _produce_query(), which should be provided by child classes.
- 
         Parameters
         ----------
         
-        name: {"list_authors" | "list_committers" |
-           "list_uauthors" | "list_ucommitters"}
+        name: string
            Entity name.
-        conditions: list of Condition objects
-           Conditions to be applied to provide context to the entity.
+
         """
 
-        self.query = self.session.query()
-        self._produce_query(name)
-        for condition in conditions:
-            self.query = condition.filter(self.query)
+        raise Exception ("_produce_query should be provided by child class")
 
     def activity (self):
         """Obtain the activity list (ActivityList object).
@@ -104,19 +89,6 @@ class SCMActivityPersons (ActivityPersons):
     Interface to entities related to activity of persons in SCM.
     
     """
-
-    def _datasource_cls(self):
-        """Return classes related to datasource.
-
-        Returns:
-        --------
-
-        common_query.GrimoireDatabase: subclass for Grimoire database to use
-        common_query.GrimoireQuery: subclass for Grimoire Query to use
-
-        """
-
-        return SCMDatabase, SCMQuery
 
     def _produce_query (self, name):
         """Produce the base query to obtain activity per person.
@@ -159,19 +131,6 @@ class ITSActivityPersons (ActivityPersons):
     
     """
 
-    def _datasource_cls(self):
-        """Return classes related to datasource.
-
-        Returns:
-        --------
-
-        common_query.GrimoireDatabase: subclass for Grimoire database to use
-        common_query.GrimoireQuery: subclass for Grimoire Query to use
-
-        """
-
-        return ITSDatabase, ITSQuery
-
     def _produce_query (self, name):
         """Produce the base query to obtain activity per person.
 
@@ -210,19 +169,6 @@ class MLSActivityPersons (ActivityPersons):
     Interface to entities related to activity of persons in MLS.
     
     """
-
-    def _datasource_cls(self):
-        """Return classes related to datasource.
-
-        Returns:
-        --------
-
-        common_query.GrimoireDatabase: subclass for Grimoire database to use
-        common_query.GrimoireQuery: subclass for Grimoire Query to use
-
-        """
-
-        return MLSDatabase, MLSQuery
 
     def _produce_query (self, name):
         """Produce the base query to obtain activity per person.

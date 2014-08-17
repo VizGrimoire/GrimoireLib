@@ -172,7 +172,7 @@ class DBFamily:
 
     Families of entities that produce data by querying a Grimoire database.
 
-    Methods _datasource_cls() and _init() should be provided when defining
+    Method _produce_query() should be provided when defining
     a child in this hierarchy.
 
     """
@@ -217,6 +217,45 @@ class DBFamily:
                                  "DatabaseDefinition class.")
         self._init (name, conditions)
 
+    def _init (self, name, conditions):
+        """Initialize everything, once a session is ready.
+
+        Uses _produce_query(), which should be provided by child classes.
+ 
+        Parameters
+        ----------
+        
+        name: {"list_authors" | "list_committers" |
+           "list_uauthors" | "list_ucommitters"}
+           Entity name.
+        conditions: list of Condition objects
+           Conditions to be applied to provide context to the entity.
+        """
+
+        self.query = self.session.query()
+        self._produce_query(name)
+        for condition in conditions:
+            self.query = condition.filter(self.query)
+
+    def _produce_query (self, name):
+        """Produce the base query to obtain activity per person.
+
+        This function assumes that self.query was already initialized.
+        The produced query replaces self.query.
+        Conditions will be applied (as filters) later to the query
+        produced by this function.
+
+        Parameters
+        ----------
+        
+        name: string
+           Entity name.
+
+        """
+
+        raise Exception ("_produce_query should be provided by child class")
+
+
     def get_session (self):
         """Obtain the session being used.
 
@@ -231,81 +270,3 @@ class DBFamily:
         """
 
         return self.session
-
-    def _create_session (self, database):
-        """Creates a session given a database definition.
-
-        Uses _datasource_cls() to determine which kind of Grimoire database
-        is being used (SCM, ITS, MLS, etc.). It should be provided by
-        children classes.
-
-        Parameters
-        ----------
-
-        database: Common.DatabaseDefinition
-           Names defining the database.
-
-        Returns
-        -------
-
-        session: sqalchemy.orm.Session suitable for querying.
-
-        """
-
-        database_cls, query_cls = self._datasource_cls()
-        DB = database_cls(database = database.url,
-                         schema = database.schema,
-                         schema_id = database.schema_id)
-        return DB.build_session(query_cls, echo = self.echo)
-
-    def _datasource_cls(self):
-        """Return classes related to datasource.
-
-        Returns:
-        --------
-
-        common_query.GrimoireDatabase: subclass for Grimoire database to use
-        common_query.GrimoireQuery: subclass for Grimoire Query to use
-
-        """
-
-        raise Exception ("_datasource_cls should be provided by child class")
-
-    def _init (self, name, conditions):
-        """Initialize the entity, once a session is ready.
-
-        It can assume self.session is already set up. This method
-        is intended to be provided by children of this root class,
-        initializing what is needed for each specific entity.
-
-        
-        Parameters
-        ----------
-
-        name: string
-           Entity name.
-        conditions: list of Condition objects
-           Conditions to be applied to provide context to the entity.
-
-        """
-
-        raise Exception ("_init should be provided by child class")
-        
-
-    # def _create_session (self, database):
-    #     """Creates a session given a database definition.
-
-    #     Parameters
-    #     ----------
-
-    #     database: Common.DatabaseDefinition
-    #        Names defining the database.
-
-    #     Returns
-    #     -------
-
-    #     session: SQLAlchemy session suitable for querying.
-
-    #     """
-
-    #     raise Exception ("_create_session should be provided by child class")
