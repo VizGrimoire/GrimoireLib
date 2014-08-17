@@ -17,31 +17,26 @@
 ## along with this program; if not, write to the Free Software
 ## Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 ##
-## Package to deal with Demography from *Grimoire (CVSAnalY, Bicho, MLStats
-## databases)
+## Package to deal with activity of persons as found in the *Grimoire
+##  (CVSAnalY, Bicho, MLStats) databases
 ##
 ## Authors:
 ##   Jesus M. Gonzalez-Barahona <jgb@bitergia.com>
 ##
 
-from common import Family, DBFamily
+from common import DBFamily
 from scm_query import SCMDatabase, SCMQuery
 from its_query import ITSDatabase, ITSQuery
 from mls_query import MLSDatabase, MLSQuery
-from scm import PeriodCondition as SCMPeriodCondition
-from scm import SCMDatabaseDefinition
-from scm import NomergesCondition as SCMNomergesCondition
-from its_conditions import PeriodCondition as ITSPeriodCondition
-from its import ITSDatabaseDefinition
-from mls import MLSDatabaseDefinition
 
 class ActivityPersons (DBFamily):
     """Root constructor of entities in the ActivityPersons family.
 
     This class can be used to instantiate entities from the ActivityPersons
-    family: those related to activity of persons.
+    family: those related to activity of persons. In this classes, activity
+    is understood as periods (start data, end date) with activity.
 
-    This is the root of ahierarchy of classes for the ActivityPersons
+    This is the root of a hierarchy of classes for the ActivityPersons
     families corresponding to the different data sources (SCM, ITS, MLS, etc.).
 
     Objects of this class provide the function activity() to
@@ -287,98 +282,104 @@ class ActiveCondition (DurationCondition):
                                                    before = self.before))
     
 
-class DurationPersons (Family):
-    """Constructor of entities in the DurationPersons family.
+# class DurationPersons (Family):
+#     """Constructor of entities in the DurationPersons family.
 
-    This class can be used to instantiate entities from the DurationPersons
-    family: those related to duration of persons.
+#     This class can be used to instantiate entities from the DurationPersons
+#     family: those related to duration of persons.
     
-    Duration can be periods of different kinds, such as age or idle time.
+#     Duration can be periods of different kinds, such as age or idle time.
     
-    Objects of this class provide the functions durations() to
-    obtain an ActorsDuration object.
+#     Objects of this class provide the functions durations() to
+#     obtain an ActorsDuration object.
 
-    """
+#     """
 
-    def __init__ (self, name, conditions = (), activity = None):
-        """Instantiation of an entity of the family.
+#     def __init__ (self, name, conditions = (), activity = None):
+#         """Instantiation of an entity of the family.
 
-        Instantiation can be specified with an ActivityPersons object.
+#         Instantiation can be specified with an ActivityPersons object.
 
-        Parameters
-        ----------
+#         Parameters
+#         ----------
         
-        name: {"age" | "idle"}
-           Enitity name.
-        conditions: list of Condition objects
-           Conditions to be applied to provide context to the entity.
-           (default: empty list).
-        activity: ActivityPersons
-           ActivityPersons object with the activity of persons to consider.
+#         name: {"age" | "idle"}
+#            Enitity name.
+#         conditions: list of Condition objects
+#            Conditions to be applied to provide context to the entity.
+#            (default: empty list).
+#         activity: ActivityPersons
+#            ActivityPersons object with the activity of persons to consider.
 
-        """
+#         """
 
-        if activity is None:
-            raise Exception ("DurationPersons: " + \
-                                 "acitivity parameter is needed.")
-        self.activity = activity
-        if name not in ("age", "idle"):
-            raise Exception ("DurationPersons: " + \
-                                 "Invalid entity name for this family: " + \
-                                 name)
-        self.name = name
-        self.snapshot = None
-        for condition in conditions:
-            condition.modify(self)
+#         if activity is None:
+#             raise Exception ("DurationPersons: " + \
+#                                  "acitivity parameter is needed.")
+#         self.activity = activity
+#         if name not in ("age", "idle"):
+#             raise Exception ("DurationPersons: " + \
+#                                  "Invalid entity name for this family: " + \
+#                                  name)
+#         self.name = name
+#         self.snapshot = None
+#         for condition in conditions:
+#             condition.modify(self)
 
-    def set_snapshot (self, time):
-        """Define a snapshot time for durations.
+#     def set_snapshot (self, time):
+#         """Define a snapshot time for durations.
 
-        Durations (age, idle) are to be calculated from the time
-        specified.
+#         Durations (age, idle) are to be calculated from the time
+#         specified.
 
-        Parameters
-        ----------
+#         Parameters
+#         ----------
 
-        time: datetime.datetime
-           Time of snapshot.
-        """
+#         time: datetime.datetime
+#            Time of snapshot.
+#         """
 
-        self.snapshot = time
+#         self.snapshot = time
 
-    def set_activity (self, activity):
-        """Change the activity considered by the object.
+#     def set_activity (self, activity):
+#         """Change the activity considered by the object.
 
-        Parameters
-        ---------
+#         Parameters
+#         ---------
 
-        activity: ActivityPersons
-           New list of activity per person to be used.
+#         activity: ActivityPersons
+#            New list of activity per person to be used.
 
-        """
+#         """
 
-        self.activity = activity
+#         self.activity = activity
 
-    def durations (self):
-       """Durations for each person (age, idle,...) depending on entity
+#     def durations (self):
+#        """Durations for each person (age, idle,...) depending on entity
 
-       """
+#        """
 
-       if self.snapshot is None:
-           snapshot = self.activity.maxend()
-       else:
-           snapshot = self.snapshot
-       if self.name == "age":
-           durations = self.activity.age(date = snapshot)
-       elif self.name == "idle":
-           durations = self.activity.idle(date = snapshot)
-       return durations
+#        if self.snapshot is None:
+#            snapshot = self.activity.maxend()
+#        else:
+#            snapshot = self.snapshot
+#        if self.name == "age":
+#            durations = self.activity.age(date = snapshot)
+#        elif self.name == "idle":
+#            durations = self.activity.idle(date = snapshot)
+#        return durations
 
 
 if __name__ == "__main__":
 
     from standalone import stdout_utf8, print_banner
     from datetime import datetime, timedelta
+    from scm import SCMDatabaseDefinition
+    from its import ITSDatabaseDefinition
+    from mls import MLSDatabaseDefinition
+    from scm import PeriodCondition as SCMPeriodCondition
+    from scm import NomergesCondition as SCMNomergesCondition
+    from its_conditions import PeriodCondition as ITSPeriodCondition
 
     stdout_utf8()
 
@@ -386,6 +387,8 @@ if __name__ == "__main__":
     database = SCMDatabaseDefinition (url = "mysql://jgb:XXX@localhost/",
                                       schema = "vizgrimoire_cvsanaly",
                                       schema_id = "vizgrimoire_cvsanaly")
+    session = database.create_session()
+
     #---------------------------------
     print_banner("List of activity for each author")
     data = SCMActivityPersons (
@@ -425,7 +428,6 @@ if __name__ == "__main__":
 
     #---------------------------------
     print_banner("List of activity for each committer (no merges, uid)")
-    session = data.get_session()
     data = SCMActivityPersons (name = "list_ucommitters",
                                conditions = (nomerges,),
                                datasource = session)
@@ -436,21 +438,21 @@ if __name__ == "__main__":
         .active(after = datetime(2014,1,1) - timedelta(days=183)) \
         .age(datetime(2014,1,1)).json()
 
-    #---------------------------------
-    print_banner("Age, using entity")
-    age = DurationPersons (name = "age",
-                           activity = data.activity())
-    print age.durations().json()
+    # #---------------------------------
+    # print_banner("Age, using entity")
+    # age = DurationPersons (name = "age",
+    #                        activity = data.activity())
+    # print age.durations().json()
 
-    #---------------------------------
-    print_banner("Age, using entity and conditions")
-    snapshot = SnapshotCondition (date = datetime (2014,1,1))
-    active_period = ActiveCondition (after = datetime(2014,1,1) - \
-                                         timedelta(days=10))
-    age = DurationPersons (name = "age",
-                           conditions = (snapshot, active_period),
-                           activity = data.activity())
-    print age.durations().json()
+    # #---------------------------------
+    # print_banner("Age, using entity and conditions")
+    # snapshot = SnapshotCondition (date = datetime (2014,1,1))
+    # active_period = ActiveCondition (after = datetime(2014,1,1) - \
+    #                                      timedelta(days=10))
+    # age = DurationPersons (name = "age",
+    #                        conditions = (snapshot, active_period),
+    #                        activity = data.activity())
+    # print age.durations().json()
     
     # ITS database
     database = ITSDatabaseDefinition (url = "mysql://jgb:XXX@localhost/",
@@ -505,34 +507,34 @@ if __name__ == "__main__":
     activity = data.activity()
     print activity
 
-    #---------------------------------
-    print_banner("MLS: Birth")
-    data = MLSActivityPersons (
-        datasource = database,
-        name = "list_usenders")
-    # Birth has the ages of all actors, considering enddate as
-    # current (snapshot) time
-    enddate = datetime(2014,7,1)
-    snapshot = SnapshotCondition (date = enddate)
-    birth = DurationPersons (name = "age",
-                             conditions = (snapshot,),
-                             activity = data.activity())
-    print birth.durations()
+    # #---------------------------------
+    # print_banner("MLS: Birth")
+    # data = MLSActivityPersons (
+    #     datasource = database,
+    #     name = "list_usenders")
+    # # Birth has the ages of all actors, considering enddate as
+    # # current (snapshot) time
+    # enddate = datetime(2014,7,1)
+    # snapshot = SnapshotCondition (date = enddate)
+    # birth = DurationPersons (name = "age",
+    #                          conditions = (snapshot,),
+    #                          activity = data.activity())
+    # print birth.durations()
 
-    #---------------------------------
-    print_banner("MLS: Aging")
-    data = MLSActivityPersons (
-        datasource = database,
-        name = "list_usenders")
-    # "Aging" has the ages of those actors active during the 
-    # last half year (that is, the period from enddate - half year
-    # to enddate)
-    active_period = ActiveCondition (after = enddate - \
-                                         timedelta(days=182))
-    aging = DurationPersons (name = "age",
-                             conditions = (snapshot, active_period),
-                             activity = data.activity())
-    print aging.durations()
+    # #---------------------------------
+    # print_banner("MLS: Aging")
+    # data = MLSActivityPersons (
+    #     datasource = database,
+    #     name = "list_usenders")
+    # # "Aging" has the ages of those actors active during the 
+    # # last half year (that is, the period from enddate - half year
+    # # to enddate)
+    # active_period = ActiveCondition (after = enddate - \
+    #                                      timedelta(days=182))
+    # aging = DurationPersons (name = "age",
+    #                          conditions = (snapshot, active_period),
+    #                          activity = data.activity())
+    # print aging.durations()
 
 
     #---------------------------------
