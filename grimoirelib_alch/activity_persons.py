@@ -40,7 +40,8 @@ class ActivityPersons (DBFamily):
     families corresponding to the different data sources (SCM, ITS, MLS, etc.).
 
     Objects of this class provide the function activity() to
-    obtain an ActivityList object. From this ActivityList, ages or
+    obtain an ActivityList object, which are a list with the period of
+    activity for each developer. From this ActivityList object, ages or
     idle period for actors can be obtained.
 
     """
@@ -68,7 +69,10 @@ class ActivityPersons (DBFamily):
 
         Extracts the activity list by querying the database
         according to the initialization of the object.
-        
+        The result is buffered, so that this method is invoked once
+        again, the result is returned directly, with no need to query
+        the database.
+
         Returns
         -------
 
@@ -76,7 +80,11 @@ class ActivityPersons (DBFamily):
 
         """
 
-        return self.query.activity()
+        try:
+            return self.activity_list
+        except AttributeError:
+            self.activity_list = self.query.activity()
+            return self.activity_list
 
 class SCMActivityPersons (ActivityPersons):
     """Constructor of entities in the SCMActivityPersons family.
@@ -400,6 +408,11 @@ if __name__ == "__main__":
     data = MLSActivityPersons (
         datasource = database,
         name = "list_usenders")
+    activity = data.activity()
+    print activity
+
+    #---------------------------------
+    print_banner("List of activity for each sender (unique ids, cached)")
     activity = data.activity()
     print activity
 
