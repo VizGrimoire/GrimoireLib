@@ -17,11 +17,32 @@
 ## along with this program; if not, write to the Free Software
 ## Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 ##
-## Package to deal with ITS Conditions
+## Package to deal with ITS data from *Grimoire (Bicho databases)
 ##
 ## Authors:
 ##   Jesus M. Gonzalez-Barahona <jgb@bitergia.com>
 ##
+
+from common import DatabaseDefinition, DBFamily
+from its_query import ITSDatabase, ITSQuery
+
+class ITSDatabaseDefinition (DatabaseDefinition):
+    """Class for defining a ITS (Bicho) Grimoire database.
+
+    """
+
+    def _datasource_cls(self):
+        """Return classes related to datasource.
+
+        Returns:
+        --------
+
+        common_query.GrimoireDatabase: subclass for Grimoire database to use
+        common_query.GrimoireQuery: subclass for Grimoire Query to use
+
+        """
+
+        return ITSDatabase, ITSQuery
 
 
 class Condition ():

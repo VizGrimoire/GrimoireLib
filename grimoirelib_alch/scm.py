@@ -26,6 +26,24 @@
 from common import DatabaseDefinition, DBFamily
 from scm_query import SCMDatabase, SCMQuery
 
+class SCMDatabaseDefinition (DatabaseDefinition):
+    """Class for defining a SCM (CVSAnalY) Grimoire database.
+
+    """
+
+    def _datasource_cls(self):
+        """Return classes related to datasource.
+
+        Returns:
+        --------
+
+        common_query.GrimoireDatabase: subclass for Grimoire database to use
+        common_query.GrimoireQuery: subclass for Grimoire Query to use
+
+        """
+
+        return SCMDatabase, SCMQuery
+
 
 class SCM (DBFamily):
     """Constructor of entities in the SCM family.
@@ -85,29 +103,6 @@ class SCM (DBFamily):
                                  name)
         for condition in conditions:
             self.query = condition.filter(self.query)
-
-    def _create_session (self, database, echo):
-        """Creates a session given a database definition.
-
-        Parameters
-        ----------
-
-        database: Common.DatabaseDefinition
-           Names defining the database.
-        echo: Boolean
-           Write SQL queries to output stream or not.
-
-        Returns
-        -------
-
-        session: SQLAlchemy session suitable for querying.
-
-        """
-
-        DB = SCMDatabase(database = database.url,
-                         schema = database.schema,
-                         schema_id = database.schema_id)
-        return DB.build_session(SCMQuery, echo = echo)
 
 
 class Condition ():
@@ -201,34 +196,34 @@ if __name__ == "__main__":
 
     from datetime import datetime
 
-    database = DatabaseDefinition (url = "mysql://jgb:XXX@localhost/",
+    database = SCMDatabaseDefinition (url = "mysql://jgb:XXX@localhost/",
                                    schema = "vizgrimoire_cvsanaly",
                                    schema_id = "vizgrimoire_cvsanaly")
-    data = SCM (database = database,
+    data = SCM (datasource = database,
                 name = "ncommits")
     print data.timeseries()
     print data.total()
 
     period = PeriodCondition (start = datetime(2013,1,1), end = None)
 
-    data = SCM (database = database,
+    data = SCM (datasource = database,
                 name = "ncommits", conditions = (period,))
     print data.timeseries()
     print data.total()
 
-    data = SCM (database = database,
+    data = SCM (datasource = database,
                 name = "listcommits")
     print data.list()
 
-    session = data.get_session()
+    session = database.create_session()
 
-    data = SCM (session = session,
+    data = SCM (datasource = session,
                 name = "nauthors", conditions = (period,))
     print data.timeseries()
     print data.total()
 
     branches = BranchesCondition (branches = ("master",))
-    data = SCM (session = session,
+    data = SCM (datasource = session,
                 name = "nauthors", conditions = (period, branches))
     print data.timeseries()
     print data.total()

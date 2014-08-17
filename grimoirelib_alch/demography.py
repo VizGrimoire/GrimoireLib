@@ -24,13 +24,16 @@
 ##   Jesus M. Gonzalez-Barahona <jgb@bitergia.com>
 ##
 
-from common import DatabaseDefinition, Family, DBFamily
+from common import Family, DBFamily
 from scm_query import SCMDatabase, SCMQuery
 from its_query import ITSDatabase, ITSQuery
 from mls_query import MLSDatabase, MLSQuery
 from scm import PeriodCondition as SCMPeriodCondition
+from scm import SCMDatabaseDefinition
 from scm import NomergesCondition as SCMNomergesCondition
 from its_conditions import PeriodCondition as ITSPeriodCondition
+from its import ITSDatabaseDefinition
+from mls import MLSDatabaseDefinition
 
 class ActivityPersons (DBFamily):
     """Root constructor of entities in the ActivityPersons family.
@@ -46,6 +49,19 @@ class ActivityPersons (DBFamily):
     idle period for actors can be obtained.
 
     """
+
+    def _datasource_cls(self):
+        """Return classes related to datasource.
+
+        Returns:
+        --------
+
+        common_query.GrimoireDatabase: subclass for Grimoire database to use
+        common_query.GrimoireQuery: subclass for Grimoire Query to use
+
+        """
+
+        raise Exception ("_datasource_cls should be provided by child class")
 
     def _init (self, name, conditions):
         """Initialize everything, once a session is ready.
@@ -89,28 +105,18 @@ class SCMActivityPersons (ActivityPersons):
     
     """
 
-    def _create_session (self, database, echo):
-        """Creates a session given a database definition.
+    def _datasource_cls(self):
+        """Return classes related to datasource.
 
-        Parameters
-        ----------
+        Returns:
+        --------
 
-        database: Common.DatabaseDefinition
-           Names defining the database.
-        echo: Boolean
-           Write SQL queries to output stream or not.
-
-        Returns
-        -------
-
-        session: SQLAlchemy session suitable for querying.
+        common_query.GrimoireDatabase: subclass for Grimoire database to use
+        common_query.GrimoireQuery: subclass for Grimoire Query to use
 
         """
 
-        DB = SCMDatabase(database = database.url,
-                         schema = database.schema,
-                         schema_id = database.schema_id)
-        return DB.build_session(SCMQuery, echo = echo)
+        return SCMDatabase, SCMQuery
 
     def _produce_query (self, name):
         """Produce the base query to obtain activity per person.
@@ -153,28 +159,18 @@ class ITSActivityPersons (ActivityPersons):
     
     """
 
-    def _create_session (self, database, echo):
-        """Creates a session given a database definition.
+    def _datasource_cls(self):
+        """Return classes related to datasource.
 
-        Parameters
-        ----------
+        Returns:
+        --------
 
-        database: Common.DatabaseDefinition
-           Names defining the database.
-        echo: Boolean
-           Write SQL queries to output stream or not.
-
-        Returns
-        -------
-
-        session: SQLAlchemy session suitable for querying.
+        common_query.GrimoireDatabase: subclass for Grimoire database to use
+        common_query.GrimoireQuery: subclass for Grimoire Query to use
 
         """
 
-        DB = ITSDatabase(database = database.url,
-                         schema = database.schema,
-                         schema_id = database.schema_id)
-        return DB.build_session(ITSQuery, echo = echo)
+        return ITSDatabase, ITSQuery
 
     def _produce_query (self, name):
         """Produce the base query to obtain activity per person.
@@ -215,28 +211,18 @@ class MLSActivityPersons (ActivityPersons):
     
     """
 
-    def _create_session (self, database, echo):
-        """Creates a session given a database definition.
+    def _datasource_cls(self):
+        """Return classes related to datasource.
 
-        Parameters
-        ----------
+        Returns:
+        --------
 
-        database: Common.DatabaseDefinition
-           Names defining the database.
-        echo: Boolean
-           Write SQL queries to output stream or not.
-
-        Returns
-        -------
-
-        session: SQLAlchemy session suitable for querying.
+        common_query.GrimoireDatabase: subclass for Grimoire database to use
+        common_query.GrimoireQuery: subclass for Grimoire Query to use
 
         """
 
-        DB = MLSDatabase(database = database.url,
-                         schema = database.schema,
-                         schema_id = database.schema_id)
-        return DB.build_session(MLSQuery, echo = echo)
+        return MLSDatabase, MLSQuery
 
     def _produce_query (self, name):
         """Produce the base query to obtain activity per person.
@@ -451,13 +437,13 @@ if __name__ == "__main__":
     stdout_utf8()
 
     # SCM database
-    database = DatabaseDefinition (url = "mysql://jgb:XXX@localhost/",
-                                   schema = "vizgrimoire_cvsanaly",
-                                   schema_id = "vizgrimoire_cvsanaly")
+    database = SCMDatabaseDefinition (url = "mysql://jgb:XXX@localhost/",
+                                      schema = "vizgrimoire_cvsanaly",
+                                      schema_id = "vizgrimoire_cvsanaly")
     #---------------------------------
     print_banner("List of activity for each author")
     data = SCMActivityPersons (
-        database = database,
+        datasource = database,
         name = "list_authors")
     activity = data.activity()
     print activity
@@ -477,7 +463,7 @@ if __name__ == "__main__":
     nomerges = SCMNomergesCondition()
 
     data = SCMActivityPersons (
-        database = database,
+        datasource = database,
         name = "list_authors", conditions = (period,nomerges))
     activity = data.activity()
     print activity
@@ -496,7 +482,7 @@ if __name__ == "__main__":
     session = data.get_session()
     data = SCMActivityPersons (name = "list_ucommitters",
                                conditions = (nomerges,),
-                               session = session)
+                               datasource = session)
     print data.activity()
     print data.activity() \
         .active(after = datetime(2014,1,1) - timedelta(days=183))
@@ -521,14 +507,14 @@ if __name__ == "__main__":
     print age.durations().json()
     
     # ITS database
-    database = DatabaseDefinition (url = "mysql://jgb:XXX@localhost/",
-                                   schema = "vizgrimoire_bicho",
-                                   schema_id = "vizgrimoire_cvsanaly")
+    database = ITSDatabaseDefinition (url = "mysql://jgb:XXX@localhost/",
+                                      schema = "vizgrimoire_bicho",
+                                      schema_id = "vizgrimoire_cvsanaly")
 
     #---------------------------------
     print_banner("List of activity for each changer")
     data = ITSActivityPersons (
-        database = database,
+        datasource = database,
         name = "list_changers")
     activity = data.activity()
     print activity
@@ -538,7 +524,7 @@ if __name__ == "__main__":
     period = ITSPeriodCondition (start = datetime(2014,1,1),
                                              end = None)
     data = ITSActivityPersons (
-        database = database,
+        datasource = database,
         name = "list_changers",
         conditions = (period,))
     activity = data.activity()
@@ -547,20 +533,20 @@ if __name__ == "__main__":
     #---------------------------------
     print_banner("List of activity for each changer (unique ids)")
     data = ITSActivityPersons (
-        database = database,
+        datasource = database,
         name = "list_uchangers")
     activity = data.activity()
     print activity
 
     # MLS database
-    database = DatabaseDefinition (url = "mysql://jgb:XXX@localhost/",
-                                   schema = "oscon_openstack_mls",
-                                   schema_id = "oscon_openstack_scm")
+    database = MLSDatabaseDefinition (url = "mysql://jgb:XXX@localhost/",
+                                      schema = "oscon_openstack_mls",
+                                      schema_id = "oscon_openstack_scm")
 
     #---------------------------------
     print_banner("List of activity for each sender")
     data = MLSActivityPersons (
-        database = database,
+        datasource = database,
         name = "list_senders")
     activity = data.activity()
     print activity
@@ -568,7 +554,7 @@ if __name__ == "__main__":
     #---------------------------------
     print_banner("List of activity for each sender (unique ids)")
     data = MLSActivityPersons (
-        database = database,
+        datasource = database,
         name = "list_usenders")
     activity = data.activity()
     print activity
@@ -576,7 +562,7 @@ if __name__ == "__main__":
     #---------------------------------
     print_banner("MLS: Birth")
     data = MLSActivityPersons (
-        database = database,
+        datasource = database,
         name = "list_usenders")
     # Birth has the ages of all actors, considering enddate as
     # current (snapshot) time
@@ -590,7 +576,7 @@ if __name__ == "__main__":
     #---------------------------------
     print_banner("MLS: Aging")
     data = MLSActivityPersons (
-        database = database,
+        datasource = database,
         name = "list_usenders")
     # "Aging" has the ages of those actors active during the 
     # last half year (that is, the period from enddate - half year

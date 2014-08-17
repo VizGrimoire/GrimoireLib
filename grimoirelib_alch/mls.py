@@ -17,11 +17,32 @@
 ## along with this program; if not, write to the Free Software
 ## Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 ##
-## Package to deal with ITS Conditions
+## Package to deal with MLS data from *Grimoire (MLStats databases)
 ##
 ## Authors:
 ##   Jesus M. Gonzalez-Barahona <jgb@bitergia.com>
 ##
+
+from common import DatabaseDefinition, DBFamily
+from mls_query import MLSDatabase, MLSQuery
+
+class MLSDatabaseDefinition (DatabaseDefinition):
+    """Class for defining a MLS (MLStats) Grimoire database.
+
+    """
+
+    def _datasource_cls(self):
+        """Return classes related to datasource.
+
+        Returns:
+        --------
+
+        common_query.GrimoireDatabase: subclass for Grimoire database to use
+        common_query.GrimoireQuery: subclass for Grimoire Query to use
+
+        """
+
+        return MLSDatabase, MLSQuery
 
 
 class Condition ():

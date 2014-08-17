@@ -23,7 +23,8 @@
 ##   Jesus M. Gonzalez-Barahona <jgb@bitergia.com>
 ##
 
-    
+from sqlalchemy.orm import Session
+
 class DatabaseDefinition:
     """Class for defining a Grimoire database.
 
@@ -39,7 +40,7 @@ class DatabaseDefinition:
     schema: string
        Schema name for the main data (SCM, ITS, MLS, etc.)
     schema_id: string
-       Schema name for the unique ids data
+       Schema name for the unique ids data.
     
     """
 
@@ -55,7 +56,9 @@ class DatabaseDefinition:
         schema: string
            Schema name for the main data (SCM, ITS, MLS, etc.)
         schema_id: string
-           Schema name for the unique ids data
+           Schema name for the unique ids data.
+        echo: Boolean
+           Write SQL queries to output stream or not (default: False).
 
         """
 
@@ -63,11 +66,47 @@ class DatabaseDefinition:
         self.schema = schema
         self.schema_id = schema_id
 
+    def create_session (self, echo = False):
+        """Creates a session for the defined database.
+
+        Uses _datasource_cls() to determine which kind of Grimoire database
+        is being used (SCM, ITS, MLS, etc.). It should be provided by
+        children classes.
+
+        echo: Boolean
+           Write debugging information to output stream or not.
+
+        Returns
+        -------
+
+        session: sqalchemy.orm.Session suitable for querying.
+
+        """
+
+        database_cls, query_cls = self._datasource_cls()
+        DB = database_cls(database = self.url,
+                         schema = self.schema,
+                         schema_id = self.schema_id)
+        return DB.build_session(query_cls, echo = echo)
+
+    def _datasource_cls(self):
+        """Return classes related to datasource.
+
+        Returns:
+        --------
+
+        common_query.GrimoireDatabase: subclass for Grimoire database to use
+        common_query.GrimoireQuery: subclass for Grimoire Query to use
+
+        """
+
+        raise Exception ("_datasource_cls should be provided by child class")
+
     def __repr__ (self):
 
         repr = "Database url: " + self.url + "\n"
-        repr = repr + "Main database schema: " + self.schema + "\n"
-        repr = repr + "Unique id database schema: " + self.schema_id + "\n"
+        repr = repr + " Main database schema: " + self.schema + "\n"
+        repr = repr + " Unique id database schema: " + self.schema_id + "\n"
         return repr
 
     def __str__ (self):
@@ -101,7 +140,7 @@ class Family:
 
     """
 
-    def __init__ (self, name, conditions = (), datasource = None):
+    def __init__ (self, datasource, name, conditions = (), echo = False):
         """Instantiation of an entity of the family.
 
         This method should be provided by each child in the hierarchy.
@@ -112,32 +151,33 @@ class Family:
         Parameters
         ----------
         
+        datasource: database, object, etc.
+           Definition of the data source used to compute values for
+           the entity.
         name: string
            Entity name.
         conditions: list of Condition objects
            Conditions to be applied to provide context to the entity.
            (default: empty list).
-        datasource: database, object, etc.
-           Definition of the data source used to compute values for
-           the entity.
+        echo: Boolean
+           Write debugging information to output stream or not.
 
         """
 
-        raise Exception ("__init__ should be provided by child classes")
+        raise Exception ("__init__ should be provided by child class")
+
 
 class DBFamily:
-    """Root of hierarchy of families using a database as data source.
+    """Root of hierarchy of families using a Grimoire database as data source.
 
     Families of entities that produce data by querying a Grimoire database.
 
-    Methods _create_session and _init should be provided when defining
+    Methods _datasource_cls() and _init() should be provided when defining
     a child in this hierarchy.
 
     """
 
-    def __init__ (self, name = None, conditions = (),
-                  session = None,
-                  database = None,
+    def __init__ (self, datasource, name, conditions = (),
                   echo = False):
         """Instantiation of an entity of the family.
 
@@ -150,38 +190,32 @@ class DBFamily:
         Parameters
         ----------
 
+        datasource: {sqlalchemy.orm.Session | Common.DatabaseDefinition}
+           If Session, active session for working with an SQLAlchemy database.
+           If DatabaseDefinition, the names defining a Grimoire database.
         name: string
-           Entity name (default: None)
-           If None, no real initialization of the entity is done,
-           only a session is produced (useful for obtaining a session
-           to reuse later).
-           Otherwise, each child class will define valid strings for
+           Entity name. Each child class will define valid strings for
            the entities that can be instantiated for the corresponding
-           family.
+           family (_init() method).
         conditions: list of Condition objects
            Conditions to be applied to provide context to the entity.
            (default: empty list).
-        session: sqlalchemy.orm.session
-           Session for working with an SQLAlchemy database.
-        database: Common.DatabaseDefinition
-           Names defining the database. If session is not None,
-           database is silently ignored, and session is used instead.
         echo: Boolean
-           Write SQL queries to output stream or not.
+           Write SQL queries and other debugging infor to output stream or not.
 
         """
 
-        if session is not None:
-            self.session = session
-        elif database is not None:
+        self.echo = echo
+        if isinstance(datasource, Session):
+            self.session = datasource
+        elif isinstance(datasource, DatabaseDefinition):
             # Create a session using info in database
-            self.session = self._create_session(database = database,
-                                                echo = echo)
+            self.session = datasource.create_session(echo = echo)
         else:
-            raise Exception ("Family: Either a session or a " + \
-                                 "database must be specified")
-        if name is not None:
-            self._init (name, conditions)
+            raise Exception ("Family: datasource must be of " + \
+                                 "sqlalchemy.orm.Session or " + \
+                                 "DatabaseDefinition class.")
+        self._init (name, conditions)
 
     def get_session (self):
         """Obtain the session being used.
@@ -197,6 +231,45 @@ class DBFamily:
         """
 
         return self.session
+
+    def _create_session (self, database):
+        """Creates a session given a database definition.
+
+        Uses _datasource_cls() to determine which kind of Grimoire database
+        is being used (SCM, ITS, MLS, etc.). It should be provided by
+        children classes.
+
+        Parameters
+        ----------
+
+        database: Common.DatabaseDefinition
+           Names defining the database.
+
+        Returns
+        -------
+
+        session: sqalchemy.orm.Session suitable for querying.
+
+        """
+
+        database_cls, query_cls = self._datasource_cls()
+        DB = database_cls(database = database.url,
+                         schema = database.schema,
+                         schema_id = database.schema_id)
+        return DB.build_session(query_cls, echo = self.echo)
+
+    def _datasource_cls(self):
+        """Return classes related to datasource.
+
+        Returns:
+        --------
+
+        common_query.GrimoireDatabase: subclass for Grimoire database to use
+        common_query.GrimoireQuery: subclass for Grimoire Query to use
+
+        """
+
+        raise Exception ("_datasource_cls should be provided by child class")
 
     def _init (self, name, conditions):
         """Initialize the entity, once a session is ready.
@@ -216,24 +289,23 @@ class DBFamily:
 
         """
 
-        raise Exception ("_init should be provided by child classes")
+        raise Exception ("_init should be provided by child class")
         
-    def _create_session (self, database, echo):
-        """Creates a session given a database definition.
 
-        Parameters
-        ----------
+    # def _create_session (self, database):
+    #     """Creates a session given a database definition.
 
-        database: Common.DatabaseDefinition
-           Names defining the database.
-        echo: Boolean
-           Write SQL queries to output stream or not.
+    #     Parameters
+    #     ----------
 
-        Returns
-        -------
+    #     database: Common.DatabaseDefinition
+    #        Names defining the database.
 
-        session: SQLAlchemy session suitable for querying.
+    #     Returns
+    #     -------
 
-        """
+    #     session: SQLAlchemy session suitable for querying.
 
-        raise Exception ("_create_session should be provided by child classes")
+    #     """
+
+    #     raise Exception ("_create_session should be provided by child class")
