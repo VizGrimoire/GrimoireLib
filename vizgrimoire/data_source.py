@@ -381,7 +381,6 @@ class DataSource(object):
 
         if type_analysis and type_analysis[1] is None:
             items = DS.get_filter_items(filter_, startdate, enddate, identities_db)
-            print(items)
             items = items.pop('name')
 
         if DS.get_name()+"_startdate" in Report.get_config()['r']:

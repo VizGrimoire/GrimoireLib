@@ -52,7 +52,7 @@ class EmailsSent(Metrics):
 
         query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                    self.filters.enddate, " m.first_date ", fields,
-                                   tables, filters, evolutionary)
+                                   tables, filters, evolutionary, self.filters.type_analysis)
         return query
 
 
@@ -208,8 +208,31 @@ class EmailsSenders(Metrics):
 
         query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                    self.filters.enddate, " m.first_date ", fields,
-                                   tables, filters, evolutionary)
+                                   tables, filters, evolutionary, self.filters.type_analysis)
         return query
+
+class People(Metrics):
+    """ People metric class for mailing lists (senders) """
+    id = "people2"
+    name = "Mailing lists people"
+    desc = "People sending messages"
+    data_source = MLS
+
+    def _get_top_global (self, days = 0, metric_filters = None):
+        """ Implemented using EmailsSenders """
+        top = None
+        senders = MLS.get_metrics("senders", MLS)
+        if senders is None:
+            senders = EmailsSenders(self.db, self.filters)
+            top = senders._get_top_global(days, metric_filters)
+        else:
+            afilters = senders.filters
+            senders.filters = self.filters
+            top = senders._get_top_global(days, metric_filters)
+            senders.filters = afilters
+
+        top['name'] = top.pop('senders')
+        return top
 
 
 class SendersResponse(Metrics):
@@ -242,7 +265,7 @@ class SendersResponse(Metrics):
 
         query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                    self.filters.enddate, " m.first_date ", fields,
-                                   tables, filters, evolutionary)
+                                   tables, filters, evolutionary, self.filters.type_analysis)
         return query
 
 
@@ -274,7 +297,7 @@ class SendersInit(Metrics):
 
         query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                    self.filters.enddate, " m.first_date ", fields,
-                                   tables, filters, evolutionary)
+                                   tables, filters, evolutionary, self.filters.type_analysis)
         return query
 
 
@@ -293,7 +316,7 @@ class EmailsSentResponse(Metrics):
 
         query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                    self.filters.enddate, " m.first_date ", fields,
-                                   tables, filters, evolutionary)
+                                   tables, filters, evolutionary, self.filters.type_analysis)
         return query
 
 class EmailsSentInit(Metrics):
@@ -311,7 +334,7 @@ class EmailsSentInit(Metrics):
 
         query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                    self.filters.enddate, " m.first_date ", fields,
-                                   tables, filters, evolutionary)
+                                   tables, filters, evolutionary, self.filters.type_analysis)
         return query
 
 class Threads(Metrics):
@@ -330,7 +353,7 @@ class Threads(Metrics):
 
         query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                    self.filters.enddate, " m.first_date ", fields,
-                                   tables, filters, evolutionary)
+                                   tables, filters, evolutionary, self.filters.type_analysis)
         return query
 
 class Repositories(Metrics):
@@ -348,7 +371,7 @@ class Repositories(Metrics):
         filters = self.db.GetSQLReportWhere(self.filters.type_analysis)
         query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                    self.filters.enddate, " m.first_date ", fields,
-                                   tables, filters, evolutionary)
+                                   tables, filters, evolutionary, self.filters.type_analysis)
         return query
 
     def get_list (self) :

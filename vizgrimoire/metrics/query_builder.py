@@ -684,6 +684,18 @@ class MLSQuery(DSQuery):
 
         return (repos  + " and ml.mailing_list_url = m.mailing_list_url")
 
+    def GetSQLPeopleFrom (self):
+        return (" , messages_people mp, people_upeople pup, " + self.identities_db + ".upeople up ")
+
+    def GetSQLPeopleWhere (self, name):
+        #fields necessaries to match info among tables
+        fields = "m.message_ID = mp.message_id AND "
+        fields += " mp.email_address = pup.people_id AND " + \
+                  " mp.type_of_recipient=\'From\' AND " +  \
+                 "  up.id = pup.upeople_id "
+        if name is not None: fields += " AND up.identifier = "+name
+        return fields
+
     # Using senders only here!
     def GetFiltersOwnUniqueIds  (self):
         return ('m.message_ID = mp.message_id AND '+\
@@ -713,6 +725,7 @@ class MLSQuery(DSQuery):
         elif analysis == 'country': From = self.GetSQLCountriesFrom(self.identities_db)
         elif analysis == 'domain': From = self.GetSQLDomainsFrom(self.identities_db)
         elif analysis == 'project': From = self.GetSQLProjectsFrom()
+        elif analysis == 'people2': From = self.GetSQLPeopleFrom()
 
         return (From)
 
@@ -739,6 +752,7 @@ class MLSQuery(DSQuery):
                 sys.exit(0)
             else:
                 where = self.GetSQLProjectsWhere(value, self.identities_db)
+        elif analysis == 'people2': where = self.GetSQLPeopleWhere(value)
 
         return (where)
 

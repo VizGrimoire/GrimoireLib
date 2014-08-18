@@ -518,7 +518,7 @@ class People(Metrics):
         closers = ITS.get_metrics("closers", ITS)
         if closers is None:
             closers = Closers(self.db, self.filters)
-            top = closers._get_top_global(days, metric_filters)
+            top = closers._get_top(days, metric_filters)
         else:
             afilters = closers.filters
             closers.filters = self.filters

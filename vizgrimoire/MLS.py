@@ -200,11 +200,14 @@ class MLS(DataSource):
             metric = DataSource.get_metrics("domains", MLS)
         elif (filter_name == "project"):
             metric = DataSource.get_metrics("projects", MLS)
+        elif (filter_name == "people2"):
+            metric = DataSource.get_metrics("people2", MLS)
         else:
             logging.error(filter_name + " not supported")
             return items
 
         items = metric.get_list()
+
         return items
 
     @staticmethod
@@ -265,6 +268,35 @@ class MLS(DataSource):
         if (filter_name == "company"):
             sent = MLS.get_filter_summary(filter_, period, startdate, enddate, identities_db, 10)
             createJSON (sent, destdir+"/"+filter_.get_summary_filename(MLS))
+
+    @staticmethod
+    def _check_report_all_data(data, filter_, startdate, enddate, idb,
+                               evol = False, period = None):
+        pass
+
+    @staticmethod
+    def create_filter_report_all(filter_, period, startdate, enddate, destdir, npeople, identities_db):
+        check = False # activate to debug issues
+        filter_name = filter_.get_name()
+        if filter_name == "people2" or filter_name == "company_off":
+            filter_all = Filter(filter_name, None)
+            agg_all = MLS.get_agg_data(period, startdate, enddate,
+                                       identities_db, filter_all)
+            fn = os.path.join(destdir, filter_.get_static_filename_all(MLS()))
+            createJSON(agg_all, fn)
+
+            evol_all = MLS.get_evolutionary_data(period, startdate, enddate,
+                                                 identities_db, filter_all)
+            fn = os.path.join(destdir, filter_.get_evolutionary_filename_all(MLS()))
+            createJSON(evol_all, fn)
+
+            if check:
+                MLS._check_report_all_data(evol_all, filter_, startdate, enddate,
+                                           identities_db, True, period)
+                MLS._check_report_all_data(agg_all, filter_, startdate, enddate,
+                                           identities_db, False, period)
+        else:
+            raise Exception(filter_name +" does not support yet group by items sql queries")
 
     @staticmethod
     def get_top_people(startdate, enddate, identities_db, npeople):
