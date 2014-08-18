@@ -132,7 +132,9 @@ if __name__ == "__main__":
 
     stdout_utf8()
 
-    # MLS database, OpenStack
+    #---------------------------------
+    print_banner("Demographics with MLS database, OpenStack")
+    
     database = MLSDatabaseDefinition (url = "mysql://jgb:XXX@localhost/",
                                       schema = "oscon_openstack_mls",
                                       schema_id = "oscon_openstack_scm")
