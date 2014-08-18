@@ -212,7 +212,7 @@ class DBFamily:
             # Create a session using info in database
             self.session = datasource.create_session(echo = echo)
         else:
-            raise Exception ("Family: datasource must be of " + \
+            raise Exception ("DBFamily: datasource must be of " + \
                                  "sqlalchemy.orm.Session or " + \
                                  "DatabaseDefinition class.")
         self._init (name, conditions)

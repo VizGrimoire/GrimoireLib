@@ -115,13 +115,13 @@ def report_demographics (activity_persons, snapshot_date,
     # Birth has the ages of all actors, considering enddate as
     # current (snapshot) time
     snapshot = SnapshotCondition (date = snapshot_date)
-    birth = DurationPersons (name = "age",
-                             conditions = (snapshot,),
-                             activity = activity_persons.activity())
+    birth = DurationPersons (datasource = activity_persons.activity(),
+                             name = "age",
+                             conditions = (snapshot,))
     active_period = ActiveCondition (after = snapshot_date - activity_period)
-    aging = DurationPersons (name = "age",
-                             conditions = (snapshot, active_period),
-                             activity = data.activity())
+    aging = DurationPersons (datasource = activity_persons.activity(),
+                             name = "age",
+                             conditions = (snapshot, active_period))
     report = {
         prefix + 'demographics-birth.json': birth.durations(),
         prefix + 'demographics-aging.json': aging.durations()
@@ -144,11 +144,11 @@ if __name__ == "__main__":
     database = MLSDatabaseDefinition (url = "mysql://jgb:XXX@localhost/",
                                       schema = "oscon_openstack_mls",
                                       schema_id = "oscon_openstack_scm")
-    data = MLSActivityPersons (
+    activity = MLSActivityPersons (
         datasource = database,
         name = "list_usenders")
 
-    report = report_demographics (activity_persons = data,
+    report = report_demographics (activity_persons = activity,
                          snapshot_date = datetime(2014,7,1),
                          activity_period = timedelta(days=182),
                          prefix = 'mls-')
