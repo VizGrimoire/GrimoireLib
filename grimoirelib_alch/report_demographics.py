@@ -58,13 +58,13 @@ def produce_json (filename, data, compact = True):
         file.write(data_json)
 
 
-def create_report (json_files, destdir):
+def create_report (report_files, destdir):
     """Create report, by producing a collection of JSON files
 
     Parameters
     ----------
 
-    json_files: dictionary
+    report_files: dictionary
        Keys are the names of JSON files to produce, values are the
        data to include in those JSON files.
     destdir: str
@@ -72,15 +72,15 @@ def create_report (json_files, destdir):
 
     """
 
-    for file in json_files:
+    for file in report_files:
         print "Producing file: ", join (destdir, file)
-        produce_json (join (destdir, file), json_files[file])
+        produce_json (join (destdir, file), report_files[file])
 
 from activity_persons import SnapshotCondition, ActiveCondition
 from duration_persons import DurationPersons
 
 def report_demographics (activity_persons, snapshot_date,
-                         activity_period, destdir, prefix):
+                         activity_period, prefix):
 
     """Produce a demographics (ages) report.
 
@@ -100,10 +100,15 @@ def report_demographics (activity_persons, snapshot_date,
        Period for determine who is still active
        (somebody is active if activity is found between
        snapshot_date - activity_period and snapshot_date)
-    destdir: str
-       Destination directory to write report
     prefix: str
-       Prefix of the files to be produced in destdir
+       Prefix of the files to be produced
+
+    Returns
+    -------
+
+    dictionary: dictionary for create_report
+       Keys are the names of JSON files to produce, values are the
+       data to include in those JSON files.
 
     """
 
@@ -121,7 +126,8 @@ def report_demographics (activity_persons, snapshot_date,
         prefix + 'demographics-birth.json': birth.durations(),
         prefix + 'demographics-aging.json': aging.durations()
         }
-    create_report (report, destdir)
+
+    return report
 
 if __name__ == "__main__":
 
@@ -142,8 +148,8 @@ if __name__ == "__main__":
         datasource = database,
         name = "list_usenders")
 
-    report_demographics (activity_persons = data,
+    report = report_demographics (activity_persons = data,
                          snapshot_date = datetime(2014,7,1),
                          activity_period = timedelta(days=182),
-                         destdir = '/tmp',
                          prefix = 'mls-')
+    create_report (report_files = report, destdir = '/tmp/')
