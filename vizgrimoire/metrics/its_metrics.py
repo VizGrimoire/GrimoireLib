@@ -47,10 +47,10 @@ class Opened(Metrics):
 
         fields = " count(distinct(i.id)) as opened "
         tables = " issues i "+ self.db.GetSQLReportFrom(self.db.identities_db, self.filters.type_analysis)
-        filters = self.db.GetSQLReportWhere(self.filters.type_analysis, self.db.identities_db)
+        filters = self.db.GetSQLReportWhere(self.filters.type_analysis, self.db.identities_db, "issues")
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                self.filters.enddate, " submitted_on ", fields,
-                               tables, filters, evolutionary)
+                               tables, filters, evolutionary, self.filters.type_analysis)
         return q
 
 class Openers(Metrics):
@@ -78,7 +78,7 @@ class Openers(Metrics):
 
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                self.filters.enddate, " tpeople.submitted_on ",
-                               fields, tables, filters, evolutionary)
+                               fields, tables, filters, evolutionary, self.filters.type_analysis)
         return q
 
 
@@ -86,7 +86,7 @@ class Openers(Metrics):
         """ This function returns the evolution or agg number of people opening issues """
         fields = " count(distinct(pup.upeople_id)) as openers "
         tables = " issues i " + self.db.GetSQLReportFrom(self.db.identities_db, self.filters.type_analysis)
-        filters = self.db.GetSQLReportWhere(self.filters.type_analysis, self.db.identities_db)
+        filters = self.db.GetSQLReportWhere(self.filters.type_analysis, self.db.identities_db, "issues")
 
         if (self.filters.type_analysis is None or len (self.filters.type_analysis) != 2) :
             #Specific case for the basic option where people_upeople table is needed
@@ -100,7 +100,7 @@ class Openers(Metrics):
 
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                self.filters.enddate, " submitted_on ",
-                               fields, tables, filters, evolutionary)
+                               fields, tables, filters, evolutionary, self.filters.type_analysis)
         return q
 
     def _get_top_global(self, days = 0, metric_filters = None):
@@ -142,7 +142,6 @@ class Openers(Metrics):
             return self.__get_sql_trk_prj__(evolutionary)
         else:
             return self.__get_sql_default__(evolutionary)
-
 
 #closed
 class Closed(Metrics):
@@ -364,7 +363,7 @@ class Changed(Metrics):
 
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                self.filters.enddate, " ch.changed_on ",
-                               fields, tables, filters, evolutionary)
+                               fields, tables, filters, evolutionary, self.filters.type_analysis)
         return q
 
 
@@ -387,7 +386,7 @@ class Changed(Metrics):
 
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                self.filters.enddate, " ch.changed_on ",
-                               fields, tables, filters, evolutionary)
+                               fields, tables, filters, evolutionary, self.filters.type_analysis)
         return q
 
     def _get_sql(self, evolutionary, close = False):
@@ -431,7 +430,7 @@ class Changers(Metrics):
 
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                self.filters.enddate, " tpeople.changed_on ",
-                               fields, tables, filters, evolutionary)
+                               fields, tables, filters, evolutionary, self.filters.type_analysis)
         return q
 
 
@@ -464,7 +463,7 @@ class Changers(Metrics):
 
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                self.filters.enddate, " ch.changed_on ",
-                               fields, tables, filters, evolutionary)
+                               fields, tables, filters, evolutionary, self.filters.type_analysis)
         return q
 
     def _get_sql(self, evolutionary, close = False):
@@ -502,7 +501,7 @@ class Changers(Metrics):
 
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                self.filters.enddate, " ch.changed_on ",
-                               fields, tables, filters, evolutionary)
+                               fields, tables, filters, evolutionary, self.filters.type_analysis)
 
         return q
 
@@ -557,11 +556,11 @@ class Trackers(Metrics):
     def _get_sql(self, evolutionary):
         fields = " COUNT(DISTINCT(tracker_id)) AS trackers  "
         tables = " issues i " + self.db.GetSQLReportFrom(self.db.identities_db, self.filters.type_analysis)
-        filters = self.db.GetSQLReportWhere(self.filters.type_analysis, self.db.identities_db)
+        filters = self.db.GetSQLReportWhere(self.filters.type_analysis, self.db.identities_db, "issues")
 
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                self.filters.enddate, " i.submitted_on ",
-                               fields, tables, filters, evolutionary)
+                               fields, tables, filters, evolutionary, self.filters.type_analysis)
 
         return q
 

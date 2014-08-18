@@ -147,8 +147,8 @@ class Metrics(object):
 
     def get_agg(self):
         """ Returns an aggregated value """
-        query = self._get_sql(False)
-        return self.db.ExecuteQuery(query)
+        q = self._get_sql(False)
+        return self.db.ExecuteQuery(q)
 
 
     def get_trends(self, date, days):
@@ -199,7 +199,7 @@ class Metrics(object):
         group_field = DSQuery.get_group_field(self.filters.type_analysis[0])
         group_field = group_field.split('.')[1] # remove table name
         field = prev.keys()[0]
-        if field == group_field: field = prev.keys()[1] 
+        if field == group_field: field = prev.keys()[1]
 
         # We need to build a new dict with trends
         # First, we need to find all possible keys

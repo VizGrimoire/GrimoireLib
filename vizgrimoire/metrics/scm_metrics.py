@@ -308,7 +308,7 @@ class Committers(Metrics):
             filters += " and s.committer_id = pup.people_id "
 
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate, 
-                               self.filters.enddate, " s.date ", fields, 
+                               self.filters.enddate, " s.date ", fields,
                                tables, filters, evolutionary, self.filters.type_analysis)
 
         return q

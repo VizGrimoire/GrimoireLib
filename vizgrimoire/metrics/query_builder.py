@@ -497,6 +497,20 @@ class ITSQuery(DSQuery):
                "upd.domain_id = d.id and "+\
                "d.name = "+name)
 
+    def GetSQLPeopleFrom (self):
+        return (" , people_upeople pup, " + self.identities_db + ".upeople up ")
+
+    def GetSQLPeopleWhere (self, name, table = "changes"):
+
+        field = "ch.changed_by"
+
+        if table == "issues": field = "i.submitted_by"
+
+        fields = " " + field + " = pup.people_id " + \
+                 " AND up.id = pup.upeople_id "
+        if name is not None: fields += " AND up.identifier = "+name
+        return fields
+
     def GetSQLReportFrom (self, identities_db, type_analysis):
         #generic function to generate 'from' clauses
         #"type" is a list of two values: type of analysis and value of 
@@ -514,12 +528,12 @@ class ITSQuery(DSQuery):
         elif analysis == 'country': From = self.GetSQLCountriesFrom(identities_db)
         elif analysis == 'domain': From = self.GetSQLDomainsFrom(identities_db)
         elif analysis == 'project': From = self.GetSQLProjectsFrom()
-        # else: raise Exception( analysis + " not supported")
-
+        elif analysis == 'people2': From = self.GetSQLPeopleFrom()
+        else: raise Exception( analysis + " not supported")
 
         return (From)
 
-    def GetSQLReportWhere (self, type_analysis, identities_db = None):
+    def GetSQLReportWhere (self, type_analysis, identities_db = None, table = "changes"):
         #generic function to generate 'where' clauses
 
         #"type" is a list of two values: type of analysis and value of 
@@ -536,7 +550,8 @@ class ITSQuery(DSQuery):
         elif analysis == 'country': where = self.GetSQLCountriesWhere(value)
         elif analysis == 'domain': where = self.GetSQLDomainsWhere(value)
         elif analysis == 'project': where = self.GetSQLProjectsWhere(value, identities_db)
-        # else: raise Exception( analysis + " not supported")
+        elif analysis == 'people2': where = self.GetSQLPeopleWhere(value, table)
+        else: raise Exception( analysis + " not supported")
 
         return (where)
 
