@@ -23,7 +23,7 @@
 ##   Jesus M. Gonzalez-Barahona <jgb@bitergia.com>
 ##
 
-from common import DatabaseDefinition, DBFamily
+from common import DatabaseDefinition, DBFamily, DBCondition
 from scm_query import SCMDatabase, SCMQuery
 
 class SCMDatabaseDefinition (DatabaseDefinition):
@@ -106,22 +106,7 @@ class SCM (DBFamily):
         return self.query.limit(limit).all()
 
 
-class Condition ():
-    """Root of all conditions
-
-    Provides a filter method which will be called when applying the condition.
-    """
-
-    def filter (query):
-        """Filter to apply for this condition
-
-        - query: query to which the filter will be applied
-        """
-
-        return query
-
-
-class NomergesCondition (Condition):
+class NomergesCondition (DBCondition):
     """No merges Condition for qualifying an entity
 
     Specifies that only "no merges" commits are to be considered,
@@ -142,7 +127,7 @@ class NomergesCondition (Condition):
         pass
 
 
-class BranchesCondition (Condition):
+class BranchesCondition (DBCondition):
     """Branches Condition for qualifying an entity.
 
     Specifies the branches to be considered"""
@@ -164,7 +149,7 @@ class BranchesCondition (Condition):
         self.branches = branches
 
 
-class PeriodCondition (Condition):
+class PeriodCondition (DBCondition):
     """Period Condition for qualifying an entity.
 
     Specifies the period when the entity has to be considered"""

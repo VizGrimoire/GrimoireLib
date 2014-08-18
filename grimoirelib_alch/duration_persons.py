@@ -26,6 +26,7 @@
 ##
 
 from common import Family
+from common import Condition as RootCondition
 from activity import ActivityList
 from activity_persons import ActivityPersons
 
@@ -144,7 +145,7 @@ class DurationPersons (Family):
        return durations
 
 
-class Condition ():
+class Condition (RootCondition):
     """Root of all conditions specific for DurationPersons entities
 
     Provides a modify method, which will be called by the entity
@@ -161,7 +162,7 @@ class Condition ():
         """
 
         if not isinstance (object, DurationPersons):
-            raise Exception ("DurationPersonsCondition: " + \
+            raise Exception ("Condition: " + \
                                  "This condition can only be applied to " + \
                                  "DurationPersons entities.")
 

@@ -270,3 +270,45 @@ class DBFamily:
         """
 
         return self.session
+
+
+class Condition ():
+    """Root of all conditions
+
+    Provides a method to check if the object to which to apply is of the
+    right class.
+
+    """
+
+    @staticmethod
+    def _check_class (object):
+        """Check that object is an instance of Family.
+
+        Raise exception if it is not.
+
+        """
+
+        if not isinstance (object, Family):
+            raise Exception ("Condition: " + \
+                                 "This condition can only be applied to " + \
+                                 "Family entities.")
+
+
+class DBCondition (Condition):
+    """Root of all database-related conditions
+
+    Provides a filter method which will be called when applying the condition.
+    """
+
+    def filter (query):
+        """Filter to apply for this condition
+
+        Parameters
+        ----------
+
+        query: slalchemy.query
+           Query to which the filter will be applied
+
+        """
+
+        return query
