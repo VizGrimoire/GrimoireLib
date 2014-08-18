@@ -17,8 +17,9 @@
 ## along with this program; if not, write to the Free Software
 ## Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 ##
-## Package to deal with duration of persons in a project, based on information
-##  found in the *Grimoire (CVSAnalY, Bicho, MLStats) databases
+## Module to deal with entities related to the duration of persons in
+##  a project, based on information found in the *Grimoire (CVSAnalY,
+##  Bicho, MLStats) databases.
 ##
 ## Authors:
 ##   Jesus M. Gonzalez-Barahona <jgb@bitergia.com>
@@ -114,6 +115,114 @@ class DurationPersons (Family):
        return durations
 
 
+class Condition ():
+    """Root of all conditions specific for DurationPersons entities
+
+    Provides a modify method, which will be called by the entity
+    to let this condition modify it.
+
+    """
+
+    @staticmethod
+    def _check_class (object):
+        """Check that object is an instance of DurationPersons.
+
+        Raise exception if it is not.
+
+        """
+
+        if not isinstance (object, DurationPersons):
+            raise Exception ("DurationPersonsCondition: " + \
+                                 "This condition can only be applied to " + \
+                                 "DurationPersons entities.")
+
+    def modify (self, object):
+        """Modification produced by this condition into object.
+
+        Parameters
+        ----------
+
+        object: DurationPersons
+           Entity to be modified.
+        
+        """
+
+        Condition._check_class (object)
+        print "DurationPersonsCondition: " + \
+            "Root class, does nothing."
+
+class SnapshotCondition (Condition):
+    """Condition for specifiying "snapshot" of durations.
+
+    Durations (age, idle) are to be calculated back from the date
+    specified by this condition. If the snapshot date is as of now,
+    this will be the real "age" or "idle time" in the project.
+
+    """
+
+    def __init__ (self, date):
+        """Set the snapshot date.
+
+        Parameters
+        ----------
+
+        date: datetime.datetime
+           Time used as reference for the snapshot.
+
+        """
+
+        self.date = date
+
+    def modify (self, object):
+        """Modification produced by this condition into object.
+
+        Specifies the time for the snapshot.
+
+        """
+
+        Condition._check_class (object)
+        object.set_snapshot(self.date)
+
+
+class ActiveCondition (Condition):
+    """Condition for filtering persons active during a period
+
+    Only persons active during the specified period are to
+    be considered.
+
+    """
+
+    def __init__ (self, after = None, before = None):
+        """Instatiation of the object.
+
+        Parameters
+        ----------
+
+        after: datetime.datetime
+           Start of the activity period to consider (default: None).
+           None means "since the begining of time".
+        before: datetime.datetime
+           End of the activity period to consider (default: None).
+           None means "until the end of time".
+
+        """
+
+        self.after = after
+        self.before = before
+
+    def modify (self, object):
+        """Modification for this condition.
+
+        Sets the new activity list, considering only active
+        persons during the period.
+
+        """
+
+        Condition._check_class (object)
+        object.set_activity(object.activity.active(after = self.after,
+                                                   before = self.before))
+
+
 if __name__ == "__main__":
 
     from standalone import stdout_utf8, print_banner
@@ -122,7 +231,6 @@ if __name__ == "__main__":
     from mls import MLSDatabaseDefinition
     from scm import NomergesCondition as SCMNomergesCondition
     from activity_persons import SCMActivityPersons, MLSActivityPersons
-    from activity_persons import SnapshotCondition, ActiveCondition
 
     stdout_utf8()
 
@@ -141,6 +249,13 @@ if __name__ == "__main__":
     age = DurationPersons (name = "age",
                            activity = data.activity())
     print age.durations().json()
+
+    #---------------------------------
+    print_banner("Using (void) root condition.")
+    condition = Condition ()
+    age = DurationPersons (name = "age",
+                           conditions = (condition,),
+                           activity = data.activity())
 
     #---------------------------------
     print_banner("Age, using entity and conditions")

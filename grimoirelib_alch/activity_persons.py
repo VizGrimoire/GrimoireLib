@@ -17,7 +17,7 @@
 ## along with this program; if not, write to the Free Software
 ## Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 ##
-## Package to deal with activity of persons as found in the *Grimoire
+## Module to deal with activity of persons as found in the *Grimoire
 ##  (CVSAnalY, Bicho, MLStats) databases
 ##
 ## Authors:
@@ -205,90 +205,6 @@ class MLSActivityPersons (ActivityPersons):
             .select_activeperiod() \
             .group_by_person()
 
-
-class DurationCondition ():
-    """Root of all conditions for DurationPersons objects
-
-    Provides a filter method which will be called when applying
-    the condition.
-    """
-
-    def filter (object):
-        """Filter to apply for this condition
-
-        - query: query to which the filter will be applied
-        """
-
-        return object
-
-class SnapshotCondition (DurationCondition):
-    """Condition for specifiying "origin" of durations.
-
-    Durations (age, idle) are to be calculated from the time
-    specified by this condition.
-
-    """
-
-    def __init__ (self, date):
-        """Instatiation of the object.
-
-        Parameters
-        ----------
-
-        date: datetime.datetime
-           Time used as reference for the snapshot.
-
-        """
-
-        self.date = date
-
-    def modify (self, object):
-        """Modification for this condition.
-
-        Specifies the time for the snapshot.
-
-        """
-
-        object.set_snapshot(self.date)
-
-
-class ActiveCondition (DurationCondition):
-    """Condition for filtering persons active during a period
-
-    Only persons active during the specified period are to
-    be considered.
-
-    """
-
-    def __init__ (self, after = None, before = None):
-        """Instatiation of the object.
-
-        Parameters
-        ----------
-
-        after: datetime.datetime
-           Start of the activity period to consider (default: None).
-           None means "since the begining of time"
-        before: datetime.datetime
-           End of the activity period to consider (default: None).
-           None means "until the end of time
-
-        """
-
-        self.after = after
-        self.before = before
-
-    def modify (self, object):
-        """Modification for this condition.
-
-        Sets the new activity list, considering only active
-        persons during the period.
-
-        """
-
-        object.set_activity(object.activity.active(after = self.after,
-                                                   before = self.before))
-    
 
 if __name__ == "__main__":
 

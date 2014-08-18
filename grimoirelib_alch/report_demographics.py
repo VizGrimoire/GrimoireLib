@@ -76,8 +76,8 @@ def create_report (report_files, destdir):
         print "Producing file: ", join (destdir, file)
         produce_json (join (destdir, file), report_files[file])
 
-from activity_persons import SnapshotCondition, ActiveCondition
 from duration_persons import DurationPersons
+from duration_persons import SnapshotCondition, ActiveCondition
 
 def report_demographics (activity_persons, snapshot_date,
                          activity_period, prefix):
