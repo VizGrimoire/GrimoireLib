@@ -23,12 +23,18 @@
 # Demography analysis. Age of developers in the project, age of
 # developers still with activity, and so on.
 
+from scm import SCMDatabaseDefinition
+from scm import NomergesCondition as SCMNomergesCondition
+from scm import PeriodCondition as SCMPeriodCondition
+from its import ITSDatabaseDefinition
+from its import PeriodCondition as ITSPeriodCondition
+from mls import MLSDatabaseDefinition
+from mls import PeriodCondition as MLSPeriodCondition
+from activity_persons import SCMActivityPersons,  ITSActivityPersons, \
+    MLSActivityPersons
+from duration_persons import DurationPersons
+from duration_persons import SnapshotCondition, ActiveCondition
 from analyses import Analyses
-from scm import PeriodCondition, NomergesCondition
-import its
-import mls
-from demography import SCMActivityPersons, ITSActivityPersons, \
-    MLSActivityPersons, DurationPersons, SnapshotCondition, ActiveCondition
 from SCM import SCM
 from ITS import ITS
 from MLS import MLS
@@ -93,9 +99,10 @@ class Ages(Analyses):
             logging.info("Error: no data source for study!")
             return
         # Prepare the SQLAlchemy database url
-        database = 'mysql://' + self.db.user + ':' + \
-            self.db.password + '@' + self.db.host + '/' + \
-            self.db.database
+        url = 'mysql://' + self.db.user + ':' + \
+            self.db.password + '@' + self.db.host + '/'
+        schema = self.db.database
+        schema_id = self.db.identities_db
         # Get startdate, endate as datetime objects
         startdate = datetime.strptime(self.filters.startdate, "'%Y-%m-%d'")
         enddate = datetime.strptime(self.filters.enddate, "'%Y-%m-%d'")
@@ -105,61 +112,67 @@ class Ages(Analyses):
             # all the actors, considering only activty during
             # the startdate..enddate period (merges are not considered
             # as activity)
-            period = PeriodCondition (start = startdate, end = enddate)
-            nomerges = NomergesCondition()
+            period = SCMPeriodCondition (start = startdate, end = enddate)
+            nomerges = SCMNomergesCondition()
+            database = SCMDatabaseDefinition (url = url,
+                                              schema = schema,
+                                              schema_id = schema_id)
             data = SCMActivityPersons (
-                database = database,
-                var = "list_uauthors",
-                conditions = (period,nomerges))
-        if data_source == ITS:
+                datasource = database,
+                name = "list_uauthors",
+                conditions = (period, nomerges))
+        elif data_source == ITS:
             logging.info("Analyzing aging for ITS")
-            schema = self.db.database
-            schema_id = self.db.identities_db
             # Activity data (start time, end time for contributions) for
             # all the actors, considering only activty during
             # the startdate..enddate period
-            period = its.PeriodCondition (start = startdate,
-                                          end = enddate)
+            period = ITSPeriodCondition (start = startdate, end = enddate)
+            database = ITSDatabaseDefinition (url = url,
+                                              schema = schema,
+                                              schema_id = schema_id)
             data = ITSActivityPersons (
-                database = database,
-                schema = schema, schema_id = schema_id,
-                var = "list_uchangers",
+                datasource = database,
+                name = "list_uchangers",
                 conditions = (period,))
-        if data_source == MLS:
+        elif data_source == MLS:
             logging.info("Analyzing aging for MLS")
-            schema = self.db.database
-            schema_id = self.db.identities_db
             # Activity data (start time, end time for contributions) for
             # all the actors, considering only activty during
             # the startdate..enddate period
-            period = mls.PeriodCondition (start = startdate,
+            period = MLSPeriodCondition (start = startdate,
                                           end = enddate)
+            database = MLSDatabaseDefinition (url = url,
+                                              schema = schema,
+                                              schema_id = schema_id)
             data = MLSActivityPersons (
-                database = database,
-                schema = schema, schema_id = schema_id,
-                var = "list_usenders",
+                datasource = database,
+                name = "list_usenders",
                 conditions = (period,))
+        else:
+            logging.info("Error: No aging analysys for this data source!")
         if data_source in (SCM, ITS, MLS):
             # Birth has the ages of all actors, consiering enddate as
             # current (snapshot) time
             snapshot = SnapshotCondition (date = enddate)
-            birth = DurationPersons (var = "age",
+            birth = DurationPersons (datasource = data,
+                                     name = "age",
                                      conditions = (snapshot,),
-                                     activity = data.activity())
+                                     )
             # "Aging" has the ages of those actors active during the 
             # last half year (that is, the period from enddate - half year
             # to enddate)
             active_period = ActiveCondition (after = enddate - \
                                                  timedelta(days=182))
-            aging = DurationPersons (var = "age",
+            aging = DurationPersons (datasource = data,
+                                     name = "age",
                                      conditions = (snapshot, active_period),
-                                     activity = data.activity())
+                                     )
             demos = {"birth": birth.durations(),
                      "aging": aging.durations()}
             return demos
-        logging.info("Error: data_source not supported!")
-        return {"birth": {},
-                "aging": {}}
+        else:
+            return {"birth": {},
+                    "aging": {}}
 
 
     def create_report(self, data_source, destdir):

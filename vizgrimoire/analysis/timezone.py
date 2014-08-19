@@ -25,8 +25,8 @@
 
 from analyses import Analyses
 from scm import PeriodCondition, NomergesCondition
-from scm_query import buildSession
-from scm_query_tz import SCMTZQuery
+#from scm_query import buildSession
+#from scm_query_tz import SCMTZQuery
 from SCM import SCM
 from datetime import datetime, timedelta
 from jsonpickle import encode, set_encoder_options

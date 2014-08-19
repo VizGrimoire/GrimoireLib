@@ -30,7 +30,7 @@ from its_query import ITSDatabase, ITSQuery
 from mls_query import MLSDatabase, MLSQuery
 
 class ActivityPersons (DBFamily):
-    """Root constructor of entities in the ActivityPersons family.
+    """Root factory of entities in the ActivityPersons family.
 
     This class can be used to instantiate entities from the ActivityPersons
     family: those related to activity of persons. In this classes, activity

@@ -156,6 +156,7 @@ if __name__ == "__main__":
     from standalone import stdout_utf8, print_banner
     from datetime import datetime, timedelta
     from scm import SCMDatabaseDefinition
+    from scm import NomergesCondition as SCMNomergesCondition
     from its import ITSDatabaseDefinition
     from mls import MLSDatabaseDefinition
     from activity_persons import SCMActivityPersons,  ITSActivityPersons, \
@@ -168,13 +169,13 @@ if __name__ == "__main__":
 
     #---------------------------------
     print_banner("Demographics with SCM database, OpenStack")
-    
+    nomerges = SCMNomergesCondition()    
     database = SCMDatabaseDefinition (url = "mysql://jgb:XXX@localhost/",
                                       schema = "oscon_openstack_scm",
                                       schema_id = "oscon_openstack_scm")
-    activity = SCMActivityPersons (
-        datasource = database,
-        name = "list_uauthors")
+    activity = SCMActivityPersons (datasource = database,
+                                   name = "list_uauthors",
+                                   conditions = (nomerges,))
 
     report = report_demographics (activity_persons = activity,
                                   snapshot_date = snapshot_date,

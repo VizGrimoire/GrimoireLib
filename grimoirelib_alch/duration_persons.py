@@ -273,19 +273,19 @@ if __name__ == "__main__":
     #---------------------------------
     print_banner("Age, using entity")
     nomerges = SCMNomergesCondition()
-    data = SCMActivityPersons (name = "list_ucommitters",
-                               conditions = (nomerges,),
-                               datasource = session)
-    age = DurationPersons (name = "age",
-                           datasource = data.activity())
+    data = SCMActivityPersons (datasource = session,
+                               name = "list_ucommitters",
+                               conditions = (nomerges,))
+    age = DurationPersons (datasource = data.activity(),
+                           name = "age")
     print age.durations().json()
 
     #---------------------------------
     print_banner("Age, using entity and ActivityPersons as datasource")
     nomerges = SCMNomergesCondition()
-    data = SCMActivityPersons (name = "list_ucommitters",
-                               conditions = (nomerges,),
-                               datasource = session)
+    data = SCMActivityPersons (datasource = session,
+                               name = "list_ucommitters",
+                               conditions = (nomerges,))
     age = DurationPersons (name = "age",
                            datasource = data)
     print age.durations().json()
@@ -293,18 +293,18 @@ if __name__ == "__main__":
     #---------------------------------
     print_banner("Using (void) root condition.")
     condition = Condition ()
-    age = DurationPersons (name = "age",
-                           conditions = (condition,),
-                           datasource = data.activity())
+    age = DurationPersons (datasource = data.activity(),
+                           name = "age",
+                           conditions = (condition,))
 
     #---------------------------------
     print_banner("Age, using entity and conditions")
     snapshot = SnapshotCondition (date = datetime (2014,1,1))
     active_period = ActiveCondition (after = datetime(2014,1,1) - \
                                          timedelta(days=10))
-    age = DurationPersons (name = "age",
-                           conditions = (snapshot, active_period),
-                           datasource = data.activity())
+    age = DurationPersons (datasource = data.activity(),
+                           name = "age",
+                           conditions = (snapshot, active_period))
     print age.durations().json()
     
     # MLS database
@@ -321,9 +321,9 @@ if __name__ == "__main__":
     # current (snapshot) time
     enddate = datetime(2014,7,1)
     snapshot = SnapshotCondition (date = enddate)
-    birth = DurationPersons (name = "age",
-                             conditions = (snapshot,),
-                             datasource = data.activity())
+    birth = DurationPersons (datasource = data.activity(),
+                             name = "age",
+                             conditions = (snapshot,))
     print birth.durations()
 
     #---------------------------------
@@ -333,7 +333,7 @@ if __name__ == "__main__":
     # to enddate)
     active_period = ActiveCondition (after = enddate - \
                                          timedelta(days=182))
-    aging = DurationPersons (name = "age",
-                             conditions = (snapshot, active_period),
-                             datasource = data.activity())
+    aging = DurationPersons (datasource = data.activity(),
+                             name = "age",
+                             conditions = (snapshot, active_period))
     print aging.durations()
