@@ -602,25 +602,6 @@ class SCMQuery (GrimoireQuery):
         list = self.all()
         return ActivityList(list)
 
-    def __repr__ (self):
-
-        if self.start is not None:
-            start = self.start.isoformat()
-        else:
-            start = "ever"
-        if self.end is not None:
-            end = self.end.isoformat()
-        else:
-            end = "ever"
-        repr = "SCMQuery from %s to %s\n" % (start, end)
-        repr = "  Joined: %s\n" % str(self.joined)
-        repr += Query.__str__(self)
-        return repr
-
-    def __str__ (self):
-
-        return self.__repr__()
-
 
 if __name__ == "__main__":
 

@@ -23,10 +23,10 @@
 # Timezone analysis. Time zones for developers and contributions.
 #
 
-from analyses import Analyses
 from scm import PeriodCondition, NomergesCondition
-#from scm_query import buildSession
-#from scm_query_tz import SCMTZQuery
+from scm_query import SCMDatabase
+from scm_query_tz import SCMTZQuery
+from analyses import Analyses
 from SCM import SCM
 from datetime import datetime, timedelta
 from jsonpickle import encode, set_encoder_options
@@ -89,9 +89,10 @@ class Timezone(Analyses):
             logging.info("Error: no data source for study!")
             return
         # Prepare the SQLAlchemy database url
-        database = 'mysql://' + self.db.user + ':' + \
-            self.db.password + '@' + self.db.host + '/' + \
-            self.db.database
+        url = 'mysql://' + self.db.user + ':' + \
+            self.db.password + '@' + self.db.host + '/'
+        schema = self.db.database
+        schema_id = self.db.identities_db
         # Get startdate, endate as datetime objects
         startdate = datetime.strptime(self.filters.startdate, "'%Y-%m-%d'")
         enddate = datetime.strptime(self.filters.enddate, "'%Y-%m-%d'")
@@ -101,12 +102,15 @@ class Timezone(Analyses):
             # all the actors, considering only activty during
             # the startdate..enddate period (merges are not considered
             # as activity)
-            session = buildSession(database = database,
-                                   cls = SCMTZQuery, echo = False)
+            database = SCMDatabase (database = url,
+                                    schema = schema,
+                                    schema_id = schema_id)
+            session = database.build_session(SCMTZQuery, echo = False)
+            # session = buildSession(database = database,
+            #                        cls = SCMTZQuery, echo = False)
 
             res = session.query().select_tz()
-            res = res.filter_period(start=datetime(2014,1,1),
-                                    end=datetime(2014,7,1))
+            res = res.filter_period(start=startdate, end=enddate)
             res = res.filter_nomerges()
             res = res.group_by_tz()
             tz = {}

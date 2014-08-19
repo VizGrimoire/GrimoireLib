@@ -26,7 +26,7 @@
 
 from sqlalchemy.sql import label
 from sqlalchemy import func
-from scm_query import SCMQuery, SCMLog
+from scm_query import SCMQuery
 
 class SCMTZQuery (SCMQuery):
     """Class for dealing with SCM queries involving time zones"""
@@ -44,6 +44,9 @@ class SCMTZQuery (SCMQuery):
 
         """
 
+        # SCMLog can be imported only once it is built, after instantiation
+        # of SCMDatabase
+        from scm_query import SCMLog
         query = self.add_columns(
             label("tz",
                   ((SCMLog.author_date_tz.op('div')(3600) + 36) % 24) - 12),
@@ -73,19 +76,22 @@ if __name__ == "__main__":
     import sys
     import codecs
     from standalone import print_banner
-    from scm_query import buildSession
+
     from datetime import datetime
     import jsonpickle
     import csv
+
+    from scm_query import SCMDatabase
 
     # Trick to make the script work when using pipes
     # (pipes confuse the interpreter, which sets codec to None)
     # http://stackoverflow.com/questions/492483/setting-the-correct-encoding-when-piping-stdout-in-python
     sys.stdout = codecs.getwriter('utf8')(sys.stdout)
 
-    session = buildSession(
-        database = 'mysql://jgb:XXX@localhost/oscon_opennebula_scm_tz',
-        cls = SCMTZQuery, echo = False)
+    database = SCMDatabase (database = 'mysql://jgb:XXX@localhost/',
+                            schema = 'oscon_opennebula_scm_tz',
+                            schema_id = 'oscon_opennebula_scm_tz')
+    session = database.build_session(SCMTZQuery, echo = False)
 
     #---------------------------------
     print_banner ("Number of commits")
