@@ -100,7 +100,7 @@ class EmailsSenders(Metrics):
 
         q = "SELECT up.id as id, up.identifier as senders, "+\
             " COUNT(DISTINCT(m.message_id)) as sent "+\
-            " FROM messages m "+ self.db.GetSQLCountriesFrom(self.db.identities_db)+ \
+            " FROM messages m "+ self.db.GetSQLCountriesFrom()+ \
             "  , "+self.db.identities_db+".upeople up "+\
             " WHERE "+ self.db.GetSQLCountriesWhere(country_name)+ " AND "+\
             "  up.id = upc.upeople_id AND "+\
@@ -140,7 +140,7 @@ class EmailsSenders(Metrics):
 
         q = "SELECT up.identifier as senders, "+\
             " COUNT(DISTINCT(m.message_id)) as sent "+\
-            " FROM messages m "+self.db.GetSQLDomainsFrom(self.db.identities_db) +\
+            " FROM messages m "+self.db.GetSQLDomainsFrom() +\
             " , "+self.db.identities_db+".upeople up "+\
             " WHERE "+self.db.GetSQLDomainsWhere(domain_name)+ " AND "+\
             "  up.id = upd.upeople_id AND "+\
