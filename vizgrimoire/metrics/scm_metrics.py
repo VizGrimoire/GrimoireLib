@@ -61,16 +61,6 @@ class Commits(Metrics):
                                    tables, filters, evolutionary, self.filters.type_analysis)
         return query
 
-    def _get_sqlslow(self, evolutionary):
-        fields = " count(distinct(s.id)) as commits "
-        tables = " scmlog s, actions a " + self.db.GetSQLReportFrom(self.filters.type_analysis)
-        filters = self.db.GetSQLReportWhere(self.filters.type_analysis, "author") + " and s.id=a.commit_id "
-
-        query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
-                                   self.filters.enddate, " s.date ", fields,
-                                   tables, filters, evolutionary, self.filters.type_analysis)
-        return query
-
 
 class Authors(Metrics):
     """ Authors metric class for source code management systems """
