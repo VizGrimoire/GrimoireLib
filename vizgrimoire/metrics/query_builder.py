@@ -260,11 +260,11 @@ class SCMQuery(DSQuery):
 
         return (repos   + " and r.id = s.repository_id")
 
-    def GetSQLCompaniesFrom (self, identities_db):
+    def GetSQLCompaniesFrom (self):
         #tables necessaries for companies
-        return (" , "+identities_db+".people_upeople pup,"+\
-                      identities_db+".upeople_companies upc,"+\
-                      identities_db+".companies c")
+        return (" , " + self.identities_db + ".people_upeople pup,"+\
+                        self.identities_db + ".upeople_companies upc,"+\
+                        self.identities_db + ".companies c")
 
     def GetSQLCompaniesWhere (self, company, role):
          #fields necessaries to match info among tables
@@ -276,11 +276,11 @@ class SCMQuery(DSQuery):
          if company is not None: fields += " AND c.name =" + company
          return fields
 
-    def GetSQLCountriesFrom (self, identities_db):
+    def GetSQLCountriesFrom (self):
         #tables necessaries for companies
-        return (" , "+identities_db+".people_upeople pup, "+\
-                      identities_db+".upeople_countries upc, "+\
-                      identities_db+".countries c")
+        return (" , " + self.identities_db + ".people_upeople pup, "+\
+                        self.identities_db + ".upeople_countries upc, "+\
+                        self.identities_db + ".countries c")
 
     def GetSQLCountriesWhere (self, country, role):
          #fields necessaries to match info among tables
@@ -289,11 +289,11 @@ class SCMQuery(DSQuery):
                       "and upc.country_id = c.id "+\
                       "and c.name ="+ country)
 
-    def GetSQLDomainsFrom (self, identities_db) :
+    def GetSQLDomainsFrom (self) :
         #tables necessaries for domains
-        return (" , "+identities_db+".people_upeople pup, "+\
-                    identities_db+".upeople_domains upd, "+\
-                    identities_db+".domains d")
+        return (" , " + self.identities_db + ".people_upeople pup, "+\
+                        self.identities_db + ".upeople_domains upd, "+\
+                        self.identities_db + ".domains d")
 
     def GetSQLDomainsWhere (self, domain, role) :
         #fields necessaries to match info among tables
@@ -327,9 +327,9 @@ class SCMQuery(DSQuery):
         # value = type_analysis[1]
 
         if analysis == 'repository': From = self.GetSQLRepositoriesFrom()
-        elif analysis == 'company': From = self.GetSQLCompaniesFrom(self.identities_db)
-        elif analysis == 'country': From = self.GetSQLCountriesFrom(self.identities_db)
-        elif analysis == 'domain': From = self.GetSQLDomainsFrom(self.identities_db)
+        elif analysis == 'company': From = self.GetSQLCompaniesFrom()
+        elif analysis == 'country': From = self.GetSQLCountriesFrom()
+        elif analysis == 'domain': From = self.GetSQLDomainsFrom()
         elif analysis == 'project': From = self.GetSQLProjectFrom()
         elif analysis == 'people': From = self.GetSQLPeopleFrom()
         elif analysis == 'people2': From = self.GetSQLPeopleFrom()
