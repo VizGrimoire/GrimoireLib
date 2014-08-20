@@ -431,7 +431,7 @@ class ITSQuery(DSQuery):
         # tables necessary for repositories
         return (", trackers t")
 
-    def GetSQLProjectsWhere (self, project, identities_db):
+    def GetSQLProjectsWhere (self, project):
         # include all repositories for a project and its subprojects
         # Remove '' from project name
         if len(project) > 1 :
@@ -444,19 +444,19 @@ class ITSQuery(DSQuery):
                SELECT repository_name
                FROM   %s.projects p, %s.project_repositories pr
                WHERE  p.project_id = pr.project_id AND pr.data_source='its'
-        """ % (identities_db, identities_db)
+        """ % (self.identities_db, self.identities_db)
 
         if subprojects != "[]":
             repos += " AND p.project_id IN (%s) " % subprojects
 
         return (repos   + ") and t.id = i.tracker_id")
 
-    def GetSQLCompaniesFrom (self, i_db):
+    def GetSQLCompaniesFrom (self):
         # fields necessary for the companies analysis
 
         return(" , people_upeople pup, "+\
-               i_db+".companies c, "+\
-               i_db+".upeople_companies upc")
+               self.identities_db + ".companies c, "+\
+               self.identities_db + ".upeople_companies upc")
 
     def GetSQLCompaniesWhere (self, name):
         # filters for the companies analysis
@@ -467,12 +467,12 @@ class ITSQuery(DSQuery):
                "i.submitted_on < upc.end and "+\
                "c.name = "+name)
 
-    def GetSQLCountriesFrom (self, i_db):
+    def GetSQLCountriesFrom (self):
         # fields necessary for the countries analysis
 
         return(" , people_upeople pup, "+\
-               i_db+".countries c, "+\
-               i_db+".upeople_countries upc")
+               self.identities_db + ".countries c, "+\
+               self.identities_db + ".upeople_countries upc")
 
     def GetSQLCountriesWhere (self, name):
         # filters for the countries analysis
@@ -482,12 +482,12 @@ class ITSQuery(DSQuery):
                "c.name = "+name)
 
 
-    def GetSQLDomainsFrom (self, i_db):
+    def GetSQLDomainsFrom (self):
         # fields necessary for the domains analysis
 
         return(" , people_upeople pup, "+\
-               i_db+".domains d, "+\
-               i_db+".upeople_domains upd")
+               self.identities_db + ".domains d, "+\
+               self.identities_db + ".upeople_domains upd")
 
 
     def GetSQLDomainsWhere (self, name):
@@ -511,7 +511,7 @@ class ITSQuery(DSQuery):
         if name is not None: fields += " AND up.identifier = "+name
         return fields
 
-    def GetSQLReportFrom (self, identities_db, type_analysis):
+    def GetSQLReportFrom (self, type_analysis):
         #generic function to generate 'from' clauses
         #"type" is a list of two values: type of analysis and value of 
         #such analysis
@@ -524,16 +524,16 @@ class ITSQuery(DSQuery):
         value = type_analysis[1]
 
         if analysis == 'repository': From = self.GetSQLRepositoriesFrom()
-        elif analysis == 'company': From = self.GetSQLCompaniesFrom(identities_db)
-        elif analysis == 'country': From = self.GetSQLCountriesFrom(identities_db)
-        elif analysis == 'domain': From = self.GetSQLDomainsFrom(identities_db)
+        elif analysis == 'company': From = self.GetSQLCompaniesFrom()
+        elif analysis == 'country': From = self.GetSQLCountriesFrom()
+        elif analysis == 'domain': From = self.GetSQLDomainsFrom()
         elif analysis == 'project': From = self.GetSQLProjectsFrom()
         elif analysis == 'people2': From = self.GetSQLPeopleFrom()
         else: raise Exception( analysis + " not supported")
 
         return (From)
 
-    def GetSQLReportWhere (self, type_analysis, identities_db = None, table = "changes"):
+    def GetSQLReportWhere (self, type_analysis, table = "changes"):
         #generic function to generate 'where' clauses
 
         #"type" is a list of two values: type of analysis and value of 
@@ -549,7 +549,7 @@ class ITSQuery(DSQuery):
         elif analysis == 'company': where = self.GetSQLCompaniesWhere(value)
         elif analysis == 'country': where = self.GetSQLCountriesWhere(value)
         elif analysis == 'domain': where = self.GetSQLDomainsWhere(value)
-        elif analysis == 'project': where = self.GetSQLProjectsWhere(value, identities_db)
+        elif analysis == 'project': where = self.GetSQLProjectsWhere(value)
         elif analysis == 'people2': where = self.GetSQLPeopleWhere(value, table)
         else: raise Exception( analysis + " not supported")
 
@@ -559,8 +559,8 @@ class ITSQuery(DSQuery):
         # Generic function that counts evolution/agg number of specific studies with similar
         # database schema such as domains, companies and countries
         fields = ' count(distinct(name)) as ' + study
-        tables = " issues i " + self.GetSQLReportFrom(identities_db, type_analysis)
-        filters = self.GetSQLReportWhere(type_analysis, identities_db)
+        tables = " issues i " + self.GetSQLReportFrom(type_analysis)
+        filters = self.GetSQLReportWhere(type_analysis)
 
         #Filtering last part of the query, not used in this case
         #filters = gsub("and\n( )+(d|c|cou|com).name =.*$", "", filters)
