@@ -121,7 +121,7 @@ class EmailsSenders(Metrics):
         q = "SELECT up.id as id, up.identifier as senders, "+\
             " COUNT(DISTINCT(m.message_id)) as sent "+\
             " FROM messages m, "+self.db.identities_db+".upeople up "+\
-             self.db.GetSQLCompaniesFrom(self.db.identities_db) +\
+             self.db.GetSQLCompaniesFrom() +\
             " WHERE "+self.db.GetSQLCompaniesWhere(company_name)+" AND "+\
             "  up.id = upc.upeople_id AND "+\
             "  m.first_date >= "+startdate+" AND "+\

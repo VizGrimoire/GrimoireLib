@@ -617,12 +617,12 @@ class MLSQuery(DSQuery):
         # fields necessary to match info among tables
         return (" m.mailing_list_url = "+repository+" ")
 
-    def GetSQLCompaniesFrom (self, i_db):
+    def GetSQLCompaniesFrom (self):
         # fields necessary for the companies analysis
         return(" , messages_people mp, "+\
                        "people_upeople pup, "+\
-                       i_db+".companies c, "+\
-                       i_db+".upeople_companies upc")
+                       self.identities_db + ".companies c, "+\
+                       self.identities_db + ".upeople_companies upc")
 
     def GetSQLCompaniesWhere (self, name):
         # filters for the companies analysis
@@ -635,12 +635,12 @@ class MLSQuery(DSQuery):
                    "m.first_date < upc.end and "+\
                    "c.name = "+name)
 
-    def GetSQLCountriesFrom (self, i_db):
+    def GetSQLCountriesFrom (self):
         # fields necessary for the countries analysis
         return(" , messages_people mp, "+\
                    "people_upeople pup, "+\
-                   i_db+".countries c, "+\
-                   i_db+".upeople_countries upc ")
+                   self.identities_db + ".countries c, "+\
+                   self.identities_db + ".upeople_countries upc ")
 
     def GetSQLCountriesWhere (self, name):
         # filters necessary for the countries analysis
@@ -652,11 +652,11 @@ class MLSQuery(DSQuery):
                    "upc.country_id = c.id and "+\
                    "c.name="+name)
 
-    def GetSQLDomainsFrom (self, i_db) :
+    def GetSQLDomainsFrom (self) :
         return (" , messages_people mp, "+\
                    "people_upeople pup, "+\
-                  i_db+".domains d, "+\
-                  i_db+".upeople_domains upd")
+                  self.identities_db + ".domains d, "+\
+                  self.identities_db + ".upeople_domains upd")
 
     def GetSQLDomainsWhere (self, name) :
         return (" m.message_ID = mp.message_id and "+\
@@ -671,7 +671,7 @@ class MLSQuery(DSQuery):
     def GetSQLProjectsFrom(self):
         return (" , mailing_lists ml")
 
-    def GetSQLProjectsWhere(self, project, identities_db):
+    def GetSQLProjectsWhere(self, project):
         # include all repositories for a project and its subprojects
         p = project.replace("'", "") # FIXME: why is "'" needed in the name?
 
@@ -680,7 +680,7 @@ class MLSQuery(DSQuery):
                FROM   %s.projects p, %s.project_repositories pr
                WHERE  p.project_id = pr.project_id AND p.project_id IN (%s)
                    AND pr.data_source='mls'
-        )""" % (identities_db, identities_db, self.get_subprojects(p))
+        )""" % (self.identities_db, self.identities_db, self.get_subprojects(p))
 
         return (repos  + " and ml.mailing_list_url = m.mailing_list_url")
 
@@ -709,9 +709,9 @@ class MLSQuery(DSQuery):
         analysis = type_analysis[0]
 
         if analysis == 'repository': From = self.GetSQLRepositoriesFrom()
-        elif analysis == 'company': From = self.GetSQLCompaniesFrom(self.identities_db)
-        elif analysis == 'country': From = self.GetSQLCountriesFrom(self.identities_db)
-        elif analysis == 'domain': From = self.GetSQLDomainsFrom(self.identities_db)
+        elif analysis == 'company': From = self.GetSQLCompaniesFrom()
+        elif analysis == 'country': From = self.GetSQLCountriesFrom()
+        elif analysis == 'domain': From = self.GetSQLDomainsFrom()
         elif analysis == 'project': From = self.GetSQLProjectsFrom()
 
         return (From)
@@ -738,7 +738,7 @@ class MLSQuery(DSQuery):
                 logging.error("project filter not supported without identities_db")
                 sys.exit(0)
             else:
-                where = self.GetSQLProjectsWhere(value, self.identities_db)
+                where = self.GetSQLProjectsWhere(value)
 
         return (where)
 
