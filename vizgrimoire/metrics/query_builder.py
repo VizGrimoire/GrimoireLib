@@ -1294,9 +1294,9 @@ class IRCQuery(DSQuery):
         analysis = type_analysis[0]
 
         if analysis == 'repository': From = self.GetSQLRepositoriesFrom()
-        elif analysis == 'company': From = self.GetSQLCompaniesFrom(self.identities_db)
-        elif analysis == 'country': From = self.GetSQLCountriesFrom(self.identities_db)
-        elif analysis == 'domain': From = self.GetSQLDomainsFrom(self.identities_db)
+        elif analysis == 'company': From = self.GetSQLCompaniesFrom()
+        elif analysis == 'country': From = self.GetSQLCountriesFrom()
+        elif analysis == 'domain': From = self.GetSQLDomainsFrom()
 
         return (From)
 
