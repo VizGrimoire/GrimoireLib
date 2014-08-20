@@ -931,6 +931,8 @@ class SCRQuery(DSQuery):
         filters += " AND people.id = changes.changed_by "
         filters += self.GetSQLReportWhere(type_analysis, identities_db)
         filters += " AND field='status' AND new_value='MERGED' "
+        # https://bugzilla.wikimedia.org/show_bug.cgi?id=66283
+        filters += " AND summary not like '%WIP%' "
         # remove autoreviews
         filters += " AND i.submitted_by<>changes.changed_by "
         filters += " ORDER BY changed_on "
@@ -959,6 +961,8 @@ class SCRQuery(DSQuery):
         filters = filter_bots + " people.id = i.submitted_by "
         filters += self.GetSQLReportWhere(type_analysis,identities_db)
         filters += " AND status<>'MERGED' AND status<>'ABANDONED' "
+        # https://bugzilla.wikimedia.org/show_bug.cgi?id=66283
+        filters += " AND summary not like '%WIP%' "
         filters += " AND ie.issue_id  = i.id "
         if reviewers:
                 filters += """
