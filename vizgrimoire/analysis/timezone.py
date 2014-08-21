@@ -24,7 +24,7 @@
 #
 
 from scm import PeriodCondition, NomergesCondition
-from scm_query import SCMDatabase
+from scm_query import DB as SCMDatabase
 from scm_query_tz import SCMTZQuery
 from analyses import Analyses
 from SCM import SCM

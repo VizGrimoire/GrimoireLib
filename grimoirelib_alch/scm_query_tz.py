@@ -26,9 +26,9 @@
 
 from sqlalchemy.sql import label
 from sqlalchemy import func
-from scm_query import DB, SCMQuery
+from scm_query import DB, Query
 
-class SCMTZQuery (SCMQuery):
+class SCMTZQuery (Query):
     """Class for dealing with SCM queries involving time zones"""
 
     def select_tz (self):

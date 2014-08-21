@@ -23,12 +23,12 @@
 # Demography analysis. Age of developers in the project, age of
 # developers still with activity, and so on.
 
-from scm import SCMDatabaseDefinition
+from scm_query import DB as SCMDatabase
 from scm import NomergesCondition as SCMNomergesCondition
 from scm import PeriodCondition as SCMPeriodCondition
-from its import ITSDatabaseDefinition
+from its_query import DB as ITSDatabase
 from its import PeriodCondition as ITSPeriodCondition
-from mls import MLSDatabaseDefinition
+from mls_query import DB as MLSDatabase
 from mls import PeriodCondition as MLSPeriodCondition
 from activity_persons import SCMActivityPersons,  ITSActivityPersons, \
     MLSActivityPersons
@@ -114,9 +114,9 @@ class Ages(Analyses):
             # as activity)
             period = SCMPeriodCondition (start = startdate, end = enddate)
             nomerges = SCMNomergesCondition()
-            database = SCMDatabaseDefinition (url = url,
-                                              schema = schema,
-                                              schema_id = schema_id)
+            database = SCMDatabase (url = url,
+                                    schema = schema,
+                                    schema_id = schema_id)
             data = SCMActivityPersons (
                 datasource = database,
                 name = "list_uauthors",
@@ -127,9 +127,9 @@ class Ages(Analyses):
             # all the actors, considering only activty during
             # the startdate..enddate period
             period = ITSPeriodCondition (start = startdate, end = enddate)
-            database = ITSDatabaseDefinition (url = url,
-                                              schema = schema,
-                                              schema_id = schema_id)
+            database = ITSDatabase (url = url,
+                                    schema = schema,
+                                    schema_id = schema_id)
             data = ITSActivityPersons (
                 datasource = database,
                 name = "list_uchangers",
@@ -141,9 +141,9 @@ class Ages(Analyses):
             # the startdate..enddate period
             period = MLSPeriodCondition (start = startdate,
                                           end = enddate)
-            database = MLSDatabaseDefinition (url = url,
-                                              schema = schema,
-                                              schema_id = schema_id)
+            database = MLSDatabase (url = url,
+                                    schema = schema,
+                                    schema_id = schema_id)
             data = MLSActivityPersons (
                 datasource = database,
                 name = "list_usenders",
