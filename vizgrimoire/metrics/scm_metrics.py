@@ -384,13 +384,17 @@ class Lines(Metrics):
         self.filters = MetricFilters(Metrics.default_period,
                                      chardates[1], chardates[0], None)
         last = self.get_agg()
+        if last['added_lines'] is None: last['added_lines'] = 0
         last_added = int(last['added_lines'])
+        if last['removed_lines'] is None: last['removed_lines'] = 0
         last_removed = int(last['removed_lines'])
 
         self.filters = MetricFilters(Metrics.default_period,
                                      chardates[2], chardates[1], None)
         prev = self.get_agg()
+        if prev['added_lines'] is None: prev['added_lines'] = 0
         prev_added = int(prev['added_lines'])
+        if prev['removed_lines'] is None: prev['removed_lines'] = 0
         prev_removed = int(prev['removed_lines'])
 
         data = {}
