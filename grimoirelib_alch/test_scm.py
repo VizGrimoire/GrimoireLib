@@ -36,8 +36,8 @@ class TestSCM (unittest.TestCase):
     def setUp (self):
 
         self.database = SCMDatabaseDefinition (url = url,
-                                            schema = schema,
-                                            schema_id = schema_id)
+                                               schema = schema,
+                                               schema_id = schema_id)
         self.session = self.database.create_session()
         self.start = datetime(2013,11,13)
         self.end = datetime(2014,2,1)

@@ -25,74 +25,80 @@
 ##
 
 from sqlalchemy import func, Column, Integer, ForeignKey
-from sqlalchemy.ext.declarative import declarative_base, DeferredReflection
 from sqlalchemy.sql import label
 from datetime import datetime
 from timeseries import TimeSeries
 from activity import ActivityList
-from common_query import table_factory, GrimoireDatabase, GrimoireQuery
+from common_query import GrimoireDatabase, GrimoireQuery
 
 
-class ITSDatabase(GrimoireDatabase):
+class DB (GrimoireDatabase):
     """Class for dealing with ITS (Bicho) databases.
 
     """
  
-    def __init__(self, database, schema, schema_id):
-        """Instatiation.
+    def _query_cls(self):
+        """Return que defauld Query class for this database
 
-        Parameters
-        ----------
+        Returns
+        -------
 
-        database: string
-           SQLAlchemy url for the database to be used, such as
-           mysql://user:passwd@host:port/
-        schema: string
-           Schema name for the ITS data
-        schema_id: string
-           Schema name for the unique ids data
-        
+        GrimoireQuery: default Query class.
+
         """
 
-        global Changes, Issues, People, PeopleUPeople, Trackers
-        global UPeople
-        self.database = database
-        Base = declarative_base(cls=DeferredReflection)
-        self.Base = Base
-        self.query_cls = ITSQuery
-        Changes = table_factory (bases = (Base,), name = 'Changes',
-                                 tablename = 'changes',
-                                 schemaname = schema,
-                                 columns = dict (
+        return Query
+
+    def _create_tables(self):
+        """Create all SQLAlchemy tables.
+
+        Builds a SQLAlchemy class per SQL table, by using _table().
+        It assumes self.Base, self.schema and self.schema_id are already
+        set (see super.__init__() code).
+
+        """
+
+        DB.Changes = GrimoireDatabase._table (
+            bases = (self.Base,), name = 'Changes',
+            tablename = 'changes',
+            schemaname = self.schema,
+            columns = dict (
                 issue_id = Column(Integer,
-                                  ForeignKey(schema + '.' + 'issues.id'))
+                                  ForeignKey(self.schema + '.' + 'issues.id'))
                 ))
-        Issues = table_factory (bases = (Base,), name = 'Issues',
-                                tablename = 'issues',
-                                schemaname = schema,
-                                columns = dict (
-                changed_by = Column(Integer,
-                                    ForeignKey(schema + '.' + 'people.id'))     
+        DB.Issues = GrimoireDatabase._table (
+            bases = (self.Base,), name = 'Issues',
+            tablename = 'issues',
+            schemaname = self.schema,
+            columns = dict (
+                changed_by = Column(
+                    Integer,
+                    ForeignKey(self.schema + '.' + 'people.id'))     
                 ))
-        People = table_factory (bases = (Base,), name = 'People',
-                                tablename = 'people',
-                                schemaname = schema)
-        PeopleUPeople = table_factory (bases = (Base,), name = 'PeopleUPeople',
-                                tablename = 'people_upeople',
-                                schemaname = schema,
-                                columns = dict (
-                upeople_id = Column(Integer,
-                                    ForeignKey(schema_id + '.' + 'upeople.id'))
+        DB.People = GrimoireDatabase._table (
+            bases = (self.Base,), name = 'People',
+            tablename = 'people',
+            schemaname = self.schema)
+        DB.PeopleUPeople = GrimoireDatabase._table (
+            bases = (self.Base,), name = 'PeopleUPeople',
+            tablename = 'people_upeople',
+            schemaname = self.schema,
+            columns = dict (
+                upeople_id = Column(
+                    Integer,
+                    ForeignKey(self.schema_id + '.' + 'upeople.id'))
                 ))
-        Trackers = table_factory (bases = (Base,), name = 'Trackers',
-                                tablename = 'trackers',
-                                schemaname = schema)
-        UPeople = table_factory (bases = (Base,), name = 'UPeople',
-                                tablename = 'upeople',
-                                schemaname = schema_id)
+        DB.Trackers = GrimoireDatabase._table (
+            bases = (self.Base,), name = 'Trackers',
+            tablename = 'trackers',
+            schemaname = self.schema)
+        DB.UPeople = GrimoireDatabase._table (
+            bases = (self.Base,), name = 'UPeople',
+            tablename = 'upeople',
+            schemaname = self.schema_id)
 
 
-class ITSQuery (GrimoireQuery):
+class Query (GrimoireQuery):
     """Class for dealing with ITS queries"""
 
 
@@ -115,15 +121,15 @@ class ITSQuery (GrimoireQuery):
 
         """
 
-        query = self.add_columns (label("person_id", People.id),
-                                  label("name", People.user_id),
-                                  label('email', People.email))
+        query = self.add_columns (label("person_id", DB.People.id),
+                                  label("name", DB.People.user_id),
+                                  label('email', DB.People.email))
         if kind == "openers":
-            person = Issues.submitted_by
-            table = Issues
+            person = DB.Issues.submitted_by
+            table = DB.Issues
         elif kind == "changers":
-            person = Changes.changed_by
-            table = Changes
+            person = DB.Changes.changed_by
+            table = DB.Changes
         elif kind == "closers":
             raise Exception ("select_personsdata: Not yet implemented")
         else:
@@ -131,10 +137,10 @@ class ITSQuery (GrimoireQuery):
                              % kind)
 
         if table in self.joined:
-            query = query.filter (People.id == person)
+            query = query.filter (DB.People.id == person)
         else:
             self.joined.append (table)
-            query = query.join (table, People.id == person)
+            query = query.join (table, DB.People.id == person)
         return query
 
 
@@ -161,14 +167,14 @@ class ITSQuery (GrimoireQuery):
 
         """
 
-        query = self.add_columns (label("person_id", UPeople.id),
-                                  label("name", UPeople.identifier))
+        query = self.add_columns (label("person_id", DB.UPeople.id),
+                                  label("name", DB.UPeople.identifier))
         if kind == "openers":
-            person = Issues.submitted_by
-            table = Issues
+            person = DB.Issues.submitted_by
+            table = DB.Issues
         elif kind == "changers":
-            person = Changes.changed_by
-            table = Changes
+            person = DB.Changes.changed_by
+            table = DB.Changes
         elif kind == "closers":
             raise Exception ("select_personsdata: Not yet implemented")
         else:
@@ -176,35 +182,39 @@ class ITSQuery (GrimoireQuery):
                              % kind)
         if not self.joined:
             # First table, UPeople is in FROM
-            self.joined.append (UPeople)
-        if not self.joined or UPeople in self.joined:
+            self.joined.append (DB.UPeople)
+        if not self.joined or DB.UPeople in self.joined:
             # First table, UPeople is in FROM, or we have UPeople
-            if PeopleUPeople not in self.joined:
-                self.joined.append (PeopleUPeople)
-                query = query.join (PeopleUPeople,
-                                    UPeople.id == PeopleUPeople.upeople_id)
+            if DB.PeopleUPeople not in self.joined:
+                self.joined.append (DB.PeopleUPeople)
+                query = query.join (
+                    DB.PeopleUPeople,
+                    DB.UPeople.id == DB.PeopleUPeople.upeople_id
+                    )
             if table in self.joined:
-                query = query.filter (PeopleUPeople.people_id == person)
+                query = query.filter (DB.PeopleUPeople.people_id == person)
             else:
                 self.joined.append (table)
-                query = query.join (table, PeopleUPeople.people_id == person)
-        elif PeopleUPeople in self.joined:
+                query = query.join (table,
+                                    DB.PeopleUPeople.people_id == person)
+        elif DB.PeopleUPeople in self.joined:
             # We have PeopleUPeople (table should be joined), no UPeople
             if table not in self.joined:
                 raise Exception ("select_personsdata_uid: " + \
                                      "If PeopleUPeople is joined, " + \
                                      str(table) + " should be joined too")
-            self.joined.append (UPeople)
-            query = query.join (UPeople,
-                                UPeople.id == PeopleUPeople.upeople_id)
+            self.joined.append (DB.UPeople)
+            query = query.join (
+                DB.UPeople,
+                DB.UPeople.id == DB.PeopleUPeople.upeople_id)
         elif table in self.joined:
             # We have table, and no PeopleUPeople, no UPeople
-            self.joined.append (PeopleUPeople)
-            query = query.join (PeopleUPeople,
-                                PeopleUPeople.people_id == person)
-            self.joined.append (UPeople)
-            query = query.join (UPeople,
-                                UPeople.id == PeopleUPeople.upeople_id)
+            self.joined.append (DB.PeopleUPeople)
+            query = query.join (DB.PeopleUPeople,
+                                DB.PeopleUPeople.people_id == person)
+            self.joined.append (DB.UPeople)
+            query = query.join (DB.UPeople,
+                                DB.UPeople.id == PeopleUPeople.upeople_id)
         else:
             # No table, no PeopleUPeople, no UPeople but some other table
             raise Exception ("select_personsdata_uid: " + \
@@ -226,9 +236,9 @@ class ITSQuery (GrimoireQuery):
         """
 
         query = self.add_columns (label('firstdate',
-                                        func.min(Changes.changed_on)),
+                                        func.min(DB.Changes.changed_on)),
                                   label('lastdate',
-                                        func.max(Changes.changed_on)))
+                                        func.max(DB.Changes.changed_on)))
         return query
 
 
@@ -245,7 +255,7 @@ class ITSQuery (GrimoireQuery):
 
         query = self
         if date == "change":
-            date_field = Changes.changed_on
+            date_field = DB.Changes.changed_on
         else:
             raise Exception ("filter_period: Unknown kind of date: %s." \
                                  % date)
@@ -295,19 +305,14 @@ class ITSQuery (GrimoireQuery):
 
 if __name__ == "__main__":
 
-    import sys
-    import codecs
-    from standalone import print_banner
+    from standalone import stdout_utf8, print_banner
 
-    # Trick to make the script work when using pipes
-    # (pipes confuse the interpreter, which sets codec to None)
-    # http://stackoverflow.com/questions/492483/setting-the-correct-encoding-when-piping-stdout-in-python
-    sys.stdout = codecs.getwriter('utf8')(sys.stdout)
+    stdout_utf8()
 
-    ITSDB = ITSDatabase(database = 'mysql://jgb:XXX@localhost/',
-                        schema = 'vizgrimoire_bicho',
-                        schema_id = 'vizgrimoire_cvsanaly')
-    session = ITSDB.build_session(ITSQuery, echo = False)
+    database = DB (url = 'mysql://jgb:XXX@localhost/',
+                   schema = 'vizgrimoire_bicho',
+                   schema_id = 'vizgrimoire_cvsanaly')
+    session = database.build_session(Query, echo = False)
 
     #---------------------------------
     print_banner ("List of openers")

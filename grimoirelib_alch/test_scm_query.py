@@ -22,12 +22,12 @@
 ##   Jesus M. Gonzalez-Barahona <jgb@bitergia.com>
 ##
 
-from scm_query import SCMDatabase, SCMQuery
+from scm_query import DB, Query
 from datetime import datetime
 from timeseries import TimeSeries
 import unittest
 
-database = 'mysql://jgb:XXX@localhost/'
+url = 'mysql://jgb:XXX@localhost/'
 schema = 'vizgrimoire_cvsanaly'
 schema_id = 'vizgrimoire_cvsanaly'
 start = datetime(2013,11,13)
@@ -36,10 +36,10 @@ end = datetime(2014,2,1)
 class TestSCMQuery (unittest.TestCase):
 
     def setUp (self):
-        DB = SCMDatabase(database = database,
-                         schema = schema,
-                         schema_id = schema_id)
-        self.session = DB.build_session(SCMQuery, echo = False)
+        database = DB (url = url,
+                       schema = schema,
+                       schema_id = schema_id)
+        self.session = database.build_session(Query, echo = False)
 
     def _test_select_nscmlog (self, variables, results):
         """Test select_nscmlog with different variables
@@ -180,8 +180,6 @@ class TestSCMQuery (unittest.TestCase):
     def test_select_nbranches (self):
         """Test select_nbranches"""
 
-        from scm_query import SCMLog
-
         correct = [[(17L,)],
                    [(5L,)],
                    TimeSeries ("months",
@@ -193,7 +191,7 @@ class TestSCMQuery (unittest.TestCase):
                                )]
         res = self.session.query().select_nbranches()
         self.assertEqual (res.all(), correct[0])
-        res = res.join(SCMLog) \
+        res = res.join(DB.SCMLog) \
             .filter_period(start=start, end=end)
         self.assertEqual (res.all(), correct[1])
         res = res.group_by_period().timeseries()
@@ -201,8 +199,6 @@ class TestSCMQuery (unittest.TestCase):
 
     def test_select_listbranches (self):
         """Test select_listbranches"""
-
-        from scm_query import SCMLog
 
         correct = [
             [(1L, 'master'), (2L, 'tinycolor'), (3L, 'webkit-companies'),
@@ -217,7 +213,7 @@ class TestSCMQuery (unittest.TestCase):
             ]
         res = self.session.query().select_listbranches()
         self.assertEqual (res.all(), correct[0])
-        res = res.join(SCMLog) \
+        res = res.join(DB.SCMLog) \
             .filter_period(start=start, end=end)
         self.assertEqual (res.all(), correct[1])
 

@@ -24,6 +24,7 @@
 ##
 
 from sqlalchemy.orm import Session
+from common_query import GrimoireDatabase
 
 class DatabaseDefinition:
     """Class for defining a Grimoire database.
@@ -84,9 +85,9 @@ class DatabaseDefinition:
         """
 
         database_cls, query_cls = self._datasource_cls()
-        DB = database_cls(database = self.url,
-                         schema = self.schema,
-                         schema_id = self.schema_id)
+        DB = database_cls(url = self.url,
+                          schema = self.schema,
+                          schema_id = self.schema_id)
         return DB.build_session(query_cls, echo = echo)
 
     def _datasource_cls(self):
@@ -211,6 +212,9 @@ class DBFamily:
         elif isinstance(datasource, DatabaseDefinition):
             # Create a session using info in database
             self.session = datasource.create_session(echo = echo)
+        elif isinstance(datasource, GrimoireDatabase):
+            # Create a session using info in database
+            self.session = datasource.build_session(echo = echo)
         else:
             raise Exception ("DBFamily: datasource must be of " + \
                                  "sqlalchemy.orm.Session or " + \

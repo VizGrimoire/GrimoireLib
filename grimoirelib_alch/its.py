@@ -23,8 +23,8 @@
 ##   Jesus M. Gonzalez-Barahona <jgb@bitergia.com>
 ##
 
-from common import DatabaseDefinition, DBFamily
-from its_query import ITSDatabase, ITSQuery
+from common import DatabaseDefinition, DBFamily, DBCondition
+from its_query import DB, Query
 
 class ITSDatabaseDefinition (DatabaseDefinition):
     """Class for defining a ITS (Bicho) Grimoire database.
@@ -42,25 +42,25 @@ class ITSDatabaseDefinition (DatabaseDefinition):
 
         """
 
-        return ITSDatabase, ITSQuery
+        return DB, Query
 
 
-class Condition ():
-    """Root of all conditions
+# class Condition ():
+#     """Root of all conditions
 
-    Provides a filter method which will be called when applying the condition.
-    """
+#     Provides a filter method which will be called when applying the condition.
+#     """
 
-    def filter (query):
-        """Filter to apply for this condition
+#     def filter (query):
+#         """Filter to apply for this condition
 
-        - query: query to which the filter will be applied
-        """
+#         - query: query to which the filter will be applied
+#         """
 
-        return query
+#         return query
 
 
-class PeriodCondition (Condition):
+class PeriodCondition (DBCondition):
     """Period Condition for qualifying a variable
 
     Specifies the period when the variable has to be considered"""

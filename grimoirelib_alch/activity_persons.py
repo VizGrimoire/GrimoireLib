@@ -25,9 +25,12 @@
 ##
 
 from common import DBFamily
-from scm_query import SCMDatabase, SCMQuery
-from its_query import ITSDatabase, ITSQuery
-from mls_query import MLSDatabase, MLSQuery
+from scm_query import DB as SCMDatabase
+from scm_query import Query as SCMQuery
+from its_query import DB as ITSDatabase
+from its_query import Query as ITSQuery
+from mls_query import DB as MLSDatabase
+from mls_query import Query as MLSQuery
 
 class ActivityPersons (DBFamily):
     """Root factory of entities in the ActivityPersons family.
@@ -210,20 +213,23 @@ if __name__ == "__main__":
 
     from standalone import stdout_utf8, print_banner
     from datetime import datetime, timedelta
-    from scm import SCMDatabaseDefinition
-    from its import ITSDatabaseDefinition
-    from mls import MLSDatabaseDefinition
+    # from scm import SCMDatabaseDefinition
+    # from its import ITSDatabaseDefinition
+    # from mls import MLSDatabaseDefinition
     from scm import PeriodCondition as SCMPeriodCondition
     from scm import NomergesCondition as SCMNomergesCondition
-    from its_conditions import PeriodCondition as ITSPeriodCondition
+    from its import PeriodCondition as ITSPeriodCondition
 
     stdout_utf8()
 
     # SCM database
-    database = SCMDatabaseDefinition (url = "mysql://jgb:XXX@localhost/",
-                                      schema = "vizgrimoire_cvsanaly",
-                                      schema_id = "vizgrimoire_cvsanaly")
-    session = database.create_session()
+    # database = SCMDatabaseDefinition (url = "mysql://jgb:XXX@localhost/",
+    #                                   schema = "vizgrimoire_cvsanaly",
+    #                                   schema_id = "vizgrimoire_cvsanaly")
+    database = SCMDatabase (url = "mysql://jgb:XXX@localhost/",
+                   schema = "vizgrimoire_cvsanaly",
+                   schema_id = "vizgrimoire_cvsanaly")
+    session = database.build_session()
 
     #---------------------------------
     print_banner("List of activity for each author")
@@ -275,9 +281,12 @@ if __name__ == "__main__":
         .age(datetime(2014,1,1)).json()
     
     # ITS database
-    database = ITSDatabaseDefinition (url = "mysql://jgb:XXX@localhost/",
-                                      schema = "vizgrimoire_bicho",
-                                      schema_id = "vizgrimoire_cvsanaly")
+    # database = ITSDatabaseDefinition (url = "mysql://jgb:XXX@localhost/",
+    #                                   schema = "vizgrimoire_bicho",
+    #                                   schema_id = "vizgrimoire_cvsanaly")
+    database = ITSDatabase (url = "mysql://jgb:XXX@localhost/",
+                            schema = "vizgrimoire_bicho",
+                            schema_id = "vizgrimoire_cvsanaly")
 
     #---------------------------------
     print_banner("List of activity for each changer")
@@ -307,10 +316,10 @@ if __name__ == "__main__":
     print activity
 
     # MLS database
-    database = MLSDatabaseDefinition (url = "mysql://jgb:XXX@localhost/",
-                                      schema = "oscon_openstack_mls",
-                                      schema_id = "oscon_openstack_scm")
-
+    database = MLSDatabase (url = "mysql://jgb:XXX@localhost/",
+                            schema = "oscon_openstack_mls",
+                            schema_id = "oscon_openstack_scm")
+    
     #---------------------------------
     print_banner("List of activity for each sender")
     data = MLSActivityPersons (

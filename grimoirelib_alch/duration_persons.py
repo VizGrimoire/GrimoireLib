@@ -257,18 +257,21 @@ if __name__ == "__main__":
 
     from standalone import stdout_utf8, print_banner
     from datetime import datetime, timedelta
-    from scm import SCMDatabaseDefinition
-    from mls import MLSDatabaseDefinition
+    from scm_query import DB as SCMDatabase
+    from mls_query import DB as MLSDatabase
+
+    # from scm import SCMDatabaseDefinition
+    # from mls import MLSDatabaseDefinition
     from scm import NomergesCondition as SCMNomergesCondition
     from activity_persons import SCMActivityPersons, MLSActivityPersons
 
     stdout_utf8()
 
     # SCM database
-    database = SCMDatabaseDefinition (url = "mysql://jgb:XXX@localhost/",
-                                      schema = "vizgrimoire_cvsanaly",
-                                      schema_id = "vizgrimoire_cvsanaly")
-    session = database.create_session()
+    database = SCMDatabase (url = "mysql://jgb:XXX@localhost/",
+                            schema = "vizgrimoire_cvsanaly",
+                            schema_id = "vizgrimoire_cvsanaly")
+    session = database.build_session()
 
     #---------------------------------
     print_banner("Age, using entity")
@@ -308,9 +311,9 @@ if __name__ == "__main__":
     print age.durations().json()
     
     # MLS database
-    database = MLSDatabaseDefinition (url = "mysql://jgb:XXX@localhost/",
-                                      schema = "oscon_openstack_mls",
-                                      schema_id = "oscon_openstack_scm")
+    database = MLSDatabase (url = "mysql://jgb:XXX@localhost/",
+                            schema = "oscon_openstack_mls",
+                            schema_id = "oscon_openstack_scm")
     data = MLSActivityPersons (
         datasource = database,
         name = "list_usenders")

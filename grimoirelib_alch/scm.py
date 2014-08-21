@@ -24,7 +24,7 @@
 ##
 
 from common import DatabaseDefinition, DBFamily, DBCondition
-from scm_query import SCMDatabase, SCMQuery
+from scm_query import DB, Query
 
 class SCMDatabaseDefinition (DatabaseDefinition):
     """Class for defining a SCM (CVSAnalY) Grimoire database.
@@ -42,7 +42,7 @@ class SCMDatabaseDefinition (DatabaseDefinition):
 
         """
 
-        return SCMDatabase, SCMQuery
+        return DB, Query
 
 
 class SCM (DBFamily):
@@ -180,34 +180,51 @@ class PeriodCondition (DBCondition):
 
 if __name__ == "__main__":
 
+    from standalone import stdout_utf8, print_banner
     from datetime import datetime
 
-    database = SCMDatabaseDefinition (url = "mysql://jgb:XXX@localhost/",
-                                   schema = "vizgrimoire_cvsanaly",
-                                   schema_id = "vizgrimoire_cvsanaly")
+    stdout_utf8()
+
+    # database = SCMDatabaseDefinition (url = "mysql://jgb:XXX@localhost/",
+    #                                schema = "vizgrimoire_cvsanaly",
+    #                                schema_id = "vizgrimoire_cvsanaly")
+    database = DB (url = "mysql://jgb:XXX@localhost/",
+                   schema = "vizgrimoire_cvsanaly",
+                   schema_id = "vizgrimoire_cvsanaly")
+
+    #---------------------------------
+    print_banner ("Number of commits (timeseries, total)")
     data = SCM (datasource = database,
                 name = "ncommits")
     print data.timeseries()
     print data.total()
 
+    #---------------------------------
+    print_banner ("Number of commits (timeseries, total), for period")
     period = PeriodCondition (start = datetime(2013,1,1), end = None)
-
     data = SCM (datasource = database,
                 name = "ncommits", conditions = (period,))
     print data.timeseries()
     print data.total()
 
+    #---------------------------------
+    print_banner ("List of commits")
     data = SCM (datasource = database,
                 name = "listcommits")
     print data.list()
 
-    session = database.create_session()
+#    session = database.create_session()
+    session = database.build_session()
 
+    #---------------------------------
+    print_banner ("Number of authors (timeseries, total)")
     data = SCM (datasource = session,
                 name = "nauthors", conditions = (period,))
     print data.timeseries()
     print data.total()
 
+    #---------------------------------
+    print_banner ("Number of authors (timeseries, total) for a period and branch")
     branches = BranchesCondition (branches = ("master",))
     data = SCM (datasource = session,
                 name = "nauthors", conditions = (period, branches))

@@ -25,82 +25,147 @@
 ##
 
 from sqlalchemy import func, Column, String, Integer, ForeignKey, and_
-from sqlalchemy.ext.declarative import declarative_base, DeferredReflection
-from sqlalchemy.schema import ForeignKeyConstraint
 from sqlalchemy.sql import label
 from datetime import datetime
 from timeseries import TimeSeries
 from activity import ActivityList
-from common_query import table_factory, GrimoireDatabase, GrimoireQuery
+from common_query import GrimoireDatabase, GrimoireQuery
 
 
-class MLSDatabase(GrimoireDatabase):
+class DB (GrimoireDatabase):
     """Class for dealing with MLS (MLStats) databases.
 
     """
 
-    def __init__(self, database, schema, schema_id):
-        """Instatiation.
+    def _query_cls(self):
+        """Return que defauld Query class for this database
 
-        Parameters
-        ----------
+        Returns
+        -------
 
-        database: string        # ;:
-           SQLAlchemy url for the database to be used, such as
-           mysql://user:passwd@host:port/
-        schema: string
-           Schema name for the ITS data
-        schema_id: string
-           Schema name for the unique ids data
-        
+        GrimoireQuery: default Query class.
+
         """
 
-        global Messages, MessagesPeople, People, PeopleUPeople, MailingLists
-        global UPeople
-        self.database = database
-        Base = declarative_base(cls=DeferredReflection)
-        self.Base = Base
-        self.query_cls = MLSQuery
-        Messages = table_factory (
-            bases = (Base,), name = 'Messages',
+        return Query
+
+    def _create_tables(self):
+        """Create all SQLAlchemy tables.
+
+        Builds a SQLAlchemy class per SQL table, by using _table().
+        It assumes self.Base, self.schema and self.schema_id are already
+        set (see super.__init__() code).
+
+        """
+
+        DB.Messages = GrimoireDatabase._table (
+            bases = (self.Base,), name = 'Messages',
             tablename = 'messages',
-            schemaname = schema,
+            schemaname = self.schema,
             columns = dict (
                 mailing_list_url = Column(
                     String,
-                    ForeignKey(schema + '.' + 'mailing_lists.mailing_list_url'))
+                    ForeignKey(self.schema + '.' + \
+                                   'mailing_lists.mailing_list_url'))
                 ))
-        MessagesPeople = table_factory (
-            bases = (Base,), name = 'MessagesPeople',
+        DB.MessagesPeople = GrimoireDatabase._table (
+            bases = (self.Base,), name = 'MessagesPeople',
             tablename = 'messages_people',
-            schemaname = schema,
+            schemaname = self.schema,
             columns = dict (
                 mailing_list_url = Column(
                     String,
-                    ForeignKey(schema + '.' + 'mailing_lists.mailing_list_url')),
+                    ForeignKey(self.schema + '.' + \
+                                   'mailing_lists.mailing_list_url')),
                 message_id = Column(
                     String,
-                    ForeignKey(schema + '.' + 'messages.message_ID'))     
+                    ForeignKey(self.schema + '.' + \
+                                   'messages.message_ID'))     
                 ))
-        People = table_factory (bases = (Base,), name = 'People',
-                                tablename = 'people',
-                                schemaname = schema)
-        PeopleUPeople = table_factory (bases = (Base,), name = 'PeopleUPeople',
-                                tablename = 'people_upeople',
-                                schemaname = schema,
-                                columns = dict (
-                upeople_id = Column(Integer,
-                                    ForeignKey(schema + '.' + 'upeople.id'))
+        DB.People = GrimoireDatabase._table (
+            bases = (self.Base,), name = 'People',
+            tablename = 'people',
+            schemaname = self.schema)
+        DB.PeopleUPeople = GrimoireDatabase._table (
+            bases = (self.Base,), name = 'PeopleUPeople',
+            tablename = 'people_upeople',
+            schemaname = self.schema,
+            columns = dict (
+                upeople_id = Column(
+                    Integer,
+                    ForeignKey(self.schema + '.' + 'upeople.id'))
                 ))
-        MailingLists = table_factory (bases = (Base,), name = 'MailingLists',
-                                tablename = 'mailing_lists',
-                                schemaname = schema)
-        UPeople = table_factory (bases = (Base,), name = 'UPeople',
-                                tablename = 'upeople',
-                                schemaname = schema_id)
+        DB.MailingLists = GrimoireDatabase._table (
+            bases = (self.Base,), name = 'MailingLists',
+            tablename = 'mailing_lists',
+            schemaname = self.schema)
+        DB.UPeople = GrimoireDatabase._table (
+            bases = (self.Base,), name = 'UPeople',
+            tablename = 'upeople',
+            schemaname = self.schema_id)
+
+    # def __init__(self, database, schema, schema_id):
+    #     """Instatiation.
+
+    #     Parameters
+    #     ----------
+
+    #     database: string        # ;:
+    #        SQLAlchemy url for the database to be used, such as
+    #        mysql://user:passwd@host:port/
+    #     schema: string
+    #        Schema name for the ITS data
+    #     schema_id: string
+    #        Schema name for the unique ids data
+        
+    #     """
+
+    #     global Messages, MessagesPeople, People, PeopleUPeople, MailingLists
+    #     global UPeople
+    #     self.database = database
+    #     Base = declarative_base(cls=DeferredReflection)
+    #     self.Base = Base
+    #     self.query_cls = MLSQuery
+    #     Messages = table_factory (
+    #         bases = (Base,), name = 'Messages',
+    #         tablename = 'messages',
+    #         schemaname = schema,
+    #         columns = dict (
+    #             mailing_list_url = Column(
+    #                 String,
+    #                 ForeignKey(schema + '.' + 'mailing_lists.mailing_list_url'))
+    #             ))
+    #     MessagesPeople = table_factory (
+    #         bases = (Base,), name = 'MessagesPeople',
+    #         tablename = 'messages_people',
+    #         schemaname = schema,
+    #         columns = dict (
+    #             mailing_list_url = Column(
+    #                 String,
+    #                 ForeignKey(schema + '.' + 'mailing_lists.mailing_list_url')),
+    #             message_id = Column(
+    #                 String,
+    #                 ForeignKey(schema + '.' + 'messages.message_ID'))     
+    #             ))
+    #     People = table_factory (bases = (Base,), name = 'People',
+    #                             tablename = 'people',
+    #                             schemaname = schema)
+    #     PeopleUPeople = table_factory (bases = (Base,), name = 'PeopleUPeople',
+    #                             tablename = 'people_upeople',
+    #                             schemaname = schema,
+    #                             columns = dict (
+    #             upeople_id = Column(Integer,
+    #                                 ForeignKey(schema + '.' + 'upeople.id'))
+    #             ))
+    #     MailingLists = table_factory (bases = (Base,), name = 'MailingLists',
+    #                             tablename = 'mailing_lists',
+    #                             schemaname = schema)
+    #     UPeople = table_factory (bases = (Base,), name = 'UPeople',
+    #                             tablename = 'upeople',
+    #                             schemaname = schema_id)
 
 
-class MLSQuery (GrimoireQuery):
+class Query (GrimoireQuery):
     """Class for dealing with MLS queries"""
 
 
@@ -123,15 +188,15 @@ class MLSQuery (GrimoireQuery):
 
         """
 
-        query = self.add_columns (label('person_id', People.email_address),
-                                  label("name", People.name),
-                                  label('email', People.email_address))
+        query = self.add_columns (label('person_id', DB.People.email_address),
+                                  label("name", DB.People.name),
+                                  label('email', DB.People.email_address))
         if kind == "senders":
-            if MessagesPeople not in self.joined:
-                query = query.join (MessagesPeople)
-                self.joined.append (MessagesPeople)
+            if DB.MessagesPeople not in self.joined:
+                query = query.join (DB.MessagesPeople)
+                self.joined.append (DB.MessagesPeople)
             query = query.filter (
-                and_(MessagesPeople.type_of_recipient == "From"))
+                and_(DB.MessagesPeople.type_of_recipient == "From"))
         elif kind == "starters":
             raise Exception ("select_personsdata: Not yet implemented")
         elif kind == "followers":
@@ -166,21 +231,22 @@ class MLSQuery (GrimoireQuery):
 
         """
 
-        query = self.add_columns (label("person_id", UPeople.id),
-                                  label("name", UPeople.identifier))
-        self.joined.append (UPeople)
+        query = self.add_columns (label("person_id", DB.UPeople.id),
+                                  label("name", DB.UPeople.identifier))
+        self.joined.append (DB.UPeople)
         if kind == "senders":
-            if PeopleUPeople not in self.joined:
+            if DB.PeopleUPeople not in self.joined:
                 query = query.join (
-                    PeopleUPeople,
-                    UPeople.id == PeopleUPeople.upeople_id)
-                self.joined.append (PeopleUPeople)
-            if MessagesPeople not in self.joined:
+                    DB.PeopleUPeople,
+                    DB.UPeople.id == DB.PeopleUPeople.upeople_id)
+                self.joined.append (DB.PeopleUPeople)
+            if DB.MessagesPeople not in self.joined:
                 query = query.join (
-                    MessagesPeople,
-                    MessagesPeople.email_address == PeopleUPeople.people_id)
-                self.joined.append (MessagesPeople)
-            query = query.filter (MessagesPeople.type_of_recipient == "From")
+                    DB.MessagesPeople,
+                    DB.MessagesPeople.email_address == \
+                        DB.PeopleUPeople.people_id)
+                self.joined.append (DB.MessagesPeople)
+            query = query.filter (DB.MessagesPeople.type_of_recipient == "From")
         elif kind == "starters":
             raise Exception ("select_personsdata: Not yet implemented")
         elif kind == "followers":
@@ -211,9 +277,9 @@ class MLSQuery (GrimoireQuery):
         """
 
         if date == "arrival":
-            date_field = Messages.arrival_date
+            date_field = DB.Messages.arrival_date
         elif date == "first":
-            date_field = Messages.first_date
+            date_field = DB.Messages.first_date
         else:
             raise Exception ("select_activeperiod: Unknown kind of date: %s." \
                                  % date)
@@ -221,7 +287,8 @@ class MLSQuery (GrimoireQuery):
                                         func.min(date_field)),
                                   label('lastdate',
                                         func.max(date_field)))
-        query = query.filter (Messages.message_ID == MessagesPeople.message_id)
+        query = query.filter (
+            DB.Messages.message_ID == DB.MessagesPeople.message_id)
         return query
 
     def filter_period(self, start = None, end = None, date = "arrival"):
@@ -252,13 +319,13 @@ class MLSQuery (GrimoireQuery):
             # No period, do nothing
             return self
         query = self
-        if Messages not in self.joined:
-            query = query.join(Messages)
-            self.joined.append (Messages)
+        if DB.Messages not in self.joined:
+            query = query.join(DB.Messages)
+            self.joined.append (DB.Messages)
         if date == "arrival":
-            date_field = Messages.arrival_date
+            date_field = DB.Messages.arrival_date
         elif date == "first":
-            date_field = Messages.first_date
+            date_field = DB.Messages.first_date
         else:
             raise Exception ("filter_period: Unknown kind of date: %s." \
                                  % date)
@@ -306,19 +373,14 @@ class MLSQuery (GrimoireQuery):
 
 if __name__ == "__main__":
 
-    import sys
-    import codecs
-    from standalone import print_banner
+    from standalone import stdout_utf8, print_banner
 
-    # Trick to make the script work when using pipes
-    # (pipes confuse the interpreter, which sets codec to None)
-    # http://stackoverflow.com/questions/492483/setting-the-correct-encoding-when-piping-stdout-in-python
-    sys.stdout = codecs.getwriter('utf8')(sys.stdout)
+    stdout_utf8()
 
-    MLSDB = MLSDatabase(database = 'mysql://jgb:XXX@localhost/',
-                        schema = 'oscon_openstack_mls',
-                        schema_id = 'oscon_openstack_scm')
-    session = MLSDB.build_session(MLSQuery, echo = False)
+    database = DB (url = 'mysql://jgb:XXX@localhost/',
+                   schema = 'oscon_openstack_mls',
+                   schema_id = 'oscon_openstack_scm')
+    session = database.build_session(Query, echo = False)
 
     #---------------------------------
     print_banner ("List of senders")
