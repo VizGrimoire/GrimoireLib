@@ -409,7 +409,7 @@ class DataSource(object):
                 logging.info(item.id)
                 id_field = DSQuery.get_group_field(type_analysis[0])
                 id_field = id_field.split('.')[1] # remove table name
-                mvalue = DataSource._fill_and_order_items(items, mvalue, id_field, 
+                mvalue = DataSource._fill_and_order_items(items, mvalue, id_field,
                                                           evol, period, startdate, enddate)
             data = dict(data.items() + mvalue.items())
 

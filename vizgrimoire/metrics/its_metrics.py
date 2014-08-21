@@ -46,8 +46,8 @@ class Opened(Metrics):
     def _get_sql(self, evolutionary):
 
         fields = " count(distinct(i.id)) as opened "
-        tables = " issues i "+ self.db.GetSQLReportFrom(self.db.identities_db, self.filters.type_analysis)
-        filters = self.db.GetSQLReportWhere(self.filters.type_analysis, self.db.identities_db, "issues")
+        tables = " issues i "+ self.db.GetSQLReportFrom(self.filters.type_analysis)
+        filters = self.db.GetSQLReportWhere(self.filters.type_analysis, "issues")
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                self.filters.enddate, " submitted_on ", fields,
                                tables, filters, evolutionary, self.filters.type_analysis)
@@ -66,8 +66,8 @@ class Openers(Metrics):
     def __get_sql_trk_prj__(self, evolutionary):
         """ First we get the submitters then join with unique identities """
         tpeople_sql  = "SELECT  distinct(submitted_by) as submitted_by, submitted_on  "
-        tpeople_sql += " FROM issues i " + self.db.GetSQLReportFrom(self.db.identities_db, self.filters.type_analysis)
-        filters_ext = self.db.GetSQLReportWhere(self.filters.type_analysis, self.db.identities_db)
+        tpeople_sql += " FROM issues i " + self.db.GetSQLReportFrom(self.filters.type_analysis)
+        filters_ext = self.db.GetSQLReportWhere(self.filters.type_analysis)
         if (filters_ext != ""):
             tpeople_sql += " WHERE " + filters_ext
 
@@ -85,8 +85,8 @@ class Openers(Metrics):
     def __get_sql_default__(self, evolutionary):
         """ This function returns the evolution or agg number of people opening issues """
         fields = " count(distinct(pup.upeople_id)) as openers "
-        tables = " issues i " + self.db.GetSQLReportFrom(self.db.identities_db, self.filters.type_analysis)
-        filters = self.db.GetSQLReportWhere(self.filters.type_analysis, self.db.identities_db, "issues")
+        tables = " issues i " + self.db.GetSQLReportFrom(self.filters.type_analysis)
+        filters = self.db.GetSQLReportWhere(self.filters.type_analysis, "issues")
 
         if (self.filters.type_analysis is None or len (self.filters.type_analysis) != 2) :
             #Specific case for the basic option where people_upeople table is needed
@@ -343,8 +343,8 @@ class Changed(Metrics):
         """ First get the issues filtered and then join with changes. Optimization for projects and trackers """
 
         issues_sql = "SELECT  i.id as id "
-        issues_sql += "FROM issues i " + self.db.GetSQLReportFrom(self.db.identities_db, self.filters.type_analysis)
-        filters_ext = self.db.GetSQLReportWhere(self.filters.type_analysis, self.db.identities_db)
+        issues_sql += "FROM issues i " + self.db.GetSQLReportFrom(self.filters.type_analysis)
+        filters_ext = self.db.GetSQLReportWhere(self.filters.type_analysis)
         if (filters_ext != ""):
             issues_sql += " WHERE " + filters_ext
                     #Action needed to replace issues filters by changes one
@@ -370,7 +370,7 @@ class Changed(Metrics):
     def __get_sql_default__(self, evolutionary, close = False):
         """ Default SQL for changed. Valid for all filters """
         fields = " count(distinct(i.id)) as changed "
-        tables = " issues i, changes ch " + self.db.GetSQLReportFrom(self.db.identities_db, self.filters.type_analysis)
+        tables = " issues i, changes ch " + self.db.GetSQLReportFrom(self.filters.type_analysis)
         filters = " i.id = ch.issue_id "
 
         if close:
@@ -378,7 +378,7 @@ class Changed(Metrics):
             fields = " count(distinct(i.id)) as closed "
             filters += " AND " + closed_condition
 
-        filters_ext = self.db.GetSQLReportWhere(self.filters.type_analysis, self.db.identities_db)
+        filters_ext = self.db.GetSQLReportWhere(self.filters.type_analysis)
         if (filters_ext != ""):
             filters += " and " + filters_ext
         #Action needed to replace issues filters by changes one
@@ -409,14 +409,14 @@ class Changers(Metrics):
         # First get changers and then join with people_upeople
 
         tpeople_sql  = "SELECT  distinct(changed_by) as cpeople, changed_on  "
-        tpeople_sql += " FROM issues i, changes ch " + self.db.GetSQLReportFrom(self.db.identities_db, self.filters.type_analysis)
+        tpeople_sql += " FROM issues i, changes ch " + self.db.GetSQLReportFrom(self.filters.type_analysis)
         tpeople_sql += " WHERE i.id = ch.issue_id "
         if close:
             closed_condition =  ITS._get_closed_condition()
             tpeople_sql += " AND " + closed_condition
 
 
-        filters_ext = self.db.GetSQLReportWhere(self.filters.type_analysis, self.db.identities_db)
+        filters_ext = self.db.GetSQLReportWhere(self.filters.type_analysis)
         if (filters_ext != ""):
             tpeople_sql += " and " + filters_ext
 
@@ -438,13 +438,13 @@ class Changers(Metrics):
         # closed_condition =  ITS._get_closed_condition()
 
         fields = " count(distinct(pup.upeople_id)) as changers "
-        tables = " issues i, changes ch " + self.db.GetSQLReportFrom(self.db.identities_db, self.filters.type_analysis) 
+        tables = " issues i, changes ch " + self.db.GetSQLReportFrom(self.filters.type_analysis) 
         filters = " i.id = ch.issue_id "
         if close:
             fields = " count(distinct(pup.upeople_id)) as closers "
             closed_condition =  ITS._get_closed_condition()
             filters += " AND " + closed_condition
-        filters_ext = self.db.GetSQLReportWhere(self.filters.type_analysis, self.db.identities_db)
+        filters_ext = self.db.GetSQLReportWhere(self.filters.type_analysis)
         if (filters_ext != ""):
             filters += " and " + filters_ext
         #unique identities filters
@@ -477,10 +477,10 @@ class Changers(Metrics):
         #This function can be also reproduced using the Backlog function.
         #However this function is less time expensive.
         fields = " count(distinct(pup.upeople_id)) as changers "
-        tables = " issues i, changes ch " + self.db.GetSQLReportFrom(self.db.identities_db, self.filters.type_analysis)
+        tables = " issues i, changes ch " + self.db.GetSQLReportFrom(self.filters.type_analysis)
 
         filters = " i.id = ch.issue_id "
-        filters_ext = self.db.GetSQLReportWhere(self.filters.type_analysis, self.db.identities_db)
+        filters_ext = self.db.GetSQLReportWhere(self.filters.type_analysis)
         if (filters_ext != ""):
             filters += " and " + filters_ext
 
@@ -555,8 +555,8 @@ class Trackers(Metrics):
 
     def _get_sql(self, evolutionary):
         fields = " COUNT(DISTINCT(tracker_id)) AS trackers  "
-        tables = " issues i " + self.db.GetSQLReportFrom(self.db.identities_db, self.filters.type_analysis)
-        filters = self.db.GetSQLReportWhere(self.filters.type_analysis, self.db.identities_db, "issues")
+        tables = " issues i " + self.db.GetSQLReportFrom(self.filters.type_analysis)
+        filters = self.db.GetSQLReportWhere(self.filters.type_analysis, "issues")
 
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                self.filters.enddate, " i.submitted_on ",

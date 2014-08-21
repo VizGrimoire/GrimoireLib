@@ -45,7 +45,7 @@ class Submitted(Metrics):
     def _get_sql(self, evolutionary):
         q = self.db.GetReviewsSQL(self.filters.period, self.filters.startdate,
                                   self.filters.enddate, "submitted",
-                                  self.filters.type_analysis, evolutionary, self.db.identities_db)
+                                  self.filters.type_analysis, evolutionary)
         return q
 
 class Merged(Metrics):
@@ -57,13 +57,13 @@ class Merged(Metrics):
     def _get_sql(self, evolutionary):
         q = self.db.GetReviewsSQL(self.filters.period, self.filters.startdate,
                                   self.filters.enddate, "merged",
-                                  self.filters.type_analysis, evolutionary, self.db.identities_db)
+                                  self.filters.type_analysis, evolutionary)
         return q
 
     def _get_sqlchanges (self, evolutionary):
         q = self.db.GetReviewsChangesSQL(self.filters.period, self.filters.startdate,
                                          self.filters.enddate, "merged",
-                                         self.filters.type_analysis, evolutionary, self.db.identities_db)
+                                         self.filters.type_analysis, evolutionary)
         return q
 
     def get_ts_changes(self):
@@ -91,13 +91,13 @@ class Abandoned(Metrics):
     def _get_sql(self, evolutionary):
         q = self.db.GetReviewsSQL(self.filters.period, self.filters.startdate,
                                   self.filters.enddate, "abandoned",
-                                  self.filters.type_analysis, evolutionary, self.db.identities_db)
+                                  self.filters.type_analysis, evolutionary)
         return q
 
     def _get_sqlchanges (self, evolutionary):
         q = self.db.GetReviewsChangesSQL(self.filters.period, self.filters.startdate,
                                          self.filters.enddate, "abandoned",
-                                         self.filters.type_analysis, evolutionary, self.db.identities_db)
+                                         self.filters.type_analysis, evolutionary)
         return q
 
     def get_ts_changes(self):
@@ -138,7 +138,9 @@ class Pending(Metrics):
         merged = metrics['merged'].get_agg()
         abandoned = metrics['abandoned'].get_agg()
 
-        pending = submitted['submitted']-merged['merged']-abandoned['abandoned']
+        # GROUP BY queries not supported yet
+        if isinstance(submitted, dict):  pending = None
+        else: pending = submitted['submitted']-merged['merged']-abandoned['abandoned']
         return ({"pending":pending})
 
     def get_ts(self):
@@ -163,7 +165,7 @@ class Opened(Metrics):
     def _get_sql(self, evolutionary):
         q = self.db.GetReviewsSQL(self.filters.period, self.filters.startdate,
                                   self.filters.enddate, "opened",
-                                  self.filters.type_analysis, evolutionary, self.db.identities_db)
+                                  self.filters.type_analysis, evolutionary)
         return q
 
 class Closed(Metrics):
@@ -175,7 +177,7 @@ class Closed(Metrics):
     def _get_sql(self, evolutionary):
         q = self.db.GetReviewsSQL(self.filters.period, self.filters.startdate,
                                   self.filters.enddate, "closed",
-                                  self.filters.type_analysis, evolutionary, self.db.identities_db)
+                                  self.filters.type_analysis, evolutionary)
         return q
 
 class InProgress(Metrics):
@@ -187,7 +189,7 @@ class InProgress(Metrics):
     def _get_sql(self, evolutionary):
         q = self.db.GetReviewsSQL(self.filters.period, self.filters.startdate,
                                   self.filters.enddate, "inprogress",
-                                  self.filters.type_analysis, evolutionary, self.db.identities_db)
+                                  self.filters.type_analysis, evolutionary)
         return q
 
 
@@ -200,13 +202,13 @@ class New(Metrics):
     def _get_sql(self, evolutionary):
         q = self.db.GetReviewsSQL(self.filters.period, self.filters.startdate,
                                   self.filters.enddate, "new",
-                                  self.filters.type_analysis, evolutionary, self.db.identities_db)
+                                  self.filters.type_analysis, evolutionary)
         return q
 
     def _get_sqlchanges (self, evolutionary):
         q = self.db.GetReviewsChangesSQL(self.filters.period, self.filters.startdate,
                                          self.filters.enddate, "new",
-                                         self.filters.type_analysis, evolutionary, self.db.identities_db)
+                                         self.filters.type_analysis, evolutionary)
         return q
 
     def get_ts_changes(self):
@@ -224,7 +226,7 @@ class PatchesVerified(Metrics):
     def _get_sql(self, evolutionary):
         q = self.db.GetEvaluationsSQL (self.filters.period, self.filters.startdate,
                                        self.filters.enddate, "verified",
-                                       self.filters.type_analysis, evolutionary, self.db.identities_db)
+                                       self.filters.type_analysis, evolutionary)
         return q
 
 class PatchesApproved(Metrics):
@@ -236,7 +238,7 @@ class PatchesApproved(Metrics):
     def _get_sql(self, evolutionary):
         q = self.db.GetEvaluationsSQL (self.filters.period, self.filters.startdate,
                                        self.filters.enddate, "approved",
-                                       self.filters.type_analysis, evolutionary, self.db.identities_db)
+                                       self.filters.type_analysis, evolutionary)
         return q
 
 class PatchesCodeReview(Metrics):
@@ -248,7 +250,7 @@ class PatchesCodeReview(Metrics):
     def _get_sql(self, evolutionary):
         q = self.db.GetEvaluationsSQL (self.filters.period, self.filters.startdate,
                                        self.filters.enddate, "codereview",
-                                       self.filters.type_analysis, evolutionary, self.db.identities_db)
+                                       self.filters.type_analysis, evolutionary)
         return q
 
 class PatchesSent(Metrics):
@@ -260,7 +262,7 @@ class PatchesSent(Metrics):
     def _get_sql(self, evolutionary):
         q = self.db.GetEvaluationsSQL (self.filters.period, self.filters.startdate,
                                        self.filters.enddate, "sent",
-                                       self.filters.type_analysis, evolutionary, self.db.identities_db)
+                                       self.filters.type_analysis, evolutionary)
         return q
 
 class PatchesWaitingForReviewer(Metrics):
@@ -272,7 +274,7 @@ class PatchesWaitingForReviewer(Metrics):
 
     def _get_sql(self, evolutionary):
         q = self.db.GetWaiting4ReviewerSQL(self.filters.period, self.filters.startdate,
-                                           self.filters.enddate, self.db.identities_db,
+                                           self.filters.enddate,
                                            self.filters.type_analysis, evolutionary)
         return q
 
@@ -284,7 +286,7 @@ class PatchesWaitingForSubmitter(Metrics):
 
     def _get_sql(self, evolutionary):
         q = self.db.GetWaiting4SubmitterSQL(self.filters.period, self.filters.startdate,
-                                            self.filters.enddate, self.db.identities_db,
+                                            self.filters.enddate,
                                             self.filters.type_analysis, evolutionary)
         return q
 
@@ -299,17 +301,17 @@ class ReviewsWaitingForReviewer(Metrics):
 
         fields = "COUNT(DISTINCT(i.id)) as ReviewsWaitingForReviewer"
         tables = "changes c, issues i, (%s) t1" % q_last_change
-        tables += self.db.GetSQLReportFrom(self.db.identities_db, self.filters.type_analysis)
+        tables += self.db.GetSQLReportFrom(self.filters.type_analysis)
         filters = """
             i.id = c.issue_id  AND t1.id = c.id
             AND (c.field='CRVW' or c.field='Code-Review' or c.field='Verified' or c.field='VRIF')
             AND (c.new_value=1 or c.new_value=2)
         """
-        filters = filters + self.db.GetSQLReportWhere(self.filters.type_analysis, self.db.identities_db)
+        filters = filters + self.db.GetSQLReportWhere(self.filters.type_analysis)
 
         q = self.db.BuildQuery (self.filters.period, self.filters.startdate,
                                 self.filters.enddate, " c.changed_on",
-                                fields, tables, filters, evolutionary)
+                                fields, tables, filters, evolutionary, self.filters.type_analysis)
         return(q)
 
 
@@ -325,17 +327,17 @@ class ReviewsWaitingForSubmitter(Metrics):
 
         fields = "COUNT(DISTINCT(i.id)) as ReviewsWaitingForSubmitter"
         tables = "changes c, issues i, (%s) t1" % q_last_change
-        tables += self.db.GetSQLReportFrom(self.db.identities_db, self.filters.type_analysis)
+        tables += self.db.GetSQLReportFrom(self.filters.type_analysis)
         filters = """
             i.id = c.issue_id  AND t1.id = c.id
             AND (c.field='CRVW' or c.field='Code-Review' or c.field='Verified' or c.field='VRIF')
             AND (c.new_value=-1 or c.new_value=-2)
         """
-        filters = filters + self.db.GetSQLReportWhere(self.filters.type_analysis, self.db.identities_db)
+        filters = filters + self.db.GetSQLReportWhere(self.filters.type_analysis)
 
         q = self.db.BuildQuery (self.filters.period, self.filters.startdate,
                                 self.filters.enddate, " c.changed_on",
-                                fields, tables, filters, evolutionary)
+                                fields, tables, filters, evolutionary, self.filters.type_analysis)
         return q
 
 class Companies(Metrics):
@@ -351,7 +353,7 @@ class Companies(Metrics):
 
         q = self.db.BuildQuery (self.filters.period, self.filters.startdate,
                                 self.filters.enddate, " i.submitted_on",
-                                fields, tables, filters, evolutionary)
+                                fields, tables, filters, evolutionary, self.filters.type_analysis)
         return q
 
     def get_list (self):
@@ -383,7 +385,7 @@ class Countries(Metrics):
 
         q = self.db.BuildQuery (self.filters.period, self.filters.startdate,
                                 self.filters.enddate, " i.submitted_on",
-                                fields, tables, filters, evolutionary)
+                                fields, tables, filters, evolutionary, self.filters.type_analysis)
         return q
 
     def get_list  (self):
@@ -453,12 +455,14 @@ class Repositories(Metrics):
     data_source = SCR
 
     def _get_sql(self, evolutionary):
-        fields = "count(distinct(t.id)) as repositories"
+        fields = " count(distinct(t.id)) as repositories"
         tables = "issues i, trackers t"
-        filters = "i.tracker_id = t.id"
+        tables += self.db.GetSQLReportFrom(self.db.identities_db, self.filters.type_analysis)
+        filters = "i.tracker_id = t.id "
+        filters += self.db.GetSQLReportWhere(self.filters.type_analysis)
         q = self.db.BuildQuery (self.filters.period, self.filters.startdate,
                                 self.filters.enddate, " i.submitted_on",
-                                fields, tables, filters, evolutionary)
+                                fields, tables, filters, evolutionary, self.filters.type_analysis)
         return q
 
     def get_list  (self):
@@ -475,13 +479,29 @@ class Repositories(Metrics):
 
 
 class People(Metrics):
-    id = "people"
+    id = "people2"
     name = "People"
-    desc = "Number of persons active in code review activities"
+    desc = "Number of people active in code review activities"
     data_source = SCR
 
     def _get_sql(self, evolutionary):
         pass
+
+    def _get_top_global (self, days = 0, metric_filters = None):
+        """ Implemented using Submitters """
+        top = None
+        submitters = SCR.get_metrics("submitters", SCR)
+        if submitters is None:
+            submitters = EmailsSenders(self.db, self.filters)
+            top = submitters._get_top_global(days, metric_filters)
+        else:
+            afilters = submitters.filters
+            submitters.filters = self.filters
+            top = submitters._get_top_global(days, metric_filters)
+            submitters.filters = afilters
+
+        top['name'] = top.pop('openers')
+        return top
 
 class Reviewers(Metrics):
     id = "reviewers"
@@ -527,9 +547,9 @@ class Reviewers(Metrics):
 
     def _get_sql(self, evolutionary):
         fields = " count(distinct(changed_by)) as reviewers "
-        tables = " changes ch, issues i " + self.db.GetSQLReportFrom(self.db.identities_db, self.filters.type_analysis)
+        tables = " changes ch, issues i " + self.db.GetSQLReportFrom(self.filters.type_analysis)
         filters  = "ch.issue_id = i.id "
-        filters += self.db.GetSQLReportWhere(self.filters.type_analysis, self.db.identities_db)
+        filters += self.db.GetSQLReportWhere(self.filters.type_analysis)
 
         if (self.filters.type_analysis is None or len (self.filters.type_analysis) != 2) :
             #Specific case for the basic option where people_upeople table is needed
@@ -544,7 +564,7 @@ class Reviewers(Metrics):
 
         q = self.db.BuildQuery (self.filters.period, self.filters.startdate,
                                 self.filters.enddate, " ch.changed_on",
-                                fields, tables, filters, evolutionary)
+                                fields, tables, filters, evolutionary, self.filters.type_analysis)
         return q
 
 class Closers(Metrics):
@@ -605,8 +625,8 @@ class Submitters(Metrics):
     def __get_sql_trk_prj__(self, evolutionary):
         """ First we get the submitters then join with unique identities """
         tpeople_sql  = "SELECT  distinct(submitted_by) as submitted_by, submitted_on  "
-        tpeople_sql += " FROM issues i " + self.db.GetSQLReportFrom(self.db.identities_db, self.filters.type_analysis)
-        filters_ext = self.db.GetSQLReportWhere(self.filters.type_analysis, self.db.identities_db) 
+        tpeople_sql += " FROM issues i " + self.db.GetSQLReportFrom(self.filters.type_analysis)
+        filters_ext = self.db.GetSQLReportWhere(self.filters.type_analysis) 
         if (filters_ext != ""):
             # Hack: remove "and "
             filters_ext = filters_ext[4:]
@@ -619,15 +639,15 @@ class Submitters(Metrics):
 
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                self.filters.enddate, " tpeople.submitted_on ",
-                               fields, tables, filters, evolutionary)
+                               fields, tables, filters, evolutionary, self.filters.type_analysis)
         return q
 
 
     def __get_sql_default__(self, evolutionary):
         """ This function returns the evolution or agg number of people opening issues """
         fields = " count(distinct(pup.upeople_id)) as submitters "
-        tables = " issues i " + self.db.GetSQLReportFrom(self.db.identities_db, self.filters.type_analysis)
-        filters = self.db.GetSQLReportWhere(self.filters.type_analysis, self.db.identities_db)
+        tables = " issues i " + self.db.GetSQLReportFrom(self.filters.type_analysis)
+        filters = self.db.GetSQLReportWhere(self.filters.type_analysis)
 
         if (self.filters.type_analysis is None or len (self.filters.type_analysis) != 2) :
             #Specific case for the basic option where people_upeople table is needed
@@ -641,7 +661,7 @@ class Submitters(Metrics):
 
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                self.filters.enddate, " submitted_on ",
-                               fields, tables, filters, evolutionary)
+                               fields, tables, filters, evolutionary, self.filters.type_analysis)
         return q
 
     def _get_sql(self, evolutionary):
@@ -692,7 +712,7 @@ class TimeToReview(Metrics):
         if self.filters.period != "month": return None
         bots = []
         q = self.db.GetTimeToReviewQuerySQL (self.filters.startdate, self.filters.enddate,
-                                             self.db.identities_db, self.filters.type_analysis, bots)
+                                             self.filters.type_analysis, bots)
         return q
 
     def get_agg(self):
