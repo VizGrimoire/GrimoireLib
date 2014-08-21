@@ -243,6 +243,7 @@ def getPeriod(granularity, number = None):
 
 
 def removeDecimals(data):
+    """ Convert Decimal type to float """
     from decimal import Decimal
     if (isinstance(data, dict)):
         for key in data:
@@ -259,6 +260,26 @@ def removeDecimals(data):
             if (isinstance(data[i], list)):
                 data[i] = removeDecimals(data[i])
     return data
+
+def roundDecimals(data):
+    """ Limit the max number of decimals in floats """
+    from metrics import Metrics
+    if (isinstance(data, dict)):
+        for key in data:
+            if (isinstance(data[key], float)):
+                data[key] = round(data[key], Metrics.max_decimals)
+            elif (isinstance(data[key], list)):
+                data[key] = roundDecimals(data[key])
+            elif (isinstance(data[key], dict)):
+                data[key] = roundDecimals(data[key])
+    if (isinstance(data, list)):
+        for i in range(0,len(data)):
+            if (isinstance(data[i], float)):
+                data[i] = round(data[i], Metrics.max_decimals)
+            if (isinstance(data[i], list)):
+                data[i] = roundDecimals(data[i])
+    return data
+
 
 def convertDatetime(data):
     if (isinstance(data, dict)):
@@ -282,7 +303,8 @@ def createJSON(data, filepath, check=False, skip_fields = []):
     filepath_py = filepath_tokens[0]+"_py.json"
     filepath_r = filepath_tokens[0]+"_r.json"
 
-    json_data = json.dumps(convertDatetime(removeDecimals(data)), sort_keys=True)
+    checked_data = convertDatetime(roundDecimals(removeDecimals(data)))
+    json_data = json.dumps(checked_data, sort_keys=True)
     json_data = json_data.replace('NaN','"NA"')
     if check == False: #forget about R JSON checking
         jsonfile = open(filepath, 'w')
