@@ -596,7 +596,8 @@ class Query (GrimoireQuery):
     def timeseries (self):
         """Return a TimeSeries object.
 
-        The query has to include a group_by_period filter
+        The query has to include a group_by_period filter.
+
         """
 
         data = []
@@ -796,7 +797,7 @@ if __name__ == "__main__":
     print res.all()
 
     #---------------------------------
-    print_banner("Filter some paths")
+    print_banner("List of authors, filter some paths")
     res = resAuth.filter_paths(("examples",))
     print res.all()
 

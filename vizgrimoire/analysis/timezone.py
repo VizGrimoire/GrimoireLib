@@ -102,7 +102,7 @@ class Timezone(Analyses):
             # all the actors, considering only activty during
             # the startdate..enddate period (merges are not considered
             # as activity)
-            database = SCMDatabase (database = url,
+            database = SCMDatabase (url = url,
                                     schema = schema,
                                     schema_id = schema_id)
             session = database.build_session(SCMTZQuery, echo = False)
@@ -113,23 +113,8 @@ class Timezone(Analyses):
             res = res.filter_period(start=startdate, end=enddate)
             res = res.filter_nomerges()
             res = res.group_by_tz()
-            tz = {}
-            for row in res.all():
-                tz[row.tz] = row
-            for zone in range (-12, 12):
-                if zone not in tz:
-                    tz[zone] = (zone, 0, 0)
-            timezones = []
-            commits = []
-            authors = []
-            for zone in range (-12, 12):
-                timezones.append (zone)
-                commits.append (tz[zone][1])
-                authors.append (tz[zone][2])
-            return {"tz": timezones,
-                    "commits": commits,
-                    "authors": authors
-                    }
+            timezones = res.timezones()
+            return timezones
         logging.info("Error: data_source not supported!")
         return {}
 

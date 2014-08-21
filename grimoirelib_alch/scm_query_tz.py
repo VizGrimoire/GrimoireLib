@@ -26,9 +26,10 @@
 
 from sqlalchemy.sql import label
 from sqlalchemy import func
-from scm_query import DB, Query
+from scm_query import DB
+from scm_query import Query as SCMQuery
 
-class SCMTZQuery (Query):
+class SCMTZQuery (SCMQuery):
     """Class for dealing with SCM queries involving time zones"""
 
     def select_tz (self):
@@ -63,6 +64,32 @@ class SCMTZQuery (Query):
 
         return self.group_by ("tz")
 
+    def timezones (self):
+        """Return a TimeZones object.
+
+        The query has to include a group_by_tz filter.
+
+        """
+
+        # tz is a dict with timezones as keys, and result rows as tuples
+        tz = {}
+        for row in self.all():
+            tz[row.tz] = row
+        ncols = len (row)
+        fields = row._fields
+        for zone in range (-12, 12):
+            if zone not in tz:
+                tz[zone] = [zone] + [0] * (ncols - 1)
+        # timezone is the resulting dict, with a key for each result column
+        timezones = {}
+        for field in fields:
+            timezones[field] = []
+        for zone in range (-12, 12):
+            col = 0
+            for field in fields:
+                timezones[field].append (tz[zone][col])
+                col = col + 1
+        return timezones
 
 if __name__ == "__main__":
 
@@ -79,7 +106,7 @@ if __name__ == "__main__":
     # http://stackoverflow.com/questions/492483/setting-the-correct-encoding-when-piping-stdout-in-python
     sys.stdout = codecs.getwriter('utf8')(sys.stdout)
 
-    database = DB (database = 'mysql://jgb:XXX@localhost/',
+    database = DB (url = 'mysql://jgb:XXX@localhost/',
                    schema = 'oscon_opennebula_scm_tz',
                    schema_id = 'oscon_opennebula_scm_tz')
     session = database.build_session(SCMTZQuery, echo = False)
@@ -101,3 +128,5 @@ if __name__ == "__main__":
                                quotechar='|', quoting=csv.QUOTE_MINIMAL)
         for row in res.all():
             tz_writer.writerow (row)
+
+    print res.timezones()
