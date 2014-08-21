@@ -55,7 +55,8 @@ class SCR(DataSource):
 
     @staticmethod
     def get_metrics_not_filters():
-        metrics_not_filters =  ['verified','codereview','sent','WaitingForReviewer','WaitingForSubmitter','approved']
+        metrics_not_filters =  ['verified','codereview','sent','WaitingForReviewer',
+                                'WaitingForSubmitter','approved','repositories']
         return metrics_not_filters
 
     @staticmethod
@@ -158,8 +159,11 @@ class SCR(DataSource):
                 metrics_on_changes = ['merged','abandoned','new']
                 for item in all_metrics:
                     if item.id in metrics_on_changes and filter_ is None:
+                        mfilter_orig = item.filters
+                        item.filters = mfilter
                         mvalue = item.get_ts_changes()
                         data = dict(data.items() + mvalue.items())
+                        item.filters = mfilter_orig
         # END SCR SPECIFIC #
 
         if not evol:
@@ -178,7 +182,11 @@ class SCR(DataSource):
             for i in [7,30,365]:
                 for item in all_metrics:
                     if item.id not in metrics_trends: continue
+                    mfilter_orig = item.filters
+                    item.filters = mfilter
                     period_data = item.get_trends(enddate, i)
+                    item.filters = mfilter_orig
+
                     data = dict(data.items() +  period_data.items())
 
                     if type_analysis and type_analysis[1] is None:
@@ -389,7 +397,8 @@ class SCR(DataSource):
 
     @staticmethod
     def get_metrics_core_agg():
-        m =  ['submitted','opened','closed','merged','abandoned','new','inprogress','pending','review_time','repositories']
+        m =  ['submitted','opened','closed','merged','abandoned','new','inprogress',
+              'pending','review_time','repositories']
         # patches metrics
         m += ['verified','approved','codereview','sent','WaitingForReviewer','WaitingForSubmitter']
         m += ['submitters','reviewers']

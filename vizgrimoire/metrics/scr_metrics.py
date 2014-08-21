@@ -139,7 +139,7 @@ class Pending(Metrics):
         abandoned = metrics['abandoned'].get_agg()
 
         # GROUP BY queries not supported yet
-        if isinstance(submitted, dict):  pending = None
+        if isinstance(submitted['submitted'], list):  pending = None
         else: pending = submitted['submitted']-merged['merged']-abandoned['abandoned']
         return ({"pending":pending})
 
@@ -457,7 +457,7 @@ class Repositories(Metrics):
     def _get_sql(self, evolutionary):
         fields = " count(distinct(t.id)) as repositories"
         tables = "issues i, trackers t"
-        tables += self.db.GetSQLReportFrom(self.db.identities_db, self.filters.type_analysis)
+        tables += self.db.GetSQLReportFrom(self.filters.type_analysis)
         filters = "i.tracker_id = t.id "
         filters += self.db.GetSQLReportWhere(self.filters.type_analysis)
         q = self.db.BuildQuery (self.filters.period, self.filters.startdate,
