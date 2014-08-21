@@ -136,6 +136,8 @@ def completePeriodIdsMonths(ts_data, start, end):
         timestamp = calendar.timegm(current.timetuple())
         new_ts_data['unixtime'].append(unicode(timestamp))
         new_ts_data['id'].append(i)
+        import locale
+        locale.setlocale(locale.LC_ALL, "en_US.UTF-8")
         new_ts_data['date'].append(datetime.strftime(current, "%b %Y"))
 
     return new_ts_data
