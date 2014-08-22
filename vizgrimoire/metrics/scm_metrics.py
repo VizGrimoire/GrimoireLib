@@ -109,9 +109,10 @@ class Authors(Metrics):
         limit = metric_filters.npeople
         filter_bots = self.get_bots_filter_sql(metric_filters)
 
-        repos_from = self.db.GetSQLRepositoriesFrom()
+        repos_from = self.db.GetSQLReportFrom(["repository", repo])
         # Remove first and
-        repos_where = " WHERE  " + self.db.GetSQLRepositoriesWhere(repo)[4:]
+        #repos_where = " WHERE  " + self.db.GetSQLRepositoriesWhere(repo)[4:]
+        repos_where = " WHERE " + self.db.GetSQLReportWhere(["repository", repo])[4:]
 
         dtables = dfilters = ""
         if (days > 0):
@@ -128,7 +129,6 @@ class Authors(Metrics):
         q += " AND s.date >= " + startdate + " and s.date < " + enddate
         q += " GROUP by u.id ORDER BY commits DESC, authors"
         q += " limit " + str(self.filters.npeople)
-
         res = self.db.ExecuteQuery(q)
 
         return res
@@ -169,10 +169,12 @@ class Authors(Metrics):
         limit = metric_filters.npeople
         filter_bots = self.get_bots_filter_sql(metric_filters)
 
-        projects_from = self.db.GetSQLProjectFrom()
+        #projects_from = self.db.GetSQLProjectFrom()
+        projects_from = self.db.GetSQLReportFrom(["project", project])
 
         # Remove first and
-        projects_where = " WHERE  " + self.db.GetSQLProjectWhere(project)[3:]
+        #projects_where = " WHERE  " + self.db.GetSQLProjectWhere(project)[3:]
+        projects_where = " WHERE  " + self.db.GetSQLReportWhere(["project", project])[4:]
 
         fields =  "SELECT COUNT(DISTINCT(s.id)) as commits, u.id, u.identifier as authors "
         fields += "FROM actions a, scmlog s, people_upeople pup, upeople u "
@@ -771,9 +773,9 @@ class Companies(Metrics):
         project = self.filters.type_analysis[1]
         limit = self.filters.npeople
 
-        projects_from = self.db.GetSQLProjectFrom()
+        projects_from = self.db.GetSQLReportFrom(["project", project])
         # Remove first and
-        projects_where = " WHERE  " + self.db.GetSQLProjectWhere(project)[3:]
+        projects_where = " WHERE  " + self.db.GetSQLReportWhere(["project", project])[4:]
 
         fields =  "SELECT COUNT(DISTINCT(s.id)) as company_commits, c.name as companies "
         fields += "FROM scmlog s, people_upeople pup, upeople u, upeople_companies upc, companies c "
@@ -956,7 +958,7 @@ class Projects(Metrics):
 
 
 if __name__ == '__main__':
-    filters = MetricFilters("week", "'2014-04-01'", "'2014-07-01'", ["project", "'nova'"])
+    filters = MetricFilters("week", "'2014-04-01'", "'2014-07-01'", ["repository,company", "'nova.git','Red Hat'"])
     dbcon = SCMQuery("root", "", "dic_cvsanaly_openstack_2259_tm", "dic_cvsanaly_openstack_2259_tm",)
-    os_sw = Companies(dbcon, filters)
-    print os_sw.get_list()
+    os_sw = Commits(dbcon, filters)
+    print os_sw.get_ts()

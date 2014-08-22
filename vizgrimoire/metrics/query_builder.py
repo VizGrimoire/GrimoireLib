@@ -25,6 +25,7 @@ import logging
 import MySQLdb
 import re
 import sys
+from sets import Set
 
 class DSQuery(object):
     """ Generic methods to control access to db """
@@ -234,16 +235,25 @@ class SCMQuery(DSQuery):
 
     def GetSQLRepositoriesFrom (self):
         #tables necessaries for repositories
-        return (" , repositories r")
+        tables = Set([])
+        tables.add("repositories r")
+
+        return tables
 
     def GetSQLRepositoriesWhere (self, repository):
         #fields necessaries to match info among tables
-        return (" and r.name ="+ repository + \
-                " and r.id = s.repository_id")
+        fields = Set([])
+        fields.add("r.name ="+ repository)
+        fields.add("r.id = s.repository_id")
+
+        return fields
 
     def GetSQLProjectFrom (self):
         #tables necessaries for repositories
-        return (" , repositories r")
+        tables = Set([])
+        tables.add("repositories r")
+
+        return tables
 
     def GetSQLProjectWhere (self, project):
         # include all repositories for a project and its subprojects
@@ -251,66 +261,93 @@ class SCMQuery(DSQuery):
         if (project[0] == "'" and project[-1] == "'"):
             project = project[1:-1]
 
-        repos = """and r.uri IN (
+        fields = Set([])
+
+        repos = """r.uri IN (
                SELECT repository_name
                FROM   %s.projects p, %s.project_repositories pr
                WHERE  p.project_id = pr.project_id AND p.project_id IN (%s)
                      AND pr.data_source='scm'
                )""" % (self.identities_db, self.identities_db, self.get_subprojects(project))
+        fields.add(repos)
+        fields.add("r.id = s.repository_id")
 
-        return (repos   + " and r.id = s.repository_id")
+        return fields
 
     def GetSQLCompaniesFrom (self):
         #tables necessaries for companies
-        return (" , " + self.identities_db + ".people_upeople pup,"+\
-                        self.identities_db + ".upeople_companies upc,"+\
-                        self.identities_db + ".companies c")
+        tables = Set([])
+        tables.add(self.identities_db + ".people_upeople pup")
+        tables.add(self.identities_db + ".upeople_companies upc")
+        tables.add(self.identities_db + ".companies c")
+
+        return tables
 
     def GetSQLCompaniesWhere (self, company, role):
          #fields necessaries to match info among tables
-         fields = "and s."+role+"_id = pup.people_id "+\
-                 "  and pup.upeople_id = upc.upeople_id "+\
-                 "  and s.date >= upc.init "+\
-                 "  and s.date < upc.end "+\
-                 "  and upc.company_id = c.id "
-         if company is not None: fields += " AND c.name =" + company
+         fields = Set([])
+         fields.add("s."+role+"_id = pup.people_id")
+         fields.add("pup.upeople_id = upc.upeople_id")
+         fields.add("s.date >= upc.init")
+         fields.add("s.date < upc.end")
+         fields.add("upc.company_id = c.id")
+         if company is not None: fields.add("c.name =" + company)
+
          return fields
 
     def GetSQLCountriesFrom (self):
         #tables necessaries for companies
-        return (" , " + self.identities_db + ".people_upeople pup, "+\
-                        self.identities_db + ".upeople_countries upc, "+\
-                        self.identities_db + ".countries c")
+        tables = Set([])
+        tables.add(self.identities_db + ".people_upeople pup")
+        tables.add(self.identities_db + ".upeople_countries upc")
+        tables.add(self.identities_db + ".countries c")
+
+        return tables
 
     def GetSQLCountriesWhere (self, country, role):
          #fields necessaries to match info among tables
-        return ("and s."+role+"_id = pup.people_id "+\
-                      "and pup.upeople_id = upc.upeople_id "+\
-                      "and upc.country_id = c.id "+\
-                      "and c.name ="+ country)
+        fields = Set([])
+        fields.add("s."+role+"_id = pup.people_id")
+        fields.add("pup.upeople_id = upc.upeople_id")
+        fields.add("upc.country_id = c.id")
+        fields.add("c.name ="+ country)
+
+        return fields
 
     def GetSQLDomainsFrom (self) :
         #tables necessaries for domains
-        return (" , " + self.identities_db + ".people_upeople pup, "+\
-                        self.identities_db + ".upeople_domains upd, "+\
-                        self.identities_db + ".domains d")
+        tables = Set([])
+        tables.add(self.identities_db + ".people_upeople pup")
+        tables.add(self.identities_db + ".upeople_domains upd")
+        tables.add(self.identities_db + ".domains d")
+
+        return tables
 
     def GetSQLDomainsWhere (self, domain, role) :
         #fields necessaries to match info among tables
-        return ("and s."+role+"_id = pup.people_id "+\
-                "and pup.upeople_id = upd.upeople_id "+\
-                "and upd.domain_id = d.id "+\
-                "and d.name ="+ domain)
+        fields = Set([])
+        fields.add("s."+role+"_id = pup.people_id")
+        fields.add("pup.upeople_id = upd.upeople_id")
+        fields.add("upd.domain_id = d.id")
+        fields.add("d.name ="+ domain)
+
+        return fields
 
     def GetSQLPeopleFrom (self):
         #tables necessaries for companies
-        return (" , people_upeople pup, " + self.identities_db + ".upeople up ")
+        tables = Set([])
+        tables.add("people_upeople pup")
+        tables.add(self.identities_db + ".upeople up")
+
+        return tables
 
     def GetSQLPeopleWhere (self, name):
         #fields necessaries to match info among tables
-        fields = " AND s.author_id = pup.people_id " + \
-                 " AND up.id = pup.upeople_id "
-        if name is not None: fields += " AND up.identifier = "+name
+        fields = Set([])
+        fields.add("s.author_id = pup.people_id")
+        fields.add("up.id = pup.upeople_id")
+        if name is not None: fields.add("up.identifier = "+name)
+
         return fields
 
 
@@ -319,23 +356,30 @@ class SCMQuery(DSQuery):
         #"type" is a list of two values: type of analysis and value of 
         #such analysis
 
-        From = ""
+        from_str = ""
+        From = Set([])
 
-        if (type_analysis is None or len(type_analysis) != 2): return From
+        if (type_analysis is None or len(type_analysis) != 2): return from_str
+
+        # To be improved... not a very smart way of doing this
+        list_analysis = type_analysis[0].split(",")
 
         analysis = type_analysis[0]
-        # value = type_analysis[1]
 
-        if analysis == 'repository': From = self.GetSQLRepositoriesFrom()
-        elif analysis == 'company': From = self.GetSQLCompaniesFrom()
-        elif analysis == 'country': From = self.GetSQLCountriesFrom()
-        elif analysis == 'domain': From = self.GetSQLDomainsFrom()
-        elif analysis == 'project': From = self.GetSQLProjectFrom()
-        elif analysis == 'people': From = self.GetSQLPeopleFrom()
-        elif analysis == 'people2': From = self.GetSQLPeopleFrom()
-        else: raise Exception( analysis + " not supported")
+        for analysis in list_analysis:
+            if analysis == 'repository': From.union_update(self.GetSQLRepositoriesFrom())
+            elif analysis == 'company': From.union_update(self.GetSQLCompaniesFrom())
+            elif analysis == 'country': From.union_update(self.GetSQLCountriesFrom())
+            elif analysis == 'domain': From.union_update(self.GetSQLDomainsFrom())
+            elif analysis == 'project': From.union_update(self.GetSQLProjectFrom())
+            elif analysis == 'people': From.union_update(self.GetSQLPeopleFrom())
+            elif analysis == 'people2': From.union_update(self.GetSQLPeopleFrom())
+            else: raise Exception( analysis + " not supported")
 
-        return (From)
+        for i in range(len(From)):
+            from_str += " , " + From.pop()
+
+        return (from_str)
 
     def GetSQLReportWhere (self, type_analysis, role = "author"):
         #generic function to generate 'where' clauses
@@ -343,23 +387,33 @@ class SCMQuery(DSQuery):
         #"type" is a list of two values: type of analysis and value of 
         #such analysis
 
-        where = ""
+        where_str = ""
+        where = Set([])
 
-        if (type_analysis is None or len(type_analysis) != 2): return where
+        if (type_analysis is None or len(type_analysis) != 2): return where_str
 
         analysis = type_analysis[0]
         value = type_analysis[1]
 
-        if analysis == 'repository': where = self.GetSQLRepositoriesWhere(value)
-        elif analysis == 'company': where = self.GetSQLCompaniesWhere(value, role)
-        elif analysis == 'country': where = self.GetSQLCountriesWhere(value, role)
-        elif analysis == 'domain': where = self.GetSQLDomainsWhere(value, role)
-        elif analysis == 'project': where = self.GetSQLProjectWhere(value)
-        elif analysis == 'people': where = self.GetSQLPeopleWhere(value)
-        elif analysis == 'people2': where = self.GetSQLPeopleWhere(value)
-        else: raise Exception( analysis + " not supported")
+        # To be improved... not a very smart way of doing this...
+        list_values = type_analysis[1].split(",")
+        list_analysis = type_analysis[0].split(",")
 
-        return (where)
+        for analysis in list_analysis:
+            value = list_values[list_analysis.index(analysis)]
+            if analysis == 'repository': where.union_update(self.GetSQLRepositoriesWhere(value))
+            elif analysis == 'company': where.union_update(self.GetSQLCompaniesWhere(value, role))
+            elif analysis == 'country': where.union_update(self.GetSQLCountriesWhere(value, role))
+            elif analysis == 'domain': where.union_update(self.GetSQLDomainsWhere(value, role))
+            elif analysis == 'project': where.union_update(self.GetSQLProjectWhere(value))
+            elif analysis == 'people': where.union_update(self.GetSQLPeopleWhere(value))
+            elif analysis == 'people2': where.union_update(self.GetSQLPeopleWhere(value))
+            else: raise Exception( analysis + " not supported")
+
+        for i in range(len(where)):
+            where_str += " and " + where.pop()
+
+        return where_str
 
     # To be used in the future for apply a generic filter to all queries
     def GetCommitsFiltered(self):
