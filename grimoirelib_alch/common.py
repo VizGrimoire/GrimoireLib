@@ -26,94 +26,6 @@
 from sqlalchemy.orm import Session
 from common_query import GrimoireDatabase
 
-class DatabaseDefinition:
-    """Class for defining a Grimoire database.
-
-    For defining a "Grimoire Database" usually a SQLAlchemy database
-    name and a set of schemas are needed.
-
-    Attributes
-    ----------
-
-    url: string
-       SQLAlchemy url for the database to be used, such as
-       mysql://user:passwd@host:port/
-    schema: string
-       Schema name for the main data (SCM, ITS, MLS, etc.)
-    schema_id: string
-       Schema name for the unique ids data.
-    
-    """
-
-    def __init__ (self, url, schema, schema_id):
-        """Create a database definition.
-
-        Parameters
-        ----------
-
-        url: string
-           SQLAlchemy url for the database to be used, such as
-           mysql://user:passwd@host:port/
-        schema: string
-           Schema name for the main data (SCM, ITS, MLS, etc.)
-        schema_id: string
-           Schema name for the unique ids data.
-        echo: Boolean
-           Write SQL queries to output stream or not (default: False).
-
-        """
-
-        self.url = url
-        self.schema = schema
-        self.schema_id = schema_id
-
-    def create_session (self, echo = False):
-        """Creates a session for the defined database.
-
-        Uses _datasource_cls() to determine which kind of Grimoire database
-        is being used (SCM, ITS, MLS, etc.). It should be provided by
-        children classes.
-
-        echo: Boolean
-           Write debugging information to output stream or not.
-
-        Returns
-        -------
-
-        session: sqalchemy.orm.Session suitable for querying.
-
-        """
-
-        database_cls, query_cls = self._datasource_cls()
-        DB = database_cls(url = self.url,
-                          schema = self.schema,
-                          schema_id = self.schema_id)
-        return DB.build_session(query_cls, echo = echo)
-
-    def _datasource_cls(self):
-        """Return classes related to datasource.
-
-        Returns:
-        --------
-
-        common_query.GrimoireDatabase: subclass for Grimoire database to use
-        common_query.GrimoireQuery: subclass for Grimoire Query to use
-
-        """
-
-        raise Exception ("_datasource_cls should be provided by child class")
-
-    def __repr__ (self):
-
-        repr = "Database url: " + self.url + "\n"
-        repr = repr + " Main database schema: " + self.schema + "\n"
-        repr = repr + " Unique id database schema: " + self.schema_id + "\n"
-        return repr
-
-    def __str__ (self):
-
-        return self.__repr__()
-
 class Family:
     """Root of hierarchy of families of entities.
 
@@ -191,9 +103,9 @@ class DBFamily:
         Parameters
         ----------
 
-        datasource: {sqlalchemy.orm.Session | Common.DatabaseDefinition}
+        datasource: {sqlalchemy.orm.Session | GrimoireDatabase}
            If Session, active session for working with an SQLAlchemy database.
-           If DatabaseDefinition, the names defining a Grimoire database.
+           If GrimoireDatabase, a Grimoire database object.
         name: string
            Entity name. Each child class will define valid strings for
            the entities that can be instantiated for the corresponding
@@ -209,17 +121,34 @@ class DBFamily:
         self.echo = echo
         if isinstance(datasource, Session):
             self.session = datasource
-        elif isinstance(datasource, DatabaseDefinition):
-            # Create a session using info in database
-            self.session = datasource.create_session(echo = echo)
         elif isinstance(datasource, GrimoireDatabase):
             # Create a session using info in database
-            self.session = datasource.build_session(echo = echo)
+            query_cls = self._query_cls ()
+            self.session = datasource.build_session(query_cls = query_cls,
+                                                    echo = echo)
         else:
             raise Exception ("DBFamily: datasource must be of " + \
                                  "sqlalchemy.orm.Session or " + \
-                                 "DatabaseDefinition class.")
+                                 "GrimoreDatabase class.")
         self._init (name, conditions)
+
+    def _query_cls(self):
+        """Return the default Query class.
+
+        If None, the underlaying Query class used by default by the
+        datasource will be used. This function returns None, child
+        classes should override that if needed (usually, when a
+        Query class which is not the default one for the datasource
+        is needed).
+
+        Returns
+        -------
+
+        GrimoireQuery: Query class.
+
+        """
+
+        return None
 
     def _init (self, name, conditions):
         """Initialize everything, once a session is ready.

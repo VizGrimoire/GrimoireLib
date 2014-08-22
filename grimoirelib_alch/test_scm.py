@@ -23,8 +23,9 @@
 ##
 
 from datetime import datetime
-from scm import SCMDatabaseDefinition, SCM, \
-    NomergesCondition, BranchesCondition, PeriodCondition
+from scm_query import DB
+from scm import SCM
+from scm import NomergesCondition, BranchesCondition, PeriodCondition
 import unittest
 
 url = 'mysql://jgb:XXX@localhost/'
@@ -35,10 +36,10 @@ class TestSCM (unittest.TestCase):
 
     def setUp (self):
 
-        self.database = SCMDatabaseDefinition (url = url,
-                                               schema = schema,
-                                               schema_id = schema_id)
-        self.session = self.database.create_session()
+        self.database = DB (url = url,
+                            schema = schema,
+                            schema_id = schema_id)
+        self.session = self.database.build_session()
         self.start = datetime(2013,11,13)
         self.end = datetime(2014,2,1)
 

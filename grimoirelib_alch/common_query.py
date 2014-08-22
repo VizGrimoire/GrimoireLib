@@ -29,7 +29,6 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm.query import Query
 from sqlalchemy.ext.declarative import declarative_base, DeferredReflection
 
-
 class GrimoireDatabase:
     """Class for dealing with Grimoire databases.
 
@@ -149,6 +148,17 @@ class GrimoireDatabase:
         Session = sessionmaker(bind=engine, query_cls=query_cls)
         session = Session()
         return (session)
+
+    def __repr__ (self):
+
+        repr = "Database url: " + self.url + "\n"
+        repr = repr + " Main database schema: " + self.schema + "\n"
+        repr = repr + " Unique id database schema: " + self.schema_id + "\n"
+        return repr
+
+    def __str__ (self):
+
+        return self.__repr__()
 
 
 class GrimoireQuery (Query):

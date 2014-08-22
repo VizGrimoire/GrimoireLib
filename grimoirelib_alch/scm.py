@@ -23,27 +23,8 @@
 ##   Jesus M. Gonzalez-Barahona <jgb@bitergia.com>
 ##
 
-from common import DatabaseDefinition, DBFamily, DBCondition
+from common import DBFamily, DBCondition
 from scm_query import DB, Query
-
-class SCMDatabaseDefinition (DatabaseDefinition):
-    """Class for defining a SCM (CVSAnalY) Grimoire database.
-
-    """
-
-    def _datasource_cls(self):
-        """Return classes related to datasource.
-
-        Returns:
-        --------
-
-        common_query.GrimoireDatabase: subclass for Grimoire database to use
-        common_query.GrimoireQuery: subclass for Grimoire Query to use
-
-        """
-
-        return DB, Query
-
 
 class SCM (DBFamily):
     """Constructor of entities in the SCM family.
@@ -185,9 +166,6 @@ if __name__ == "__main__":
 
     stdout_utf8()
 
-    # database = SCMDatabaseDefinition (url = "mysql://jgb:XXX@localhost/",
-    #                                schema = "vizgrimoire_cvsanaly",
-    #                                schema_id = "vizgrimoire_cvsanaly")
     database = DB (url = "mysql://jgb:XXX@localhost/",
                    schema = "vizgrimoire_cvsanaly",
                    schema_id = "vizgrimoire_cvsanaly")
@@ -213,7 +191,6 @@ if __name__ == "__main__":
                 name = "listcommits")
     print data.list()
 
-#    session = database.create_session()
     session = database.build_session()
 
     #---------------------------------

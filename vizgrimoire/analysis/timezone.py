@@ -23,9 +23,10 @@
 # Timezone analysis. Time zones for developers and contributions.
 #
 
-from scm import PeriodCondition, NomergesCondition
+from scm import PeriodCondition as SCMPeriodCondition
+from scm import NomergesCondition as SCMNomergesCondition 
 from scm_query import DB as SCMDatabase
-from scm_query_tz import SCMTZQuery
+from activity_timezones import SCMActivityTZ
 from analyses import Analyses
 from SCM import SCM
 from datetime import datetime, timedelta
@@ -98,22 +99,16 @@ class Timezone(Analyses):
         enddate = datetime.strptime(self.filters.enddate, "'%Y-%m-%d'")
         if data_source == SCM:
             logging.info("Analyzing timezone for SCM")
-            # Activity data (start time, end time for contributions) for
-            # all the actors, considering only activty during
-            # the startdate..enddate period (merges are not considered
-            # as activity)
+            period = SCMPeriodCondition (start = startdate, end = enddate)
+            nomerges = SCMNomergesCondition()
             database = SCMDatabase (url = url,
                                     schema = schema,
                                     schema_id = schema_id)
-            session = database.build_session(SCMTZQuery, echo = False)
-            # session = buildSession(database = database,
-            #                        cls = SCMTZQuery, echo = False)
-
-            res = session.query().select_tz()
-            res = res.filter_period(start=startdate, end=enddate)
-            res = res.filter_nomerges()
-            res = res.group_by_tz()
-            timezones = res.timezones()
+            data = SCMActivityTZ (
+                datasource = database,
+                name = "authors",
+                conditions = (period, nomerges))
+            timezones = data.timezones()
             return timezones
         logging.info("Error: data_source not supported!")
         return {}

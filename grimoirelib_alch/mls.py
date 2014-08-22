@@ -23,42 +23,8 @@
 ##   Jesus M. Gonzalez-Barahona <jgb@bitergia.com>
 ##
 
-from common import DatabaseDefinition, DBFamily, DBCondition
+from common import DBFamily, DBCondition
 from mls_query import DB, Query
-
-class MLSDatabaseDefinition (DatabaseDefinition):
-    """Class for defining a MLS (MLStats) Grimoire database.
-
-    """
-
-    def _datasource_cls(self):
-        """Return classes related to datasource.
-
-        Returns:
-        --------
-
-        common_query.GrimoireDatabase: subclass for Grimoire database to use
-        common_query.GrimoireQuery: subclass for Grimoire Query to use
-
-        """
-
-        return DB, Query
-
-
-# class Condition ():
-#     """Root of all conditions
-
-#     Provides a filter method which will be called when applying the condition.
-#     """
-
-#     def filter (query):
-#         """Filter to apply for this condition
-
-#         - query: query to which the filter will be applied
-#         """
-
-#         return query
-
 
 class PeriodCondition (DBCondition):
     """Period Condition for qualifying a variable

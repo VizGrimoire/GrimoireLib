@@ -29,7 +29,8 @@ from sqlalchemy import func
 from scm_query import DB
 from scm_query import Query as SCMQuery
 
-class SCMTZQuery (SCMQuery):
+
+class Query (SCMQuery):
     """Class for dealing with SCM queries involving time zones"""
 
     def select_tz (self):
@@ -41,7 +42,7 @@ class SCMTZQuery (SCMQuery):
         Returns
         -------
 
-        SCMTZQuery object
+        Query object
 
         """
 
@@ -58,7 +59,7 @@ class SCMTZQuery (SCMQuery):
         Returns
         -------
 
-        SCMTZQuery object
+        Query object
 
         """
 
@@ -93,26 +94,20 @@ class SCMTZQuery (SCMQuery):
 
 if __name__ == "__main__":
 
-    import sys
-    import codecs
-    from standalone import print_banner
-
+    from standalone import stdout_utf8, print_banner
     from datetime import datetime
     import jsonpickle
     import csv
 
-    # Trick to make the script work when using pipes
-    # (pipes confuse the interpreter, which sets codec to None)
-    # http://stackoverflow.com/questions/492483/setting-the-correct-encoding-when-piping-stdout-in-python
-    sys.stdout = codecs.getwriter('utf8')(sys.stdout)
+    stdout_utf8()
 
     database = DB (url = 'mysql://jgb:XXX@localhost/',
                    schema = 'oscon_opennebula_scm_tz',
                    schema_id = 'oscon_opennebula_scm_tz')
-    session = database.build_session(SCMTZQuery, echo = False)
+    session = database.build_session(query_cls = Query, echo = False)
 
     #---------------------------------
-    print_banner ("Number of commits")
+    print_banner ("Activity per timezone, raw from database")
     res = session.query().select_tz()
     res = res.filter_period(start=datetime(2014,1,1),
                             end=datetime(2014,7,1))
@@ -121,12 +116,18 @@ if __name__ == "__main__":
     print res
     print res.all()
 
+    #---------------------------------
+    print_banner ("Activity per timezone, raw from database, JSON")
     print jsonpickle.encode(res.all(), unpicklable=False)
 
+    #---------------------------------
+    print_banner ("Activity per timezone, raw, CSV in /tmp/tz.csv")
     with open ('/tmp/tz.csv', 'wb') as csvfile:
         tz_writer = csv.writer(csvfile, delimiter=' ',
                                quotechar='|', quoting=csv.QUOTE_MINIMAL)
         for row in res.all():
             tz_writer.writerow (row)
 
+    #---------------------------------
+    print_banner ("Activity per timezone, timezones()")
     print res.timezones()
