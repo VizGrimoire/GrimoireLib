@@ -26,9 +26,9 @@
 
 from common import DBFamily
 from scm_query import DB as SCMDatabase
-from scm_query_tz import Query
-# from mls_query import DB as MLSDatabase
-# from mls_query import Query as MLSQuery
+from scm_query_tz import Query as SCMTZQuery
+from mls_query import DB as MLSDatabase
+from mls_query_tz import Query as MLSTZQuery
 
 class ActivityTZ (DBFamily):
     """Root factory of entities in the ActivityTZ family.
@@ -64,7 +64,7 @@ class ActivityTZ (DBFamily):
 
         """
 
-        return Query
+        return None
 
     def _produce_query (self, name):
         """Produce the base query to obtain activity per timezone.
@@ -113,6 +113,18 @@ class SCMActivityTZ (ActivityTZ):
     
     """
 
+    def _query_cls(self):
+        """Return the default Query class.
+
+        Returns
+        -------
+
+        GrimoireQuery: Query class.
+
+        """
+
+        return SCMTZQuery
+
     def _produce_query (self, name):
         """Produce the base query to obtain activity per timezone.
 
@@ -145,6 +157,18 @@ class MLSActivityTZ (ActivityTZ):
     Interface to entities related to activity of persons in MLS.
     
     """
+
+    def _query_cls(self):
+        """Return the default Query class.
+
+        Returns
+        -------
+
+        GrimoireQuery: Query class.
+
+        """
+
+        return MLSTZQuery
 
     def _produce_query (self, name):
         """Produce the base query to obtain activity per timezone.
@@ -194,7 +218,7 @@ if __name__ == "__main__":
 
     #---------------------------------
     print_banner("Author activity per time zone (now using session)")
-    session = database.build_session(query_cls = Query)
+    session = database.build_session(query_cls = SCMTZQuery)
     data = SCMActivityTZ (
         datasource = session,
         name = "authors")
@@ -212,3 +236,14 @@ if __name__ == "__main__":
     tz = data.timezones()
     print tz
 
+    database = MLSDatabase (url = 'mysql://jgb:XXX@localhost/',
+                   schema = 'oscon_openstack_mls',
+                   schema_id = 'oscon_openstack_scm')
+
+    #---------------------------------
+    print_banner("Sender activity per time zone")
+    data = MLSActivityTZ (
+        datasource = database,
+        name = "senders")
+    tz = data.timezones()
+    print tz

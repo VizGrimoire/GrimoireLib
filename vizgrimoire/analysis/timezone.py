@@ -26,9 +26,12 @@
 from scm import PeriodCondition as SCMPeriodCondition
 from scm import NomergesCondition as SCMNomergesCondition 
 from scm_query import DB as SCMDatabase
-from activity_timezones import SCMActivityTZ
+from mls import PeriodCondition as MLSPeriodCondition
+from mls_query import DB as MLSDatabase
+from activity_timezones import SCMActivityTZ, MLSActivityTZ
 from analyses import Analyses
 from SCM import SCM
+from MLS import MLS
 from datetime import datetime, timedelta
 from jsonpickle import encode, set_encoder_options
 import codecs
@@ -108,11 +111,22 @@ class Timezone(Analyses):
                 datasource = database,
                 name = "authors",
                 conditions = (period, nomerges))
+        elif data_source == MLS:
+            logging.info("Analyzing timezone for MLS")
+            period = MLSPeriodCondition (start = startdate, end = enddate)
+            database = MLSDatabase (url = url,
+                                    schema = schema,
+                                    schema_id = schema_id)
+            data = MLSActivityTZ (
+                datasource = database,
+                name = "senders",
+                conditions = (period,))
+        if data_source in (SCM, MLS):
             timezones = data.timezones()
             return timezones
-        logging.info("Error: data_source not supported!")
-        return {}
-
+        else:
+            logging.info("Error: data_source not supported!")
+            return {}
 
     def create_report(self, data_source, destdir):
         """Create report for the analysis.
@@ -133,6 +147,8 @@ class Timezone(Analyses):
         logging.info("Producing report for study: Timezone")
         if data_source == SCM:
             prefix = "scm"
+        if data_source == MLS:
+            prefix = "mls"
         else:
             logging.info("Error: data_source not supported for Timezone")
             return
@@ -167,3 +183,15 @@ if __name__ == '__main__':
                         encoding="utf8")
     print encode(tz.result(SCM), unpicklable=False)
 
+    # Nos, MLS
+    dbcon = DSQuery(user = "jgb", password = "XXX", 
+                    database = "oscon_openstack_mls",
+                    identities_db = "oscon_openstack_scm")
+    tz = Timezone(dbcon, filters)
+
+    # Produce pretty JSON output
+    set_encoder_options('json', sort_keys=True, indent=4,
+                        separators=(',', ': '),
+                        ensure_ascii=False,
+                        encoding="utf8")
+    print encode(tz.result(MLS), unpicklable=False)

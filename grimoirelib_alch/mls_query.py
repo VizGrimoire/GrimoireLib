@@ -104,66 +104,6 @@ class DB (GrimoireDatabase):
             tablename = 'upeople',
             schemaname = self.schema_id)
 
-    # def __init__(self, database, schema, schema_id):
-    #     """Instatiation.
-
-    #     Parameters
-    #     ----------
-
-    #     database: string        # ;:
-    #        SQLAlchemy url for the database to be used, such as
-    #        mysql://user:passwd@host:port/
-    #     schema: string
-    #        Schema name for the ITS data
-    #     schema_id: string
-    #        Schema name for the unique ids data
-        
-    #     """
-
-    #     global Messages, MessagesPeople, People, PeopleUPeople, MailingLists
-    #     global UPeople
-    #     self.database = database
-    #     Base = declarative_base(cls=DeferredReflection)
-    #     self.Base = Base
-    #     self.query_cls = MLSQuery
-    #     Messages = table_factory (
-    #         bases = (Base,), name = 'Messages',
-    #         tablename = 'messages',
-    #         schemaname = schema,
-    #         columns = dict (
-    #             mailing_list_url = Column(
-    #                 String,
-    #                 ForeignKey(schema + '.' + 'mailing_lists.mailing_list_url'))
-    #             ))
-    #     MessagesPeople = table_factory (
-    #         bases = (Base,), name = 'MessagesPeople',
-    #         tablename = 'messages_people',
-    #         schemaname = schema,
-    #         columns = dict (
-    #             mailing_list_url = Column(
-    #                 String,
-    #                 ForeignKey(schema + '.' + 'mailing_lists.mailing_list_url')),
-    #             message_id = Column(
-    #                 String,
-    #                 ForeignKey(schema + '.' + 'messages.message_ID'))     
-    #             ))
-    #     People = table_factory (bases = (Base,), name = 'People',
-    #                             tablename = 'people',
-    #                             schemaname = schema)
-    #     PeopleUPeople = table_factory (bases = (Base,), name = 'PeopleUPeople',
-    #                             tablename = 'people_upeople',
-    #                             schemaname = schema,
-    #                             columns = dict (
-    #             upeople_id = Column(Integer,
-    #                                 ForeignKey(schema + '.' + 'upeople.id'))
-    #             ))
-    #     MailingLists = table_factory (bases = (Base,), name = 'MailingLists',
-    #                             tablename = 'mailing_lists',
-    #                             schemaname = schema)
-    #     UPeople = table_factory (bases = (Base,), name = 'UPeople',
-    #                             tablename = 'upeople',
-    #                             schemaname = schema_id)
-
 
 class Query (GrimoireQuery):
     """Class for dealing with MLS queries"""

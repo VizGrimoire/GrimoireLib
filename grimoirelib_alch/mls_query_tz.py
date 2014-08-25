@@ -17,8 +17,8 @@
 ## along with this program; if not, write to the Free Software
 ## Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 ##
-## Package to deal with queries for SCM data from *Grimoire, related to
-##  timezones in dates (CVSAnalY databases)
+## Package to deal with queries for MLS data from *Grimoire, related to
+##  timezones in dates (MLStats databases)
 ##
 ## Authors:
 ##   Jesus M. Gonzalez-Barahona <jgb@bitergia.com>
@@ -26,18 +26,18 @@
 
 from sqlalchemy.sql import label
 from sqlalchemy import func
-from scm_query import DB
-from scm_query import Query as SCMQuery
+from mls_query import DB
+from mls_query import Query as MLSQuery
 
 
-class Query (SCMQuery):
+class Query (MLSQuery):
     """Class for dealing with SCM queries involving time zones"""
 
     def select_tz (self):
         """Select time zones and other related fields from database.
 
-        Selects count of commits, count of distinct authors,
-        time zone, and month / year for author_date.
+        Selects count of messages, count of distinct senders,
+        time zone.
 
         Returns
         -------
@@ -48,9 +48,15 @@ class Query (SCMQuery):
 
         query = self.add_columns(
             label("tz",
-                  ((DB.SCMLog.author_date_tz.op('div')(3600) + 36) % 24) - 12),
-            label("commits", func.count(func.distinct(DB.SCMLog.id))),
-            label("authors", func.count(func.distinct(DB.SCMLog.author_id))))
+                  ((DB.Messages.first_date_tz.op('div')(3600) + 36) % 24) - 12),
+            label("messages",
+                  func.count(func.distinct(DB.Messages.message_ID))),
+            label("authors",
+                  func.count(func.distinct(DB.MessagesPeople.email_address))))
+        if DB.MessagesPeople not in self.joined:
+            query = query.join (DB.MessagesPeople)
+            self.joined.append (DB.MessagesPeople)
+            query = query.filter (DB.MessagesPeople.type_of_recipient == "From")
         return query
 
     def group_by_tz (self):
@@ -102,8 +108,8 @@ if __name__ == "__main__":
     stdout_utf8()
 
     database = DB (url = 'mysql://jgb:XXX@localhost/',
-                   schema = 'oscon_opennebula_scm_tz',
-                   schema_id = 'oscon_opennebula_scm_tz')
+                   schema = 'oscon_openstack_mls',
+                   schema_id = 'oscon_openstack_scm')
     session = database.build_session(query_cls = Query, echo = False)
 
     #---------------------------------
@@ -122,7 +128,7 @@ if __name__ == "__main__":
 
     #---------------------------------
     print_banner ("Activity per timezone, raw, CSV in /tmp/tz.csv")
-    with open ('/tmp/scm-tz.csv', 'wb') as csvfile:
+    with open ('/tmp/mls-tz.csv', 'wb') as csvfile:
         tz_writer = csv.writer(csvfile, delimiter=' ',
                                quotechar='|', quoting=csv.QUOTE_MINIMAL)
         for row in res.all():

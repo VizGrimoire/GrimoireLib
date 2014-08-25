@@ -27,7 +27,7 @@ from common import DBFamily, DBCondition
 from mls_query import DB, Query
 
 class PeriodCondition (DBCondition):
-    """Period Condition for qualifying a variable
+    """Period Condition for qualifying an entity.
 
     Specifies the period when the variable has to be considered"""
 
@@ -46,8 +46,7 @@ class PeriodCondition (DBCondition):
 
         - start (datetime): start of the period
         - end (datetime): end of the period
-        - date: "commit" or "author"
-            Git maintains "commit" and "author" date
+        - date: "arrival"
         """
 
         self.start = start
