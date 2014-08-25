@@ -959,8 +959,19 @@ class Projects(Metrics):
 
 
 if __name__ == '__main__':
-    #filters = MetricFilters("week", "'2014-04-01'", "'2014-07-01'", ["repository,company", "'nova.git','Red Hat'"])
-    filters = MetricFilters("week", "'2014-04-01'", "'2014-07-01'", None, 10, "OpenStack Jenkins")
+    filters1 = MetricFilters("week", "'2014-04-01'", "'2014-07-01'", ["repository,company", "'nova.git','Red Hat'"])
+    filters2 = MetricFilters("week", "'2014-04-01'", "'2014-07-01'", ["repository,company", "'nova.git','Red Hat'"], 10, "OpenStack Jenkins")
+    filters3 = MetricFilters("week", "'2014-04-01'", "'2014-07-01'", None, 10, "OpenStack Jenkins,Jenkins")
+    filters4 = MetricFilters("week", "'2014-04-01'", "'2014-07-01'", None, 10)
     dbcon = SCMQuery("root", "", "dic_cvsanaly_openstack_2259_tm", "dic_cvsanaly_openstack_2259_tm",)
-    os_sw = Commits(dbcon, filters)
+    os_sw = Commits(dbcon, filters1)
+    print os_sw.get_ts()
+
+    os_sw = Commits(dbcon, filters2)
+    print os_sw.get_ts()
+
+    os_sw = Commits(dbcon, filters3)
+    print os_sw.get_ts()
+
+    os_sw = Commits(dbcon, filters4)
     print os_sw.get_ts()

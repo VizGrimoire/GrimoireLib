@@ -355,9 +355,9 @@ class SCMQuery(DSQuery):
         # Another option is to remove those bots directly in the people table.
         tables = Set([])
         #tables.add("scmlog s")
-        tables.add("people p")
-        tables.add("people_upeople pup")
-        tables.add("upeople u")
+        tables.add(self.identities_db + ".people p")
+        tables.add(self.identities_db + ".people_upeople pup")
+        tables.add(self.identities_db + ".upeople u")
 
         return tables
 
