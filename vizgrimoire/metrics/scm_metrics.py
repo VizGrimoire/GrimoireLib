@@ -62,6 +62,26 @@ class Commits(Metrics):
         return query
 
 
+class Revisions(Metrics):
+    """ Unique revisions class for source code management """
+
+    id = "revisions"
+    name = "Revisions"
+    desc = "Unique revisions submitted to the source code"
+    data_source = SCM
+
+    def _get_sql(self, evolutionary):
+        q_actions = " AND s.id IN (select distinct(a.commit_id) from actions a)"
+
+        fields = " count(distinct(s.rev)) as revisions "
+        tables = " scmlog s " + self.db.GetSQLReportFrom(self.filters.type_analysis)
+        filters = self.db.GetSQLReportWhere(self.filters.type_analysis, "author") + q_actions
+        query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
+                                   self.filters.enddate, " s.date ", fields,
+                                   tables, filters, evolutionary, self.filters.type_analysis)
+        return query
+
+
 class Authors(Metrics):
     """ Authors metric class for source code management systems """
 
@@ -960,7 +980,12 @@ class Projects(Metrics):
 
 
 if __name__ == '__main__':
-    filters = MetricFilters("week", "'2014-04-01'", "'2014-07-01'", ["project", "'nova'"])
+    filters = MetricFilters("week", "'2010-04-01'", "'2014-09-01'", [])
     dbcon = SCMQuery("root", "", "dic_cvsanaly_openstack_2259_tm", "dic_cvsanaly_openstack_2259_tm",)
-    os_sw = Companies(dbcon, filters)
-    print os_sw.get_list()
+
+    os_sw = Revisions(dbcon, filters)
+    print os_sw.get_agg()
+
+    os_sw = Commits(dbcon, filters)
+    print os_sw.get_agg()
+
