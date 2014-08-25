@@ -25,10 +25,10 @@
 ##
 
 from common import DBFamily
-from scm_query import DB as SCMDatabase
-from scm_query_tz import Query as SCMTZQuery
-from mls_query import DB as MLSDatabase
-from mls_query_tz import Query as MLSTZQuery
+from grimoirelib_alch.query.scm import DB as SCMDatabase
+from grimoirelib_alch.query.scm_tz import Query as SCMTZQuery
+from grimoirelib_alch.query.mls import DB as MLSDatabase
+from grimoirelib_alch.query.mls_tz import Query as MLSTZQuery
 
 class ActivityTZ (DBFamily):
     """Root factory of entities in the ActivityTZ family.
@@ -197,10 +197,10 @@ class MLSActivityTZ (ActivityTZ):
 
 if __name__ == "__main__":
 
-    from standalone import stdout_utf8, print_banner
-    from datetime import datetime, timedelta
+    from grimoirelib_alch.aux.standalone import stdout_utf8, print_banner
     from scm import PeriodCondition as SCMPeriodCondition
     from scm import NomergesCondition as SCMNomergesCondition
+    from datetime import datetime, timedelta
 
     stdout_utf8()
 

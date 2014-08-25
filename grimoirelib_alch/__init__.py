@@ -1,1 +1,1 @@
-# Making this a true module directory.
+# Making this a true package.

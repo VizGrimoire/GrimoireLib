@@ -24,7 +24,7 @@
 ##
 
 from common import DBFamily, DBCondition
-from scm_query import DB, Query
+from grimoirelib_alch.query.scm import DB, Query
 
 class SCM (DBFamily):
     """Constructor of entities in the SCM family.
@@ -161,7 +161,7 @@ class PeriodCondition (DBCondition):
 
 if __name__ == "__main__":
 
-    from standalone import stdout_utf8, print_banner
+    from grimoirelib_alch.aux.standalone import stdout_utf8, print_banner
     from datetime import datetime
 
     stdout_utf8()

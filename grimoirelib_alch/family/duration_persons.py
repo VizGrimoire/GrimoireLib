@@ -25,10 +25,12 @@
 ##   Jesus M. Gonzalez-Barahona <jgb@bitergia.com>
 ##
 
-from common import Family
-from common import Condition as RootCondition
-from activity import ActivityList
+from common import (
+    Family,
+    Condition as RootCondition
+    )
 from activity_persons import ActivityPersons
+from grimoirelib_alch.type.activity import ActivityList
 
 class DurationPersons (Family):
     """Factory of entities in the DurationPersons family.
@@ -78,7 +80,8 @@ class DurationPersons (Family):
             self.activity = datasource
         else:
             raise Exception ("DurationPersons: datasource must be of " + \
-                                 "ActivityPersons class hierarchy.")
+                                 "ActivityPersons or ActivityList " + \
+                                 "hierarchies.")
         if name not in ("age", "idle"):
             raise Exception ("DurationPersons: " + \
                                  "Invalid entity name for this family: " + \
@@ -255,13 +258,11 @@ class ActiveCondition (Condition):
 
 if __name__ == "__main__":
 
-    from standalone import stdout_utf8, print_banner
+    from grimoirelib_alch.aux.standalone import stdout_utf8, print_banner
     from datetime import datetime, timedelta
-    from scm_query import DB as SCMDatabase
-    from mls_query import DB as MLSDatabase
+    from grimoirelib_alch.query.scm import DB as SCMDatabase
+    from grimoirelib_alch.query.mls import DB as MLSDatabase
 
-    # from scm import SCMDatabaseDefinition
-    # from mls import MLSDatabaseDefinition
     from scm import NomergesCondition as SCMNomergesCondition
     from activity_persons import SCMActivityPersons, MLSActivityPersons
 

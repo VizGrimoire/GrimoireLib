@@ -16,16 +16,18 @@
 ## along with this program; if not, write to the Free Software
 ## Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 ##
-## Unit tests for scm.py
+## Unit tests for family.scm.py
 ## 
 ## Authors:
 ##   Jesus M. Gonzalez-Barahona <jgb@bitergia.com>
 ##
 
+from grimoirelib_alch.query.scm import DB
+from grimoirelib_alch.family.scm import (
+    SCM,
+    NomergesCondition, BranchesCondition, PeriodCondition
+    )
 from datetime import datetime
-from scm_query import DB
-from scm import SCM
-from scm import NomergesCondition, BranchesCondition, PeriodCondition
 import unittest
 
 url = 'mysql://jgb:XXX@localhost/'

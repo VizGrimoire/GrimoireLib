@@ -23,8 +23,9 @@
 ##   Jesus M. Gonzalez-Barahona <jgb@bitergia.com>
 ##
 
+from grimoirelib_alch.query.common import GrimoireDatabase
+
 from sqlalchemy.orm import Session
-from common_query import GrimoireDatabase
 
 class Family:
     """Root of hierarchy of families of entities.

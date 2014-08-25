@@ -24,7 +24,7 @@
 ##
 
 from common import DBFamily, DBCondition
-from mls_query import DB, Query
+from grimoirelib_alch.query.mls import DB, Query
 
 class PeriodCondition (DBCondition):
     """Period Condition for qualifying an entity.

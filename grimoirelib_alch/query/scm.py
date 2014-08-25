@@ -24,12 +24,13 @@
 ##   Jesus M. Gonzalez-Barahona <jgb@bitergia.com>
 ##
 
+from grimoirelib_alch.type.timeseries import TimeSeries
+from grimoirelib_alch.type.activity import ActivityList
+from common import GrimoireDatabase, GrimoireQuery
+
 from sqlalchemy import func, Column, Integer, ForeignKey, or_
 from sqlalchemy.sql import label
 from datetime import datetime
-from timeseries import TimeSeries
-from activity import ActivityList
-from common_query import GrimoireDatabase, GrimoireQuery
 
 
 class DB (GrimoireDatabase):
@@ -625,7 +626,7 @@ class Query (GrimoireQuery):
 
 if __name__ == "__main__":
 
-    from standalone import stdout_utf8, print_banner
+    from grimoirelib_alch.aux.standalone import stdout_utf8, print_banner
 
     stdout_utf8()
 

@@ -24,7 +24,7 @@
 ##
 
 from common import DBFamily, DBCondition
-from its_query import DB, Query
+from grimoirelib_alch.query.its import DB, Query
 
 class PeriodCondition (DBCondition):
     """Period Condition for qualifying a variable

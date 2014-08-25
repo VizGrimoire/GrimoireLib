@@ -22,9 +22,9 @@
 ##   Jesus M. Gonzalez-Barahona <jgb@bitergia.com>
 ##
 
-from scm_query import DB, Query
+from grimoirelib_alch.query.scm import DB, Query
+from grimoirelib_alch.type.timeseries import TimeSeries
 from datetime import datetime
-from timeseries import TimeSeries
 import unittest
 
 url = 'mysql://jgb:XXX@localhost/'

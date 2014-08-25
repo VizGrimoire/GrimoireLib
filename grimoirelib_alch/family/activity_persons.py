@@ -25,12 +25,19 @@
 ##
 
 from common import DBFamily
-from scm_query import DB as SCMDatabase
-from scm_query import Query as SCMQuery
-from its_query import DB as ITSDatabase
-from its_query import Query as ITSQuery
-from mls_query import DB as MLSDatabase
-from mls_query import Query as MLSQuery
+from grimoirelib_alch.query.scm import (
+    DB as SCMDatabase,
+    Query as SCMQuery
+    )
+from grimoirelib_alch.query.its import (
+    DB as ITSDatabase,
+    Query as ITSQuery
+    )
+from grimoirelib_alch.query.mls import (
+    DB as MLSDatabase,
+    Query as MLSQuery
+    )
+
 
 class ActivityPersons (DBFamily):
     """Root factory of entities in the ActivityPersons family.
@@ -211,7 +218,7 @@ class MLSActivityPersons (ActivityPersons):
 
 if __name__ == "__main__":
 
-    from standalone import stdout_utf8, print_banner
+    from grimoirelib_alch.aux.standalone import stdout_utf8, print_banner
     from datetime import datetime, timedelta
     # from scm import SCMDatabaseDefinition
     # from its import ITSDatabaseDefinition
