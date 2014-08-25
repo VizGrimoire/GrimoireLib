@@ -54,11 +54,12 @@ class Commits(Metrics):
         q_actions = " AND s.id IN (select distinct(a.commit_id) from actions a)"
 
         fields = " count(distinct(s.id)) as commits "
-        tables = " scmlog s " + self.db.GetSQLReportFrom(self.filters.type_analysis)
-        filters = self.db.GetSQLReportWhere(self.filters.type_analysis, "author") + q_actions
+        tables = " scmlog s " + self.db.GetSQLReportFrom(self.filters)
+        filters = self.db.GetSQLReportWhere(self.filters, "author") + q_actions
         query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                    self.filters.enddate, " s.date ", fields,
                                    tables, filters, evolutionary, self.filters.type_analysis)
+        print query
         return query
 
 
@@ -78,10 +79,10 @@ class Authors(Metrics):
 
         fields = " count(distinct(pup.upeople_id)) AS authors "
         tables = " scmlog s "
-        filters = self.db.GetSQLReportWhere(self.filters.type_analysis, "author")
+        filters = self.db.GetSQLReportWhere(self.filters, "author")
 
         #specific parts of the query depending on the report needed
-        tables += self.db.GetSQLReportFrom(self.filters.type_analysis)
+        tables += self.db.GetSQLReportFrom(self.filters)
 
         # Hack to cover SCMQuery probs
         if (self.filters.type_analysis is None or len (self.filters.type_analysis) != 2):
@@ -109,10 +110,10 @@ class Authors(Metrics):
         limit = metric_filters.npeople
         filter_bots = self.get_bots_filter_sql(metric_filters)
 
-        repos_from = self.db.GetSQLReportFrom(["repository", repo])
+        repos_from = self.db.GetSQLReportFrom(self.filters)
         # Remove first and
         #repos_where = " WHERE  " + self.db.GetSQLRepositoriesWhere(repo)[4:]
-        repos_where = " WHERE " + self.db.GetSQLReportWhere(["repository", repo])[4:]
+        repos_where = " WHERE " + self.db.GetSQLReportWhere(self.filters)[4:]
 
         dtables = dfilters = ""
         if (days > 0):
@@ -170,11 +171,11 @@ class Authors(Metrics):
         filter_bots = self.get_bots_filter_sql(metric_filters)
 
         #projects_from = self.db.GetSQLProjectFrom()
-        projects_from = self.db.GetSQLReportFrom(["project", project])
+        projects_from = self.db.GetSQLReportFrom(self.filters)
 
         # Remove first and
         #projects_where = " WHERE  " + self.db.GetSQLProjectWhere(project)[3:]
-        projects_where = " WHERE  " + self.db.GetSQLReportWhere(["project", project])[4:]
+        projects_where = " WHERE  " + self.db.GetSQLReportWhere(self.filters)[4:]
 
         fields =  "SELECT COUNT(DISTINCT(s.id)) as commits, u.id, u.identifier as authors "
         fields += "FROM actions a, scmlog s, people_upeople pup, upeople u "
@@ -283,10 +284,10 @@ class Committers(Metrics):
         # This function contains basic parts of the query to count committers
         fields = ' count(distinct(pup.upeople_id)) AS committers '
         tables = "scmlog s "
-        filters = self.db.GetSQLReportWhere(self.filters.type_analysis, "committer")
+        filters = self.db.GetSQLReportWhere(self.filters, "committer")
 
         #specific parts of the query depending on the report needed
-        tables += self.db.GetSQLReportFrom(self.filters.type_analysis)
+        tables += self.db.GetSQLReportFrom(self.filters)
 
         if (self.filters.type_analysis is None or len (self.filters.type_analysis) != 2) :
             #Specific case for the basic option where people_upeople table is needed
@@ -319,10 +320,10 @@ class Files(Metrics):
         tables = " scmlog s, actions a "
         filters = " a.commit_id = s.id "
 
-        tables += self.db.GetSQLReportFrom(self.filters.type_analysis)
+        tables += self.db.GetSQLReportFrom(self.filters)
         # TODO: left "author" as generic option coming from parameters 
         # (this should be specified by command line)
-        filters += self.db.GetSQLReportWhere(self.filters.type_analysis, "author")
+        filters += self.db.GetSQLReportWhere(self.filters, "author")
 
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                self.filters.enddate, " s.date ", fields,
@@ -344,9 +345,9 @@ class Lines(Metrics):
         tables = "scmlog s, commits_lines cl "
         filters = "cl.commit_id = s.id "
 
-        tables += self.db.GetSQLReportFrom(self.filters.type_analysis)
+        tables += self.db.GetSQLReportFrom(self.filters)
         #TODO: left "author" as generic option coming from parameters (this should be specified by command line)
-        filters += self.db.GetSQLReportWhere(self.filters.type_analysis, "author")
+        filters += self.db.GetSQLReportWhere(self.filters, "author")
 
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                self.filters.enddate, " s.date ", fields,
@@ -411,9 +412,9 @@ class AddedLines(Metrics):
         tables = "scmlog s, commits_lines cl "
         filters = "cl.commit_id = s.id "
 
-        tables += self.db.GetSQLReportFrom(self.filters.type_analysis)
+        tables += self.db.GetSQLReportFrom(self.filters)
         #TODO: left "author" as generic option coming from parameters (this should be specified by command line)
-        filters += self.db.GetSQLReportWhere(self.filters.type_analysis, "author")
+        filters += self.db.GetSQLReportWhere(self.filters, "author")
 
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                self.filters.enddate, " s.date ", fields,
@@ -434,9 +435,9 @@ class RemovedLines(Metrics):
         tables = "scmlog s, commits_lines cl "
         filters = "cl.commit_id = s.id "
 
-        tables += self.db.GetSQLReportFrom(self.filters.type_analysis)
+        tables += self.db.GetSQLReportFrom(self.filters)
         #TODO: left "author" as generic option coming from parameters (this should be specified by command line)
-        filters += self.db.GetSQLReportWhere(self.filters.type_analysis, "author")
+        filters += self.db.GetSQLReportWhere(self.filters, "author")
 
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                self.filters.enddate, " s.date ", fields,
@@ -458,9 +459,9 @@ class Branches(Metrics):
         filters = " a.commit_id = s.id "
 
         # specific parts of the query depending on the report needed
-        tables += self.db.GetSQLReportFrom(self.filters.type_analysis)
+        tables += self.db.GetSQLReportFrom(self.filters)
         #TODO: left "author" as generic option coming from parameters (this should be specified by command line)
-        filters += self.db.GetSQLReportWhere(self.filters.type_analysis, "author")
+        filters += self.db.GetSQLReportWhere(self.filters, "author")
 
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                self.filters.enddate, " s.date ", fields,
@@ -482,8 +483,8 @@ class Actions(Metrics):
         tables = " scmlog s, actions a "
         filters = " a.commit_id = s.id "
 
-        tables += self.db.GetSQLReportFrom(self.filters.type_analysis)
-        filters += self.db.GetSQLReportWhere(self.filters.type_analysis, "author")
+        tables += self.db.GetSQLReportFrom(self.filters)
+        filters += self.db.GetSQLReportWhere(self.filters, "author")
 
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                self.filters.enddate, " s.date ", fields,
@@ -505,8 +506,8 @@ class CommitsPeriod(Metrics):
         tables = " scmlog s "
         filters = " s.id IN (SELECT DISTINCT(a.commit_id) from actions a) "
 
-        tables += self.db.GetSQLReportFrom(self.filters.type_analysis)
-        filters += self.db.GetSQLReportWhere(self.filters.type_analysis, "author")
+        tables += self.db.GetSQLReportFrom(self.filters)
+        filters += self.db.GetSQLReportWhere(self.filters, "author")
 
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                self.filters.enddate, " s.date ", fields,
@@ -533,8 +534,8 @@ class FilesPeriod(Metrics):
         tables = " scmlog s, actions a "
         filters = " s.id = a.commit_id "
 
-        tables += self.db.GetSQLReportFrom(self.filters.type_analysis)
-        filters += self.db.GetSQLReportWhere(self.filters.type_analysis, "author")
+        tables += self.db.GetSQLReportFrom(self.filters)
+        filters += self.db.GetSQLReportWhere(self.filters, "author")
 
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                self.filters.enddate, " s.date ", fields,
@@ -561,10 +562,10 @@ class CommitsAuthor(Metrics):
         tables = " scmlog s, actions a "
         filters = " s.id = a.commit_id "
 
-        filters += self.db.GetSQLReportWhere(self.filters.type_analysis, "author")
+        filters += self.db.GetSQLReportWhere(self.filters, "author")
 
         #specific parts of the query depending on the report needed
-        tables += self.db.GetSQLReportFrom(self.filters.type_analysis)
+        tables += self.db.GetSQLReportFrom(self.filters)
  
         if (self.filters.type_analysis is None or len (self.filters.type_analysis) != 2) :
             #Specific case for the basic option where people_upeople table is needed
@@ -598,10 +599,10 @@ class AuthorsPeriod(Metrics):
         tables = " scmlog s "
         # filters = ""
 
-        filters = self.db.GetSQLReportWhere(self.filters.type_analysis, "author")
+        filters = self.db.GetSQLReportWhere(self.filters, "author")
 
         #specific parts of the query depending on the report needed
-        tables += self.db.GetSQLReportFrom(self.filters.type_analysis)
+        tables += self.db.GetSQLReportFrom(self.filters)
 
         if (self.filters.type_analysis is None or len (self.filters.type_analysis) != 2) :
             #Specific case for the basic option where people_upeople table is needed
@@ -645,10 +646,10 @@ class CommittersPeriod(Metrics):
         tables = " scmlog s "
         # filters = ""
 
-        filters = self.db.GetSQLReportWhere(self.filters.type_analysis, "committer")
+        filters = self.db.GetSQLReportWhere(self.filters, "committer")
 
         #specific parts of the query depending on the report needed
-        tables += self.db.GetSQLReportFrom(self.filters.type_analysis)
+        tables += self.db.GetSQLReportFrom(self.filters)
 
         if (self.filters.type_analysis is None or len (self.filters.type_analysis) != 2) :
             #Specific case for the basic option where people_upeople table is needed
@@ -685,10 +686,10 @@ class FilesAuthor(Metrics):
         tables = " scmlog s, actions a "
         filters = " s.id = a.commit_id "
 
-        filters += self.db.GetSQLReportWhere(self.filters.type_analysis, "author")
+        filters += self.db.GetSQLReportWhere(self.filters, "author")
 
         #specific parts of the query depending on the report needed
-        tables += self.db.GetSQLReportFrom(self.filters.type_analysis)
+        tables += self.db.GetSQLReportFrom(self.filters)
 
         if (self.filters.type_analysis is None or len (self.filters.type_analysis) != 2) :
             #Specific case for the basic option where people_upeople table is needed
@@ -721,9 +722,9 @@ class Repositories(Metrics):
         tables = "scmlog s "
 
         # specific parts of the query depending on the report needed
-        tables += self.db.GetSQLReportFrom(self.filters.type_analysis)
+        tables += self.db.GetSQLReportFrom(self.filters)
         #TODO: left "author" as generic option coming from parameters (this should be specified by command line)
-        filters = self.db.GetSQLReportWhere(self.filters.type_analysis, "author")
+        filters = self.db.GetSQLReportWhere(self.filters, "author")
 
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                self.filters.enddate, " s.date ", fields,
@@ -773,9 +774,9 @@ class Companies(Metrics):
         project = self.filters.type_analysis[1]
         limit = self.filters.npeople
 
-        projects_from = self.db.GetSQLReportFrom(["project", project])
+        projects_from = self.db.GetSQLReportFrom(self.filters)
         # Remove first and
-        projects_where = " WHERE  " + self.db.GetSQLReportWhere(["project", project])[4:]
+        projects_where = " WHERE  " + self.db.GetSQLReportWhere(self.filters)[4:]
 
         fields =  "SELECT COUNT(DISTINCT(s.id)) as company_commits, c.name as companies "
         fields += "FROM scmlog s, people_upeople pup, upeople u, upeople_companies upc, companies c "
@@ -958,7 +959,8 @@ class Projects(Metrics):
 
 
 if __name__ == '__main__':
-    filters = MetricFilters("week", "'2014-04-01'", "'2014-07-01'", ["repository,company", "'nova.git','Red Hat'"])
+    #filters = MetricFilters("week", "'2014-04-01'", "'2014-07-01'", ["repository,company", "'nova.git','Red Hat'"])
+    filters = MetricFilters("week", "'2014-04-01'", "'2014-07-01'", None, 10, "OpenStack Jenkins")
     dbcon = SCMQuery("root", "", "dic_cvsanaly_openstack_2259_tm", "dic_cvsanaly_openstack_2259_tm",)
     os_sw = Commits(dbcon, filters)
     print os_sw.get_ts()

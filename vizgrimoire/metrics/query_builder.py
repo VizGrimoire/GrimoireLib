@@ -350,66 +350,107 @@ class SCMQuery(DSQuery):
 
         return fields
 
+    def GetSQLBotFrom(self):
+        # Bots are removed from the upeople table, using the upeople.identifier table.
+        # Another option is to remove those bots directly in the people table.
+        tables = Set([])
+        #tables.add("scmlog s")
+        tables.add("people p")
+        tables.add("people_upeople pup")
+        tables.add("upeople u")
 
-    def GetSQLReportFrom (self, type_analysis):
-        #generic function to generate 'from' clauses
-        #"type" is a list of two values: type of analysis and value of 
-        #such analysis
+        return tables
+
+    def GetSQLBotWhere(self, raw_bots):
+        # Based on the tables provided in GetSQLBotFrom method, 
+        # this method provides the clauses to join the several tables
+
+        bots = raw_bots.split(",")
+        where = Set([])
+        where.add("s.author_id = p.id")
+        where.add("p.id = pup.people_id")
+        where.add("pup.upeople_id = u.id")
+        for bot in bots:
+            # This code only ignores bots provided in raw_bots.
+            # This should add the other way around, u.identifier = 'xxx'
+            where.add("u.identifier <> '" + bot + "'")
+
+        return where
+
+    def GetSQLReportFrom (self, filters):
+        # generic function to generate "from" clauses
+        # "filters" is an instance of MetricsFilter that contains all of the
+        # information needed to build the where clauses.
 
         from_str = ""
         From = Set([])
 
-        if (type_analysis is None or len(type_analysis) != 2): return from_str
+        type_analysis = filters.type_analysis
+        #if (type_analysis is None or len(type_analysis) != 2): return from_str
+        # the type_analysis length !=2 error should be raised in the MetricFilter instance
+        if type_analysis is not None:
+            # To be improved... not a very smart way of doing this
+            list_analysis = type_analysis[0].split(",")
 
-        # To be improved... not a very smart way of doing this
-        list_analysis = type_analysis[0].split(",")
+            analysis = type_analysis[0]
 
-        analysis = type_analysis[0]
+            # Retrieving tables based on the required type of analysis.
+            for analysis in list_analysis:
+                if analysis == 'repository': From.union_update(self.GetSQLRepositoriesFrom())
+                elif analysis == 'company': From.union_update(self.GetSQLCompaniesFrom())
+                elif analysis == 'country': From.union_update(self.GetSQLCountriesFrom())
+                elif analysis == 'domain': From.union_update(self.GetSQLDomainsFrom())
+                elif analysis == 'project': From.union_update(self.GetSQLProjectFrom())
+                elif analysis == 'people': From.union_update(self.GetSQLPeopleFrom())
+                elif analysis == 'people2': From.union_update(self.GetSQLPeopleFrom())
+                else: raise Exception( analysis + " not supported")
 
-        for analysis in list_analysis:
-            if analysis == 'repository': From.union_update(self.GetSQLRepositoriesFrom())
-            elif analysis == 'company': From.union_update(self.GetSQLCompaniesFrom())
-            elif analysis == 'country': From.union_update(self.GetSQLCountriesFrom())
-            elif analysis == 'domain': From.union_update(self.GetSQLDomainsFrom())
-            elif analysis == 'project': From.union_update(self.GetSQLProjectFrom())
-            elif analysis == 'people': From.union_update(self.GetSQLPeopleFrom())
-            elif analysis == 'people2': From.union_update(self.GetSQLPeopleFrom())
-            else: raise Exception( analysis + " not supported")
+        # Adding tables (if) needed when filtering bots.
+        if filters.people_out is not None:
+            From.union_update(self.GetSQLBotFrom())
 
+        # Building the query for tables
         for i in range(len(From)):
             from_str += " , " + From.pop()
 
         return (from_str)
 
-    def GetSQLReportWhere (self, type_analysis, role = "author"):
-        #generic function to generate 'where' clauses
-
-        #"type" is a list of two values: type of analysis and value of 
-        #such analysis
+    def GetSQLReportWhere (self, filters, role = "author"):
+        # Generic function to generate 'where' clauses
+        # 'filters' is an instance of MetricsFilter class with all of the 
+        # conditions needed to build the where clauses
 
         where_str = ""
         where = Set([])
 
-        if (type_analysis is None or len(type_analysis) != 2): return where_str
+        type_analysis = filters.type_analysis
+        #if (type_analysis is None or len(type_analysis) != 2): return where_str 
+        # the type_analysis !=2 error should be raised when building a new instance 
+        # of the class MetricFilter
+        if type_analysis is not None:
+            analysis = type_analysis[0]
+            value = type_analysis[1]
 
-        analysis = type_analysis[0]
-        value = type_analysis[1]
+            # To be improved... not a very smart way of doing this...
+            list_values = type_analysis[1].split(",")
+            list_analysis = type_analysis[0].split(",")
 
-        # To be improved... not a very smart way of doing this...
-        list_values = type_analysis[1].split(",")
-        list_analysis = type_analysis[0].split(",")
+            for analysis in list_analysis:
+                value = list_values[list_analysis.index(analysis)]
+                if analysis == 'repository': where.union_update(self.GetSQLRepositoriesWhere(value))
+                elif analysis == 'company': where.union_update(self.GetSQLCompaniesWhere(value, role))
+                elif analysis == 'country': where.union_update(self.GetSQLCountriesWhere(value, role))
+                elif analysis == 'domain': where.union_update(self.GetSQLDomainsWhere(value, role))
+                elif analysis == 'project': where.union_update(self.GetSQLProjectWhere(value))
+                elif analysis == 'people': where.union_update(self.GetSQLPeopleWhere(value))
+                elif analysis == 'people2': where.union_update(self.GetSQLPeopleWhere(value))
+                else: raise Exception( analysis + " not supported")
 
-        for analysis in list_analysis:
-            value = list_values[list_analysis.index(analysis)]
-            if analysis == 'repository': where.union_update(self.GetSQLRepositoriesWhere(value))
-            elif analysis == 'company': where.union_update(self.GetSQLCompaniesWhere(value, role))
-            elif analysis == 'country': where.union_update(self.GetSQLCountriesWhere(value, role))
-            elif analysis == 'domain': where.union_update(self.GetSQLDomainsWhere(value, role))
-            elif analysis == 'project': where.union_update(self.GetSQLProjectWhere(value))
-            elif analysis == 'people': where.union_update(self.GetSQLPeopleWhere(value))
-            elif analysis == 'people2': where.union_update(self.GetSQLPeopleWhere(value))
-            else: raise Exception( analysis + " not supported")
+        # Adding conditions (if) needed when filtering bots
+        if filters.people_out is not None:
+            where.union_update(self.GetSQLBotWhere(filters.people_out))
 
+        # Building the where clauses query part
         for i in range(len(where)):
             where_str += " and " + where.pop()
 
