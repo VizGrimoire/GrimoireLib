@@ -23,15 +23,17 @@
 # Timezone analysis. Time zones for developers and contributions.
 #
 
-from scm import PeriodCondition as SCMPeriodCondition
-from scm import NomergesCondition as SCMNomergesCondition 
-from scm_query import DB as SCMDatabase
-from mls import PeriodCondition as MLSPeriodCondition
-from mls_query import DB as MLSDatabase
-from activity_timezones import SCMActivityTZ, MLSActivityTZ
+from grimoirelib_alch.scm import PeriodCondition as SCMPeriodCondition
+from grimoirelib_alch.scm import NomergesCondition as SCMNomergesCondition 
+from grimoirelib_alch.scm_query import DB as SCMDatabase
+from grimoirelib_alch.mls import PeriodCondition as MLSPeriodCondition
+from grimoirelib_alch.mls_query import DB as MLSDatabase
+from grimoirelib_alch.activity_timezones import SCMActivityTZ, MLSActivityTZ
+
 from analyses import Analyses
 from SCM import SCM
 from MLS import MLS
+
 from datetime import datetime, timedelta
 from jsonpickle import encode, set_encoder_options
 import codecs

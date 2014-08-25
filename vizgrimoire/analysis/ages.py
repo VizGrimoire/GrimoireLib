@@ -23,21 +23,25 @@
 # Demography analysis. Age of developers in the project, age of
 # developers still with activity, and so on.
 
-from scm_query import DB as SCMDatabase
-from scm import NomergesCondition as SCMNomergesCondition
-from scm import PeriodCondition as SCMPeriodCondition
-from its_query import DB as ITSDatabase
-from its import PeriodCondition as ITSPeriodCondition
-from mls_query import DB as MLSDatabase
-from mls import PeriodCondition as MLSPeriodCondition
-from activity_persons import SCMActivityPersons,  ITSActivityPersons, \
-    MLSActivityPersons
-from duration_persons import DurationPersons
-from duration_persons import SnapshotCondition, ActiveCondition
+from grimoirelib_alch.scm_query import DB as SCMDatabase
+from grimoirelib_alch.scm import NomergesCondition as SCMNomergesCondition
+from grimoirelib_alch.scm import PeriodCondition as SCMPeriodCondition
+from grimoirelib_alch.its_query import DB as ITSDatabase
+from grimoirelib_alch.its import PeriodCondition as ITSPeriodCondition
+from grimoirelib_alch.mls_query import DB as MLSDatabase
+from grimoirelib_alch.mls import PeriodCondition as MLSPeriodCondition
+from grimoirelib_alch.activity_persons import SCMActivityPersons
+from grimoirelib_alch.activity_persons import ITSActivityPersons
+from grimoirelib_alch.activity_persons import MLSActivityPersons
+from grimoirelib_alch.duration_persons import DurationPersons
+from grimoirelib_alch.duration_persons import SnapshotCondition
+from grimoirelib_alch.duration_persons import ActiveCondition
+
 from analyses import Analyses
 from SCM import SCM
 from ITS import ITS
 from MLS import MLS
+
 from datetime import datetime, timedelta
 from jsonpickle import encode, set_encoder_options
 import codecs
