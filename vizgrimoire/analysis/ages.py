@@ -23,20 +23,25 @@
 # Demography analysis. Age of developers in the project, age of
 # developers still with activity, and so on.
 
-from grimoirelib_alch.scm_query import DB as SCMDatabase
-from grimoirelib_alch.scm import NomergesCondition as SCMNomergesCondition
-from grimoirelib_alch.scm import PeriodCondition as SCMPeriodCondition
-from grimoirelib_alch.its_query import DB as ITSDatabase
-from grimoirelib_alch.its import PeriodCondition as ITSPeriodCondition
-from grimoirelib_alch.mls_query import DB as MLSDatabase
-from grimoirelib_alch.mls import PeriodCondition as MLSPeriodCondition
-from grimoirelib_alch.activity_persons import SCMActivityPersons
-from grimoirelib_alch.activity_persons import ITSActivityPersons
-from grimoirelib_alch.activity_persons import MLSActivityPersons
-from grimoirelib_alch.duration_persons import DurationPersons
-from grimoirelib_alch.duration_persons import SnapshotCondition
-from grimoirelib_alch.duration_persons import ActiveCondition
-
+from grimoirelib_alch.query.scm import DB as SCMDatabase
+from grimoirelib_alch.family.scm import (
+    NomergesCondition as SCMNomergesCondition,
+    PeriodCondition as SCMPeriodCondition
+    )
+from grimoirelib_alch.query.its import DB as ITSDatabase
+from grimoirelib_alch.family.its import PeriodCondition as ITSPeriodCondition
+from grimoirelib_alch.query.mls import DB as MLSDatabase
+from grimoirelib_alch.family.mls import PeriodCondition as MLSPeriodCondition
+from grimoirelib_alch.family.activity_persons import (
+    SCMActivityPersons,
+    ITSActivityPersons,
+    MLSActivityPersons
+    )
+from grimoirelib_alch.family.duration_persons import (
+    DurationPersons,
+    SnapshotCondition,
+    ActiveCondition
+    )
 from analyses import Analyses
 from SCM import SCM
 from ITS import ITS
