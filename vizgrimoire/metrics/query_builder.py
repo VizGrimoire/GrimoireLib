@@ -137,25 +137,25 @@ class DSQuery(object):
 
         return(sql)
 
-    def _get_fields_query(fields):
+    def _get_fields_query(self, fields):
         # Returns a string with fields separated by ","
-        fields_str = fields.pop()
+        fields_str = str(fields.pop())
         for i in range(len(fields)):
-            fields_str += " , " + fields.pop()
+            fields_str += " , " + str(fields.pop())
         return fields_str + " "
 
-    def _get_tables_query(tables):
+    def _get_tables_query(self, tables):
         # Returns a string with tables separated by ","
-        tables_str = tables.pop()
+        tables_str = str(tables.pop())
         for i in range(len(tables)):
-            tables_str += " , " + tables.pop()
+            tables_str += " , " + str(tables.pop())
         return tables_str + " "
 
-    def _get_filters_query(filters):
+    def _get_filters_query(self, filters):
         # Returns a string with fielters separated by "and"
-        filters_str = filters.pop()
+        filters_str = str(filters.pop())
         for i in range(len(filters)):
-            filters_str += " and " + filters.pop()
+            filters_str += " and " + str(filters.pop())
         return filters_str + " "
 
 
@@ -410,7 +410,6 @@ class SCMQuery(DSQuery):
         # "filters" is an instance of MetricsFilter that contains all of the
         # information needed to build the where clauses.
 
-        from_str = ""
         From = Set([])
 
         type_analysis = filters.type_analysis
@@ -437,18 +436,13 @@ class SCMQuery(DSQuery):
         if filters.people_out is not None:
             From.union_update(self.GetSQLBotFrom())
 
-        # Building the query for tables
-        for i in range(len(From)):
-            from_str += " , " + From.pop()
-
-        return (from_str)
+        return (From)
 
     def GetSQLReportWhere (self, filters, role = "author"):
         # Generic function to generate 'where' clauses
         # 'filters' is an instance of MetricsFilter class with all of the 
         # conditions needed to build the where clauses
 
-        where_str = ""
         where = Set([])
 
         type_analysis = filters.type_analysis
@@ -478,11 +472,7 @@ class SCMQuery(DSQuery):
         if filters.people_out is not None:
             where.union_update(self.GetSQLBotWhere(filters.people_out))
 
-        # Building the where clauses query part
-        for i in range(len(where)):
-            where_str += " and " + where.pop()
-
-        return where_str
+        return where
 
     # To be used in the future for apply a generic filter to all queries
     def GetCommitsFiltered(self):
