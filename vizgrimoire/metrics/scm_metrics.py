@@ -88,12 +88,14 @@ class Authors(Metrics):
         if (self.filters.type_analysis is None or len (self.filters.type_analysis) != 2):
             #Specific case for the basic option where people_upeople table is needed
             #and not taken into account in the initial part of the query
-            tables += ",  people_upeople pup"
-            filters += " and s.author_id = pup.people_id"
+            if "people_upeople pup" not in tables:
+                tables += ",  people_upeople pup"
+                filters += " and s.author_id = pup.people_id"
 
         elif (self.filters.type_analysis[0] == "repository" or self.filters.type_analysis[0] == "project"):
-            tables += ",  people_upeople pup"
-            filters += " and s.author_id = pup.people_id "
+            if "people_upeople pup" not in tables:
+                tables += ",  people_upeople pup"
+                filters += " and s.author_id = pup.people_id "
 
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                self.filters.enddate, " s.date ", fields,
@@ -292,13 +294,15 @@ class Committers(Metrics):
         if (self.filters.type_analysis is None or len (self.filters.type_analysis) != 2) :
             #Specific case for the basic option where people_upeople table is needed
             #and not taken into account in the initial part of the query
-            tables += " ,  "+self.db.identities_db+".people_upeople pup "
-            filters += " and s.committer_id = pup.people_id"
+            if "people_upeople pup" not in tables:
+                tables += " ,  people_upeople pup "
+                filters += " and s.committer_id = pup.people_id"
 
         elif (self.filters.type_analysis[0] == "repository" or self.filters.type_analysis[0] == "project"):
             #Adding people_upeople table
-            tables += ",  "+self.db.identities_db+".people_upeople pup"
-            filters += " and s.committer_id = pup.people_id "
+            if "people_upeople pup" not in tables:
+                tables += ",  people_upeople pup"
+                filters += " and s.committer_id = pup.people_id "
 
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate, 
                                self.filters.enddate, " s.date ", fields,
@@ -570,13 +574,15 @@ class CommitsAuthor(Metrics):
         if (self.filters.type_analysis is None or len (self.filters.type_analysis) != 2) :
             #Specific case for the basic option where people_upeople table is needed
             #and not taken into account in the initial part of the query
-            tables += ",  "+self.db.identities_db+".people_upeople pup"
-            filters += " and s.author_id = pup.people_id"
+            if "people_upeople pup" not in tables:
+                tables += ",  people_upeople pup"
+                filters += " and s.author_id = pup.people_id"
 
         elif (self.filters.type_analysis[0] == "repository" or self.filters.type_analysis[0] == "project"):
             #Adding people_upeople table
-            tables += ",  "+self.db.identities_db+".people_upeople pup"
-            filters += " and s.author_id = pup.people_id "
+            if "people_upeople pup" not in tables:
+                tables += ",  people_upeople pup"
+                filters += " and s.author_id = pup.people_id "
 
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                self.filters.enddate, " s.date ", fields,
@@ -607,13 +613,15 @@ class AuthorsPeriod(Metrics):
         if (self.filters.type_analysis is None or len (self.filters.type_analysis) != 2) :
             #Specific case for the basic option where people_upeople table is needed
             #and not taken into account in the initial part of the query
-            tables += ",  "+self.db.identities_db+".people_upeople pup"
-            filters += " and s.author_id = pup.people_id"
+            if "people_upeople pup" not in tables:
+                tables += ",  people_upeople pup"
+                filters += " and s.author_id = pup.people_id"
 
         elif (self.filters.type_analysis[0] == "repository" or self.filters.type_analysis[0] == "project"):
             #Adding people_upeople table
-            tables += ",  "+self.db.identities_db+".people_upeople pup"
-            filters += " and s.author_id = pup.people_id "
+            if "people_upeople pup" not in tables:
+                tables += ",  people_upeople pup"
+                filters += " and s.author_id = pup.people_id "
 
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                self.filters.enddate, " s.date ", fields,
@@ -654,13 +662,16 @@ class CommittersPeriod(Metrics):
         if (self.filters.type_analysis is None or len (self.filters.type_analysis) != 2) :
             #Specific case for the basic option where people_upeople table is needed
             #and not taken into account in the initial part of the query
-            tables += ",  "+self.db.identities_db+".people_upeople pup"
-            filters += " and s.committer_id = pup.people_id"
+            if "people_upeople pup" not in tables:
+                tables += ",  people_upeople pup"
+                filters += " and s.committer_id = pup.people_id"
 
         elif (self.filters.type_analysis[0] == "repository" or self.filters.type_analysis[0] == "project"):
             #Adding people_upeople table
-            tables += ",  "+self.db.identities_db+".people_upeople pup"
-            filters += " and s.committer_id = pup.people_id "
+            if "people_upeople pup" not in tables:
+                tables += ",  people_upeople pup"
+                filters += " and s.committer_id = pup.people_id "
+
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                self.filters.enddate, " s.date ", fields,
                                tables, filters, evolutionary, self.filters.type_analysis)
@@ -694,13 +705,15 @@ class FilesAuthor(Metrics):
         if (self.filters.type_analysis is None or len (self.filters.type_analysis) != 2) :
             #Specific case for the basic option where people_upeople table is needed
             #and not taken into account in the initial part of the query
-            tables += ",  "+self.db.identities_db+".people_upeople pup"
-            filters += " and s.author_id = pup.people_id"
+            if "people_upeople pup" not in tables:
+                tables += ",  people_upeople pup"
+                filters += " and s.author_id = pup.people_id"
 
         elif (self.filters.type_analysis[0] == "repository" or self.filters.type_analysis[0] == "project"):
             #Adding people_upeople table
-            tables += ",  "+self.db.identities_db+".people_upeople pup"
-            filters += " and s.author_id = pup.people_id "
+            if "people_upeople pup" not in tables:
+                tables += ",  people_upeople pup"
+                filters += " and s.author_id = pup.people_id "
 
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                self.filters.enddate, " s.date ", fields,

@@ -137,12 +137,41 @@ class DSQuery(object):
 
         return(sql)
 
+    def _get_fields_query(fields):
+        # Returns a string with fields separated by ","
+        fields_str = fields.pop()
+        for i in range(len(fields)):
+            fields_str += " , " + fields.pop()
+        return fields_str + " "
+
+    def _get_tables_query(tables):
+        # Returns a string with tables separated by ","
+        tables_str = tables.pop()
+        for i in range(len(tables)):
+            tables_str += " , " + tables.pop()
+        return tables_str + " "
+
+    def _get_filters_query(filters):
+        # Returns a string with fielters separated by "and"
+        filters_str = filters.pop()
+        for i in range(len(filters)):
+            filters_str += " and " + filters.pop()
+        return filters_str + " "
+
 
     def BuildQuery (self, period, startdate, enddate, date_field, fields,
                     tables, filters, evolutionary, type_analysis = None):
         # Select the way to evolutionary or aggregated dataset
         # filter_all: get data for all items in a filter
         q = ""
+
+        if isinstance(fields, Set):
+            # Special case where query fields are sets.
+            # TODO: The "if" should be removed after the migration given that
+            # all of the queries will use this.
+            fields = self._get_fields_query(fields)
+            tables = self._get_tables_query(tables)
+            filters = self._get_filters_query(filters)
 
         # if all_items build a query for getting all items in one query
         all_items = None
@@ -277,7 +306,7 @@ class SCMQuery(DSQuery):
     def GetSQLCompaniesFrom (self):
         #tables necessaries for companies
         tables = Set([])
-        tables.add(self.identities_db + ".people_upeople pup")
+        tables.add("people_upeople pup")
         tables.add(self.identities_db + ".upeople_companies upc")
         tables.add(self.identities_db + ".companies c")
 
@@ -298,7 +327,7 @@ class SCMQuery(DSQuery):
     def GetSQLCountriesFrom (self):
         #tables necessaries for companies
         tables = Set([])
-        tables.add(self.identities_db + ".people_upeople pup")
+        tables.add("people_upeople pup")
         tables.add(self.identities_db + ".upeople_countries upc")
         tables.add(self.identities_db + ".countries c")
 
@@ -317,7 +346,7 @@ class SCMQuery(DSQuery):
     def GetSQLDomainsFrom (self) :
         #tables necessaries for domains
         tables = Set([])
-        tables.add(self.identities_db + ".people_upeople pup")
+        tables.add("people_upeople pup")
         tables.add(self.identities_db + ".upeople_domains upd")
         tables.add(self.identities_db + ".domains d")
 
@@ -355,17 +384,16 @@ class SCMQuery(DSQuery):
         # Another option is to remove those bots directly in the people table.
         tables = Set([])
         #tables.add("scmlog s")
-        tables.add(self.identities_db + ".people p")
-        tables.add(self.identities_db + ".people_upeople pup")
+        tables.add("people p")
+        tables.add("people_upeople pup")
         tables.add(self.identities_db + ".upeople u")
 
         return tables
 
-    def GetSQLBotWhere(self, raw_bots):
+    def GetSQLBotWhere(self, bots):
         # Based on the tables provided in GetSQLBotFrom method, 
         # this method provides the clauses to join the several tables
 
-        bots = raw_bots.split(",")
         where = Set([])
         where.add("s.author_id = p.id")
         where.add("p.id = pup.people_id")
