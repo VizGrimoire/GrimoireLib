@@ -71,6 +71,26 @@ class Commits(Metrics):
         return query
 
 
+class Revisions(Metrics):
+    """ Unique revisions class for source code management """
+
+    id = "revisions"
+    name = "Revisions"
+    desc = "Unique revisions submitted to the source code"
+    data_source = SCM
+
+    def _get_sql(self, evolutionary):
+        q_actions = " AND s.id IN (select distinct(a.commit_id) from actions a)"
+
+        fields = " count(distinct(s.rev)) as revisions "
+        tables = " scmlog s " + self.db.GetSQLReportFrom(self.filters.type_analysis)
+        filters = self.db.GetSQLReportWhere(self.filters.type_analysis, "author") + q_actions
+        query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
+                                   self.filters.enddate, " s.date ", fields,
+                                   tables, filters, evolutionary, self.filters.type_analysis)
+        return query
+
+
 class Authors(Metrics):
     """ Authors metric class for source code management systems """
 
@@ -417,13 +437,17 @@ class Lines(Metrics):
         self.filters = MetricFilters(Metrics.default_period,
                                      chardates[1], chardates[0], None)
         last = self.get_agg()
+        if last['added_lines'] is None: last['added_lines'] = 0
         last_added = int(last['added_lines'])
+        if last['removed_lines'] is None: last['removed_lines'] = 0
         last_removed = int(last['removed_lines'])
 
         self.filters = MetricFilters(Metrics.default_period,
                                      chardates[2], chardates[1], None)
         prev = self.get_agg()
+        if prev['added_lines'] is None: prev['added_lines'] = 0
         prev_added = int(prev['added_lines'])
+        if prev['removed_lines'] is None: prev['removed_lines'] = 0
         prev_removed = int(prev['removed_lines'])
 
         data = {}
@@ -1087,3 +1111,4 @@ if __name__ == '__main__':
 
     os_sw = Commits(dbcon, filters4)
     print os_sw.get_ts()
+
