@@ -375,6 +375,10 @@ class DataSource(object):
         if automator_metrics in automator['r']:
             metrics_on = automator['r'][automator_metrics].split(",")
 
+        if "people_out" in Report.get_config()['r']:
+            people_out = Report.get_config()['r']["people_out"]
+            people_out = people_out.split(",")
+
         type_analysis = None
         if filter_ is not None:
             type_analysis = filter_.get_type_analysis()
@@ -387,7 +391,9 @@ class DataSource(object):
             startdate = Report.get_config()['r'][DS.get_name()+"_startdate"]
         if DS.get_name()+"_enddate" in Report.get_config()['r']:
             enddate = Report.get_config()['r'][DS.get_name()+"_enddate"]
-        mfilter = MetricFilters(period, startdate, enddate, type_analysis)
+        # TODO: the hardcoded 10 should be removed, and use instead the npeople provided
+        #       in the config file.
+        mfilter = MetricFilters(period, startdate, enddate, type_analysis, 10, people_out, None)
         metrics_reports = DS.get_metrics_core_reports()
         all_metrics = DS.get_metrics_set(DS)
 
