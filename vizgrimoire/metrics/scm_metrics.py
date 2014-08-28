@@ -57,7 +57,7 @@ class Commits(Metrics):
         tables = Set([])
         filters = Set([])
 
-        fields.add("count(distinct(s.id)) as commits")
+        fields.add("count(distinct(s.rev)) as commits")
 
         tables.add("scmlog s")
         tables.union_update(self.db.GetSQLReportFrom(self.filters))
@@ -65,26 +65,6 @@ class Commits(Metrics):
         filters.add("s.id IN (select distinct(a.commit_id) from actions a)")
         filters.union_update(self.db.GetSQLReportWhere(self.filters, "author"))
 
-        query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
-                                   self.filters.enddate, " s.date ", fields,
-                                   tables, filters, evolutionary, self.filters.type_analysis)
-        return query
-
-
-class Revisions(Metrics):
-    """ Unique revisions class for source code management """
-
-    id = "revisions"
-    name = "Revisions"
-    desc = "Unique revisions submitted to the source code"
-    data_source = SCM
-
-    def _get_sql(self, evolutionary):
-        q_actions = " AND s.id IN (select distinct(a.commit_id) from actions a)"
-
-        fields = " count(distinct(s.rev)) as revisions "
-        tables = " scmlog s " + self.db.GetSQLReportFrom(self.filters.type_analysis)
-        filters = self.db.GetSQLReportWhere(self.filters.type_analysis, "author") + q_actions
         query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                    self.filters.enddate, " s.date ", fields,
                                    tables, filters, evolutionary, self.filters.type_analysis)
