@@ -375,6 +375,7 @@ class DataSource(object):
         if automator_metrics in automator['r']:
             metrics_on = automator['r'][automator_metrics].split(",")
 
+        people_out = []
         if "people_out" in Report.get_config()['r']:
             people_out = Report.get_config()['r']["people_out"]
             people_out = people_out.split(",")
