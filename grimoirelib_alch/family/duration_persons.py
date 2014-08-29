@@ -209,12 +209,14 @@ class SnapshotCondition (Condition):
     def modify (self, object):
         """Modification produced by this condition into object.
 
-        Specifies the time for the snapshot.
+        Specifies the time for the snapshot, and filters actors not active
+        before snapshot date.
 
         """
 
         Condition._check_class (object)
         object.set_snapshot(self.date)
+        object.set_activity(object.activity.active(before = self.date))
 
 
 class ActiveCondition (Condition):

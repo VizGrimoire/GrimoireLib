@@ -171,7 +171,8 @@ class Ages(Analyses):
             # last half year (that is, the period from enddate - half year
             # to enddate)
             active_period = ActiveCondition (after = enddate - \
-                                                 timedelta(days=182))
+                                                 timedelta(days=182),
+                                             before = enddate)
             aging = DurationPersons (datasource = data,
                                      name = "age",
                                      conditions = (snapshot, active_period),

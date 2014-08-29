@@ -98,8 +98,8 @@ def add_report (report, to_add):
     return report
 
 
-from duration_persons import DurationPersons
-from duration_persons import SnapshotCondition, ActiveCondition
+from grimoirelib_alch.family.duration_persons import DurationPersons
+from grimoirelib_alch.family.duration_persons import SnapshotCondition, ActiveCondition
 
 def report_demographics (activity_persons, snapshot_date,
                          activity_period, prefix):
@@ -140,7 +140,8 @@ def report_demographics (activity_persons, snapshot_date,
     birth = DurationPersons (datasource = activity_persons,
                              name = "age",
                              conditions = (snapshot,))
-    active_period = ActiveCondition (after = snapshot_date - activity_period)
+    active_period = ActiveCondition (after = snapshot_date - activity_period,
+                                     before = snapshot_date)
     aging = DurationPersons (datasource = activity_persons,
                              name = "age",
                              conditions = (snapshot, active_period))
@@ -153,15 +154,17 @@ def report_demographics (activity_persons, snapshot_date,
 
 if __name__ == "__main__":
 
-    from standalone import stdout_utf8, print_banner
+    from grimoirelib_alch.aux.standalone import stdout_utf8, print_banner
     from datetime import datetime, timedelta
-    from scm import SCMDatabaseDefinition
-    from scm import NomergesCondition as SCMNomergesCondition
-    from its import ITSDatabaseDefinition
-    from mls import MLSDatabaseDefinition
-    from activity_persons import SCMActivityPersons,  ITSActivityPersons, \
+    from grimoirelib_alch.query.scm import DB as SCMDatabase
+    from grimoirelib_alch.family.scm import NomergesCondition as SCMNomergesCondition
+    from grimoirelib_alch.query.its import DB as ITSDatabase
+    from grimoirelib_alch.query.mls import DB as MLSDatabase
+    from grimoirelib_alch.family.activity_persons import (
+        SCMActivityPersons,
+        ITSActivityPersons,
         MLSActivityPersons
-
+        )
     stdout_utf8()
 
     snapshot_date = datetime(2014,7,1)
@@ -170,9 +173,9 @@ if __name__ == "__main__":
     #---------------------------------
     print_banner("Demographics with SCM database, OpenStack")
     nomerges = SCMNomergesCondition()    
-    database = SCMDatabaseDefinition (url = "mysql://jgb:XXX@localhost/",
-                                      schema = "oscon_openstack_scm",
-                                      schema_id = "oscon_openstack_scm")
+    database = SCMDatabase (url = "mysql://jgb:XXX@localhost/",
+                            schema = "oscon_openstack_scm",
+                            schema_id = "oscon_openstack_scm")
     activity = SCMActivityPersons (datasource = database,
                                    name = "list_uauthors",
                                    conditions = (nomerges,))
@@ -185,9 +188,9 @@ if __name__ == "__main__":
     #---------------------------------
     print_banner("Demographics with ITS database, OpenStack")
     
-    database = ITSDatabaseDefinition (url = "mysql://jgb:XXX@localhost/",
-                                      schema = "oscon_openstack_its",
-                                      schema_id = "oscon_openstack_scm")
+    database = ITSDatabase (url = "mysql://jgb:XXX@localhost/",
+                            schema = "oscon_openstack_its",
+                            schema_id = "oscon_openstack_scm")
     activity = ITSActivityPersons (
         datasource = database,
         name = "list_uchangers")
@@ -202,9 +205,9 @@ if __name__ == "__main__":
     #---------------------------------
     print_banner("Demographics with MLS database, OpenStack")
     
-    database = MLSDatabaseDefinition (url = "mysql://jgb:XXX@localhost/",
-                                      schema = "oscon_openstack_mls",
-                                      schema_id = "oscon_openstack_scm")
+    database = MLSDatabase (url = "mysql://jgb:XXX@localhost/",
+                            schema = "oscon_openstack_mls",
+                            schema_id = "oscon_openstack_scm")
     activity = MLSActivityPersons (
         datasource = database,
         name = "list_usenders")
