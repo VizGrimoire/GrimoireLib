@@ -325,6 +325,8 @@ def write_JSON (filename, data):
 
 if __name__ == "__main__":
 
+    from jsonpickle import encode
+
     list_a = ["hola", "adios", 4, 5]
     list_b = ["hola", "adios", 4]
     list_c = ["hola", "adis", 4, 5]
@@ -347,4 +349,4 @@ if __name__ == "__main__":
     print_comparison (list_f, list_h, compare_items)
     print_comparison (dict_a, dict_b, compare_dicts)
     print_comparison (dict_a, dict_c, compare_items)
-    equal_JSON (dict_a, dict_c, details = True)
+    equal_JSON (encode(dict_a), encode(dict_c, unpicklable=False), details = True)

@@ -22,11 +22,12 @@
 ##   Jesus M. Gonzalez-Barahona <jgb@bitergia.com>
 ##
 
+from support import equal_JSON
+from grimoirelib_alch.type.activity import Period, ActivityList
+
 from datetime import datetime
-from activity import Period, ActivityList
 from sqlalchemy.util import KeyedTuple
 from jsonpickle import encode
-from test_support import equalJSON
 import unittest
 
 
@@ -44,7 +45,7 @@ class TestPeriod (unittest.TestCase):
 """
         period = Period(datetime(2011,12,1), datetime(2012,11,1))
         period_json = encode(period, unpicklable=False)
-        self.assertTrue( equalJSON(period_json, correct_json))
+        self.assertTrue( equal_JSON(period_json, correct_json))
 
 class TestActivityList (unittest.TestCase):
     """Unit tests for class ActivityList"""
@@ -83,7 +84,7 @@ class TestActivityList (unittest.TestCase):
                                          datetime(2013,2,3)],
                                         labels = rowlabels)))
         activity_json = encode(list, unpicklable=False)
-        self.assertTrue( equalJSON( activity_json, correct_json ))
+        self.assertTrue( equal_JSON( activity_json, correct_json ))
 
 if __name__ == "__main__":
     unittest.main()
