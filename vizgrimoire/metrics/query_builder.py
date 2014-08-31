@@ -724,149 +724,241 @@ class MLSQuery(DSQuery):
     def GetSQLRepositoriesFrom (self):
         # tables necessary for repositories
         #return (" messages m ") 
-        return (" ")
+        tables = Set([])
+        tables.add("")
+
+        return tables
 
     def GetSQLRepositoriesWhere (self, repository):
         # fields necessary to match info among tables
-        return (" m.mailing_list_url = "+repository+" ")
+        filters = Set([])
+        filters.add("m.mailing_list_url = " + repository)
+
+        return filters
 
     def GetSQLCompaniesFrom (self):
         # fields necessary for the companies analysis
-        return(" , messages_people mp, "+\
-                       "people_upeople pup, "+\
-                       self.identities_db + ".companies c, "+\
-                       self.identities_db + ".upeople_companies upc")
+        tables = Set([])
+        tables.add("messages_people mp")
+        tables.add("people_upeople pup")
+        tables.add(self.identities_db + ".upeople_companies upc")
+        tables.add(self.identities_db + ".companies c")
+
+        return tables
 
     def GetSQLCompaniesWhere (self, name):
         # filters for the companies analysis
-        return(" m.message_ID = mp.message_id and "+\
-                   "mp.email_address = pup.people_id and "+\
-                   "mp.type_of_recipient=\'From\' and "+\
-                   "pup.upeople_id = upc.upeople_id and "+\
-                   "upc.company_id = c.id and "+\
-                   "m.first_date >= upc.init and "+\
-                   "m.first_date < upc.end and "+\
-                   "c.name = "+name)
+        filters = Set([])
+        filters.add("m.message_ID = mp.message_id")
+        filters.add("mp.email_address = pup.people_id")
+        filters.add("mp.type_of_recipient = \'From\'")
+        filters.add("pup.upeople_id = upc.upeople_id")
+        filters.add("upc.company_id = c.id")
+        filters.add("m.first_date >= upc.init")
+        filters.add("m.first_date < upc.end")
+        filters.add("c.name = "+name)
+
+        return filters
 
     def GetSQLCountriesFrom (self):
         # fields necessary for the countries analysis
-        return(" , messages_people mp, "+\
-                   "people_upeople pup, "+\
-                   self.identities_db + ".countries c, "+\
-                   self.identities_db + ".upeople_countries upc ")
+        tables = Set([])
+        tables.add("messages_people mp")
+        tables.add("people_upeople pup")
+        tables.add(self.identities_db + ".countries c")
+        tables.add(self.identities_db + ".upeople_countries upc")
+
+        return tables
 
     def GetSQLCountriesWhere (self, name):
         # filters necessary for the countries analysis
+        filters = Set([])
+        filters.add("m.message_ID = mp.message_id")
+        filters.add("mp.email_address = pup.people_id")
+        filters.add("mp.type_of_recipient = \'From\'")
+        filters.add("pup.upeople_id = upc.upeople_id")
+        filters.add("upc.country_id = c.id")
+        filters.add("c.name = " + name)
 
-        return(" m.message_ID = mp.message_id and "+\
-                   "mp.email_address = pup.people_id and "+\
-                   "mp.type_of_recipient=\'From\' and "+\
-                   "pup.upeople_id = upc.upeople_id and "+\
-                   "upc.country_id = c.id and "+\
-                   "c.name="+name)
+        return filters
 
-    def GetSQLDomainsFrom (self) :
-        return (" , messages_people mp, "+\
-                   "people_upeople pup, "+\
-                  self.identities_db + ".domains d, "+\
-                  self.identities_db + ".upeople_domains upd")
+    def GetSQLDomainsFrom (self):
+        tables = Set([])
+        tables.add("messages_people mp")
+        tables.add("people_upeople pup")
+        tables.add(self.identities_db + ".domains d")
+        tables.add(self.identities_db + ".upeople_domains upd")
 
-    def GetSQLDomainsWhere (self, name) :
-        return (" m.message_ID = mp.message_id and "+\
-                    "mp.email_address = pup.people_id and "+\
-                    "mp.type_of_recipient=\'From\' and "+\
-                    "pup.upeople_id = upd.upeople_id AND "+\
-                    "upd.domain_id = d.id AND "+\
-                    "m.first_date >= upd.init AND "+\
-                    "m.first_date < upd.end and "+\
-                    "d.name="+ name)
+        return tables
+
+    def GetSQLDomainsWhere (self, name):
+        filters = Set([])
+        filters.add("m.message_ID = mp.message_id")
+        filters.add("mp.email_address = pup.people_id")
+        filters.add("mp.type_of_recipient = \'From\'")
+        filters.add("pup.upeople_id = upd.upeople_id")
+        filters.add("upd.domain_id = d.id")
+        filters.add("m.first_date >= upd.init")
+        filters.add("m.first_date < upd.end")
+        filters.add("d.name = " + name)
+
+        return filters
 
     def GetSQLProjectsFrom(self):
-        return (" , mailing_lists ml")
+        tables = Set([])
+        tables.add("mailing_lists ml")
+
+        return tables
 
     def GetSQLProjectsWhere(self, project):
         # include all repositories for a project and its subprojects
         p = project.replace("'", "") # FIXME: why is "'" needed in the name?
 
-        repos = """and ml.mailing_list_url IN (
+        repos = Set([])
+
+        repos_str = """ml.mailing_list_url IN (
                SELECT repository_name
                FROM   %s.projects p, %s.project_repositories pr
                WHERE  p.project_id = pr.project_id AND p.project_id IN (%s)
                    AND pr.data_source='mls'
         )""" % (self.identities_db, self.identities_db, self.get_subprojects(p))
+        repos.add(repos_str)
+        repos.add("ml.mailing_list_url = m.mailing_list_url")
 
-        return (repos  + " and ml.mailing_list_url = m.mailing_list_url")
+        return repos
 
     def GetSQLPeopleFrom (self):
-        return (" , messages_people mp, people_upeople pup, " + self.identities_db + ".upeople up ")
+        tables = Set([])
+        tables.add("messages_people mp")
+        tables.add("people_upeople pup")
+        #TODO: change "upeople up" by "upeople u" accordingly to the
+        #      rest of GrimoireLib
+        tables.add(self.identities_db + ".upeople up")
+
+        return tables
 
     def GetSQLPeopleWhere (self, name):
         #fields necessaries to match info among tables
-        fields = "m.message_ID = mp.message_id AND "
-        fields += " mp.email_address = pup.people_id AND " + \
-                  " mp.type_of_recipient=\'From\' AND " +  \
-                 "  up.id = pup.upeople_id "
-        if name is not None: fields += " AND up.identifier = "+name
-        return fields
+        filters = Set([])
+        filters.add("m.message_ID = mp.message_id")
+        filters.add("mp.email_address = pup.people_id")
+        filters.add("mp.type_of_recipient = \'From\'")
+        filters.add("up.id = pup.upeople_id")
+
+        if name is not None: 
+            filters.add("up.identifier = " + name)
+
+        return filters
 
     # Using senders only here!
     def GetFiltersOwnUniqueIds  (self):
-        return ('m.message_ID = mp.message_id AND '+\
-                ' mp.email_address = pup.people_id AND '+\
-                ' mp.type_of_recipient=\'From\'')
+        filters = Set([])
+        filters.add("m.message_ID = mp.message_id")
+        filters.add("mp.email_address = pup.people_id")
+        filters.add("mp.type_of_recipient = \'From\'")
+
+        return filters
+
     def GetTablesOwnUniqueIds (self):
-        return ('messages m, messages_people mp, people_upeople pup')
+        tables = Set([])
+        tables.add("messages m")
+        tables.add("messages_people mp")
+        tables.add("people_upeople pup")
+
+        return tables
 
 
     ##########
     #Generic functions to obtain FROM and WHERE clauses per type of report
     ##########
 
-    def GetSQLReportFrom (self, type_analysis):
+    def GetSQLBotFrom(self):
+        # Tables needed to filter bots in mailing lists
+        tables = Set([])
+
+        tables.add("messages m")
+        tables.add("messages_people mp")
+        tables.add("people_upeople pup")
+        tables.add(self.identities_db + ".upeople u")
+
+        return tables
+
+    def GetSQLReportFrom (self, filters):
         #generic function to generate 'from' clauses
         #"type" is a list of two values: type of analysis and value of 
         #such analysis
 
-        From = ""
+        From = Set([])
 
-        if (type_analysis is None or len(type_analysis) != 2): return From
+        type_analysis = filters.type_analysis
+        #if (type_analysis is None or len(type_analysis) != 2): return From
+        if type_analysis is not None:
+            list_analysis = type_analysis[0].split(",")
+            #analysis = type_analysis[0]
 
-        analysis = type_analysis[0]
+            for analysis in list_analysis:
+                if analysis == 'repository': From.union_update(self.GetSQLRepositoriesFrom())
+                elif analysis == 'company': From.union_update(self.GetSQLCompaniesFrom())
+                elif analysis == 'country': From.union_update(self.GetSQLCountriesFrom())
+                elif analysis == 'domain': From.union_update(self.GetSQLDomainsFrom())
+                elif analysis == 'project': From.union_update(self.GetSQLProjectsFrom())
+                elif analysis == 'people2': From.union_update(self.GetSQLPeopleFrom())
+                else: raise Exception( analysis + " not supported")
 
-        if analysis == 'repository': From = self.GetSQLRepositoriesFrom()
-        elif analysis == 'company': From = self.GetSQLCompaniesFrom()
-        elif analysis == 'country': From = self.GetSQLCountriesFrom()
-        elif analysis == 'domain': From = self.GetSQLDomainsFrom()
-        elif analysis == 'project': From = self.GetSQLProjectsFrom()
-        elif analysis == 'people2': From = self.GetSQLPeopleFrom()
-
+        if filters.people_out is not None:
+            From.union_update(self.GetSQLBotFrom())
+        
         return (From)
 
+    def GetSQLBotWhere(self, bots):
+        # Based on the tables provided in GetSQLBotFrom method, 
+        # this method provides the clauses to join the several tables
 
-    def GetSQLReportWhere (self, type_analysis):
+        where = Set([])
+        where.add("m.message_ID = mp.message_id")
+        where.add("mp.email_address = pup.people_id")
+        where.add("mp.type_of_recipient = \'From\'")
+        where.add("pup.upeople_id = u.id")
+        for bot in bots:
+            where.add("u.identifier <> '" + bot + "'")
+
+        return where
+
+    def GetSQLReportWhere (self, filters):
         #generic function to generate 'where' clauses
         #"type" is a list of two values: type of analysis and value of 
         #such analysisd
 
-        where = ""
+        where = Set([])
 
-        if (type_analysis is None or len(type_analysis) != 2): return where
+        type_analysis = filters.type_analysis
 
-        analysis = type_analysis[0]
-        value = type_analysis[1]
+        #if (type_analysis is None or len(type_analysis) != 2): return where
+        if type_analysis is not None:
+            analysis = type_analysis[0]
+            value = type_analysis[1]
 
-        if analysis == 'repository': where = self.GetSQLRepositoriesWhere(value)
-        elif analysis == 'company': where = self.GetSQLCompaniesWhere(value)
-        elif analysis == 'country': where = self.GetSQLCountriesWhere(value)
-        elif analysis == 'domain': where = self.GetSQLDomainsWhere(value)
-        elif analysis == 'people2': where = self.GetSQLPeopleWhere(value)
-        elif analysis == 'project':
-            if (self.identities_db is None):
-                logging.error("project filter not supported without identities_db")
-                sys.exit(0)
-            else:
-                where = self.GetSQLProjectsWhere(value)
-        elif analysis == 'people2': where = self.GetSQLPeopleWhere(value)
+            # To be improved... not a very smart way of doing this...
+            list_values = type_analysis[1].split(",")
+            list_analysis = type_analysis[0].split(",")
+
+            for analysis in list_analysis:
+                value = list_values[list_analysis.index(analysis)]    
+                if analysis == 'repository': where.union_update(self.GetSQLRepositoriesWhere(value))
+                elif analysis == 'company': where.union_update(self.GetSQLCompaniesWhere(value))
+                elif analysis == 'country': where.union_update(self.GetSQLCountriesWhere(value))
+                elif analysis == 'domain': where.union_update(self.GetSQLDomainsWhere(value))
+                elif analysis == 'people2': where.union_update(self.GetSQLPeopleWhere(value))
+                elif analysis == 'project':
+                    if (self.identities_db is None):
+                        logging.error("project filter not supported without identities_db")
+                        sys.exit(0)
+                    else:
+                        where.union_update(self.GetSQLProjectsWhere(value))
+                elif analysis == 'people2': where.union_update(self.GetSQLPeopleWhere(value))
+
+        if filters.people_out is not None:
+            where.union_update(self.GetSQLBotWhere(filters.people_out))
 
         return (where)
 
@@ -874,9 +966,15 @@ class MLSQuery(DSQuery):
         # Generic function that counts evolution/agg number of specific studies with similar
         # database schema such as domains, companies and countries
 
-        fields = ' count(distinct(name)) as ' + study
-        tables = " messages m " + self.GetSQLReportFrom(type_analysis)
-        filters = self.GetSQLReportWhere(type_analysis) + " and m.is_response_of is null "
+        fields = Set([])
+        tables = Set([])
+        filters = Set([])
+
+        fields.add("count(distinct(name)) as " + study)
+        tables.add("messages m")
+        tables.union_update(self.GetSQLReportFrom(type_analysis))
+        filters.add("m.is_response_of is null")
+        filters.union_update(self.GetSQLReportWhere(type_analysis))        
 
         #Filtering last part of the query, not used in this case
         #filters = gsub("and\n( )+(d|c|cou|com).name =.*$", "", filters)
@@ -886,44 +984,60 @@ class MLSQuery(DSQuery):
 
         return q
 
-    def GetTablesCountries (self) :
-        return (self.GetTablesOwnUniqueIds()+', '+\
-                      self.identities_db+'.countries c, '+\
-                      self.identities_db+'.upeople_countries upc')
+    # TODO: What's the difference among the following methods
+    # and previously defined ones?. We should refactor this to have
+    # only one of them.
+    def GetTablesCountries (self):
+        tables = Set([])
+        tables.union_update(self.GetTablesOwnUniqueIds())
+        tables.add(self.identities_db + ".countries c")
+        tables.add(self.identities_db + ".upeople_countries upc")
+      
+        return tables
 
+    def GetFiltersCountries (self):
+        filters = Set([])
+        filters.union_update(self.GetFiltersOwnUniqueIds())
+        filters.add("pup.upeople_id = upc.upeople_id")
+        filters.add("upc.country_id = c.id")
+        
+        return filters
 
-    def GetFiltersCountries (self) :
-        return (self.GetFiltersOwnUniqueIds()+' AND '+\
-                  "pup.upeople_id = upc.upeople_id AND "+\
-                  'upc.country_id = c.id')
+    def GetTablesCompanies (self):
+        tables = Set([])
+        tables.union_update(self.GetTablesOwnUniqueIds())
+        tables.add(self.identities_db + ".companies c")
+        tables.add(self.identities_db + ".upeople_companies upc")
 
+        return tables
 
-    def GetTablesCompanies (self) :
-        return (self.GetTablesOwnUniqueIds()+', '+\
-                      self.identities_db+'.companies c, '+\
-                      self.identities_db+'.upeople_companies upc')
+    def GetFiltersCompanies (self):
+        filters = Set([])
+        filters.union_update(self.GetFiltersOwnUniqueIds())
+        filters.add("pup.upeople_id = upc.upeople_id")
+        filters.add("upc.company_id = c.id")
+        filters.add("m.first_date >= upc.init")
+        filters.add("m.first_date < upc.end")
 
+        return filters
 
-    def GetFiltersCompanies (self) :
-        return (self.GetFiltersOwnUniqueIds()+' AND '+\
-                      "pup.upeople_id = upc.upeople_id AND "+\
-                      "upc.company_id = c.id AND "+\
-                      "m.first_date >= upc.init AND "+\
-                      'm.first_date < upc.end')
+    def GetTablesDomains (self):
+        tables = Set([])
+        tables.union_update(self.GetTablesOwnUniqueIds())
+        tables.add(self.identities_db + ".domains d")
+        tables.add(self.identities_db + ".upeople_domains upd")
 
-
-    def GetTablesDomains (self) :
-        return (self.GetTablesOwnUniqueIds()+', '+\
-                      self.identities_db+'.domains d, '+\
-                      self.identities_db+'.upeople_domains upd')
-
+        return tables
 
     def GetFiltersDomains (self) :
-        return (self.GetFiltersOwnUniqueIds()+' AND '+\
-                      "pup.upeople_id = upd.upeople_id AND "+\
-                      "upd.domain_id = d.id AND "+\
-                      "m.first_date >= upd.init AND "+\
-                      'm.first_date < upd.end')
+        filters = Set([])
+        filters.union_update(self.GetFiltersOwnUniqueIds())
+        filters.add("pup.upeople_id = upd.upeople_id")
+        filters.add("upd.domain_id = d.id")
+        filters.add("m.first_date >= upd.init")
+        filters.add("m.first_date < upd.end")
+
+        return filters
 
 class SCRQuery(DSQuery):
     """ Specific query builders for source code review source"""
