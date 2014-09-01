@@ -27,6 +27,8 @@ import re
 import sys
 from sets import Set
 
+from metrics_filter import MetricFilters
+
 class DSQuery(object):
     """ Generic methods to control access to db """
 
@@ -139,24 +141,36 @@ class DSQuery(object):
 
     def _get_fields_query(self, fields):
         # Returns a string with fields separated by ","
-        fields_str = str(fields.pop())
-        for i in range(len(fields)):
-            fields_str += " , " + str(fields.pop())
-        return fields_str + " "
+        fields_str = ""
+
+        if len(fields) > 0:
+            fields_str = str(fields.pop())
+            for i in range(len(fields)):
+                fields_str += " , " + str(fields.pop())
+
+        return fields_str
 
     def _get_tables_query(self, tables):
         # Returns a string with tables separated by ","
-        tables_str = str(tables.pop())
-        for i in range(len(tables)):
-            tables_str += " , " + str(tables.pop())
-        return tables_str + " "
+        tables_str = ""
+       
+        if len(tables) > 0:
+            tables_str = str(tables.pop())
+            for i in range(len(tables)):
+                tables_str += " , " + str(tables.pop())
+
+        return tables_str
 
     def _get_filters_query(self, filters):
-        # Returns a string with fielters separated by "and"
-        filters_str = str(filters.pop())
-        for i in range(len(filters)):
-            filters_str += " and " + str(filters.pop())
-        return filters_str + " "
+        # Returns a string with filters separated by "and"
+        filters_str = ""
+
+        if len(filters) > 0:
+            filters_str = str(filters.pop())
+            for i in range(len(filters)):
+                filters_str += " and " + str(filters.pop())
+
+        return filters_str
 
 
     def BuildQuery (self, period, startdate, enddate, date_field, fields,
@@ -894,7 +908,7 @@ class MLSQuery(DSQuery):
         type_analysis = filters.type_analysis
         #if (type_analysis is None or len(type_analysis) != 2): return From
         if type_analysis is not None:
-            list_analysis = type_analysis[0].split(",")
+            list_analysis = type_analysis[0].split(",") 
             #analysis = type_analysis[0]
 
             for analysis in list_analysis:
@@ -963,7 +977,7 @@ class MLSQuery(DSQuery):
 
         return (where)
 
-    def GetStudies (self, period, startdate, enddate, type_analysis, evolutionary, study, metricfilters):
+    def GetStudies (self, period, startdate, enddate, type_analysis, evolutionary, study):
         # Generic function that counts evolution/agg number of specific studies with similar
         # database schema such as domains, companies and countries
 
@@ -971,12 +985,12 @@ class MLSQuery(DSQuery):
         tables = Set([])
         filters = Set([])
 
-        metricfilters.type_analysis = type_analysis
+        metric_filters = MetricFilters(period, startdate, enddate, type_analysis, evolutionary)
         fields.add("count(distinct(name)) as " + study)
         tables.add("messages m")
-        tables.union_update(self.GetSQLReportFrom(metricfilters))
+        tables.union_update(self.GetSQLReportFrom(metric_filters))
         filters.add("m.is_response_of is null")
-        filters.union_update(self.GetSQLReportWhere(metricfilters))        
+        filters.union_update(self.GetSQLReportWhere(metric_filters))        
 
         #Filtering last part of the query, not used in this case
         #filters = gsub("and\n( )+(d|c|cou|com).name =.*$", "", filters)

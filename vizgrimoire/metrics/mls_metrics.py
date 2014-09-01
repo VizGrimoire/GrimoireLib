@@ -57,7 +57,6 @@ class EmailsSent(Metrics):
         tables.union_update(self.db.GetSQLReportFrom(self.filters))
         filters.union_update(self.db.GetSQLReportWhere(self.filters))
 
-
         query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                    self.filters.enddate, " m.first_date ", fields,
                                    tables, filters, evolutionary, self.filters.type_analysis)
@@ -472,7 +471,7 @@ class Companies(Metrics):
 
     def _get_sql(self, evolutionary):
         return self.db.GetStudies(self.filters.period, self.filters.startdate, 
-                                  self.filters.enddate, ['company', ''], evolutionary, 'companies', self.filters)
+                                  self.filters.enddate, ['company', ''], evolutionary, 'companies')
 
     def get_list (self):
         filter_ = DataSource.get_filter_bots(Filter("company"))
@@ -504,7 +503,7 @@ class Domains(Metrics):
 
     def _get_sql(self, evolutionary):
         return self.db.GetStudies(self.filters.period, self.filters.startdate,
-                                  self.filters.enddate, ['domain', ''], evolutionary, 'domains', self.filters)
+                                  self.filters.enddate, ['domain', ''], evolutionary, 'domains')
 
     def get_list  (self) :
         filter_ = DataSource.get_filter_bots(Filter("domain"))
@@ -536,7 +535,7 @@ class Countries(Metrics):
 
     def _get_sql(self, evolutionary):
         query = self.db.GetStudies(self.filters.period, self.filters.startdate,
-                                  self.filters.enddate, ['country', ''], evolutionary, 'countries', self.filters)
+                                  self.filters.enddate, ['country', ''], evolutionary, 'countries')
         return query
 
     def get_list  (self):
