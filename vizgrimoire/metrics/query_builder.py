@@ -725,8 +725,6 @@ class MLSQuery(DSQuery):
         # tables necessary for repositories
         #return (" messages m ") 
         tables = Set([])
-        tables.add("")
-
         return tables
 
     def GetSQLRepositoriesWhere (self, repository):
@@ -756,7 +754,8 @@ class MLSQuery(DSQuery):
         filters.add("upc.company_id = c.id")
         filters.add("m.first_date >= upc.init")
         filters.add("m.first_date < upc.end")
-        filters.add("c.name = "+name)
+        if name <> "":
+            filters.add("c.name = "+name)
 
         return filters
 
@@ -778,7 +777,8 @@ class MLSQuery(DSQuery):
         filters.add("mp.type_of_recipient = \'From\'")
         filters.add("pup.upeople_id = upc.upeople_id")
         filters.add("upc.country_id = c.id")
-        filters.add("c.name = " + name)
+        if name <> "":
+            filters.add("c.name = " + name)
 
         return filters
 
@@ -800,7 +800,8 @@ class MLSQuery(DSQuery):
         filters.add("upd.domain_id = d.id")
         filters.add("m.first_date >= upd.init")
         filters.add("m.first_date < upd.end")
-        filters.add("d.name = " + name)
+        if name <> "":
+            filters.add("d.name = " + name)
 
         return filters
 
@@ -962,7 +963,7 @@ class MLSQuery(DSQuery):
 
         return (where)
 
-    def GetStudies (self, period, startdate, enddate, type_analysis, evolutionary, study):
+    def GetStudies (self, period, startdate, enddate, type_analysis, evolutionary, study, metricfilters):
         # Generic function that counts evolution/agg number of specific studies with similar
         # database schema such as domains, companies and countries
 
@@ -970,11 +971,12 @@ class MLSQuery(DSQuery):
         tables = Set([])
         filters = Set([])
 
+        metricfilters.type_analysis = type_analysis
         fields.add("count(distinct(name)) as " + study)
         tables.add("messages m")
-        tables.union_update(self.GetSQLReportFrom(type_analysis))
+        tables.union_update(self.GetSQLReportFrom(metricfilters))
         filters.add("m.is_response_of is null")
-        filters.union_update(self.GetSQLReportWhere(type_analysis))        
+        filters.union_update(self.GetSQLReportWhere(metricfilters))        
 
         #Filtering last part of the query, not used in this case
         #filters = gsub("and\n( )+(d|c|cou|com).name =.*$", "", filters)
