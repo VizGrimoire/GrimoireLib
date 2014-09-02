@@ -127,19 +127,19 @@ intended for direct use.</p>
 <td>Return the results represented by this <tt class="docutils literal"><span class="pre">Query</span></tt> as a list.</td>
 </tr>
 <tr class="row-odd"><td><tt class="xref py py-obj docutils literal"><span class="pre">as_scalar</span></tt>()</td>
-<td>Return the full SELECT statement represented by this <a class="reference internal" href="grimoirelib_alch.query.mls_tz.html#grimoirelib_alch.query.mls_tz.Query" title="grimoirelib_alch.query.mls_tz.Query"><tt class="xref py py-class docutils literal"><span class="pre">Query</span></tt></a>, converted to a scalar subquery.</td>
+<td>Return the full SELECT statement represented by this <a class="reference internal" href="grimoirelib_alch.query.its.html#grimoirelib_alch.query.its.Query" title="grimoirelib_alch.query.its.Query"><tt class="xref py py-class docutils literal"><span class="pre">Query</span></tt></a>, converted to a scalar subquery.</td>
 </tr>
 <tr class="row-even"><td><tt class="xref py py-obj docutils literal"><span class="pre">autoflush</span></tt>(setting)</td>
 <td>Return a Query with a specific &#8216;autoflush&#8217; setting.</td>
 </tr>
 <tr class="row-odd"><td><tt class="xref py py-obj docutils literal"><span class="pre">correlate</span></tt>(*args)</td>
-<td>Return a <a class="reference internal" href="grimoirelib_alch.query.mls_tz.html#grimoirelib_alch.query.mls_tz.Query" title="grimoirelib_alch.query.mls_tz.Query"><tt class="xref py py-class docutils literal"><span class="pre">Query</span></tt></a> construct which will correlate the given FROM clauses to that of an enclosing <a class="reference internal" href="grimoirelib_alch.query.mls_tz.html#grimoirelib_alch.query.mls_tz.Query" title="grimoirelib_alch.query.mls_tz.Query"><tt class="xref py py-class docutils literal"><span class="pre">Query</span></tt></a> or <tt class="xref py py-func docutils literal"><span class="pre">select()</span></tt>.</td>
+<td>Return a <a class="reference internal" href="grimoirelib_alch.query.its.html#grimoirelib_alch.query.its.Query" title="grimoirelib_alch.query.its.Query"><tt class="xref py py-class docutils literal"><span class="pre">Query</span></tt></a> construct which will correlate the given FROM clauses to that of an enclosing <a class="reference internal" href="grimoirelib_alch.query.its.html#grimoirelib_alch.query.its.Query" title="grimoirelib_alch.query.its.Query"><tt class="xref py py-class docutils literal"><span class="pre">Query</span></tt></a> or <tt class="xref py py-func docutils literal"><span class="pre">select()</span></tt>.</td>
 </tr>
 <tr class="row-even"><td><tt class="xref py py-obj docutils literal"><span class="pre">count</span></tt>()</td>
 <td>Return a count of rows this Query would return.</td>
 </tr>
 <tr class="row-odd"><td><tt class="xref py py-obj docutils literal"><span class="pre">cte</span></tt>([name,&nbsp;recursive])</td>
-<td>Return the full SELECT statement represented by this <a class="reference internal" href="grimoirelib_alch.query.mls_tz.html#grimoirelib_alch.query.mls_tz.Query" title="grimoirelib_alch.query.mls_tz.Query"><tt class="xref py py-class docutils literal"><span class="pre">Query</span></tt></a> represented as a common table expression (CTE).</td>
+<td>Return the full SELECT statement represented by this <a class="reference internal" href="grimoirelib_alch.query.its.html#grimoirelib_alch.query.its.Query" title="grimoirelib_alch.query.its.Query"><tt class="xref py py-class docutils literal"><span class="pre">Query</span></tt></a> represented as a common table expression (CTE).</td>
 </tr>
 <tr class="row-even"><td><tt class="xref py py-obj docutils literal"><span class="pre">delete</span></tt>([synchronize_session])</td>
 <td>Perform a bulk delete query.</td>
@@ -199,16 +199,16 @@ intended for direct use.</p>
 <td>Produce an INTERSECT ALL of this Query against one or more queries.</td>
 </tr>
 <tr class="row-odd"><td><tt class="xref py py-obj docutils literal"><span class="pre">join</span></tt>(*props,&nbsp;**kwargs)</td>
-<td>Create a SQL JOIN against this <a class="reference internal" href="grimoirelib_alch.query.mls_tz.html#grimoirelib_alch.query.mls_tz.Query" title="grimoirelib_alch.query.mls_tz.Query"><tt class="xref py py-class docutils literal"><span class="pre">Query</span></tt></a> object&#8217;s criterion and apply generatively, returning the newly resulting <a class="reference internal" href="grimoirelib_alch.query.mls_tz.html#grimoirelib_alch.query.mls_tz.Query" title="grimoirelib_alch.query.mls_tz.Query"><tt class="xref py py-class docutils literal"><span class="pre">Query</span></tt></a>.</td>
+<td>Create a SQL JOIN against this <a class="reference internal" href="grimoirelib_alch.query.its.html#grimoirelib_alch.query.its.Query" title="grimoirelib_alch.query.its.Query"><tt class="xref py py-class docutils literal"><span class="pre">Query</span></tt></a> object&#8217;s criterion and apply generatively, returning the newly resulting <a class="reference internal" href="grimoirelib_alch.query.its.html#grimoirelib_alch.query.its.Query" title="grimoirelib_alch.query.its.Query"><tt class="xref py py-class docutils literal"><span class="pre">Query</span></tt></a>.</td>
 </tr>
 <tr class="row-even"><td><tt class="xref py py-obj docutils literal"><span class="pre">label</span></tt>(name)</td>
-<td>Return the full SELECT statement represented by this <a class="reference internal" href="grimoirelib_alch.query.mls_tz.html#grimoirelib_alch.query.mls_tz.Query" title="grimoirelib_alch.query.mls_tz.Query"><tt class="xref py py-class docutils literal"><span class="pre">Query</span></tt></a>, converted to a scalar subquery with a label of the given name.</td>
+<td>Return the full SELECT statement represented by this <a class="reference internal" href="grimoirelib_alch.query.its.html#grimoirelib_alch.query.its.Query" title="grimoirelib_alch.query.its.Query"><tt class="xref py py-class docutils literal"><span class="pre">Query</span></tt></a>, converted to a scalar subquery with a label of the given name.</td>
 </tr>
 <tr class="row-odd"><td><tt class="xref py py-obj docutils literal"><span class="pre">limit</span></tt>(limit)</td>
 <td>Apply a <tt class="docutils literal"><span class="pre">LIMIT</span></tt> to the query and return the newly resulting</td>
 </tr>
 <tr class="row-even"><td><tt class="xref py py-obj docutils literal"><span class="pre">merge_result</span></tt>(iterator[,&nbsp;load])</td>
-<td>Merge a result into this <a class="reference internal" href="grimoirelib_alch.query.mls_tz.html#grimoirelib_alch.query.mls_tz.Query" title="grimoirelib_alch.query.mls_tz.Query"><tt class="xref py py-class docutils literal"><span class="pre">Query</span></tt></a> object&#8217;s Session.</td>
+<td>Merge a result into this <a class="reference internal" href="grimoirelib_alch.query.its.html#grimoirelib_alch.query.its.Query" title="grimoirelib_alch.query.its.Query"><tt class="xref py py-class docutils literal"><span class="pre">Query</span></tt></a> object&#8217;s Session.</td>
 </tr>
 <tr class="row-odd"><td><tt class="xref py py-obj docutils literal"><span class="pre">offset</span></tt>(offset)</td>
 <td>Apply an <tt class="docutils literal"><span class="pre">OFFSET</span></tt> to the query and return the newly resulting <tt class="docutils literal"><span class="pre">Query</span></tt>.</td>
@@ -229,22 +229,22 @@ intended for direct use.</p>
 <td>add values for bind parameters which may have been</td>
 </tr>
 <tr class="row-odd"><td><tt class="xref py py-obj docutils literal"><span class="pre">populate_existing</span></tt>()</td>
-<td>Return a <a class="reference internal" href="grimoirelib_alch.query.mls_tz.html#grimoirelib_alch.query.mls_tz.Query" title="grimoirelib_alch.query.mls_tz.Query"><tt class="xref py py-class docutils literal"><span class="pre">Query</span></tt></a> that will expire and refresh all instances as they are loaded, or reused from the current <tt class="xref py py-class docutils literal"><span class="pre">Session</span></tt>.</td>
+<td>Return a <a class="reference internal" href="grimoirelib_alch.query.its.html#grimoirelib_alch.query.its.Query" title="grimoirelib_alch.query.its.Query"><tt class="xref py py-class docutils literal"><span class="pre">Query</span></tt></a> that will expire and refresh all instances as they are loaded, or reused from the current <tt class="xref py py-class docutils literal"><span class="pre">Session</span></tt>.</td>
 </tr>
 <tr class="row-even"><td><tt class="xref py py-obj docutils literal"><span class="pre">prefix_with</span></tt>(*prefixes)</td>
 <td>Apply the prefixes to the query and return the newly resulting <tt class="docutils literal"><span class="pre">Query</span></tt>.</td>
 </tr>
 <tr class="row-odd"><td><tt class="xref py py-obj docutils literal"><span class="pre">reset_joinpoint</span></tt>()</td>
-<td>Return a new <a class="reference internal" href="grimoirelib_alch.query.mls_tz.html#grimoirelib_alch.query.mls_tz.Query" title="grimoirelib_alch.query.mls_tz.Query"><tt class="xref py py-class docutils literal"><span class="pre">Query</span></tt></a>, where the &#8220;join point&#8221; has been reset back to the base FROM entities of the query.</td>
+<td>Return a new <a class="reference internal" href="grimoirelib_alch.query.its.html#grimoirelib_alch.query.its.Query" title="grimoirelib_alch.query.its.Query"><tt class="xref py py-class docutils literal"><span class="pre">Query</span></tt></a>, where the &#8220;join point&#8221; has been reset back to the base FROM entities of the query.</td>
 </tr>
 <tr class="row-even"><td><tt class="xref py py-obj docutils literal"><span class="pre">scalar</span></tt>()</td>
 <td>Return the first element of the first result or None if no rows present.</td>
 </tr>
 <tr class="row-odd"><td><tt class="xref py py-obj docutils literal"><span class="pre">select_entity_from</span></tt>(from_obj)</td>
-<td>Set the FROM clause of this <a class="reference internal" href="grimoirelib_alch.query.mls_tz.html#grimoirelib_alch.query.mls_tz.Query" title="grimoirelib_alch.query.mls_tz.Query"><tt class="xref py py-class docutils literal"><span class="pre">Query</span></tt></a> to a core selectable, applying it as a replacement FROM clause for corresponding mapped entities.</td>
+<td>Set the FROM clause of this <a class="reference internal" href="grimoirelib_alch.query.its.html#grimoirelib_alch.query.its.Query" title="grimoirelib_alch.query.its.Query"><tt class="xref py py-class docutils literal"><span class="pre">Query</span></tt></a> to a core selectable, applying it as a replacement FROM clause for corresponding mapped entities.</td>
 </tr>
 <tr class="row-even"><td><tt class="xref py py-obj docutils literal"><span class="pre">select_from</span></tt>(*from_obj)</td>
-<td>Set the FROM clause of this <a class="reference internal" href="grimoirelib_alch.query.mls_tz.html#grimoirelib_alch.query.mls_tz.Query" title="grimoirelib_alch.query.mls_tz.Query"><tt class="xref py py-class docutils literal"><span class="pre">Query</span></tt></a> explicitly.</td>
+<td>Set the FROM clause of this <a class="reference internal" href="grimoirelib_alch.query.its.html#grimoirelib_alch.query.its.Query" title="grimoirelib_alch.query.its.Query"><tt class="xref py py-class docutils literal"><span class="pre">Query</span></tt></a> explicitly.</td>
 </tr>
 <tr class="row-odd"><td><tt class="xref py py-obj docutils literal"><span class="pre">slice</span></tt>(start,&nbsp;stop)</td>
 <td>apply LIMIT/OFFSET to the <tt class="docutils literal"><span class="pre">Query</span></tt> based on a &#8220;</td>
@@ -268,19 +268,19 @@ intended for direct use.</p>
 <td>Return an iterator yielding result tuples corresponding</td>
 </tr>
 <tr class="row-even"><td><tt class="xref py py-obj docutils literal"><span class="pre">with_entities</span></tt>(*entities)</td>
-<td>Return a new <a class="reference internal" href="grimoirelib_alch.query.mls_tz.html#grimoirelib_alch.query.mls_tz.Query" title="grimoirelib_alch.query.mls_tz.Query"><tt class="xref py py-class docutils literal"><span class="pre">Query</span></tt></a> replacing the SELECT list with the given entities.</td>
+<td>Return a new <a class="reference internal" href="grimoirelib_alch.query.its.html#grimoirelib_alch.query.its.Query" title="grimoirelib_alch.query.its.Query"><tt class="xref py py-class docutils literal"><span class="pre">Query</span></tt></a> replacing the SELECT list with the given entities.</td>
 </tr>
 <tr class="row-odd"><td><tt class="xref py py-obj docutils literal"><span class="pre">with_for_update</span></tt>([read,&nbsp;nowait,&nbsp;of])</td>
-<td>return a new <a class="reference internal" href="grimoirelib_alch.query.mls_tz.html#grimoirelib_alch.query.mls_tz.Query" title="grimoirelib_alch.query.mls_tz.Query"><tt class="xref py py-class docutils literal"><span class="pre">Query</span></tt></a> with the specified options for the</td>
+<td>return a new <a class="reference internal" href="grimoirelib_alch.query.its.html#grimoirelib_alch.query.its.Query" title="grimoirelib_alch.query.its.Query"><tt class="xref py py-class docutils literal"><span class="pre">Query</span></tt></a> with the specified options for the</td>
 </tr>
 <tr class="row-even"><td><tt class="xref py py-obj docutils literal"><span class="pre">with_hint</span></tt>(selectable,&nbsp;text[,&nbsp;dialect_name])</td>
-<td>Add an indexing hint for the given entity or selectable to this <a class="reference internal" href="grimoirelib_alch.query.mls_tz.html#grimoirelib_alch.query.mls_tz.Query" title="grimoirelib_alch.query.mls_tz.Query"><tt class="xref py py-class docutils literal"><span class="pre">Query</span></tt></a>.</td>
+<td>Add an indexing hint for the given entity or selectable to this <a class="reference internal" href="grimoirelib_alch.query.its.html#grimoirelib_alch.query.its.Query" title="grimoirelib_alch.query.its.Query"><tt class="xref py py-class docutils literal"><span class="pre">Query</span></tt></a>.</td>
 </tr>
 <tr class="row-odd"><td><tt class="xref py py-obj docutils literal"><span class="pre">with_labels</span></tt>()</td>
 <td>Apply column labels to the return value of Query.statement.</td>
 </tr>
 <tr class="row-even"><td><tt class="xref py py-obj docutils literal"><span class="pre">with_lockmode</span></tt>(mode)</td>
-<td>Return a new <a class="reference internal" href="grimoirelib_alch.query.mls_tz.html#grimoirelib_alch.query.mls_tz.Query" title="grimoirelib_alch.query.mls_tz.Query"><tt class="xref py py-class docutils literal"><span class="pre">Query</span></tt></a> object with the specified &#8220;locking mode&#8221;, which essentially refers to the <tt class="docutils literal"><span class="pre">FOR</span> <span class="pre">UPDATE</span></tt> clause.</td>
+<td>Return a new <a class="reference internal" href="grimoirelib_alch.query.its.html#grimoirelib_alch.query.its.Query" title="grimoirelib_alch.query.its.Query"><tt class="xref py py-class docutils literal"><span class="pre">Query</span></tt></a> object with the specified &#8220;locking mode&#8221;, which essentially refers to the <tt class="docutils literal"><span class="pre">FOR</span> <span class="pre">UPDATE</span></tt> clause.</td>
 </tr>
 <tr class="row-odd"><td><tt class="xref py py-obj docutils literal"><span class="pre">with_parent</span></tt>(instance[,&nbsp;property])</td>
 <td>Add filtering criterion that relates the given instance to a child object or collection, using its attribute state as well as an established <tt class="xref py py-func docutils literal"><span class="pre">relationship()</span></tt> configuration.</td>
@@ -289,10 +289,10 @@ intended for direct use.</p>
 <td>Load columns for inheriting classes.</td>
 </tr>
 <tr class="row-odd"><td><tt class="xref py py-obj docutils literal"><span class="pre">with_session</span></tt>(session)</td>
-<td>Return a <a class="reference internal" href="grimoirelib_alch.query.mls_tz.html#grimoirelib_alch.query.mls_tz.Query" title="grimoirelib_alch.query.mls_tz.Query"><tt class="xref py py-class docutils literal"><span class="pre">Query</span></tt></a> that will use the given <tt class="xref py py-class docutils literal"><span class="pre">Session</span></tt>.</td>
+<td>Return a <a class="reference internal" href="grimoirelib_alch.query.its.html#grimoirelib_alch.query.its.Query" title="grimoirelib_alch.query.its.Query"><tt class="xref py py-class docutils literal"><span class="pre">Query</span></tt></a> that will use the given <tt class="xref py py-class docutils literal"><span class="pre">Session</span></tt>.</td>
 </tr>
 <tr class="row-even"><td><tt class="xref py py-obj docutils literal"><span class="pre">with_transformation</span></tt>(fn)</td>
-<td>Return a new <a class="reference internal" href="grimoirelib_alch.query.mls_tz.html#grimoirelib_alch.query.mls_tz.Query" title="grimoirelib_alch.query.mls_tz.Query"><tt class="xref py py-class docutils literal"><span class="pre">Query</span></tt></a> object transformed by the given function.</td>
+<td>Return a new <a class="reference internal" href="grimoirelib_alch.query.its.html#grimoirelib_alch.query.its.Query" title="grimoirelib_alch.query.its.Query"><tt class="xref py py-class docutils literal"><span class="pre">Query</span></tt></a> object transformed by the given function.</td>
 </tr>
 <tr class="row-odd"><td><tt class="xref py py-obj docutils literal"><span class="pre">yield_per</span></tt>(count)</td>
 <td>Yield only <tt class="docutils literal"><span class="pre">count</span></tt> rows at a time.</td>
