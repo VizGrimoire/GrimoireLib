@@ -581,6 +581,11 @@ class CoreReviewers(Metrics):
 
     """
 
+    id = "core_reviewers"
+    name = "Core Reviewers"
+    desc = "Number of developers reviewing code review activities that can use a +2 or -2"
+    data_source = SCR
+
     def _get_sql(self, evolutionary):
         fields = " count(distinct(changed_by)) as core_reviewers "
         tables = " changes ch, issues i " + self.db.GetSQLReportFrom(self.filters.type_analysis)
