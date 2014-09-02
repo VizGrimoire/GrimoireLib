@@ -1,0 +1,7 @@
+grimoirelib_alch.aux.standalone module
+======================================
+
+.. automodule:: grimoirelib_alch.aux.standalone
+    :members:
+    :undoc-members:
+    :show-inheritance:

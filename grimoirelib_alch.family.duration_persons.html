@@ -1,0 +1,287 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>grimoirelib_alch.family.duration_persons module &mdash; GrimoreLib 1.0 documentation</title>
+    
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="GrimoreLib 1.0 documentation" href="index.html" />
+    <link rel="up" title="grimoirelib_alch.family package" href="grimoirelib_alch.family.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="np-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="index.html">GrimoreLib 1.0 documentation</a> &raquo;</li>
+          <li><a href="modules.html" >&lt;no title&gt;</a> &raquo;</li>
+          <li><a href="grimoirelib_alch.html" >grimoirelib_alch package</a> &raquo;</li>
+          <li><a href="grimoirelib_alch.family.html" accesskey="U">grimoirelib_alch.family package</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="module-grimoirelib_alch.family.duration_persons">
+<span id="grimoirelib-alch-family-duration-persons-module"></span><h1>grimoirelib_alch.family.duration_persons module<a class="headerlink" href="#module-grimoirelib_alch.family.duration_persons" title="Permalink to this headline">¶</a></h1>
+<dl class="class">
+<dt id="grimoirelib_alch.family.duration_persons.ActiveCondition">
+<em class="property">class </em><tt class="descclassname">grimoirelib_alch.family.duration_persons.</tt><tt class="descname">ActiveCondition</tt><big>(</big><em>after=None</em>, <em>before=None</em><big>)</big><a class="reference internal" href="_modules/grimoirelib_alch/family/duration_persons.html#ActiveCondition"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#grimoirelib_alch.family.duration_persons.ActiveCondition" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#grimoirelib_alch.family.duration_persons.Condition" title="grimoirelib_alch.family.duration_persons.Condition"><tt class="xref py py-class docutils literal"><span class="pre">grimoirelib_alch.family.duration_persons.Condition</span></tt></a></p>
+<p>Condition for filtering persons active during a period</p>
+<p>Only persons active during the specified period are to
+be considered.</p>
+<p class="rubric">Methods</p>
+<table border="1" class="longtable docutils">
+<colgroup>
+<col width="10%" />
+<col width="90%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><a class="reference internal" href="#grimoirelib_alch.family.duration_persons.ActiveCondition.modify" title="grimoirelib_alch.family.duration_persons.ActiveCondition.modify"><tt class="xref py py-obj docutils literal"><span class="pre">modify</span></tt></a>(object)</td>
+<td>Modification for this condition.</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="grimoirelib_alch.family.duration_persons.ActiveCondition.modify">
+<tt class="descname">modify</tt><big>(</big><em>object</em><big>)</big><a class="reference internal" href="_modules/grimoirelib_alch/family/duration_persons.html#ActiveCondition.modify"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#grimoirelib_alch.family.duration_persons.ActiveCondition.modify" title="Permalink to this definition">¶</a></dt>
+<dd><p>Modification for this condition.</p>
+<p>Sets the new activity list, considering only active
+persons during the period.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="grimoirelib_alch.family.duration_persons.Condition">
+<em class="property">class </em><tt class="descclassname">grimoirelib_alch.family.duration_persons.</tt><tt class="descname">Condition</tt><a class="reference internal" href="_modules/grimoirelib_alch/family/duration_persons.html#Condition"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#grimoirelib_alch.family.duration_persons.Condition" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="grimoirelib_alch.family.common.html#grimoirelib_alch.family.common.Condition" title="grimoirelib_alch.family.common.Condition"><tt class="xref py py-class docutils literal"><span class="pre">grimoirelib_alch.family.common.Condition</span></tt></a></p>
+<p>Root of all conditions specific for DurationPersons entities</p>
+<p>Provides a modify method, which will be called by the entity
+to let this condition modify it.</p>
+<p class="rubric">Methods</p>
+<table border="1" class="longtable docutils">
+<colgroup>
+<col width="10%" />
+<col width="90%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><a class="reference internal" href="#grimoirelib_alch.family.duration_persons.Condition.modify" title="grimoirelib_alch.family.duration_persons.Condition.modify"><tt class="xref py py-obj docutils literal"><span class="pre">modify</span></tt></a>(object)</td>
+<td>Modification produced by this condition into object.</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="grimoirelib_alch.family.duration_persons.Condition.modify">
+<tt class="descname">modify</tt><big>(</big><em>object</em><big>)</big><a class="reference internal" href="_modules/grimoirelib_alch/family/duration_persons.html#Condition.modify"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#grimoirelib_alch.family.duration_persons.Condition.modify" title="Permalink to this definition">¶</a></dt>
+<dd><p>Modification produced by this condition into object.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>object: DurationPersons</strong> :</p>
+<blockquote class="last">
+<div><p>Entity to be modified.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="grimoirelib_alch.family.duration_persons.DurationPersons">
+<em class="property">class </em><tt class="descclassname">grimoirelib_alch.family.duration_persons.</tt><tt class="descname">DurationPersons</tt><big>(</big><em>datasource</em>, <em>name</em>, <em>conditions=()</em><big>)</big><a class="reference internal" href="_modules/grimoirelib_alch/family/duration_persons.html#DurationPersons"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#grimoirelib_alch.family.duration_persons.DurationPersons" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="grimoirelib_alch.family.common.html#grimoirelib_alch.family.common.Family" title="grimoirelib_alch.family.common.Family"><tt class="xref py py-class docutils literal"><span class="pre">grimoirelib_alch.family.common.Family</span></tt></a></p>
+<p>Factory of entities in the DurationPersons family.</p>
+<p>This class can be used to instantiate entities from the DurationPersons
+family: those related to duration of persons.</p>
+<p>Duration can be periods of different kinds, such as age or idle time.</p>
+<p>Objects of this class provide the function durations() to
+obtain an ActorsDuration object.</p>
+<p class="rubric">Methods</p>
+<table border="1" class="longtable docutils">
+<colgroup>
+<col width="10%" />
+<col width="90%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><a class="reference internal" href="#grimoirelib_alch.family.duration_persons.DurationPersons.durations" title="grimoirelib_alch.family.duration_persons.DurationPersons.durations"><tt class="xref py py-obj docutils literal"><span class="pre">durations</span></tt></a>()</td>
+<td>Return durations for each person (age, idle,...) depending on entity</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#grimoirelib_alch.family.duration_persons.DurationPersons.set_activity" title="grimoirelib_alch.family.duration_persons.DurationPersons.set_activity"><tt class="xref py py-obj docutils literal"><span class="pre">set_activity</span></tt></a>(activity)</td>
+<td>Change the activity list considered by the entity.</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#grimoirelib_alch.family.duration_persons.DurationPersons.set_snapshot" title="grimoirelib_alch.family.duration_persons.DurationPersons.set_snapshot"><tt class="xref py py-obj docutils literal"><span class="pre">set_snapshot</span></tt></a>(time)</td>
+<td>Define a snapshot time for durations.</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="grimoirelib_alch.family.duration_persons.DurationPersons.durations">
+<tt class="descname">durations</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/grimoirelib_alch/family/duration_persons.html#DurationPersons.durations"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#grimoirelib_alch.family.duration_persons.DurationPersons.durations" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return durations for each person (age, idle,...) depending on entity</p>
+<p>If there is no snapshot date, it considers the maximum date in the
+datasource as snapshot (date to count back ages).</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><strong>activity.ActorsDuration: list of actors, with duration for each of them.</strong> :</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="grimoirelib_alch.family.duration_persons.DurationPersons.set_activity">
+<tt class="descname">set_activity</tt><big>(</big><em>activity</em><big>)</big><a class="reference internal" href="_modules/grimoirelib_alch/family/duration_persons.html#DurationPersons.set_activity"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#grimoirelib_alch.family.duration_persons.DurationPersons.set_activity" title="Permalink to this definition">¶</a></dt>
+<dd><p>Change the activity list considered by the entity.</p>
+<p>This is used, for example, to apply a condition on the entity,
+such as &#8220;active before such and such date&#8221;. For doing that
+kind of stuff, the activity list is changed.</p>
+<dl class="docutils">
+<dt>activity: activity.ActivityList</dt>
+<dd>New list of activity per person to be used.</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="grimoirelib_alch.family.duration_persons.DurationPersons.set_snapshot">
+<tt class="descname">set_snapshot</tt><big>(</big><em>time</em><big>)</big><a class="reference internal" href="_modules/grimoirelib_alch/family/duration_persons.html#DurationPersons.set_snapshot"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#grimoirelib_alch.family.duration_persons.DurationPersons.set_snapshot" title="Permalink to this definition">¶</a></dt>
+<dd><p>Define a snapshot time for durations.</p>
+<p>Durations (age, idle) are to be calculated back from the time
+specified. This can be used, for example, by conditions
+defininf a certain snapshot.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>time: datetime.datetime</strong> :</p>
+<blockquote class="last">
+<div><p>Time of snapshot.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="grimoirelib_alch.family.duration_persons.SnapshotCondition">
+<em class="property">class </em><tt class="descclassname">grimoirelib_alch.family.duration_persons.</tt><tt class="descname">SnapshotCondition</tt><big>(</big><em>date</em><big>)</big><a class="reference internal" href="_modules/grimoirelib_alch/family/duration_persons.html#SnapshotCondition"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#grimoirelib_alch.family.duration_persons.SnapshotCondition" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#grimoirelib_alch.family.duration_persons.Condition" title="grimoirelib_alch.family.duration_persons.Condition"><tt class="xref py py-class docutils literal"><span class="pre">grimoirelib_alch.family.duration_persons.Condition</span></tt></a></p>
+<p>Condition for specifiying &#8220;snapshot&#8221; of durations.</p>
+<p>Durations (age, idle) are to be calculated back from the date
+specified by this condition. If the snapshot date is as of now,
+this will be the real &#8220;age&#8221; or &#8220;idle time&#8221; in the project.</p>
+<p class="rubric">Methods</p>
+<table border="1" class="longtable docutils">
+<colgroup>
+<col width="10%" />
+<col width="90%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><a class="reference internal" href="#grimoirelib_alch.family.duration_persons.SnapshotCondition.modify" title="grimoirelib_alch.family.duration_persons.SnapshotCondition.modify"><tt class="xref py py-obj docutils literal"><span class="pre">modify</span></tt></a>(object)</td>
+<td>Modification produced by this condition into object.</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="grimoirelib_alch.family.duration_persons.SnapshotCondition.modify">
+<tt class="descname">modify</tt><big>(</big><em>object</em><big>)</big><a class="reference internal" href="_modules/grimoirelib_alch/family/duration_persons.html#SnapshotCondition.modify"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#grimoirelib_alch.family.duration_persons.SnapshotCondition.modify" title="Permalink to this definition">¶</a></dt>
+<dd><p>Modification produced by this condition into object.</p>
+<p>Specifies the time for the snapshot, and filters actors not active
+before snapshot date.</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/grimoirelib_alch.family.duration_persons.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="np-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="index.html">GrimoreLib 1.0 documentation</a> &raquo;</li>
+          <li><a href="modules.html" >&lt;no title&gt;</a> &raquo;</li>
+          <li><a href="grimoirelib_alch.html" >grimoirelib_alch package</a> &raquo;</li>
+          <li><a href="grimoirelib_alch.family.html" >grimoirelib_alch.family package</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2014, Bitergia.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+    </div>
+  </body>
+</html>

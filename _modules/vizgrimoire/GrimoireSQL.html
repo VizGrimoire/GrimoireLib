@@ -1,0 +1,351 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>vizgrimoire.GrimoireSQL &mdash; GrimoreLib 1.0 documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="top" title="GrimoreLib 1.0 documentation" href="../../index.html" />
+    <link rel="up" title="Module code" href="../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="../../np-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../index.html">GrimoreLib 1.0 documentation</a> &raquo;</li>
+          <li><a href="../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for vizgrimoire.GrimoireSQL</h1><div class="highlight"><pre>
+<span class="c">#!/usr/bin/env python</span>
+
+<span class="c"># Copyright (C) 2014 Bitergia</span>
+<span class="c"># </span>
+<span class="c"># This program is free software; you can redistribute it and/or modify</span>
+<span class="c"># it under the terms of the GNU General Public License as published by</span>
+<span class="c"># the Free Software Foundation; either version 3 of the License, or</span>
+<span class="c"># (at your option) any later version.</span>
+<span class="c">#</span>
+<span class="c"># This program is distributed in the hope that it will be useful,</span>
+<span class="c"># but WITHOUT ANY WARRANTY; without even the implied warranty of</span>
+<span class="c"># MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the</span>
+<span class="c"># GNU General Public License for more details.</span>
+<span class="c">#</span>
+<span class="c"># You should have received a copy of the GNU General Public License</span>
+<span class="c"># along with this program; if not, write to the Free Software</span>
+<span class="c"># Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.</span>
+<span class="c">#</span>
+<span class="c"># Authors:</span>
+<span class="c">#     Alvaro del Castillo &lt;acs@bitergia.com&gt;</span>
+
+<span class="c"># SQL utilities</span>
+
+<span class="kn">import</span> <span class="nn">MySQLdb</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">re</span><span class="o">,</span> <span class="nn">sys</span>
+
+
+<span class="c"># global vars to be moved to specific classes</span>
+<span class="n">cursor</span> <span class="o">=</span> <span class="bp">None</span>
+<span class="c"># one connection per database</span>
+<span class="n">dbpool</span> <span class="o">=</span> <span class="p">{}</span>
+
+<span class="c">##########</span>
+<span class="c">#Generic functions to obtain FROM and WHERE clauses per type of report</span>
+<span class="c">##########</span>
+
+<div class="viewcode-block" id="GetSQLReportFrom"><a class="viewcode-back" href="../../vizgrimoire.GrimoireSQL.html#vizgrimoire.GrimoireSQL.GetSQLReportFrom">[docs]</a><span class="k">def</span> <span class="nf">GetSQLReportFrom</span> <span class="p">(</span><span class="n">identities_db</span><span class="p">,</span> <span class="n">type_analysis</span><span class="p">):</span>
+    <span class="c">#generic function to generate &#39;from&#39; clauses</span>
+    <span class="c">#&quot;type&quot; is a list of two values: type of analysis and value of </span>
+    <span class="c">#such analysis</span>
+
+
+    <span class="k">if</span> <span class="p">(</span><span class="n">type_analysis</span> <span class="ow">is</span> <span class="bp">None</span> <span class="ow">or</span> <span class="nb">len</span><span class="p">(</span><span class="n">type_analysis</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">2</span><span class="p">):</span> <span class="k">return</span> <span class="s">&quot;&quot;</span>
+
+    <span class="n">analysis</span> <span class="o">=</span> <span class="n">type_analysis</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="c"># value = type_analysis[1]</span>
+
+    <span class="n">tables</span> <span class="o">=</span> <span class="s">&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="n">analysis</span><span class="p">):</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">analysis</span> <span class="o">==</span> <span class="s">&#39;repository&#39;</span><span class="p">):</span> <span class="n">tables</span>  <span class="o">=</span> <span class="n">GetSQLRepositoriesFrom</span><span class="p">()</span>
+        <span class="k">elif</span> <span class="p">(</span><span class="n">analysis</span> <span class="o">==</span> <span class="s">&#39;company&#39;</span><span class="p">):</span> <span class="n">tables</span> <span class="o">=</span> <span class="n">GetSQLCompaniesFrom</span><span class="p">(</span><span class="n">identities_db</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="p">(</span><span class="n">analysis</span> <span class="o">==</span> <span class="s">&#39;country&#39;</span><span class="p">):</span> <span class="n">tables</span> <span class="o">=</span> <span class="n">GetSQLCountriesFrom</span><span class="p">(</span><span class="n">identities_db</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="p">(</span><span class="n">analysis</span> <span class="o">==</span> <span class="s">&#39;domain&#39;</span><span class="p">):</span> <span class="n">tables</span> <span class="o">=</span> <span class="n">GetSQLDomainsFrom</span><span class="p">(</span><span class="n">identities_db</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="p">(</span><span class="n">tables</span><span class="p">)</span>
+
+</div>
+<div class="viewcode-block" id="GetSQLReportWhere"><a class="viewcode-back" href="../../vizgrimoire.GrimoireSQL.html#vizgrimoire.GrimoireSQL.GetSQLReportWhere">[docs]</a><span class="k">def</span> <span class="nf">GetSQLReportWhere</span> <span class="p">(</span><span class="n">type_analysis</span><span class="p">,</span> <span class="n">role</span><span class="p">):</span>
+    <span class="c">#generic function to generate &#39;where&#39; clauses</span>
+
+    <span class="c">#&quot;type&quot; is a list of two values: type of analysis and value of </span>
+    <span class="c">#such analysis</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="n">type_analysis</span> <span class="ow">is</span> <span class="bp">None</span> <span class="ow">or</span> <span class="nb">len</span><span class="p">(</span><span class="n">type_analysis</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">2</span><span class="p">):</span> <span class="k">return</span> <span class="s">&quot;&quot;</span>
+
+    <span class="n">analysis</span> <span class="o">=</span> <span class="n">type_analysis</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">value</span> <span class="o">=</span> <span class="n">type_analysis</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">where</span> <span class="o">=</span> <span class="s">&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="n">analysis</span><span class="p">):</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">analysis</span> <span class="o">==</span> <span class="s">&#39;repository&#39;</span><span class="p">):</span> <span class="n">where</span>  <span class="o">=</span> <span class="n">GetSQLRepositoriesWhere</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="p">(</span><span class="n">analysis</span> <span class="o">==</span> <span class="s">&#39;company&#39;</span><span class="p">):</span> <span class="n">where</span> <span class="o">=</span> <span class="n">GetSQLCompaniesWhere</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">role</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="p">(</span><span class="n">analysis</span> <span class="o">==</span> <span class="s">&#39;country&#39;</span><span class="p">):</span> <span class="n">where</span> <span class="o">=</span> <span class="n">GetSQLCountriesWhere</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">role</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="p">(</span><span class="n">analysis</span> <span class="o">==</span> <span class="s">&#39;domain&#39;</span><span class="p">):</span> <span class="n">where</span> <span class="o">=</span> <span class="n">GetSQLDomainsWhere</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">role</span><span class="p">)</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">where</span><span class="p">)</span>
+
+<span class="c">##</span>
+<span class="c">## METAQUERIES</span>
+<span class="c">##</span>
+
+<span class="c"># TODO: regexpr not adapted yet from R to Python</span>
+
+</div>
+<div class="viewcode-block" id="GetSQLGlobal"><a class="viewcode-back" href="../../vizgrimoire.GrimoireSQL.html#vizgrimoire.GrimoireSQL.GetSQLGlobal">[docs]</a><span class="k">def</span> <span class="nf">GetSQLGlobal</span><span class="p">(</span><span class="n">date</span><span class="p">,</span> <span class="n">fields</span><span class="p">,</span> <span class="n">tables</span><span class="p">,</span> <span class="n">filters</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">end</span><span class="p">):</span>
+    <span class="n">sql</span> <span class="o">=</span> <span class="s">&#39;SELECT &#39;</span><span class="o">+</span> <span class="n">fields</span>
+    <span class="n">sql</span> <span class="o">+=</span> <span class="s">&#39; FROM &#39;</span><span class="o">+</span> <span class="n">tables</span>
+    <span class="n">sql</span> <span class="o">+=</span> <span class="s">&#39; WHERE &#39;</span><span class="o">+</span><span class="n">date</span><span class="o">+</span><span class="s">&#39;&gt;=&#39;</span><span class="o">+</span><span class="n">start</span><span class="o">+</span><span class="s">&#39; AND &#39;</span><span class="o">+</span><span class="n">date</span><span class="o">+</span><span class="s">&#39;&lt;&#39;</span><span class="o">+</span><span class="n">end</span>
+    <span class="n">reg_and</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="s">&quot;^[ ]*and&quot;</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">)</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">filters</span> <span class="o">!=</span> <span class="s">&quot;&quot;</span><span class="p">):</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">reg_and</span><span class="o">.</span><span class="n">match</span> <span class="p">(</span><span class="n">filters</span><span class="o">.</span><span class="n">lower</span><span class="p">()))</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span> <span class="n">sql</span> <span class="o">+=</span> <span class="s">&quot; &quot;</span> <span class="o">+</span> <span class="n">filters</span>
+        <span class="k">else</span><span class="p">:</span> <span class="n">sql</span> <span class="o">+=</span> <span class="s">&#39; AND &#39;</span><span class="o">+</span><span class="n">filters</span>
+    <span class="k">return</span><span class="p">(</span><span class="n">sql</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="GetSQLPeriod"><a class="viewcode-back" href="../../vizgrimoire.GrimoireSQL.html#vizgrimoire.GrimoireSQL.GetSQLPeriod">[docs]</a><span class="k">def</span> <span class="nf">GetSQLPeriod</span><span class="p">(</span><span class="n">period</span><span class="p">,</span> <span class="n">date</span><span class="p">,</span> <span class="n">fields</span><span class="p">,</span> <span class="n">tables</span><span class="p">,</span> <span class="n">filters</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">end</span><span class="p">):</span>
+    <span class="c"># kind = [&#39;year&#39;,&#39;month&#39;,&#39;week&#39;,&#39;day&#39;]</span>
+    <span class="n">iso_8601_mode</span> <span class="o">=</span> <span class="mi">3</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">period</span> <span class="o">==</span> <span class="s">&#39;day&#39;</span><span class="p">):</span>
+        <span class="c"># Remove time so unix timestamp is start of day    </span>
+        <span class="n">sql</span> <span class="o">=</span> <span class="s">&#39;SELECT UNIX_TIMESTAMP(DATE(&#39;</span><span class="o">+</span><span class="n">date</span><span class="o">+</span><span class="s">&#39;)) AS unixtime, &#39;</span>
+    <span class="k">elif</span> <span class="p">(</span><span class="n">period</span> <span class="o">==</span> <span class="s">&#39;week&#39;</span><span class="p">):</span>
+        <span class="n">sql</span> <span class="o">=</span> <span class="s">&#39;SELECT YEARWEEK(&#39;</span><span class="o">+</span><span class="n">date</span><span class="o">+</span><span class="s">&#39;,&#39;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">iso_8601_mode</span><span class="p">)</span><span class="o">+</span><span class="s">&#39;) AS week, &#39;</span>
+    <span class="k">elif</span> <span class="p">(</span><span class="n">period</span> <span class="o">==</span> <span class="s">&#39;month&#39;</span><span class="p">):</span>
+        <span class="n">sql</span> <span class="o">=</span> <span class="s">&#39;SELECT YEAR(&#39;</span><span class="o">+</span><span class="n">date</span><span class="o">+</span><span class="s">&#39;)*12+MONTH(&#39;</span><span class="o">+</span><span class="n">date</span><span class="o">+</span><span class="s">&#39;) AS month, &#39;</span>
+    <span class="k">elif</span> <span class="p">(</span><span class="n">period</span> <span class="o">==</span> <span class="s">&#39;year&#39;</span><span class="p">):</span>
+        <span class="n">sql</span> <span class="o">=</span> <span class="s">&#39;SELECT YEAR(&#39;</span><span class="o">+</span><span class="n">date</span><span class="o">+</span><span class="s">&#39;)*12 AS year, &#39;</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s">&quot;PERIOD: &quot;</span><span class="o">+</span><span class="n">period</span><span class="o">+</span><span class="s">&quot; not supported&quot;</span><span class="p">)</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+    <span class="c"># sql = paste(sql, &#39;DATE_FORMAT (&#39;,date,&#39;, \&#39;%d %b %Y\&#39;) AS date, &#39;)</span>
+    <span class="n">sql</span> <span class="o">+=</span> <span class="n">fields</span>
+    <span class="n">sql</span> <span class="o">+=</span> <span class="s">&#39; FROM &#39;</span> <span class="o">+</span> <span class="n">tables</span>
+    <span class="n">sql</span> <span class="o">=</span> <span class="n">sql</span> <span class="o">+</span> <span class="s">&#39; WHERE &#39;</span><span class="o">+</span><span class="n">date</span><span class="o">+</span><span class="s">&#39;&gt;=&#39;</span><span class="o">+</span><span class="n">start</span><span class="o">+</span><span class="s">&#39; AND &#39;</span><span class="o">+</span><span class="n">date</span><span class="o">+</span><span class="s">&#39;&lt;&#39;</span><span class="o">+</span><span class="n">end</span>
+    <span class="n">reg_and</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="s">&quot;^[ ]*and&quot;</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="n">filters</span> <span class="o">!=</span> <span class="s">&quot;&quot;</span><span class="p">):</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">reg_and</span><span class="o">.</span><span class="n">match</span> <span class="p">(</span><span class="n">filters</span><span class="o">.</span><span class="n">lower</span><span class="p">()))</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span> <span class="n">sql</span> <span class="o">+=</span> <span class="s">&quot; &quot;</span> <span class="o">+</span> <span class="n">filters</span>
+        <span class="k">else</span><span class="p">:</span> <span class="n">sql</span> <span class="o">+=</span> <span class="s">&#39; AND &#39;</span> <span class="o">+</span> <span class="n">filters</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="n">period</span> <span class="o">==</span> <span class="s">&#39;year&#39;</span><span class="p">):</span>
+        <span class="n">sql</span> <span class="o">+=</span> <span class="s">&#39; GROUP BY YEAR(&#39;</span><span class="o">+</span><span class="n">date</span><span class="o">+</span><span class="s">&#39;)&#39;</span>
+        <span class="n">sql</span> <span class="o">+=</span> <span class="s">&#39; ORDER BY YEAR(&#39;</span><span class="o">+</span><span class="n">date</span><span class="o">+</span><span class="s">&#39;)&#39;</span>
+    <span class="k">elif</span> <span class="p">(</span><span class="n">period</span> <span class="o">==</span> <span class="s">&#39;month&#39;</span><span class="p">):</span>
+        <span class="n">sql</span> <span class="o">+=</span> <span class="s">&#39; GROUP BY YEAR(&#39;</span><span class="o">+</span><span class="n">date</span><span class="o">+</span><span class="s">&#39;),MONTH(&#39;</span><span class="o">+</span><span class="n">date</span><span class="o">+</span><span class="s">&#39;)&#39;</span>
+        <span class="n">sql</span> <span class="o">+=</span> <span class="s">&#39; ORDER BY YEAR(&#39;</span><span class="o">+</span><span class="n">date</span><span class="o">+</span><span class="s">&#39;),MONTH(&#39;</span><span class="o">+</span><span class="n">date</span><span class="o">+</span><span class="s">&#39;)&#39;</span>
+    <span class="k">elif</span> <span class="p">(</span><span class="n">period</span> <span class="o">==</span> <span class="s">&#39;week&#39;</span><span class="p">):</span>
+        <span class="n">sql</span> <span class="o">+=</span> <span class="s">&#39; GROUP BY YEARWEEK(&#39;</span><span class="o">+</span><span class="n">date</span><span class="o">+</span><span class="s">&#39;,&#39;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">iso_8601_mode</span><span class="p">)</span><span class="o">+</span><span class="s">&#39;)&#39;</span>
+        <span class="n">sql</span> <span class="o">+=</span> <span class="s">&#39; ORDER BY YEARWEEK(&#39;</span><span class="o">+</span><span class="n">date</span><span class="o">+</span><span class="s">&#39;,&#39;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">iso_8601_mode</span><span class="p">)</span><span class="o">+</span><span class="s">&#39;)&#39;</span>
+    <span class="k">elif</span> <span class="p">(</span><span class="n">period</span> <span class="o">==</span> <span class="s">&#39;day&#39;</span><span class="p">):</span>
+        <span class="n">sql</span> <span class="o">+=</span> <span class="s">&#39; GROUP BY YEAR(&#39;</span><span class="o">+</span><span class="n">date</span><span class="o">+</span><span class="s">&#39;),DAYOFYEAR(&#39;</span><span class="o">+</span><span class="n">date</span><span class="o">+</span><span class="s">&#39;)&#39;</span>
+        <span class="n">sql</span> <span class="o">+=</span> <span class="s">&#39; ORDER BY YEAR(&#39;</span><span class="o">+</span><span class="n">date</span><span class="o">+</span><span class="s">&#39;),DAYOFYEAR(&#39;</span><span class="o">+</span><span class="n">date</span><span class="o">+</span><span class="s">&#39;)&#39;</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s">&quot;PERIOD: &quot;</span><span class="o">+</span><span class="n">period</span><span class="o">+</span><span class="s">&quot; not supported&quot;</span><span class="p">)</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+    <span class="k">return</span><span class="p">(</span><span class="n">sql</span><span class="p">)</span>
+
+<span class="c">##########</span>
+<span class="c"># Specific FROM and WHERE clauses per type of report</span>
+<span class="c">##########</span></div>
+<div class="viewcode-block" id="GetSQLRepositoriesFrom"><a class="viewcode-back" href="../../vizgrimoire.GrimoireSQL.html#vizgrimoire.GrimoireSQL.GetSQLRepositoriesFrom">[docs]</a><span class="k">def</span> <span class="nf">GetSQLRepositoriesFrom</span><span class="p">():</span>
+    <span class="c">#tables necessaries for repositories</span>
+    <span class="k">return</span> <span class="p">(</span><span class="s">&quot; , repositories r&quot;</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="GetSQLRepositoriesWhere"><a class="viewcode-back" href="../../vizgrimoire.GrimoireSQL.html#vizgrimoire.GrimoireSQL.GetSQLRepositoriesWhere">[docs]</a><span class="k">def</span> <span class="nf">GetSQLRepositoriesWhere</span><span class="p">(</span><span class="n">repository</span><span class="p">):</span>
+    <span class="c">#fields necessaries to match info among tables</span>
+    <span class="n">filter_</span> <span class="o">=</span> <span class="s">&quot; and r.name =&quot;</span><span class="o">+</span> <span class="n">repository</span> <span class="o">+</span> \
+             <span class="s">&quot; and r.id = s.repository_id&quot;</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">filter_</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="GetSQLCompaniesFrom"><a class="viewcode-back" href="../../vizgrimoire.GrimoireSQL.html#vizgrimoire.GrimoireSQL.GetSQLCompaniesFrom">[docs]</a><span class="k">def</span> <span class="nf">GetSQLCompaniesFrom</span><span class="p">(</span><span class="n">identities_db</span><span class="p">):</span>
+    <span class="c">#tables necessaries for companies</span>
+    <span class="n">filter_</span> <span class="o">=</span> <span class="s">&quot; , &quot;</span><span class="o">+</span><span class="n">identities_db</span><span class="o">+</span><span class="s">&quot;.people_upeople pup,&quot;</span><span class="o">+</span>\
+                  <span class="n">identities_db</span><span class="o">+</span><span class="s">&quot;.upeople_companies upc,&quot;</span><span class="o">+</span> \
+                  <span class="n">identities_db</span><span class="o">+</span><span class="s">&quot;.companies c&quot;</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">filter_</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="GetSQLCompaniesWhere"><a class="viewcode-back" href="../../vizgrimoire.GrimoireSQL.html#vizgrimoire.GrimoireSQL.GetSQLCompaniesWhere">[docs]</a><span class="k">def</span> <span class="nf">GetSQLCompaniesWhere</span> <span class="p">(</span><span class="n">company</span><span class="p">,</span> <span class="n">role</span><span class="p">):</span>
+    <span class="c">#fields necessaries to match info among tables</span>
+    <span class="n">filter_</span> <span class="o">=</span> <span class="s">&quot;and s.&quot;</span><span class="o">+</span><span class="n">role</span><span class="o">+</span><span class="s">&quot;_id = pup.people_id &quot;</span><span class="o">+</span>\
+             <span class="s">&quot;and pup.upeople_id = upc.upeople_id &quot;</span><span class="o">+</span>\
+             <span class="s">&quot;and s.date &gt;= upc.init &quot;</span><span class="o">+</span>\
+             <span class="s">&quot;and s.date &lt; upc.end &quot;</span><span class="o">+</span>\
+             <span class="s">&quot;and upc.company_id = c.id &quot;</span><span class="o">+</span>\
+             <span class="s">&quot;and c.name =&quot;</span><span class="o">+</span> <span class="n">company</span>
+    <span class="k">return</span><span class="p">(</span><span class="n">filter_</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="GetSQLCountriesFrom"><a class="viewcode-back" href="../../vizgrimoire.GrimoireSQL.html#vizgrimoire.GrimoireSQL.GetSQLCountriesFrom">[docs]</a><span class="k">def</span> <span class="nf">GetSQLCountriesFrom</span> <span class="p">(</span><span class="n">identities_db</span><span class="p">):</span>
+    <span class="c">#tables necessaries for companies</span>
+    <span class="n">filter_</span> <span class="o">=</span> <span class="s">&quot; , &quot;</span><span class="o">+</span><span class="n">identities_db</span><span class="o">+</span><span class="s">&quot;.people_upeople pup,&quot;</span> <span class="o">+</span>\
+                  <span class="n">identities_db</span><span class="o">+</span><span class="s">&quot;upeople_countries upc&quot;</span><span class="p">,</span><span class="o">+</span>\
+                  <span class="n">identities_db</span><span class="o">+</span><span class="s">&quot;.countries c&quot;</span>
+    <span class="k">return</span><span class="p">(</span><span class="n">filter_</span><span class="p">)</span>
+
+</div>
+<div class="viewcode-block" id="GetSQLCountriesWhere"><a class="viewcode-back" href="../../vizgrimoire.GrimoireSQL.html#vizgrimoire.GrimoireSQL.GetSQLCountriesWhere">[docs]</a><span class="k">def</span> <span class="nf">GetSQLCountriesWhere</span> <span class="p">(</span><span class="n">country</span><span class="p">,</span> <span class="n">role</span><span class="p">):</span>
+    <span class="c">#fields necessaries to match info among tables</span>
+    <span class="n">filter_</span> <span class="o">=</span> <span class="s">&quot;and s.&quot;</span><span class="o">+</span><span class="n">role</span><span class="o">+</span><span class="s">&quot;_id = pup.people_id &quot;</span><span class="o">+</span>\
+             <span class="s">&quot;and pup.upeople_id = upc.upeople_id &quot;</span><span class="o">+</span>\
+             <span class="s">&quot;and upc.country_id = c.id &quot;</span><span class="o">+</span>\
+             <span class="s">&quot;and c.name =&quot;</span><span class="o">+</span><span class="n">country</span>
+    <span class="k">return</span><span class="p">(</span><span class="n">filter_</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="GetSQLDomainsFrom"><a class="viewcode-back" href="../../vizgrimoire.GrimoireSQL.html#vizgrimoire.GrimoireSQL.GetSQLDomainsFrom">[docs]</a><span class="k">def</span> <span class="nf">GetSQLDomainsFrom</span> <span class="p">(</span><span class="n">identities_db</span><span class="p">):</span>
+    <span class="c">#tables necessaries for domains</span>
+    <span class="n">filter_</span> <span class="o">=</span> <span class="s">&quot; , &quot;</span><span class="o">+</span><span class="n">identities_db</span><span class="o">+</span><span class="s">&quot;.people_upeople pup, &quot;</span><span class="o">+</span>\
+                   <span class="n">identities_db</span><span class="o">+</span><span class="s">&quot;.upeople_domains upd &quot;</span><span class="o">+</span>\
+                   <span class="n">identities_db</span><span class="o">+</span><span class="s">&quot;.domains d&quot;</span>
+    <span class="k">return</span><span class="p">(</span><span class="n">filter_</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="GetSQLDomainsWhere"><a class="viewcode-back" href="../../vizgrimoire.GrimoireSQL.html#vizgrimoire.GrimoireSQL.GetSQLDomainsWhere">[docs]</a><span class="k">def</span> <span class="nf">GetSQLDomainsWhere</span> <span class="p">(</span><span class="n">domain</span><span class="p">,</span> <span class="n">role</span><span class="p">):</span>
+    <span class="c">#fields necessaries to match info among tables</span>
+    <span class="n">filter_</span> <span class="o">=</span> <span class="s">&quot;and s.&quot;</span><span class="o">+</span><span class="n">role</span><span class="o">+</span><span class="s">&quot;_id = pup.people_id &quot;</span> <span class="o">+</span>\
+             <span class="s">&quot; and pup.upeople_id = upd.upeople_id &quot;</span><span class="o">+</span>\
+             <span class="s">&quot; and upd.domain_id = d.id &quot;</span><span class="o">+</span>\
+             <span class="s">&quot; and d.name =&quot;</span><span class="o">+</span> <span class="n">domain</span>
+    <span class="k">return</span><span class="p">(</span><span class="n">filter_</span><span class="p">)</span>
+<span class="c">############</span>
+<span class="c">#Generic functions to check evolutionary or static info and for the execution of the final query</span>
+<span class="c">###########</span>
+</div>
+<div class="viewcode-block" id="BuildQuery"><a class="viewcode-back" href="../../vizgrimoire.GrimoireSQL.html#vizgrimoire.GrimoireSQL.BuildQuery">[docs]</a><span class="k">def</span> <span class="nf">BuildQuery</span> <span class="p">(</span><span class="n">period</span><span class="p">,</span> <span class="n">startdate</span><span class="p">,</span> <span class="n">enddate</span><span class="p">,</span> <span class="n">date_field</span><span class="p">,</span> <span class="n">fields</span><span class="p">,</span> <span class="n">tables</span><span class="p">,</span> <span class="n">filters</span><span class="p">,</span> <span class="n">evolutionary</span><span class="p">):</span>
+    <span class="c"># Select the way to evolutionary or aggregated dataset</span>
+    <span class="n">q</span> <span class="o">=</span> <span class="s">&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="n">evolutionary</span><span class="p">):</span>
+        <span class="n">q</span> <span class="o">=</span> <span class="n">GetSQLPeriod</span><span class="p">(</span><span class="n">period</span><span class="p">,</span> <span class="n">date_field</span><span class="p">,</span> <span class="n">fields</span><span class="p">,</span> <span class="n">tables</span><span class="p">,</span> <span class="n">filters</span><span class="p">,</span>
+                          <span class="n">startdate</span><span class="p">,</span> <span class="n">enddate</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">q</span> <span class="o">=</span> <span class="n">GetSQLGlobal</span><span class="p">(</span><span class="n">date_field</span><span class="p">,</span> <span class="n">fields</span><span class="p">,</span> <span class="n">tables</span><span class="p">,</span> <span class="n">filters</span><span class="p">,</span>
+                          <span class="n">startdate</span><span class="p">,</span> <span class="n">enddate</span><span class="p">)</span>
+
+    <span class="k">return</span><span class="p">(</span><span class="n">q</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="SetDBChannel"><a class="viewcode-back" href="../../vizgrimoire.GrimoireSQL.html#vizgrimoire.GrimoireSQL.SetDBChannel">[docs]</a><span class="k">def</span> <span class="nf">SetDBChannel</span> <span class="p">(</span><span class="n">user</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">password</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">database</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                  <span class="n">host</span><span class="o">=</span><span class="s">&quot;127.0.0.1&quot;</span><span class="p">,</span> <span class="n">port</span><span class="o">=</span><span class="mi">3306</span><span class="p">,</span> <span class="n">group</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="k">global</span> <span class="n">cursor</span>
+    <span class="k">global</span> <span class="n">dbpool</span>
+
+    <span class="n">db</span> <span class="o">=</span> <span class="bp">None</span>
+
+    <span class="k">if</span> <span class="n">database</span> <span class="ow">in</span> <span class="n">dbpool</span><span class="p">:</span>
+        <span class="n">db</span> <span class="o">=</span> <span class="n">dbpool</span><span class="p">[</span><span class="n">database</span><span class="p">]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">group</span> <span class="o">==</span> <span class="bp">None</span><span class="p">):</span>
+            <span class="n">db</span> <span class="o">=</span> <span class="n">MySQLdb</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">user</span><span class="o">=</span><span class="n">user</span><span class="p">,</span> <span class="n">passwd</span><span class="o">=</span><span class="n">password</span><span class="p">,</span>
+                                 <span class="n">db</span><span class="o">=</span><span class="n">database</span><span class="p">,</span> <span class="n">host</span><span class="o">=</span><span class="n">host</span><span class="p">,</span> <span class="n">port</span><span class="o">=</span><span class="n">port</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">db</span> <span class="o">=</span> <span class="n">MySQLdb</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">read_default_group</span><span class="o">=</span><span class="n">group</span><span class="p">,</span> <span class="n">db</span><span class="o">=</span><span class="n">database</span><span class="p">)</span>
+        <span class="n">dbpool</span><span class="p">[</span><span class="n">database</span><span class="p">]</span> <span class="o">=</span> <span class="n">db</span>
+
+    <span class="n">cursor</span> <span class="o">=</span> <span class="n">db</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span>
+    <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s">&quot;SET NAMES &#39;utf8&#39;&quot;</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="ExecuteQuery"><a class="viewcode-back" href="../../vizgrimoire.GrimoireSQL.html#vizgrimoire.GrimoireSQL.ExecuteQuery">[docs]</a><span class="k">def</span> <span class="nf">ExecuteQuery</span> <span class="p">(</span><span class="n">sql</span><span class="p">):</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">sql</span><span class="p">)</span>
+    <span class="n">rows</span> <span class="o">=</span> <span class="n">cursor</span><span class="o">.</span><span class="n">rowcount</span>
+    <span class="n">columns</span> <span class="o">=</span> <span class="n">cursor</span><span class="o">.</span><span class="n">description</span>
+
+    <span class="k">if</span> <span class="n">columns</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span> <span class="k">return</span> <span class="n">result</span>
+
+    <span class="k">for</span> <span class="n">column</span> <span class="ow">in</span> <span class="n">columns</span><span class="p">:</span>
+        <span class="n">result</span><span class="p">[</span><span class="n">column</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">if</span> <span class="n">rows</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">cursor</span><span class="o">.</span><span class="n">fetchall</span><span class="p">():</span>
+            <span class="k">for</span> <span class="p">(</span><span class="n">index</span><span class="p">,</span><span class="n">column</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">value</span><span class="p">):</span>
+                <span class="n">result</span><span class="p">[</span><span class="n">columns</span><span class="p">[</span><span class="n">index</span><span class="p">][</span><span class="mi">0</span><span class="p">]]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">column</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">rows</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">value</span> <span class="o">=</span> <span class="n">cursor</span><span class="o">.</span><span class="n">fetchone</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">columns</span><span class="p">)):</span>
+            <span class="n">result</span><span class="p">[</span><span class="n">columns</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">0</span><span class="p">]]</span> <span class="o">=</span> <span class="n">value</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">result</span> </div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="../../np-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../index.html">GrimoreLib 1.0 documentation</a> &raquo;</li>
+          <li><a href="../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2014, Bitergia.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+    </div>
+  </body>
+</html>

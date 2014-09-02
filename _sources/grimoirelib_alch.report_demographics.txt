@@ -1,0 +1,7 @@
+grimoirelib_alch.report_demographics module
+===========================================
+
+.. automodule:: grimoirelib_alch.report_demographics
+    :members:
+    :undoc-members:
+    :show-inheritance:

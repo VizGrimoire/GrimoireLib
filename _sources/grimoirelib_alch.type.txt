@@ -1,0 +1,18 @@
+grimoirelib_alch.type package
+=============================
+
+Submodules
+----------
+
+.. toctree::
+
+   grimoirelib_alch.type.activity
+   grimoirelib_alch.type.timeseries
+
+Module contents
+---------------
+
+.. automodule:: grimoirelib_alch.type
+    :members:
+    :undoc-members:
+    :show-inheritance:

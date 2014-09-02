@@ -1,0 +1,7 @@
+vizgrimoire.ReleasesDS module
+=============================
+
+.. automodule:: vizgrimoire.ReleasesDS
+    :members:
+    :undoc-members:
+    :show-inheritance:

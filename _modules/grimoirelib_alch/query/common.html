@@ -1,0 +1,318 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>grimoirelib_alch.query.common &mdash; GrimoreLib 1.0 documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <link rel="top" title="GrimoreLib 1.0 documentation" href="../../../index.html" />
+    <link rel="up" title="Module code" href="../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="../../../np-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">GrimoreLib 1.0 documentation</a> &raquo;</li>
+          <li><a href="../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for grimoirelib_alch.query.common</h1><div class="highlight"><pre>
+<span class="c">#! /usr/bin/python</span>
+<span class="c"># -*- coding: utf-8 -*-</span>
+
+<span class="c">## Copyright (C) 2014 Bitergia</span>
+<span class="c">##</span>
+<span class="c">## This program is free software; you can redistribute it and/or modify</span>
+<span class="c">## it under the terms of the GNU General Public License as published by</span>
+<span class="c">## the Free Software Foundation; either version 3 of the License, or</span>
+<span class="c">## (at your option) any later version.</span>
+<span class="c">##</span>
+<span class="c">## This program is distributed in the hope that it will be useful,</span>
+<span class="c">## but WITHOUT ANY WARRANTY; without even the implied warranty of</span>
+<span class="c">## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the</span>
+<span class="c">## GNU General Public License for more details.</span>
+<span class="c">##</span>
+<span class="c">## You should have received a copy of the GNU General Public License</span>
+<span class="c">## along with this program; if not, write to the Free Software</span>
+<span class="c">## Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.</span>
+<span class="c">##</span>
+<span class="c">## Package to deal with common functionality for queries to *Grimoire</span>
+<span class="c">##  databases</span>
+<span class="c">##</span>
+<span class="c">## Authors:</span>
+<span class="c">##   Jesus M. Gonzalez-Barahona &lt;jgb@bitergia.com&gt;</span>
+<span class="c">##</span>
+
+<span class="kn">from</span> <span class="nn">sqlalchemy</span> <span class="kn">import</span> <span class="n">create_engine</span>
+<span class="kn">from</span> <span class="nn">sqlalchemy.orm</span> <span class="kn">import</span> <span class="n">sessionmaker</span>
+<span class="kn">from</span> <span class="nn">sqlalchemy.orm.query</span> <span class="kn">import</span> <span class="n">Query</span>
+<span class="kn">from</span> <span class="nn">sqlalchemy.ext.declarative</span> <span class="kn">import</span> <span class="n">declarative_base</span><span class="p">,</span> <span class="n">DeferredReflection</span>
+
+<div class="viewcode-block" id="GrimoireDatabase"><a class="viewcode-back" href="../../../grimoirelib_alch.query.common.html#grimoirelib_alch.query.common.GrimoireDatabase">[docs]</a><span class="k">class</span> <span class="nc">GrimoireDatabase</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Class for dealing with Grimoire databases.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">url</span><span class="p">,</span> <span class="n">schema</span><span class="p">,</span> <span class="n">schema_id</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Instatiation.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+
+<span class="sd">        url: string</span>
+<span class="sd">           SQLAlchemy url for the database to be used, such as</span>
+<span class="sd">           mysql://user:passwd@host:port/</span>
+<span class="sd">        schema: string</span>
+<span class="sd">           Schema name for the ITS data</span>
+<span class="sd">        schema_id: string</span>
+<span class="sd">           Schema name for the unique ids data</span>
+<span class="sd">        </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">url</span> <span class="o">=</span> <span class="n">url</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">schema</span> <span class="o">=</span> <span class="n">schema</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">schema_id</span> <span class="o">=</span> <span class="n">schema_id</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">query_cls</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_query_cls</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Base</span> <span class="o">=</span> <span class="n">declarative_base</span><span class="p">(</span><span class="n">cls</span><span class="o">=</span><span class="n">DeferredReflection</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_create_tables</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">_query_cls</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return the default Query class for this database</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+
+<span class="sd">        GrimoireQuery: default Query class.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">raise</span> <span class="ne">Exception</span> <span class="p">(</span><span class="s">&quot;_query_cls should be provided by child class&quot;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_create_tables</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Create all SQLAlchemy tables.</span>
+
+<span class="sd">        Builds a SQLAlchemy class per SQL table, by using _table().</span>
+<span class="sd">        It assumes self.Base, self.schema and self.schema_id are already</span>
+<span class="sd">        set (see __init__() code).</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">raise</span> <span class="ne">Exception</span> <span class="p">(</span><span class="s">&quot;_create_tables should be provided by child class&quot;</span><span class="p">)</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">_table</span> <span class="p">(</span><span class="n">bases</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">tablename</span><span class="p">,</span> <span class="n">schemaname</span><span class="p">,</span> <span class="n">columns</span> <span class="o">=</span> <span class="p">{}):</span>
+        <span class="sd">&quot;&quot;&quot;Factory for building SQAlchemy table classes.</span>
+
+<span class="sd">        This function allows for the creation of classes for each of the</span>
+<span class="sd">        tables in the database. This way, table classes can be created</span>
+<span class="sd">        when the code is running, and some parameters such as the schema</span>
+<span class="sd">        name are available (as opposed to using the Python class constructor,</span>
+<span class="sd">        which requieres that all the parameters are ready at declaration time.</span>
+<span class="sd">        </span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+
+<span class="sd">        base: list of classes to inherit from</span>
+<span class="sd">           Base classes, of which the resulting clase will inherit</span>
+<span class="sd">        name: string</span>
+<span class="sd">           Name of the class to be built</span>
+<span class="sd">        tablename: string</span>
+<span class="sd">           Name of the database table to be interfaced by the class</span>
+<span class="sd">        schemaname: string</span>
+<span class="sd">           Name of the schema to which the table belongs</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+
+<span class="sd">        class in the bases hierarchies</span>
+<span class="sd">        </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">attr</span> <span class="o">=</span> <span class="nb">dict</span> <span class="p">(</span>
+            <span class="n">__tablename__</span> <span class="o">=</span> <span class="n">tablename</span><span class="p">,</span>
+            <span class="n">__table_args__</span> <span class="o">=</span> <span class="p">{</span><span class="s">&#39;schema&#39;</span><span class="p">:</span> <span class="n">schemaname</span><span class="p">}</span>
+            <span class="p">)</span>
+        <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">columns</span><span class="p">:</span>
+            <span class="n">attr</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">columns</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+        <span class="n">table_class</span> <span class="o">=</span> <span class="nb">type</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">bases</span><span class="p">,</span> <span class="n">attr</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">table_class</span>
+
+<div class="viewcode-block" id="GrimoireDatabase.build_session"><a class="viewcode-back" href="../../../grimoirelib_alch.query.common.html#grimoirelib_alch.query.common.GrimoireDatabase.build_session">[docs]</a>    <span class="k">def</span> <span class="nf">build_session</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">query_cls</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span> <span class="n">echo</span> <span class="o">=</span> <span class="bp">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Create a session with the database</span>
+
+<span class="sd">        Instantiatates an engine and a session to work with it.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        </span>
+<span class="sd">        query_cls: Class in GrimoireQuery hierarchy</span>
+<span class="sd">           Query class (Default: None)</span>
+<span class="sd">           None means the &quot;canonical query class&quot;, defined by the subclass,</span>
+<span class="sd">           such as ITSQuery for ITSDatabase.</span>
+<span class="sd">        echo: boolean</span>
+<span class="sd">           Output SQL to stdout or not.</span>
+<span class="sd">        </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        
+        <span class="c"># To set Unicode interaction with MySQL</span>
+        <span class="c"># http://docs.sqlalchemy.org/en/rel_0_9/dialects/mysql.html#unicode</span>
+        <span class="n">trailer</span> <span class="o">=</span> <span class="s">&quot;?charset=utf8&amp;use_unicode=0&quot;</span>
+        <span class="n">database</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">url</span> <span class="o">+</span> <span class="n">trailer</span>
+        <span class="n">engine</span> <span class="o">=</span> <span class="n">create_engine</span><span class="p">(</span><span class="n">database</span><span class="p">,</span>
+                               <span class="n">convert_unicode</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s">&#39;utf8&#39;</span><span class="p">,</span>
+                               <span class="n">echo</span><span class="o">=</span><span class="n">echo</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Base</span><span class="o">.</span><span class="n">prepare</span><span class="p">(</span><span class="n">engine</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">query_cls</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">query_cls</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">query_cls</span>
+        <span class="n">Session</span> <span class="o">=</span> <span class="n">sessionmaker</span><span class="p">(</span><span class="n">bind</span><span class="o">=</span><span class="n">engine</span><span class="p">,</span> <span class="n">query_cls</span><span class="o">=</span><span class="n">query_cls</span><span class="p">)</span>
+        <span class="n">session</span> <span class="o">=</span> <span class="n">Session</span><span class="p">()</span>
+        <span class="k">return</span> <span class="p">(</span><span class="n">session</span><span class="p">)</span>
+</div>
+    <span class="k">def</span> <span class="nf">__repr__</span> <span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+
+        <span class="nb">repr</span> <span class="o">=</span> <span class="s">&quot;Database url: &quot;</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">url</span> <span class="o">+</span> <span class="s">&quot;</span><span class="se">\n</span><span class="s">&quot;</span>
+        <span class="nb">repr</span> <span class="o">=</span> <span class="nb">repr</span> <span class="o">+</span> <span class="s">&quot; Main database schema: &quot;</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">schema</span> <span class="o">+</span> <span class="s">&quot;</span><span class="se">\n</span><span class="s">&quot;</span>
+        <span class="nb">repr</span> <span class="o">=</span> <span class="nb">repr</span> <span class="o">+</span> <span class="s">&quot; Unique id database schema: &quot;</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">schema_id</span> <span class="o">+</span> <span class="s">&quot;</span><span class="se">\n</span><span class="s">&quot;</span>
+        <span class="k">return</span> <span class="nb">repr</span>
+
+    <span class="k">def</span> <span class="nf">__str__</span> <span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__repr__</span><span class="p">()</span>
+
+</div>
+<div class="viewcode-block" id="GrimoireQuery"><a class="viewcode-back" href="../../../grimoirelib_alch.query.common.html#grimoirelib_alch.query.common.GrimoireQuery">[docs]</a><span class="k">class</span> <span class="nc">GrimoireQuery</span> <span class="p">(</span><span class="n">Query</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Class for dealing with Grimiore queries</span>
+
+<span class="sd">    In fact, this is the root of the hierarchy of classes, not</span>
+<span class="sd">    intended for direct use.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span> <span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">entities</span><span class="p">,</span> <span class="n">session</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Create a GrimoreQuery.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+
+<span class="sd">        entities: list of SQLAlchemy entities</span>
+<span class="sd">           Entities (tables) to include in the query</span>
+<span class="sd">        session: SQLAlchemy session</span>
+<span class="sd">           SQLAlchemy session to use to connect to the database</span>
+
+<span class="sd">        Attributes</span>
+<span class="sd">        ----------</span>
+
+<span class="sd">        self.start: datetime.datetime</span>
+<span class="sd">           Start of the period to consider for commits. Default: None</span>
+<span class="sd">           (start from the first commit)</span>
+<span class="sd">        self.end: datetime.datetime</span>
+<span class="sd">           End of the period to consider for commits. Default: None</span>
+<span class="sd">           (end in the last commit)</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">start</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">end</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="c"># Keep an accounting of which tables have been joined, to avoid</span>
+        <span class="c"># undesired repeated joins</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">joined</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">Query</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">entities</span><span class="p">,</span> <span class="n">session</span><span class="p">)</span>
+
+
+    <span class="k">def</span> <span class="nf">__repr__</span> <span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">start</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">start</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">start</span><span class="o">.</span><span class="n">isoformat</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">start</span> <span class="o">=</span> <span class="s">&quot;ever&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">end</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">end</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">end</span><span class="o">.</span><span class="n">isoformat</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">end</span> <span class="o">=</span> <span class="s">&quot;ever&quot;</span>
+        <span class="nb">repr</span> <span class="o">=</span> <span class="s">&quot;Query from </span><span class="si">%s</span><span class="s"> to </span><span class="si">%s</span><span class="se">\n</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">end</span><span class="p">)</span>
+        <span class="nb">repr</span> <span class="o">=</span> <span class="s">&quot;  Joined: </span><span class="si">%s</span><span class="se">\n</span><span class="s">&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">joined</span><span class="p">)</span>
+        <span class="nb">repr</span> <span class="o">+=</span> <span class="n">Query</span><span class="o">.</span><span class="n">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="k">return</span> <span class="nb">repr</span>
+
+    <span class="k">def</span> <span class="nf">__str__</span> <span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__repr__</span><span class="p">()</span>
+</pre></div></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="../../../np-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">GrimoreLib 1.0 documentation</a> &raquo;</li>
+          <li><a href="../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2014, Bitergia.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+    </div>
+  </body>
+</html>

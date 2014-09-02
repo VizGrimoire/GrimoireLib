@@ -1,0 +1,921 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>build_dashboard &mdash; GrimoreLib 1.0 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="top" title="GrimoreLib 1.0 documentation" href="../index.html" />
+    <link rel="up" title="Module code" href="index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="../np-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../index.html">GrimoreLib 1.0 documentation</a> &raquo;</li>
+          <li><a href="index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for build_dashboard</h1><div class="highlight"><pre>
+<span class="c">#!/usr/bin/python</span>
+<span class="c"># -*- coding: utf-8 -*-</span>
+
+<span class="c"># Copyright (C) 2013, 2014 Jesus M. Gonzalez-Barahona</span>
+<span class="c">#</span>
+<span class="c"># This program is free software; you can redistribute it and/or modify</span>
+<span class="c"># it under the terms of the GNU General Public License as published by</span>
+<span class="c"># the Free Software Foundation; either version 3 of the License, or</span>
+<span class="c"># (at your option) any later version.</span>
+<span class="c">#</span>
+<span class="c"># This program is distributed in the hope that it will be useful,</span>
+<span class="c"># but WITHOUT ANY WARRANTY; without even the implied warranty of</span>
+<span class="c"># MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the</span>
+<span class="c"># GNU General Public License for more details.</span>
+<span class="c">#</span>
+<span class="c"># You should have received a copy of the GNU General Public License</span>
+<span class="c"># along with this program; if not, write to the Free Software</span>
+<span class="c"># Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.</span>
+<span class="c">#</span>
+<span class="c"># Authors :</span>
+<span class="c">#       Jesus M. Gonzalez-Barahona &lt;jgb@bitergia.com&gt;</span>
+
+<span class="c">#</span>
+<span class="c"># vg-github.py</span>
+<span class="c">#</span>
+
+<span class="sd">&quot;&quot;&quot;Simple script to retrieve data from GitHub repositories about a project,</span>
+<span class="sd">or all the projects owned by a user.</span>
+<span class="sd">It installs CVSAnalY and Bicho (form MetricsGrimoire git repositories),</span>
+<span class="sd">the needed packages from vizGrimoire git repositories, R dependencies,</span>
+<span class="sd">and main Python dependencies.</span>
+
+<span class="sd">There are options for not installing everything once again if the script</span>
+<span class="sd">is run again, run it with --help to get a full list.</span>
+
+<span class="sd">Example of how to produce a dashboard for repository</span>
+<span class="sd">VizGrimoire/VizGrimoireR:</span>
+
+<span class="sd">vg-github.py --user jgb --passwd XXX --dir /tmp/vgr --removedb</span>
+<span class="sd"> --ghuser ghuser --ghpasswd XXX VizGrimoire/VizGrimoireR</span>
+
+<span class="sd">Example of how to produce a dashboard for all repositories owned by</span>
+<span class="sd">organization MetricsGrimoire:</span>
+
+<span class="sd">vg-github.py --user jgb --passwd XXX --dir ~/dashboard --removedb</span>
+<span class="sd"> --ghuser ghuser --ghpasswd XXX --name Grimoire MetricsGrimoire VizGrimoire</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">argparse</span>
+<span class="kn">import</span> <span class="nn">MySQLdb</span>
+<span class="kn">from</span> <span class="nn">contextlib</span> <span class="kn">import</span> <span class="n">closing</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">shutil</span>
+<span class="kn">import</span> <span class="nn">errno</span>
+<span class="kn">from</span> <span class="nn">subprocess</span> <span class="kn">import</span> <span class="n">check_call</span><span class="p">,</span> <span class="n">Popen</span><span class="p">,</span> <span class="n">PIPE</span>
+<span class="kn">import</span> <span class="nn">urllib2</span>
+<span class="kn">import</span> <span class="nn">json</span>
+<span class="kn">import</span> <span class="nn">string</span>
+
+<span class="n">mgConf</span> <span class="o">=</span> <span class="p">{}</span>
+<span class="n">rConf</span> <span class="o">=</span> <span class="p">{}</span>
+<span class="n">args</span> <span class="o">=</span> <span class="bp">None</span>
+<span class="n">dbPrefix</span> <span class="o">=</span> <span class="s">&quot;&quot;</span>
+<span class="nb">dir</span> <span class="o">=</span> <span class="s">&quot;&quot;</span>
+<span class="n">dashboard_dir</span> <span class="o">=</span> <span class="s">&quot;&quot;</span>
+<span class="n">JSONdir</span> <span class="o">=</span> <span class="s">&quot;&quot;</span>
+
+<div class="viewcode-block" id="DBConf"><a class="viewcode-back" href="../build_dashboard.html#build_dashboard.DBConf">[docs]</a><span class="k">class</span> <span class="nc">DBConf</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Configuration for a MySQL database.</span>
+
+<span class="sd">    Includes information to access the database, such as MySQL user name,</span>
+<span class="sd">    password for that user, etc.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+
+<span class="sd">    name: string</span>
+<span class="sd">        Database name (or prefix, in some cases)</span>
+<span class="sd">    host: string</span>
+<span class="sd">        Host name of the machine hosting the database. Default: &#39;localhost&#39;</span>
+<span class="sd">    port: integer</span>
+<span class="sd">        Port of the database in host. Default: None, if standard port is used</span>
+<span class="sd">    user: string</span>
+<span class="sd">        MySQL user to access database. Default: None, if no user is needed</span>
+<span class="sd">    passwd: string</span>
+<span class="sd">        Password for user. Default: None, if no password is needed</span>
+<span class="sd">    </span>
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+
+<span class="sd">    Same as parameters.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span> <span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">host</span> <span class="o">=</span> <span class="s">&#39;localhost&#39;</span><span class="p">,</span> <span class="n">port</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span>
+                  <span class="n">user</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span> <span class="n">passwd</span> <span class="o">=</span> <span class="bp">None</span><span class="p">):</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">name</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">host</span> <span class="o">=</span> <span class="n">host</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">port</span> <span class="o">=</span> <span class="n">port</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">user</span> <span class="o">=</span> <span class="n">user</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">passwd</span> <span class="o">=</span> <span class="n">passwd</span>
+
+<div class="viewcode-block" id="DBConf.connect"><a class="viewcode-back" href="../build_dashboard.html#build_dashboard.DBConf.connect">[docs]</a>    <span class="k">def</span> <span class="nf">connect</span> <span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return a dictionary with parameters needed by MySQLdb.connect().</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+
+<span class="sd">        dictionary:</span>
+<span class="sd">            Values useful for MySQLdb.connect(), omiting those that are None.</span>
+<span class="sd">            Those are: &#39;host&#39;, &#39;port&#39;, &#39;user&#39;, &#39;passwd&#39;</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">ret_vars</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">my_vars</span> <span class="o">=</span> <span class="nb">vars</span> <span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="p">[</span><span class="s">&#39;host&#39;</span><span class="p">,</span> <span class="s">&#39;port&#39;</span><span class="p">,</span> <span class="s">&#39;user&#39;</span><span class="p">,</span> <span class="s">&#39;passwd&#39;</span><span class="p">]:</span>
+            <span class="k">if</span> <span class="n">my_vars</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="n">ret_vars</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">my_vars</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+        <span class="k">return</span> <span class="p">(</span><span class="n">ret_vars</span><span class="p">)</span>
+
+</div></div>
+<span class="k">def</span> <span class="nf">_prepare_db</span> <span class="p">(</span><span class="n">tool</span><span class="p">,</span> <span class="n">conf</span><span class="p">,</span> <span class="n">remove</span> <span class="o">=</span> <span class="bp">True</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Prepare MetricsGrimoire database.</span>
+
+<span class="sd">    Prepares (and deletes, if args.removedb was specified) the database</span>
+<span class="sd">    for a MetricsGrimoire tool.</span>
+<span class="sd">    This is usually run once per tool, just before the calls to run the tools</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+
+<span class="sd">    tool: {&#39;cvsanaly&#39;, &#39;bicho&#39;}</span>
+<span class="sd">        Tool for which to prepare database.</span>
+<span class="sd">    conf: DBConf</span>
+<span class="sd">        Configuration for the database</span>
+<span class="sd">    remove: Boolean</span>
+<span class="sd">        Whether to remove the database before preparing it</span>
+<span class="sd">        (default: True).</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+
+<span class="sd">    None</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c"># Open database connection and get a cursor</span>
+    <span class="n">conn</span> <span class="o">=</span> <span class="n">MySQLdb</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="o">**</span><span class="n">conf</span><span class="o">.</span><span class="n">connect</span><span class="p">())</span>
+
+    <span class="c"># with clause ensures that connection is closed (and committed) even</span>
+    <span class="c"># in the case of exceptions</span>
+    <span class="k">with</span> <span class="n">closing</span><span class="p">(</span><span class="n">conn</span><span class="o">.</span><span class="n">cursor</span><span class="p">())</span> <span class="k">as</span> <span class="n">cursor</span><span class="p">:</span>
+        <span class="c"># Create database and remove it in advance, if needed</span>
+        <span class="k">if</span> <span class="n">remove</span><span class="p">:</span>
+            <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s">&#39;DROP DATABASE IF EXISTS &#39;</span> <span class="o">+</span> <span class="n">conf</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+        <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s">&#39;CREATE DATABASE IF NOT EXISTS &#39;</span> <span class="o">+</span> <span class="n">conf</span><span class="o">.</span><span class="n">name</span> <span class="o">+</span>
+                       <span class="s">&#39; CHARACTER SET utf8 COLLATE utf8_unicode_ci&#39;</span><span class="p">)</span>
+    <span class="n">conn</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+
+<div class="viewcode-block" id="find_repos"><a class="viewcode-back" href="../build_dashboard.html#build_dashboard.find_repos">[docs]</a><span class="k">def</span> <span class="nf">find_repos</span> <span class="p">(</span><span class="n">user</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Find the repos for a GitHub user or organization.</span>
+
+<span class="sd">    Gets a list of the repositories (projects) owned by a GitHub</span>
+<span class="sd">    user or organization, by querying the GitHub REST API.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+
+<span class="sd">    user: string</span>
+<span class="sd">        GitHub user or organziation</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+
+<span class="sd">    tuple of strings</span>
+<span class="sd">        Repository names.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">repos_url</span> <span class="o">=</span> <span class="s">&#39;https://api.github.com/users/&#39;</span> <span class="o">+</span> <span class="n">user</span> <span class="o">+</span> <span class="s">&#39;/repos&#39;</span>
+    <span class="n">res</span> <span class="o">=</span> <span class="n">urllib2</span><span class="o">.</span><span class="n">urlopen</span><span class="p">(</span><span class="n">repos_url</span><span class="p">)</span>
+    <span class="n">repos_json</span> <span class="o">=</span> <span class="n">res</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
+    <span class="n">repos</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">repos_json</span><span class="p">)</span>
+    <span class="n">repo_names</span> <span class="o">=</span> <span class="p">[</span><span class="n">repo</span><span class="p">[</span><span class="s">&#39;full_name&#39;</span><span class="p">]</span> <span class="k">for</span> <span class="n">repo</span> <span class="ow">in</span> <span class="n">repos</span><span class="p">]</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">repo_names</span><span class="p">)</span>
+
+</div>
+<div class="viewcode-block" id="run_mgtool"><a class="viewcode-back" href="../build_dashboard.html#build_dashboard.run_mgtool">[docs]</a><span class="k">def</span> <span class="nf">run_mgtool</span> <span class="p">(</span><span class="n">tool</span><span class="p">,</span> <span class="n">project</span><span class="p">,</span> <span class="n">db_conf</span><span class="p">,</span> <span class="n">mg_dir</span><span class="p">,</span> <span class="n">tool_conf</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Run MetricsGrimoire tool.</span>
+
+<span class="sd">    Run a MetricsGrimoire tool to extract data from project, and</span>
+<span class="sd">    store it in dbname.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+
+<span class="sd">    tool: {&#39;cvsanaly&#39;, &#39;bicho&#39;}</span>
+<span class="sd">        Tool to run</span>
+<span class="sd">    project: string</span>
+<span class="sd">        GitHub project, such as &#39;VizGrimoire/VizGrimoireR&#39;</span>
+<span class="sd">    db_conf: DBConf</span>
+<span class="sd">        Configuration for the database</span>
+<span class="sd">    mg_dir: string</span>
+<span class="sd">        Directory with MegricsGRimoire tools</span>
+<span class="sd">    tool_conf: dictionary</span>
+<span class="sd">        Configuration for the tool to run (see Notes below)</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+
+<span class="sd">    None</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+
+<span class="sd">    The tool_conf dictionary must have at least the following entries:</span>
+
+<span class="sd">    &quot;dir&quot;: directory (relative to mg_dir) with the installed tool</span>
+<span class="sd">    &quot;bin&quot;: path of binary for the installed tool (relative to &quot;dir&quot;)</span>
+<span class="sd">    &quot;db&quot;: tool option to specify the name of the  MySQL database</span>
+<span class="sd">    &quot;dbuser&quot;: tool option to specify the MySQL user to access the database</span>
+<span class="sd">    &quot;dbpasswd&quot;: tool option to specify the passwd for the MySQL user</span>
+<span class="sd">    &quot;opts&quot;: other needed parameters (options) to run the tool</span>
+<span class="sd">    &quot;ppath&quot;: PYTHONPATH path needed to run the tool</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c"># Prepare options to run the tool</span>
+    <span class="n">tool_bin</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">mg_dir</span><span class="p">,</span> <span class="n">tool_conf</span><span class="p">[</span><span class="s">&quot;dir&quot;</span><span class="p">],</span> <span class="n">tool_conf</span><span class="p">[</span><span class="s">&quot;bin&quot;</span><span class="p">])</span>
+    <span class="n">opts</span> <span class="o">=</span> <span class="p">[</span><span class="n">tool_bin</span><span class="p">]</span>
+    <span class="n">opts</span><span class="o">.</span><span class="n">extend</span> <span class="p">(</span><span class="n">tool_conf</span><span class="p">[</span><span class="s">&quot;opts&quot;</span><span class="p">])</span>
+    <span class="k">if</span> <span class="n">db_conf</span><span class="o">.</span><span class="n">user</span><span class="p">:</span>
+        <span class="n">opts</span><span class="o">.</span><span class="n">extend</span> <span class="p">([</span><span class="n">tool_conf</span><span class="p">[</span><span class="s">&quot;dbuser&quot;</span><span class="p">],</span> <span class="n">db_conf</span><span class="o">.</span><span class="n">user</span><span class="p">])</span>
+    <span class="k">if</span> <span class="n">db_conf</span><span class="o">.</span><span class="n">passwd</span><span class="p">:</span>
+        <span class="n">opts</span><span class="o">.</span><span class="n">extend</span> <span class="p">([</span><span class="n">tool_conf</span><span class="p">[</span><span class="s">&quot;dbpasswd&quot;</span><span class="p">],</span> <span class="n">db_conf</span><span class="o">.</span><span class="n">passwd</span><span class="p">])</span>
+    <span class="n">opts</span><span class="o">.</span><span class="n">extend</span> <span class="p">([</span><span class="n">tool_conf</span><span class="p">[</span><span class="s">&quot;db&quot;</span><span class="p">],</span> <span class="n">db_conf</span><span class="o">.</span><span class="n">name</span><span class="p">])</span>
+    <span class="c"># Specific code for running cvsanaly</span>
+    <span class="k">if</span> <span class="n">tool</span> <span class="o">==</span> <span class="s">&quot;cvsanaly&quot;</span><span class="p">:</span>
+        <span class="n">clone_repos</span> <span class="p">(</span><span class="nb">dir</span> <span class="o">+</span> <span class="s">&#39;/repos/&#39;</span><span class="p">,</span>
+                     <span class="p">{</span><span class="n">project</span><span class="p">:</span> <span class="s">&quot;https://github.com/&quot;</span> <span class="o">+</span> <span class="n">project</span> <span class="o">+</span> <span class="s">&quot;.git&quot;</span><span class="p">})</span>
+        <span class="n">opts</span><span class="o">.</span><span class="n">append</span> <span class="p">(</span><span class="s">&quot;--extensions=&quot;</span> <span class="o">+</span> <span class="s">&quot;CommitsLOC&quot;</span><span class="p">)</span>
+        <span class="n">opts</span><span class="o">.</span><span class="n">append</span> <span class="p">(</span><span class="nb">dir</span> <span class="o">+</span> <span class="s">&#39;/repos/&#39;</span> <span class="o">+</span> <span class="n">project</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">args</span><span class="o">.</span><span class="n">verbose</span><span class="p">:</span>
+             <span class="n">opts</span><span class="o">.</span><span class="n">append</span> <span class="p">(</span><span class="s">&quot;--quiet&quot;</span><span class="p">)</span>
+    <span class="c"># Specific code for running bicho</span>
+    <span class="k">if</span> <span class="n">tool</span> <span class="o">==</span> <span class="s">&quot;bicho&quot;</span><span class="p">:</span>
+        <span class="n">opts</span><span class="o">.</span><span class="n">extend</span> <span class="p">([</span><span class="s">&quot;--url&quot;</span><span class="p">,</span>
+                     <span class="s">&quot;https://api.github.com/repos/&quot;</span> <span class="o">+</span> <span class="n">project</span> <span class="o">+</span> <span class="s">&quot;/issues&quot;</span><span class="p">,</span>
+                      <span class="s">&quot;--backend-user&quot;</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">ghuser</span><span class="p">,</span>
+                      <span class="s">&quot;--backend-password&quot;</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">ghpasswd</span><span class="p">])</span>
+    <span class="k">print</span> <span class="s">&quot;Running MetricsGrimoire tool (&quot;</span> <span class="o">+</span> <span class="n">tool</span> <span class="o">+</span> <span class="s">&quot;)&quot;</span> 
+    <span class="c"># Run the tool</span>
+    <span class="n">env</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="n">env</span> <span class="p">[</span><span class="s">&quot;PYTHONPATH&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">tool_conf</span><span class="p">[</span><span class="s">&quot;ppath&quot;</span><span class="p">]</span> <span class="o">+</span> <span class="s">&quot;:&quot;</span> <span class="o">+</span> \
+        <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&quot;PYTHONPATH&quot;</span><span class="p">,</span> <span class="s">&quot;&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">verbose</span><span class="p">:</span>
+        <span class="k">print</span> <span class="s">&quot;PYTHONPATH: &quot;</span> <span class="o">+</span> <span class="n">env</span> <span class="p">[</span><span class="s">&quot;PYTHONPATH&quot;</span><span class="p">]</span>
+        <span class="k">print</span> <span class="s">&quot;Running: &quot;</span> <span class="o">+</span> <span class="s">&quot; &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">opts</span><span class="p">)</span>
+    <span class="n">check_call</span><span class="p">(</span><span class="n">opts</span><span class="p">,</span> <span class="n">env</span><span class="o">=</span><span class="n">env</span><span class="p">)</span>
+
+</div>
+<div class="viewcode-block" id="run_mgtools"><a class="viewcode-back" href="../build_dashboard.html#build_dashboard.run_mgtools">[docs]</a><span class="k">def</span> <span class="nf">run_mgtools</span> <span class="p">(</span><span class="n">tools</span><span class="p">,</span> <span class="n">projects</span><span class="p">,</span> <span class="n">db_conf</span><span class="p">,</span> <span class="n">db_remove</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Run MetricsGrimoire tools</span>
+
+<span class="sd">    Run the specified MetricsGrimoire tools for the specified</span>
+<span class="sd">    GitHub projects, preparing the corresponding databases if needed</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+
+<span class="sd">    tools: list of {&#39;cvsanaly&#39;, &#39;bicho&#39;}</span>
+<span class="sd">        List of tools to run (usually [&#39;cvsanaly&#39;, &#39;bicho&#39;]</span>
+<span class="sd">    projects: list of strings</span>
+<span class="sd">        List of GitHub projects, such as VizGrimoire/VizGrimoireR</span>
+<span class="sd">    db_conf: DBConf</span>
+<span class="sd">        Configuration for the database (see Notes below)</span>
+<span class="sd">        db_conf.name will be used as the prefix for database names</span>
+<span class="sd">    db_remove: Boolean</span>
+<span class="sd">        Whether to remove the databases before preparing it.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+
+<span class="sd">    None</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+
+<span class="sd">    run_mgtools (tools = [&#39;cvsanaly&#39;, &#39;bicho&#39;],</span>
+<span class="sd">                 projects = [&#39;VizGrimoire/VizGrimoireR&#39;],</span>
+<span class="sd">                 db_conf = DBConf (name = &#39;mg&#39;, user = &#39;jgb&#39;, passwd = &#39;XXX&#39;)</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">for</span> <span class="n">tool</span> <span class="ow">in</span> <span class="n">tools</span><span class="p">:</span>
+        <span class="c"># Prepare databases</span>
+        <span class="n">dbname</span> <span class="o">=</span> <span class="n">db_conf</span><span class="o">.</span><span class="n">name</span> <span class="o">+</span> <span class="s">&quot;_&quot;</span> <span class="o">+</span> <span class="n">tool</span>
+        <span class="n">db_conf_tool</span> <span class="o">=</span> <span class="n">DBConf</span> <span class="p">(</span><span class="n">name</span> <span class="o">=</span> <span class="n">dbname</span><span class="p">,</span>
+                               <span class="n">host</span> <span class="o">=</span> <span class="n">db_conf</span><span class="o">.</span><span class="n">host</span><span class="p">,</span>
+                               <span class="n">port</span> <span class="o">=</span> <span class="n">db_conf</span><span class="o">.</span><span class="n">port</span><span class="p">,</span>
+                               <span class="n">user</span> <span class="o">=</span> <span class="n">db_conf</span><span class="o">.</span><span class="n">user</span><span class="p">,</span>
+                               <span class="n">passwd</span> <span class="o">=</span> <span class="n">db_conf</span><span class="o">.</span><span class="n">passwd</span><span class="p">)</span>
+        <span class="n">_prepare_db</span> <span class="p">(</span><span class="n">tool</span> <span class="o">=</span> <span class="n">tool</span><span class="p">,</span> <span class="n">conf</span> <span class="o">=</span> <span class="n">db_conf_tool</span><span class="p">,</span> <span class="n">remove</span> <span class="o">=</span> <span class="n">db_remove</span><span class="p">)</span>
+        <span class="c"># Run tools</span>
+        <span class="k">for</span> <span class="n">project</span> <span class="ow">in</span> <span class="n">projects</span><span class="p">:</span>
+            <span class="n">run_mgtool</span> <span class="p">(</span><span class="n">tool</span> <span class="o">=</span> <span class="n">tool</span><span class="p">,</span> <span class="n">project</span> <span class="o">=</span> <span class="n">project</span><span class="p">,</span>
+                        <span class="n">db_conf</span> <span class="o">=</span> <span class="n">db_conf_tool</span><span class="p">,</span>
+                        <span class="n">mg_dir</span> <span class="o">=</span> <span class="n">mgConf</span><span class="p">[</span><span class="s">&quot;dir&quot;</span><span class="p">],</span> 
+                        <span class="n">tool_conf</span> <span class="o">=</span> <span class="n">mgConf</span><span class="p">[</span><span class="n">tool</span><span class="p">])</span>
+
+</div>
+<div class="viewcode-block" id="clone_repos"><a class="viewcode-back" href="../build_dashboard.html#build_dashboard.clone_repos">[docs]</a><span class="k">def</span> <span class="nf">clone_repos</span> <span class="p">(</span><span class="nb">dir</span><span class="p">,</span> <span class="n">repos</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Clone under local directory dir, from the specified git repos.</span>
+
+<span class="sd">    Clone locally the repos if corresponding subdirectories don&#39;t exist,</span>
+<span class="sd">    or pull from them if they exist.</span>
+<span class="sd">    For each pkg, a corresponding entry in conf must exist. That entry</span>
+<span class="sd">    should be a dictionary, with at lease two entries:</span>
+<span class="sd">    - &quot;dir&quot;: the subdirectory name for installation</span>
+<span class="sd">    - &quot;repo&quot;: the url of the git repository</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+
+<span class="sd">    dir : string</span>
+<span class="sd">        Path of directory to install git repos as subdirectories</span>
+<span class="sd">    repos : dictionary</span>
+<span class="sd">        Git repos to clone. Each entry in the dictionary will correspond</span>
+<span class="sd">        to a repository: keys are identifiers for repos, that will be</span>
+<span class="sd">        used as subdir names, values are repo urls.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+
+<span class="sd">    None</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">create_dir</span> <span class="p">(</span><span class="nb">dir</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">repo</span> <span class="ow">in</span> <span class="n">repos</span><span class="p">:</span>
+        <span class="n">dir_repo</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">dir</span><span class="p">,</span> <span class="n">repo</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">dir_repo</span><span class="p">):</span>
+            <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">dir_repo</span><span class="p">)</span>
+            <span class="n">check_call</span><span class="p">([</span><span class="s">&quot;git&quot;</span><span class="p">,</span> <span class="s">&quot;clone&quot;</span><span class="p">,</span> <span class="n">repos</span><span class="p">[</span><span class="n">repo</span><span class="p">],</span> <span class="n">dir_repo</span><span class="p">])</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">check_call</span><span class="p">([</span><span class="s">&quot;git&quot;</span><span class="p">,</span> <span class="s">&quot;--git-dir=&quot;</span> <span class="o">+</span> <span class="n">dir_repo</span> <span class="o">+</span> <span class="s">&quot;/.git&quot;</span><span class="p">,</span> <span class="s">&quot;pull&quot;</span><span class="p">])</span>
+
+</div>
+<div class="viewcode-block" id="create_dir"><a class="viewcode-back" href="../build_dashboard.html#build_dashboard.create_dir">[docs]</a><span class="k">def</span> <span class="nf">create_dir</span> <span class="p">(</span><span class="nb">dir</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Create dir directory, including subdirectories if needed.</span>
+
+<span class="sd">    Do nothing if dir directory already exists. Raise exception if</span>
+<span class="sd">    the path existis, but it is not a directory.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    </span>
+<span class="sd">    dir: string</span>
+<span class="sd">        Path of directory to create</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="nb">dir</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">OSError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">e</span><span class="o">.</span><span class="n">errno</span> <span class="o">==</span> <span class="n">errno</span><span class="o">.</span><span class="n">EEXIST</span> <span class="ow">and</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="nb">dir</span><span class="p">):</span>
+            <span class="k">pass</span>
+        <span class="k">else</span><span class="p">:</span> 
+            <span class="k">raise</span>
+
+</div>
+<div class="viewcode-block" id="install_vizgrimoirer"><a class="viewcode-back" href="../build_dashboard.html#build_dashboard.install_vizgrimoirer">[docs]</a><span class="k">def</span> <span class="nf">install_vizgrimoirer</span> <span class="p">(</span><span class="n">libdir</span><span class="p">,</span> <span class="n">pkgdir</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Install the appropriate vizgrimore R package in a specific location</span>
+
+<span class="sd">    Installs the package to ensure it is properly installed,</span>
+<span class="sd">    even if it is not available from the standard R librdirs,</span>
+<span class="sd">    or the version there is not the right one.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+
+<span class="sd">    libdir: directory to install R libraries</span>
+<span class="sd">    pkgdir: directory with the source code for the</span>
+<span class="sd">        VizGrimoireR R package</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+
+<span class="sd">    None</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">env</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="n">env</span> <span class="p">[</span><span class="s">&quot;R_LIBS&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">libdir</span>
+    <span class="n">check_call</span> <span class="p">([</span><span class="s">&quot;R&quot;</span><span class="p">,</span> <span class="s">&quot;CMD&quot;</span><span class="p">,</span> <span class="s">&quot;INSTALL&quot;</span><span class="p">,</span> <span class="n">pkgdir</span><span class="p">],</span> <span class="n">env</span><span class="o">=</span><span class="n">env</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="install_rdepend"><a class="viewcode-back" href="../build_dashboard.html#build_dashboard.install_rdepend">[docs]</a><span class="k">def</span> <span class="nf">install_rdepend</span> <span class="p">(</span><span class="n">libdir</span><span class="p">,</span> <span class="n">vizgrimoirer</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Install R dependencies in a specific location</span>
+
+<span class="sd">    Installs R dependencies, obtained by reading the DESCRIPTION</span>
+<span class="sd">    file in the source package for VizGrimoire R.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+
+<span class="sd">    libdir: string</span>
+<span class="sd">        Path of directory to install R libraries</span>
+<span class="sd">    vizgrimoirer: string</span>
+<span class="sd">        Path of directory with the source code for the</span>
+<span class="sd">        VizGrimoireR R package</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+
+<span class="sd">    None</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c"># Extract dependant R packages from Depends line in DESCRIPTION</span>
+    <span class="n">descFile</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">vizgrimoirer</span> <span class="o">+</span> <span class="s">&quot;/DESCRIPTION&quot;</span><span class="p">)</span>
+    <span class="n">lines</span> <span class="o">=</span> <span class="n">descFile</span><span class="o">.</span><span class="n">readlines</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">lines</span><span class="p">:</span>
+        <span class="p">(</span><span class="n">field</span><span class="p">,</span> <span class="n">content</span><span class="p">)</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&quot;:&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">field</span> <span class="o">==</span> <span class="s">&quot;Depends&quot;</span><span class="p">:</span>
+            <span class="n">pkgList</span> <span class="o">=</span> <span class="n">content</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&quot;,&quot;</span><span class="p">)</span>
+            <span class="k">break</span>
+    <span class="c"># Build R vector with packages to install</span>
+    <span class="n">pkgVector</span> <span class="o">=</span> <span class="s">&#39;c(&#39;</span>
+    <span class="n">first</span> <span class="o">=</span> <span class="bp">True</span>
+    <span class="k">for</span> <span class="n">pkg</span> <span class="ow">in</span> <span class="n">pkgList</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">first</span><span class="p">:</span>
+            <span class="n">first</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">pkgVector</span> <span class="o">=</span> <span class="n">pkgVector</span> <span class="o">+</span> <span class="s">&#39;,&#39;</span>
+        <span class="n">pkgVector</span> <span class="o">=</span> <span class="n">pkgVector</span> <span class="o">+</span> <span class="s">&#39;&quot;&#39;</span> <span class="o">+</span> <span class="n">pkg</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="o">+</span> <span class="s">&#39;&quot;&#39;</span>
+    <span class="n">pkgVector</span> <span class="o">=</span> <span class="n">pkgVector</span> <span class="o">+</span> <span class="s">&#39;)&#39;</span>
+    <span class="c"># Run R to install all packages</span>
+    <span class="n">rcode</span> <span class="o">=</span> <span class="s">&#39;install.packages(&#39;</span> <span class="o">+</span> <span class="n">pkgVector</span> <span class="o">+</span> <span class="s">&#39;, lib=&quot;&#39;</span> <span class="o">+</span> \
+           <span class="n">libdir</span> <span class="o">+</span> <span class="s">&#39;&quot;, repos=&quot;http://cran.rstudio.com/&quot;)</span><span class="se">\n</span><span class="s">&#39;</span>
+    <span class="n">env</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="n">env</span> <span class="p">[</span><span class="s">&quot;R_LIBS&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">libdir</span>
+    <span class="n">p</span> <span class="o">=</span> <span class="n">Popen</span><span class="p">([</span><span class="s">&quot;R&quot;</span><span class="p">,</span> <span class="s">&quot;--vanilla&quot;</span><span class="p">],</span> <span class="n">stdin</span><span class="o">=</span><span class="n">PIPE</span><span class="p">)</span>
+    <span class="n">p</span><span class="o">.</span><span class="n">communicate</span><span class="p">(</span><span class="n">rcode</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="install_pdepend"><a class="viewcode-back" href="../build_dashboard.html#build_dashboard.install_pdepend">[docs]</a><span class="k">def</span> <span class="nf">install_pdepend</span> <span class="p">(</span><span class="n">libdir</span><span class="p">,</span> <span class="n">libs</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Install Python dependencies in a specific location</span>
+
+<span class="sd">    Installs Python dependencies, using pip</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+
+<span class="sd">    libdir: string</span>
+<span class="sd">        Path of directory to install Python libraries</span>
+<span class="sd">    libs: list of string</span>
+<span class="sd">        List of names of the libraries to install from pip</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+
+<span class="sd">    None</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">for</span> <span class="n">lib</span> <span class="ow">in</span> <span class="n">libs</span><span class="p">:</span>
+        <span class="n">check_call</span> <span class="p">([</span><span class="s">&quot;pip&quot;</span><span class="p">,</span> <span class="s">&quot;install&quot;</span><span class="p">,</span> <span class="s">&quot;--target=&quot;</span> <span class="o">+</span> <span class="n">libdir</span><span class="p">,</span> <span class="n">lib</span><span class="p">])</span>
+</div>
+<div class="viewcode-block" id="unique_ids"><a class="viewcode-back" href="../build_dashboard.html#build_dashboard.unique_ids">[docs]</a><span class="k">def</span> <span class="nf">unique_ids</span> <span class="p">(</span><span class="n">dbprefix</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Run unique identities stuff</span>
+
+<span class="sd">    - dbprefix: prefix for the databases</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">print</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">vgConf</span><span class="p">[</span><span class="s">&quot;dir&quot;</span><span class="p">],</span>
+                        <span class="n">vgConf</span><span class="p">[</span><span class="s">&quot;vizGrimoireUtils&quot;</span><span class="p">][</span><span class="s">&quot;dir&quot;</span><span class="p">],</span>
+                        <span class="n">vguConf</span><span class="p">[</span><span class="s">&quot;unifypeople&quot;</span><span class="p">])</span>
+    <span class="n">check_call</span> <span class="p">([</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">vgConf</span><span class="p">[</span><span class="s">&quot;dir&quot;</span><span class="p">],</span>
+                        <span class="n">vgConf</span><span class="p">[</span><span class="s">&quot;vizGrimoireUtils&quot;</span><span class="p">][</span><span class="s">&quot;dir&quot;</span><span class="p">],</span>
+                        <span class="n">vguConf</span><span class="p">[</span><span class="s">&quot;unifypeople&quot;</span><span class="p">]),</span>
+           <span class="s">&quot;-d&quot;</span><span class="p">,</span> <span class="n">dbprefix</span> <span class="o">+</span> <span class="s">&quot;_&quot;</span> <span class="o">+</span> <span class="s">&quot;cvsanaly&quot;</span><span class="p">,</span>
+           <span class="s">&quot;-u&quot;</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">user</span><span class="p">,</span> <span class="s">&quot;-p&quot;</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">passwd</span><span class="p">,</span> <span class="s">&quot;-i&quot;</span><span class="p">,</span> <span class="s">&quot;no&quot;</span><span class="p">])</span>
+    <span class="n">check_call</span> <span class="p">([</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">vgConf</span><span class="p">[</span><span class="s">&quot;dir&quot;</span><span class="p">],</span>
+                        <span class="n">vgConf</span><span class="p">[</span><span class="s">&quot;vizGrimoireUtils&quot;</span><span class="p">][</span><span class="s">&quot;dir&quot;</span><span class="p">],</span>
+                        <span class="n">vguConf</span><span class="p">[</span><span class="s">&quot;ds2id&quot;</span><span class="p">]),</span>
+           <span class="s">&quot;--data-source=its&quot;</span><span class="p">,</span>
+           <span class="s">&quot;--db-name-ds=&quot;</span> <span class="o">+</span> <span class="n">dbprefix</span> <span class="o">+</span> <span class="s">&quot;_&quot;</span> <span class="o">+</span> <span class="s">&quot;bicho&quot;</span><span class="p">,</span>
+           <span class="s">&quot;--db-name-ids=&quot;</span> <span class="o">+</span> <span class="n">dbprefix</span> <span class="o">+</span> <span class="s">&quot;_&quot;</span> <span class="o">+</span> <span class="s">&quot;cvsanaly&quot;</span><span class="p">,</span>
+           <span class="s">&quot;-u&quot;</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">user</span><span class="p">,</span> <span class="s">&quot;-p&quot;</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">passwd</span><span class="p">])</span>
+</div>
+<div class="viewcode-block" id="affiliation"><a class="viewcode-back" href="../build_dashboard.html#build_dashboard.affiliation">[docs]</a><span class="k">def</span> <span class="nf">affiliation</span> <span class="p">(</span><span class="n">dbprefix</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Run affiliation stuff</span>
+
+<span class="sd">    - dbprefix: prefix for the databases</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">check_call</span> <span class="p">([</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">vgConf</span><span class="p">[</span><span class="s">&quot;dir&quot;</span><span class="p">],</span>
+                        <span class="n">vgConf</span><span class="p">[</span><span class="s">&quot;vizGrimoireUtils&quot;</span><span class="p">][</span><span class="s">&quot;dir&quot;</span><span class="p">],</span>
+                        <span class="n">vguConf</span><span class="p">[</span><span class="s">&quot;domains&quot;</span><span class="p">]),</span>
+           <span class="s">&quot;-d&quot;</span><span class="p">,</span> <span class="n">dbprefix</span> <span class="o">+</span> <span class="s">&quot;_&quot;</span> <span class="o">+</span> <span class="s">&quot;cvsanaly&quot;</span><span class="p">,</span>
+           <span class="s">&quot;-u&quot;</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">user</span><span class="p">,</span> <span class="s">&quot;-p&quot;</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">passwd</span><span class="p">])</span>
+
+
+</div>
+<div class="viewcode-block" id="run_analysis"><a class="viewcode-back" href="../build_dashboard.html#build_dashboard.run_analysis">[docs]</a><span class="k">def</span> <span class="nf">run_analysis</span> <span class="p">(</span><span class="n">scripts</span><span class="p">,</span> <span class="n">base_dbs</span><span class="p">,</span> <span class="n">id_dbs</span><span class="p">,</span> <span class="n">outdir</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Run analysis scripts</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+
+<span class="sd">    scripts: list of string</span>
+<span class="sd">        Scripts to run (full path names)</span>
+<span class="sd">    base_dbs: list of string</span>
+<span class="sd">        Database names for each script</span>
+<span class="sd">    id_dbs: list of string</span>
+<span class="sd">        Identities database names for each script</span>
+<span class="sd">    outdir: string</span>
+<span class="sd">        Directory to write output JSON files (full path)</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+
+<span class="sd">    None</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c"># Create the JSON data directory for the scripts to write to</span>
+    <span class="n">create_dir</span><span class="p">(</span><span class="n">outdir</span><span class="p">)</span>
+    <span class="c"># Run the analysis scripts</span>
+    <span class="n">env</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="n">env</span><span class="p">[</span><span class="s">&quot;R_LIBS&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">rConf</span><span class="p">[</span><span class="s">&quot;libdir&quot;</span><span class="p">]</span> <span class="o">+</span> <span class="s">&quot;:&quot;</span> <span class="o">+</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&quot;R_LIBS&quot;</span><span class="p">,</span> <span class="s">&quot;&quot;</span><span class="p">)</span>
+    <span class="n">env</span><span class="p">[</span><span class="s">&quot;PYTHONPATH&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">glConf</span><span class="p">[</span><span class="s">&quot;libdir&quot;</span><span class="p">]</span> <span class="o">+</span> <span class="s">&quot;:&quot;</span> <span class="o">+</span> \
+        <span class="n">glConf</span><span class="p">[</span><span class="s">&quot;moddir&quot;</span><span class="p">]</span> <span class="o">+</span> <span class="s">&quot;:&quot;</span> <span class="o">+</span> \
+        <span class="n">pythonConf</span><span class="p">[</span><span class="s">&quot;libdir&quot;</span><span class="p">]</span> <span class="o">+</span> <span class="s">&quot;:&quot;</span> <span class="o">+</span> \
+        <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&quot;PYTHONPATH&quot;</span><span class="p">,</span> <span class="s">&quot;&quot;</span><span class="p">)</span>
+    <span class="n">env</span><span class="p">[</span><span class="s">&quot;LANG&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s">&quot;&quot;</span>
+    <span class="k">for</span> <span class="n">script</span><span class="p">,</span> <span class="n">base_db</span><span class="p">,</span> <span class="n">id_db</span> <span class="ow">in</span> <span class="nb">zip</span> <span class="p">(</span><span class="n">scripts</span><span class="p">,</span> <span class="n">base_dbs</span><span class="p">,</span> <span class="n">id_dbs</span><span class="p">):</span>
+        <span class="n">call_list</span> <span class="o">=</span> <span class="p">[</span><span class="n">script</span><span class="p">,</span> <span class="s">&quot;-d&quot;</span><span class="p">,</span> <span class="n">base_db</span><span class="p">,</span>
+                     <span class="s">&quot;--dbuser&quot;</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">user</span><span class="p">,</span> <span class="s">&quot;--dbpassword&quot;</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">passwd</span><span class="p">,</span>
+                     <span class="s">&quot;-i&quot;</span><span class="p">,</span> <span class="n">id_db</span><span class="p">,</span>
+                     <span class="s">&quot;--granularity&quot;</span><span class="p">,</span> <span class="s">&quot;weeks&quot;</span><span class="p">,</span>
+                     <span class="s">&quot;--reports&quot;</span><span class="p">,</span> <span class="s">&quot;people,repositories&quot;</span><span class="p">,</span>
+                     <span class="s">&quot;--destination&quot;</span><span class="p">,</span> <span class="n">outdir</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">verbose</span><span class="p">:</span>
+            <span class="k">print</span> <span class="s">&quot;Running: &quot;</span> <span class="o">+</span> <span class="s">&quot; &quot;</span><span class="o">.</span><span class="n">join</span> <span class="p">(</span><span class="n">call_list</span><span class="p">)</span>
+        <span class="n">check_call</span> <span class="p">(</span><span class="n">call_list</span><span class="p">,</span> <span class="n">env</span><span class="o">=</span><span class="n">env</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="produce_config"><a class="viewcode-back" href="../build_dashboard.html#build_dashboard.produce_config">[docs]</a><span class="k">def</span> <span class="nf">produce_config</span> <span class="p">(</span><span class="n">config_template</span><span class="p">,</span> <span class="n">config_file</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Produce a config.json file by translating a template file.</span>
+
+<span class="sd">    - config_template: template for config.json (filename)</span>
+<span class="sd">    - config_file: config.json file to be produced (filename)</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">verbose</span><span class="p">:</span>
+        <span class="k">print</span> <span class="p">(</span><span class="s">&quot;Producing config file &quot;</span> <span class="o">+</span> <span class="n">config_file</span> <span class="o">+</span> \
+                   <span class="s">&quot; from template &quot;</span> <span class="o">+</span> <span class="n">config_template</span> <span class="o">+</span> <span class="s">&quot;.&quot;</span><span class="p">)</span>
+    <span class="n">subst</span> <span class="o">=</span> <span class="nb">dict</span> <span class="p">(</span><span class="n">start_date</span> <span class="o">=</span> <span class="s">&quot;2002-10-10&quot;</span><span class="p">,</span>
+                  <span class="n">end_date</span> <span class="o">=</span> <span class="s">&quot;2013-12-31&quot;</span><span class="p">,</span>
+                  <span class="n">project_name</span> <span class="o">=</span> <span class="n">name</span><span class="p">,</span>
+                  <span class="n">project_url</span> <span class="o">=</span> <span class="s">&quot;http://github.com/&quot;</span> <span class="o">+</span> <span class="n">name</span><span class="p">,</span>
+                  <span class="n">scm_url</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="p">,</span>
+                  <span class="n">its_url</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="p">)</span>
+    <span class="n">template_str</span> <span class="o">=</span> <span class="s">&quot;&quot;</span>
+    <span class="k">with</span> <span class="nb">open</span> <span class="p">(</span><span class="n">config_template</span><span class="p">,</span> <span class="s">&quot;r&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">template</span><span class="p">:</span>
+        <span class="n">template_str</span> <span class="o">=</span> <span class="n">template</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
+    <span class="n">template</span> <span class="o">=</span> <span class="n">string</span><span class="o">.</span><span class="n">Template</span><span class="p">(</span><span class="n">template_str</span><span class="p">)</span>
+    <span class="n">config_str</span> <span class="o">=</span> <span class="n">template</span><span class="o">.</span><span class="n">safe_substitute</span> <span class="p">(</span><span class="n">subst</span><span class="p">)</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">config_file</span><span class="p">,</span> <span class="s">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">config</span><span class="p">:</span>
+        <span class="n">config</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">config_str</span><span class="p">)</span>
+        <span class="n">config</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="produce_dashboard"><a class="viewcode-back" href="../build_dashboard.html#build_dashboard.produce_dashboard">[docs]</a><span class="k">def</span> <span class="nf">produce_dashboard</span> <span class="p">(</span><span class="n">vizgrimoirejs_dir</span><span class="p">,</span> <span class="n">example_dir</span><span class="p">,</span>
+                       <span class="n">dashboard_dir</span><span class="p">,</span> <span class="n">json_dir</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Produce an HTML dashboard for the JSON files</span>
+
+<span class="sd">    - vizgrimoirejs_dir: dir with the source for VizGrimoireJS </span>
+<span class="sd">    - example_dir: dir with the source specific for the example </span>
+<span class="sd">    - dashboard_dir: dir to copy dashboard files to</span>
+<span class="sd">    - json_dir: dir for json files</span>
+
+<span class="sd">    Produce an HTML dashboard for the JSON files generated by the</span>
+<span class="sd">    analysis scripts.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c"># Files from vizGrimoireJS to copy:</span>
+    <span class="n">vgjsFiles</span> <span class="o">=</span> <span class="p">[</span><span class="s">&quot;vizgrimoire.min.js&quot;</span><span class="p">,</span>
+                 <span class="s">&quot;lib/jquery-1.7.1.min.js&quot;</span><span class="p">,</span>
+                 <span class="s">&quot;bootstrap/js/bootstrap.min.js&quot;</span><span class="p">,</span>
+                 <span class="s">&quot;vizgrimoire.css&quot;</span><span class="p">,</span>
+                 <span class="s">&quot;browser/custom.css&quot;</span><span class="p">,</span>
+                 <span class="s">&quot;bootstrap/css/bootstrap.min.css&quot;</span><span class="p">,</span>
+                 <span class="s">&quot;bootstrap/css/bootstrap-responsive.min.css&quot;</span><span class="p">,</span>
+                 <span class="s">&quot;browser/favicon.ico&quot;</span><span class="p">]</span>
+    <span class="c"># Files specific to this GitHub example:</span>
+    <span class="n">ghBrowserfiles</span> <span class="o">=</span> <span class="p">[</span><span class="s">&quot;index.html&quot;</span><span class="p">,</span> <span class="s">&quot;people.html&quot;</span><span class="p">,</span>
+                      <span class="s">&quot;navbar.html&quot;</span><span class="p">,</span> <span class="s">&quot;footer.html&quot;</span><span class="p">,</span> <span class="s">&quot;refcard.html&quot;</span><span class="p">,</span>
+                      <span class="s">&quot;project-card.html&quot;</span><span class="p">,</span>
+                      <span class="s">&quot;viz_cfg.json&quot;</span><span class="p">,</span> <span class="s">&quot;custom.css&quot;</span><span class="p">]</span>
+
+    <span class="k">for</span> <span class="nb">file</span> <span class="ow">in</span> <span class="n">vgjsFiles</span><span class="p">:</span>
+        <span class="n">shutil</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">vizgrimoirejs_dir</span> <span class="o">+</span> <span class="s">&quot;/&quot;</span> <span class="o">+</span> <span class="nb">file</span><span class="p">,</span> <span class="n">dashboard_dir</span><span class="p">)</span>
+    <span class="k">for</span> <span class="nb">file</span> <span class="ow">in</span> <span class="n">ghBrowserfiles</span><span class="p">:</span>
+        <span class="n">shutil</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">example_dir</span> <span class="o">+</span> <span class="s">&quot;/&quot;</span> <span class="o">+</span> <span class="nb">file</span><span class="p">,</span> <span class="n">dashboard_dir</span><span class="p">)</span>
+    <span class="n">produce_config</span> <span class="p">(</span><span class="n">example_dir</span> <span class="o">+</span> <span class="s">&quot;/config.json&quot;</span><span class="p">,</span>
+                    <span class="n">dashboard_dir</span> <span class="o">+</span> <span class="s">&quot;/config.json&quot;</span><span class="p">)</span>
+</div>
+<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s">&quot;__main__&quot;</span><span class="p">:</span>
+
+    <span class="k">def</span> <span class="nf">parse_args</span> <span class="p">():</span>
+        <span class="sd">&quot;&quot;&quot;Parse command line arguments&quot;&quot;&quot;</span>
+
+        <span class="n">parser</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">(</span><span class="n">description</span><span class="o">=</span><span class="s">&quot;&quot;&quot;</span>
+<span class="s">Simple script to retrieve data from GitHub repositories about a project.</span>
+<span class="s">It creates MySQL databases named name_cvsanaly, name_bicho (assummes</span>
+<span class="s">permission to create databases), but refrains to do so if they already</span>
+<span class="s">exist (name will have / and - changed to _).</span>
+<span class="s">It installs MetricsGrimoire and vizGrimoire tools (except for GrimoireLib)</span>
+<span class="s">from their git repos, and their R and main Python dependencies.</span>
+<span class="s">&quot;&quot;&quot;</span><span class="p">)</span>
+        <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s">&quot;projects&quot;</span><span class="p">,</span>
+                            <span class="n">help</span><span class="o">=</span><span class="s">&quot;GitHub user(s)/organization(s) and/or project(s) (if it contains &#39;/&#39;) to analyze&quot;</span><span class="p">,</span>
+                            <span class="n">nargs</span><span class="o">=</span><span class="s">&#39;+&#39;</span><span class="p">)</span>
+        <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s">&quot;--name&quot;</span><span class="p">,</span>
+                            <span class="n">help</span><span class="o">=</span><span class="s">&quot;Project name (default: first projects argument)&quot;</span><span class="p">)</span>
+        <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s">&quot;--user&quot;</span><span class="p">,</span>
+                            <span class="n">help</span><span class="o">=</span><span class="s">&quot;MySQL user name&quot;</span><span class="p">)</span>
+        <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s">&quot;--passwd&quot;</span><span class="p">,</span>
+                            <span class="n">help</span><span class="o">=</span><span class="s">&quot;MySQL password&quot;</span><span class="p">)</span>
+        <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s">&quot;--dir&quot;</span><span class="p">,</span>
+                            <span class="n">help</span><span class="o">=</span><span class="s">&quot;Extraction directory (must exist). Default: /tmp&quot;</span><span class="p">)</span>
+        <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s">&quot;--removedb&quot;</span><span class="p">,</span>
+                            <span class="n">help</span><span class="o">=</span><span class="s">&quot;Remove all databases, if present, before creating them&quot;</span><span class="p">,</span>
+                            <span class="n">action</span><span class="o">=</span><span class="s">&quot;store_true&quot;</span><span class="p">)</span>
+        <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s">&quot;--nomg&quot;</span><span class="p">,</span>
+                            <span class="n">help</span><span class="o">=</span><span class="s">&quot;Don&#39;t run MetricsGrimoire tools&quot;</span><span class="p">,</span>
+                            <span class="n">action</span><span class="o">=</span><span class="s">&quot;store_true&quot;</span><span class="p">)</span>
+        <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s">&quot;--nopeople&quot;</span><span class="p">,</span>
+                            <span class="n">help</span><span class="o">=</span><span class="s">&quot;Don&#39;t run people stuff (unique ids, affiliation)&quot;</span><span class="p">,</span>
+                            <span class="n">action</span><span class="o">=</span><span class="s">&quot;store_true&quot;</span><span class="p">)</span>
+        <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s">&quot;--noinstvg&quot;</span><span class="p">,</span>
+                            <span class="n">help</span><span class="o">=</span><span class="s">&quot;Don&#39;t install vizGrimoire packages from repos&quot;</span><span class="p">,</span>
+                            <span class="n">action</span><span class="o">=</span><span class="s">&quot;store_true&quot;</span><span class="p">)</span>
+        <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s">&quot;--noinstvgr&quot;</span><span class="p">,</span>
+                            <span class="n">help</span><span class="o">=</span><span class="s">&quot;Don&#39;t install vizgrimoire R package&quot;</span><span class="p">,</span>
+                            <span class="n">action</span><span class="o">=</span><span class="s">&quot;store_true&quot;</span><span class="p">)</span>
+        <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s">&quot;--nordep&quot;</span><span class="p">,</span>
+                            <span class="n">help</span><span class="o">=</span><span class="s">&quot;Don&#39;t install R dependencies&quot;</span><span class="p">,</span>
+                            <span class="n">action</span><span class="o">=</span><span class="s">&quot;store_true&quot;</span><span class="p">)</span>
+        <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s">&quot;--nopythondep&quot;</span><span class="p">,</span>
+                            <span class="n">help</span><span class="o">=</span><span class="s">&quot;Don&#39;t install Python dependencies&quot;</span><span class="p">,</span>
+                            <span class="n">action</span><span class="o">=</span><span class="s">&quot;store_true&quot;</span><span class="p">)</span>
+        <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s">&quot;--noanalysis&quot;</span><span class="p">,</span>
+                            <span class="n">help</span><span class="o">=</span><span class="s">&quot;Don&#39;t run vizGrimoireR analysis&quot;</span><span class="p">,</span>
+                            <span class="n">action</span><span class="o">=</span><span class="s">&quot;store_true&quot;</span><span class="p">)</span>
+        <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s">&quot;--nobrowser&quot;</span><span class="p">,</span>
+                            <span class="n">help</span><span class="o">=</span><span class="s">&quot;Don&#39;t copy files for the browser&quot;</span><span class="p">,</span>
+                            <span class="n">action</span><span class="o">=</span><span class="s">&quot;store_true&quot;</span><span class="p">)</span>
+        <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s">&quot;--ghuser&quot;</span><span class="p">,</span>
+                            <span class="n">help</span><span class="o">=</span><span class="s">&quot;GitHub user name&quot;</span><span class="p">)</span>
+        <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s">&quot;--ghpasswd&quot;</span><span class="p">,</span>
+                            <span class="n">help</span><span class="o">=</span><span class="s">&quot;GitHub password&quot;</span><span class="p">)</span>
+        <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s">&quot;--vgdir&quot;</span><span class="p">,</span>
+                            <span class="n">help</span><span class="o">=</span><span class="s">&quot;Directory with vigGrimoireR, vizGrimoireJS and vizGrimoireUtils directories&quot;</span><span class="p">)</span>
+        <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s">&quot;--verbose&quot;</span><span class="p">,</span>
+                            <span class="n">help</span><span class="o">=</span><span class="s">&quot;Print out some messages about what&#39;s happening&quot;</span><span class="p">,</span>
+                            <span class="n">action</span><span class="o">=</span><span class="s">&quot;store_true&quot;</span><span class="p">)</span>
+        
+        <span class="n">args</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">()</span>
+        <span class="k">return</span> <span class="p">(</span><span class="n">args</span><span class="p">)</span>
+
+    <span class="n">args</span> <span class="o">=</span> <span class="n">parse_args</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">name</span><span class="p">:</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">name</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">projects</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">dbPrefix</span> <span class="o">=</span> <span class="n">name</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s">&#39;/&#39;</span><span class="p">,</span> <span class="s">&#39;_&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s">&#39;-&#39;</span><span class="p">,</span><span class="s">&#39;_&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">dir</span><span class="p">:</span>
+        <span class="nb">dir</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">dir</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="nb">dir</span> <span class="o">=</span> <span class="s">&quot;/tmp&quot;</span>
+
+    <span class="c"># Directory for this script</span>
+    <span class="n">my_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">realpath</span><span class="p">(</span><span class="n">__file__</span><span class="p">))</span>
+    <span class="c"># GrimoireLib directory is two levels up</span>
+    <span class="n">gl_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">my_dir</span><span class="p">)[</span><span class="mi">0</span><span class="p">])[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="c"># Root directory for the dashboard</span>
+    <span class="n">dashboard_dir</span> <span class="o">=</span> <span class="nb">dir</span> <span class="o">+</span> <span class="s">&quot;/dashboard&quot;</span>
+    <span class="c"># JSON directory for browser</span>
+    <span class="n">JSONdir</span> <span class="o">=</span> <span class="n">dashboard_dir</span> <span class="o">+</span> <span class="s">&quot;/data/json&quot;</span>
+
+    <span class="c"># Configuration for MetricsGrimoire</span>
+    <span class="n">mgConf</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="c"># Configure R paths</span>
+    <span class="n">rConf</span> <span class="o">=</span> <span class="p">{</span><span class="s">&quot;libdir&quot;</span><span class="p">:</span> <span class="nb">dir</span> <span class="o">+</span> <span class="s">&quot;/rlib&quot;</span><span class="p">,</span>
+             <span class="s">&quot;vgrpkg&quot;</span><span class="p">:</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">gl_dir</span><span class="p">,</span> <span class="s">&quot;vizgrimoire&quot;</span><span class="p">),</span>
+             <span class="p">}</span>
+    <span class="c"># Configure Python (paths, dependencies)</span>
+    <span class="n">pythonConf</span> <span class="o">=</span> <span class="p">{</span><span class="s">&quot;libdir&quot;</span><span class="p">:</span> <span class="nb">dir</span> <span class="o">+</span> <span class="s">&quot;/pythonlib&quot;</span><span class="p">,</span>
+                  <span class="s">&quot;libs&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s">&quot;rpy2&quot;</span><span class="p">]}</span>
+    <span class="c"># Configure GrimoireLib paths</span>
+    <span class="n">glConf</span> <span class="o">=</span> <span class="p">{</span><span class="s">&quot;libdir&quot;</span><span class="p">:</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">gl_dir</span><span class="p">,</span> <span class="s">&quot;vizgrimoire&quot;</span><span class="p">),</span>
+              <span class="s">&quot;moddir&quot;</span><span class="p">:</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">gl_dir</span><span class="p">,</span> <span class="s">&quot;vizgrimoire&quot;</span><span class="p">,</span> <span class="s">&quot;analysis&quot;</span><span class="p">)</span> <span class="o">+</span> \
+                  <span class="s">&quot;:&quot;</span> <span class="o">+</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">gl_dir</span><span class="p">,</span> <span class="s">&quot;vizgrimoire&quot;</span><span class="p">,</span> <span class="s">&quot;metrics&quot;</span><span class="p">),</span>
+              <span class="s">&quot;scm_analysis&quot;</span><span class="p">:</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">my_dir</span><span class="p">,</span> <span class="s">&quot;github_analysis.py&quot;</span><span class="p">),</span>
+              <span class="s">&quot;its_analysis&quot;</span><span class="p">:</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">my_dir</span><span class="p">,</span> <span class="s">&quot;its_analysis.py&quot;</span><span class="p">),</span>
+              <span class="p">}</span>
+    <span class="c"># Configuration for other vizGrimoire packages</span>
+    <span class="n">vgConf</span> <span class="o">=</span> <span class="p">{</span><span class="s">&quot;pkgs&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s">&quot;vizGrimoireUtils&quot;</span><span class="p">,</span> <span class="s">&quot;vizGrimoireJS&quot;</span><span class="p">],</span>
+              <span class="s">&quot;dir&quot;</span><span class="p">:</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">dir</span><span class="p">,</span> <span class="s">&quot;vizGrimoire&quot;</span><span class="p">)</span>
+              <span class="p">}</span>
+    <span class="n">vgConf</span><span class="p">[</span><span class="s">&quot;vizGrimoireUtils&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s">&quot;dir&quot;</span><span class="p">:</span> <span class="s">&quot;vizGrimoireUtils&quot;</span><span class="p">,</span>
+        <span class="s">&quot;repo&quot;</span><span class="p">:</span> <span class="s">&quot;https://github.com/VizGrimoire/VizGrimoireUtils.git&quot;</span>
+        <span class="p">}</span>
+    <span class="n">vgConf</span><span class="p">[</span><span class="s">&quot;vizGrimoireJS&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s">&quot;dir&quot;</span><span class="p">:</span> <span class="s">&quot;vizGrimoireJS&quot;</span><span class="p">,</span>
+        <span class="s">&quot;repo&quot;</span><span class="p">:</span> <span class="s">&quot;https://github.com/VizGrimoire/VizGrimoireJS.git&quot;</span>
+        <span class="p">}</span>
+            
+    <span class="c"># Configure vizGrimoireUtils paths</span>
+    <span class="n">vguConf</span> <span class="o">=</span> <span class="p">{</span><span class="s">&quot;unifypeople&quot;</span><span class="p">:</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="s">&quot;identities&quot;</span><span class="p">,</span> <span class="s">&quot;unifypeople.py&quot;</span><span class="p">),</span>
+               <span class="s">&quot;ds2id&quot;</span><span class="p">:</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="s">&quot;identities&quot;</span><span class="p">,</span> <span class="s">&quot;datasource2identities.py&quot;</span><span class="p">),</span>
+               <span class="s">&quot;domains&quot;</span><span class="p">:</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="s">&quot;identities&quot;</span><span class="p">,</span> <span class="s">&quot;domains_analysis.py&quot;</span><span class="p">)</span>
+               <span class="p">}</span>
+    <span class="c"># Now, if there is no --nomg flag, run MetricsGrimoire tools</span>
+    <span class="c"># If it is for a github user, get all the projects under the user name,</span>
+    <span class="c"># and run tools on each of them.</span>
+    <span class="c"># If it is for a single project, just run the tools on it</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">args</span><span class="o">.</span><span class="n">nomg</span><span class="p">:</span>
+        <span class="c"># Location of MetricsGrimoire repositories</span>
+        <span class="n">mgConf</span><span class="p">[</span><span class="s">&quot;repo&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s">&quot;https://github.com/MetricsGrimoire/&quot;</span>
+        <span class="n">mgConf</span><span class="p">[</span><span class="s">&quot;dir&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">dir</span><span class="p">,</span> <span class="s">&quot;mg&quot;</span><span class="p">)</span>
+        <span class="n">mgConf</span><span class="p">[</span><span class="s">&quot;tools&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="s">&quot;cvsanaly&quot;</span><span class="p">,</span> <span class="s">&quot;repohandler&quot;</span><span class="p">,</span> <span class="s">&quot;bicho&quot;</span><span class="p">]</span>
+        <span class="n">mgConf</span><span class="p">[</span><span class="s">&quot;bintools&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="s">&quot;cvsanaly&quot;</span><span class="p">,</span> <span class="s">&quot;bicho&quot;</span><span class="p">]</span>
+        <span class="n">mgConf</span><span class="p">[</span><span class="s">&quot;repohandler&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s">&quot;repo&quot;</span><span class="p">:</span> <span class="n">mgConf</span><span class="p">[</span><span class="s">&quot;repo&quot;</span><span class="p">]</span> <span class="o">+</span> <span class="s">&quot;RepositoryHandler&quot;</span><span class="p">,</span>
+            <span class="s">&quot;dir&quot;</span><span class="p">:</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">mgConf</span><span class="p">[</span><span class="s">&quot;dir&quot;</span><span class="p">],</span> <span class="s">&quot;RepositoryHandler&quot;</span><span class="p">)</span>
+            <span class="p">}</span>
+        <span class="n">mgConf</span><span class="p">[</span><span class="s">&quot;cvsanaly&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s">&quot;repo&quot;</span><span class="p">:</span> <span class="n">mgConf</span><span class="p">[</span><span class="s">&quot;repo&quot;</span><span class="p">]</span> <span class="o">+</span> <span class="s">&quot;CVSAnalY&quot;</span><span class="p">,</span>
+            <span class="s">&quot;dir&quot;</span><span class="p">:</span> <span class="s">&quot;CVSAnalY&quot;</span><span class="p">,</span>
+            <span class="s">&quot;bin&quot;</span><span class="p">:</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">mgConf</span><span class="p">[</span><span class="s">&quot;dir&quot;</span><span class="p">],</span> <span class="s">&quot;CVSAnalY&quot;</span><span class="p">,</span> <span class="s">&quot;cvsanaly2&quot;</span><span class="p">),</span>
+            <span class="s">&quot;opts&quot;</span><span class="p">:</span> <span class="p">[],</span>
+            <span class="s">&quot;dbuser&quot;</span><span class="p">:</span> <span class="s">&quot;--db-user&quot;</span><span class="p">,</span>
+            <span class="s">&quot;dbpasswd&quot;</span><span class="p">:</span> <span class="s">&quot;--db-password&quot;</span><span class="p">,</span>
+            <span class="s">&quot;db&quot;</span><span class="p">:</span> <span class="s">&quot;--db-database&quot;</span>
+            <span class="p">}</span>
+        <span class="n">mgConf</span><span class="p">[</span><span class="s">&quot;cvsanaly&quot;</span><span class="p">][</span><span class="s">&quot;ppath&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">mgConf</span><span class="p">[</span><span class="s">&quot;repohandler&quot;</span><span class="p">][</span><span class="s">&quot;dir&quot;</span><span class="p">]</span> <span class="o">+</span> \
+            <span class="s">&quot;:&quot;</span> <span class="o">+</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">mgConf</span><span class="p">[</span><span class="s">&quot;dir&quot;</span><span class="p">],</span> <span class="n">mgConf</span><span class="p">[</span><span class="s">&quot;cvsanaly&quot;</span><span class="p">][</span><span class="s">&quot;dir&quot;</span><span class="p">])</span>
+        <span class="n">mgConf</span><span class="p">[</span><span class="s">&quot;bicho&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s">&quot;repo&quot;</span><span class="p">:</span> <span class="n">mgConf</span><span class="p">[</span><span class="s">&quot;repo&quot;</span><span class="p">]</span> <span class="o">+</span> <span class="s">&quot;Bicho&quot;</span><span class="p">,</span>
+            <span class="s">&quot;dir&quot;</span><span class="p">:</span> <span class="s">&quot;Bicho&quot;</span><span class="p">,</span>
+            <span class="s">&quot;bin&quot;</span><span class="p">:</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="s">&quot;bin&quot;</span><span class="p">,</span> <span class="s">&quot;bicho&quot;</span><span class="p">),</span>
+            <span class="s">&quot;opts&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s">&quot;-d&quot;</span><span class="p">,</span> <span class="s">&quot;1&quot;</span><span class="p">,</span> <span class="s">&quot;-b&quot;</span><span class="p">,</span> <span class="s">&quot;github&quot;</span><span class="p">],</span>
+            <span class="s">&quot;dbuser&quot;</span><span class="p">:</span> <span class="s">&quot;--db-user-out&quot;</span><span class="p">,</span>
+            <span class="s">&quot;dbpasswd&quot;</span><span class="p">:</span> <span class="s">&quot;--db-password-out&quot;</span><span class="p">,</span>
+            <span class="s">&quot;db&quot;</span><span class="p">:</span> <span class="s">&quot;--db-database-out&quot;</span>
+            <span class="p">}</span>
+        <span class="n">mgConf</span><span class="p">[</span><span class="s">&quot;bicho&quot;</span><span class="p">][</span><span class="s">&quot;ppath&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">mgConf</span><span class="p">[</span><span class="s">&quot;dir&quot;</span><span class="p">],</span>
+                                                <span class="n">mgConf</span><span class="p">[</span><span class="s">&quot;bicho&quot;</span><span class="p">][</span><span class="s">&quot;dir&quot;</span><span class="p">])</span>
+        <span class="n">clone_repos</span> <span class="p">(</span><span class="n">mgConf</span><span class="p">[</span><span class="s">&quot;dir&quot;</span><span class="p">],</span>
+                     <span class="p">{</span><span class="n">mgConf</span><span class="p">[</span><span class="nb">dir</span><span class="p">][</span><span class="s">&quot;dir&quot;</span><span class="p">]:</span> <span class="n">mgConf</span><span class="p">[</span><span class="nb">dir</span><span class="p">][</span><span class="s">&quot;repo&quot;</span><span class="p">]</span>
+                      <span class="k">for</span> <span class="nb">dir</span> <span class="ow">in</span> <span class="n">mgConf</span><span class="p">[</span><span class="s">&quot;tools&quot;</span><span class="p">]})</span>
+        <span class="n">projects</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">project</span> <span class="ow">in</span> <span class="n">args</span><span class="o">.</span><span class="n">projects</span><span class="p">:</span>
+            <span class="k">if</span> <span class="s">&#39;/&#39;</span> <span class="ow">in</span> <span class="n">project</span><span class="p">:</span>
+                <span class="c"># Single GitHub repo</span>
+                <span class="n">projects</span><span class="o">.</span><span class="n">append</span> <span class="p">(</span><span class="n">project</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c"># GitHub user/organization</span>
+                <span class="n">projects</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">find_repos</span> <span class="p">(</span><span class="n">project</span><span class="p">))</span>
+        <span class="n">run_mgtools</span> <span class="p">(</span><span class="n">tools</span> <span class="o">=</span> <span class="p">[</span><span class="s">&quot;cvsanaly&quot;</span><span class="p">,</span> <span class="s">&quot;bicho&quot;</span><span class="p">],</span>
+                     <span class="n">projects</span> <span class="o">=</span> <span class="n">projects</span><span class="p">,</span>
+                     <span class="n">db_conf</span> <span class="o">=</span> <span class="n">DBConf</span><span class="p">(</span><span class="n">name</span> <span class="o">=</span> <span class="n">dbPrefix</span><span class="p">,</span>
+                                      <span class="n">user</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">user</span><span class="p">,</span>
+                                      <span class="n">passwd</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">passwd</span><span class="p">),</span>
+                     <span class="n">db_remove</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">removedb</span><span class="p">)</span>
+
+    <span class="c"># Install vizGrinmoire packages needed, from their git repos</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">args</span><span class="o">.</span><span class="n">noinstvg</span><span class="p">:</span>
+        <span class="n">clone_repos</span> <span class="p">(</span><span class="n">vgConf</span><span class="p">[</span><span class="s">&quot;dir&quot;</span><span class="p">],</span>
+                     <span class="p">{</span><span class="nb">dir</span><span class="p">:</span> <span class="n">vgConf</span><span class="p">[</span><span class="nb">dir</span><span class="p">][</span><span class="s">&quot;repo&quot;</span><span class="p">]</span> <span class="k">for</span> <span class="nb">dir</span> <span class="ow">in</span> <span class="n">vgConf</span><span class="p">[</span><span class="s">&quot;pkgs&quot;</span><span class="p">]})</span>
+
+    <span class="c"># Run unique_ids and affiliation (people stuff)</span>
+    <span class="c"># except that --nopeople was specified</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">args</span><span class="o">.</span><span class="n">nopeople</span><span class="p">:</span>
+        <span class="n">unique_ids</span> <span class="p">(</span><span class="n">dbPrefix</span><span class="p">)</span>
+        <span class="n">affiliation</span> <span class="p">(</span><span class="n">dbPrefix</span><span class="p">)</span>
+
+    <span class="c"># Install vizgrimoire R package and its R dependencies, just in case</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">args</span><span class="o">.</span><span class="n">noinstvgr</span><span class="p">:</span>
+        <span class="n">create_dir</span> <span class="p">(</span><span class="n">rConf</span><span class="p">[</span><span class="s">&quot;libdir&quot;</span><span class="p">])</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">args</span><span class="o">.</span><span class="n">noinstvgr</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">args</span><span class="o">.</span><span class="n">nordep</span><span class="p">:</span>
+        <span class="n">install_rdepend</span> <span class="p">(</span><span class="n">rConf</span><span class="p">[</span><span class="s">&quot;libdir&quot;</span><span class="p">],</span> <span class="n">rConf</span><span class="p">[</span><span class="s">&quot;vgrpkg&quot;</span><span class="p">])</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">args</span><span class="o">.</span><span class="n">noinstvgr</span><span class="p">:</span>
+        <span class="n">install_vizgrimoirer</span> <span class="p">(</span><span class="n">rConf</span><span class="p">[</span><span class="s">&quot;libdir&quot;</span><span class="p">],</span> <span class="n">rConf</span><span class="p">[</span><span class="s">&quot;vgrpkg&quot;</span><span class="p">])</span>
+
+    <span class="c"># Install Python dependencies</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">args</span><span class="o">.</span><span class="n">nopythondep</span><span class="p">:</span>
+        <span class="n">install_pdepend</span> <span class="p">(</span><span class="n">pythonConf</span><span class="p">[</span><span class="s">&quot;libdir&quot;</span><span class="p">],</span> <span class="n">pythonConf</span><span class="p">[</span><span class="s">&quot;libs&quot;</span><span class="p">])</span>
+
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">args</span><span class="o">.</span><span class="n">noanalysis</span><span class="p">:</span>
+        <span class="n">run_analysis</span> <span class="p">([</span><span class="n">glConf</span><span class="p">[</span><span class="s">&quot;scm_analysis&quot;</span><span class="p">],</span> <span class="n">glConf</span><span class="p">[</span><span class="s">&quot;its_analysis&quot;</span><span class="p">]],</span>
+                      <span class="p">[</span><span class="n">dbPrefix</span> <span class="o">+</span> <span class="s">&quot;_&quot;</span> <span class="o">+</span> <span class="s">&quot;cvsanaly&quot;</span><span class="p">,</span> <span class="n">dbPrefix</span> <span class="o">+</span> <span class="s">&quot;_&quot;</span> <span class="o">+</span> <span class="s">&quot;bicho&quot;</span><span class="p">],</span>
+                      <span class="p">[</span><span class="n">dbPrefix</span> <span class="o">+</span> <span class="s">&quot;_&quot;</span> <span class="o">+</span> <span class="s">&quot;cvsanaly&quot;</span><span class="p">,</span> <span class="n">dbPrefix</span> <span class="o">+</span> <span class="s">&quot;_&quot;</span> <span class="o">+</span> <span class="s">&quot;cvsanaly&quot;</span><span class="p">],</span>
+                      <span class="n">JSONdir</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">args</span><span class="o">.</span><span class="n">nobrowser</span><span class="p">:</span>
+        <span class="n">produce_dashboard</span> <span class="p">(</span><span class="n">vizgrimoirejs_dir</span> <span class="o">=</span> \
+                               <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">vgConf</span><span class="p">[</span><span class="s">&quot;dir&quot;</span><span class="p">],</span>
+                                            <span class="n">vgConf</span><span class="p">[</span><span class="s">&quot;vizGrimoireJS&quot;</span><span class="p">][</span><span class="s">&quot;dir&quot;</span><span class="p">]),</span>
+                           <span class="n">example_dir</span> <span class="o">=</span> <span class="n">my_dir</span><span class="p">,</span>
+                           <span class="n">dashboard_dir</span> <span class="o">=</span> <span class="n">dashboard_dir</span><span class="p">,</span>
+                           <span class="n">json_dir</span> <span class="o">=</span> <span class="n">JSONdir</span><span class="p">)</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="../np-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../index.html">GrimoreLib 1.0 documentation</a> &raquo;</li>
+          <li><a href="index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2014, Bitergia.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+    </div>
+  </body>
+</html>

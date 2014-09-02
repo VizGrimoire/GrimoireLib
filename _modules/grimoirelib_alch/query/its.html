@@ -1,0 +1,443 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>grimoirelib_alch.query.its &mdash; GrimoreLib 1.0 documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <link rel="top" title="GrimoreLib 1.0 documentation" href="../../../index.html" />
+    <link rel="up" title="Module code" href="../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="../../../np-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">GrimoreLib 1.0 documentation</a> &raquo;</li>
+          <li><a href="../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for grimoirelib_alch.query.its</h1><div class="highlight"><pre>
+<span class="c">#! /usr/bin/python</span>
+<span class="c"># -*- coding: utf-8 -*-</span>
+
+<span class="c">## Copyright (C) 2014 Bitergia</span>
+<span class="c">##</span>
+<span class="c">## This program is free software; you can redistribute it and/or modify</span>
+<span class="c">## it under the terms of the GNU General Public License as published by</span>
+<span class="c">## the Free Software Foundation; either version 3 of the License, or</span>
+<span class="c">## (at your option) any later version.</span>
+<span class="c">##</span>
+<span class="c">## This program is distributed in the hope that it will be useful,</span>
+<span class="c">## but WITHOUT ANY WARRANTY; without even the implied warranty of</span>
+<span class="c">## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the</span>
+<span class="c">## GNU General Public License for more details.</span>
+<span class="c">##</span>
+<span class="c">## You should have received a copy of the GNU General Public License</span>
+<span class="c">## along with this program; if not, write to the Free Software</span>
+<span class="c">## Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.</span>
+<span class="c">##</span>
+<span class="c">## Package to deal with queries for ITS data from *Grimoire</span>
+<span class="c">##  (Bicho databases)</span>
+<span class="c">##</span>
+<span class="c">## Authors:</span>
+<span class="c">##   Jesus M. Gonzalez-Barahona &lt;jgb@bitergia.com&gt;</span>
+<span class="c">##</span>
+
+<span class="kn">from</span> <span class="nn">grimoirelib_alch.type.timeseries</span> <span class="kn">import</span> <span class="n">TimeSeries</span>
+<span class="kn">from</span> <span class="nn">grimoirelib_alch.type.activity</span> <span class="kn">import</span> <span class="n">ActivityList</span>
+<span class="kn">from</span> <span class="nn">grimoirelib_alch.query.common</span> <span class="kn">import</span> <span class="n">GrimoireDatabase</span><span class="p">,</span> <span class="n">GrimoireQuery</span>
+
+<span class="kn">from</span> <span class="nn">sqlalchemy</span> <span class="kn">import</span> <span class="n">func</span><span class="p">,</span> <span class="n">Column</span><span class="p">,</span> <span class="n">Integer</span><span class="p">,</span> <span class="n">ForeignKey</span>
+<span class="kn">from</span> <span class="nn">sqlalchemy.sql</span> <span class="kn">import</span> <span class="n">label</span>
+<span class="kn">from</span> <span class="nn">datetime</span> <span class="kn">import</span> <span class="n">datetime</span>
+
+
+<div class="viewcode-block" id="DB"><a class="viewcode-back" href="../../../grimoirelib_alch.query.its.html#grimoirelib_alch.query.its.DB">[docs]</a><span class="k">class</span> <span class="nc">DB</span> <span class="p">(</span><span class="n">GrimoireDatabase</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Class for dealing with ITS (Bicho) databases.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+ 
+    <span class="k">def</span> <span class="nf">_query_cls</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return que defauld Query class for this database</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+
+<span class="sd">        GrimoireQuery: default Query class.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">return</span> <span class="n">Query</span>
+
+    <span class="k">def</span> <span class="nf">_create_tables</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Create all SQLAlchemy tables.</span>
+
+<span class="sd">        Builds a SQLAlchemy class per SQL table, by using _table().</span>
+<span class="sd">        It assumes self.Base, self.schema and self.schema_id are already</span>
+<span class="sd">        set (see super.__init__() code).</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">DB</span><span class="o">.</span><span class="n">Changes</span> <span class="o">=</span> <span class="n">GrimoireDatabase</span><span class="o">.</span><span class="n">_table</span> <span class="p">(</span>
+            <span class="n">bases</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Base</span><span class="p">,),</span> <span class="n">name</span> <span class="o">=</span> <span class="s">&#39;Changes&#39;</span><span class="p">,</span>
+            <span class="n">tablename</span> <span class="o">=</span> <span class="s">&#39;changes&#39;</span><span class="p">,</span>
+            <span class="n">schemaname</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">schema</span><span class="p">,</span>
+            <span class="n">columns</span> <span class="o">=</span> <span class="nb">dict</span> <span class="p">(</span>
+                <span class="n">issue_id</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Integer</span><span class="p">,</span>
+                                  <span class="n">ForeignKey</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">schema</span> <span class="o">+</span> <span class="s">&#39;.&#39;</span> <span class="o">+</span> <span class="s">&#39;issues.id&#39;</span><span class="p">))</span>
+                <span class="p">))</span>
+        <span class="n">DB</span><span class="o">.</span><span class="n">Issues</span> <span class="o">=</span> <span class="n">GrimoireDatabase</span><span class="o">.</span><span class="n">_table</span> <span class="p">(</span>
+            <span class="n">bases</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Base</span><span class="p">,),</span> <span class="n">name</span> <span class="o">=</span> <span class="s">&#39;Issues&#39;</span><span class="p">,</span>
+            <span class="n">tablename</span> <span class="o">=</span> <span class="s">&#39;issues&#39;</span><span class="p">,</span>
+            <span class="n">schemaname</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">schema</span><span class="p">,</span>
+            <span class="n">columns</span> <span class="o">=</span> <span class="nb">dict</span> <span class="p">(</span>
+                <span class="n">changed_by</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span>
+                    <span class="n">Integer</span><span class="p">,</span>
+                    <span class="n">ForeignKey</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">schema</span> <span class="o">+</span> <span class="s">&#39;.&#39;</span> <span class="o">+</span> <span class="s">&#39;people.id&#39;</span><span class="p">))</span>     
+                <span class="p">))</span>
+        <span class="n">DB</span><span class="o">.</span><span class="n">People</span> <span class="o">=</span> <span class="n">GrimoireDatabase</span><span class="o">.</span><span class="n">_table</span> <span class="p">(</span>
+            <span class="n">bases</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Base</span><span class="p">,),</span> <span class="n">name</span> <span class="o">=</span> <span class="s">&#39;People&#39;</span><span class="p">,</span>
+            <span class="n">tablename</span> <span class="o">=</span> <span class="s">&#39;people&#39;</span><span class="p">,</span>
+            <span class="n">schemaname</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">schema</span><span class="p">)</span>
+        <span class="n">DB</span><span class="o">.</span><span class="n">PeopleUPeople</span> <span class="o">=</span> <span class="n">GrimoireDatabase</span><span class="o">.</span><span class="n">_table</span> <span class="p">(</span>
+            <span class="n">bases</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Base</span><span class="p">,),</span> <span class="n">name</span> <span class="o">=</span> <span class="s">&#39;PeopleUPeople&#39;</span><span class="p">,</span>
+            <span class="n">tablename</span> <span class="o">=</span> <span class="s">&#39;people_upeople&#39;</span><span class="p">,</span>
+            <span class="n">schemaname</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">schema</span><span class="p">,</span>
+            <span class="n">columns</span> <span class="o">=</span> <span class="nb">dict</span> <span class="p">(</span>
+                <span class="n">upeople_id</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span>
+                    <span class="n">Integer</span><span class="p">,</span>
+                    <span class="n">ForeignKey</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">schema_id</span> <span class="o">+</span> <span class="s">&#39;.&#39;</span> <span class="o">+</span> <span class="s">&#39;upeople.id&#39;</span><span class="p">))</span>
+                <span class="p">))</span>
+        <span class="n">DB</span><span class="o">.</span><span class="n">Trackers</span> <span class="o">=</span> <span class="n">GrimoireDatabase</span><span class="o">.</span><span class="n">_table</span> <span class="p">(</span>
+            <span class="n">bases</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Base</span><span class="p">,),</span> <span class="n">name</span> <span class="o">=</span> <span class="s">&#39;Trackers&#39;</span><span class="p">,</span>
+            <span class="n">tablename</span> <span class="o">=</span> <span class="s">&#39;trackers&#39;</span><span class="p">,</span>
+            <span class="n">schemaname</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">schema</span><span class="p">)</span>
+        <span class="n">DB</span><span class="o">.</span><span class="n">UPeople</span> <span class="o">=</span> <span class="n">GrimoireDatabase</span><span class="o">.</span><span class="n">_table</span> <span class="p">(</span>
+            <span class="n">bases</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Base</span><span class="p">,),</span> <span class="n">name</span> <span class="o">=</span> <span class="s">&#39;UPeople&#39;</span><span class="p">,</span>
+            <span class="n">tablename</span> <span class="o">=</span> <span class="s">&#39;upeople&#39;</span><span class="p">,</span>
+            <span class="n">schemaname</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">schema_id</span><span class="p">)</span>
+
+</div>
+<div class="viewcode-block" id="Query"><a class="viewcode-back" href="../../../grimoirelib_alch.query.its.html#grimoirelib_alch.query.its.Query">[docs]</a><span class="k">class</span> <span class="nc">Query</span> <span class="p">(</span><span class="n">GrimoireQuery</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Class for dealing with ITS queries&quot;&quot;&quot;</span>
+
+
+<div class="viewcode-block" id="Query.select_personsdata"><a class="viewcode-back" href="../../../grimoirelib_alch.query.its.html#grimoirelib_alch.query.its.Query.select_personsdata">[docs]</a>    <span class="k">def</span> <span class="nf">select_personsdata</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">kind</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Adds columns with persons data to select clause.</span>
+
+<span class="sd">        Adds people.user, people.email to the select clause of query.</span>
+<span class="sd">        Does not join new tables.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+
+<span class="sd">        kind: {&quot;openers&quot;, &quot;closers&quot;, &quot;changers&quot;}</span>
+<span class="sd">           Kind of person to select</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+
+<span class="sd">        ITSQuery: Result query, with new fields: id, name, email        </span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">query</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">add_columns</span> <span class="p">(</span><span class="n">label</span><span class="p">(</span><span class="s">&quot;person_id&quot;</span><span class="p">,</span> <span class="n">DB</span><span class="o">.</span><span class="n">People</span><span class="o">.</span><span class="n">id</span><span class="p">),</span>
+                                  <span class="n">label</span><span class="p">(</span><span class="s">&quot;name&quot;</span><span class="p">,</span> <span class="n">DB</span><span class="o">.</span><span class="n">People</span><span class="o">.</span><span class="n">user_id</span><span class="p">),</span>
+                                  <span class="n">label</span><span class="p">(</span><span class="s">&#39;email&#39;</span><span class="p">,</span> <span class="n">DB</span><span class="o">.</span><span class="n">People</span><span class="o">.</span><span class="n">email</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">kind</span> <span class="o">==</span> <span class="s">&quot;openers&quot;</span><span class="p">:</span>
+            <span class="n">person</span> <span class="o">=</span> <span class="n">DB</span><span class="o">.</span><span class="n">Issues</span><span class="o">.</span><span class="n">submitted_by</span>
+            <span class="n">table</span> <span class="o">=</span> <span class="n">DB</span><span class="o">.</span><span class="n">Issues</span>
+        <span class="k">elif</span> <span class="n">kind</span> <span class="o">==</span> <span class="s">&quot;changers&quot;</span><span class="p">:</span>
+            <span class="n">person</span> <span class="o">=</span> <span class="n">DB</span><span class="o">.</span><span class="n">Changes</span><span class="o">.</span><span class="n">changed_by</span>
+            <span class="n">table</span> <span class="o">=</span> <span class="n">DB</span><span class="o">.</span><span class="n">Changes</span>
+        <span class="k">elif</span> <span class="n">kind</span> <span class="o">==</span> <span class="s">&quot;closers&quot;</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">Exception</span> <span class="p">(</span><span class="s">&quot;select_personsdata: Not yet implemented&quot;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">Exception</span> <span class="p">(</span><span class="s">&quot;select_personsdata: Unknown kind </span><span class="si">%s</span><span class="s">.&quot;</span> \
+                             <span class="o">%</span> <span class="n">kind</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">table</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">joined</span><span class="p">:</span>
+            <span class="n">query</span> <span class="o">=</span> <span class="n">query</span><span class="o">.</span><span class="n">filter</span> <span class="p">(</span><span class="n">DB</span><span class="o">.</span><span class="n">People</span><span class="o">.</span><span class="n">id</span> <span class="o">==</span> <span class="n">person</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">joined</span><span class="o">.</span><span class="n">append</span> <span class="p">(</span><span class="n">table</span><span class="p">)</span>
+            <span class="n">query</span> <span class="o">=</span> <span class="n">query</span><span class="o">.</span><span class="n">join</span> <span class="p">(</span><span class="n">table</span><span class="p">,</span> <span class="n">DB</span><span class="o">.</span><span class="n">People</span><span class="o">.</span><span class="n">id</span> <span class="o">==</span> <span class="n">person</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">query</span>
+
+</div>
+<div class="viewcode-block" id="Query.select_personsdata_uid"><a class="viewcode-back" href="../../../grimoirelib_alch.query.its.html#grimoirelib_alch.query.its.Query.select_personsdata_uid">[docs]</a>    <span class="k">def</span> <span class="nf">select_personsdata_uid</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">kind</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Adds columns with persons data to select clause (uid version).</span>
+
+<span class="sd">        Adds person_id, name, to the select clause of query,</span>
+<span class="sd">        having unique identities into account.</span>
+<span class="sd">        Joins with PeopleUPeople, UPeople, and Changes / Isues if they</span>
+<span class="sd">        are not already joined.</span>
+<span class="sd">        Relationships: UPeople.id == PeopleUPeople.upeople_id,</span>
+<span class="sd">        PeopleUPeople.people_id == person</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+
+<span class="sd">        kind: {&quot;openers&quot;, &quot;closers&quot;, &quot;changers&quot;}</span>
+<span class="sd">           Kind of person to select</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+
+<span class="sd">        SCMObject: Result query, with new fields: id, name, email        </span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">query</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">add_columns</span> <span class="p">(</span><span class="n">label</span><span class="p">(</span><span class="s">&quot;person_id&quot;</span><span class="p">,</span> <span class="n">DB</span><span class="o">.</span><span class="n">UPeople</span><span class="o">.</span><span class="n">id</span><span class="p">),</span>
+                                  <span class="n">label</span><span class="p">(</span><span class="s">&quot;name&quot;</span><span class="p">,</span> <span class="n">DB</span><span class="o">.</span><span class="n">UPeople</span><span class="o">.</span><span class="n">identifier</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">kind</span> <span class="o">==</span> <span class="s">&quot;openers&quot;</span><span class="p">:</span>
+            <span class="n">person</span> <span class="o">=</span> <span class="n">DB</span><span class="o">.</span><span class="n">Issues</span><span class="o">.</span><span class="n">submitted_by</span>
+            <span class="n">table</span> <span class="o">=</span> <span class="n">DB</span><span class="o">.</span><span class="n">Issues</span>
+        <span class="k">elif</span> <span class="n">kind</span> <span class="o">==</span> <span class="s">&quot;changers&quot;</span><span class="p">:</span>
+            <span class="n">person</span> <span class="o">=</span> <span class="n">DB</span><span class="o">.</span><span class="n">Changes</span><span class="o">.</span><span class="n">changed_by</span>
+            <span class="n">table</span> <span class="o">=</span> <span class="n">DB</span><span class="o">.</span><span class="n">Changes</span>
+        <span class="k">elif</span> <span class="n">kind</span> <span class="o">==</span> <span class="s">&quot;closers&quot;</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">Exception</span> <span class="p">(</span><span class="s">&quot;select_personsdata: Not yet implemented&quot;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">Exception</span> <span class="p">(</span><span class="s">&quot;select_personsdata: Unknown kind </span><span class="si">%s</span><span class="s">.&quot;</span> \
+                             <span class="o">%</span> <span class="n">kind</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">joined</span><span class="p">:</span>
+            <span class="c"># First table, UPeople is in FROM</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">joined</span><span class="o">.</span><span class="n">append</span> <span class="p">(</span><span class="n">DB</span><span class="o">.</span><span class="n">UPeople</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">joined</span> <span class="ow">or</span> <span class="n">DB</span><span class="o">.</span><span class="n">UPeople</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">joined</span><span class="p">:</span>
+            <span class="c"># First table, UPeople is in FROM, or we have UPeople</span>
+            <span class="k">if</span> <span class="n">DB</span><span class="o">.</span><span class="n">PeopleUPeople</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">joined</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">joined</span><span class="o">.</span><span class="n">append</span> <span class="p">(</span><span class="n">DB</span><span class="o">.</span><span class="n">PeopleUPeople</span><span class="p">)</span>
+                <span class="n">query</span> <span class="o">=</span> <span class="n">query</span><span class="o">.</span><span class="n">join</span> <span class="p">(</span>
+                    <span class="n">DB</span><span class="o">.</span><span class="n">PeopleUPeople</span><span class="p">,</span>
+                    <span class="n">DB</span><span class="o">.</span><span class="n">UPeople</span><span class="o">.</span><span class="n">id</span> <span class="o">==</span> <span class="n">DB</span><span class="o">.</span><span class="n">PeopleUPeople</span><span class="o">.</span><span class="n">upeople_id</span>
+                    <span class="p">)</span>
+            <span class="k">if</span> <span class="n">table</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">joined</span><span class="p">:</span>
+                <span class="n">query</span> <span class="o">=</span> <span class="n">query</span><span class="o">.</span><span class="n">filter</span> <span class="p">(</span><span class="n">DB</span><span class="o">.</span><span class="n">PeopleUPeople</span><span class="o">.</span><span class="n">people_id</span> <span class="o">==</span> <span class="n">person</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">joined</span><span class="o">.</span><span class="n">append</span> <span class="p">(</span><span class="n">table</span><span class="p">)</span>
+                <span class="n">query</span> <span class="o">=</span> <span class="n">query</span><span class="o">.</span><span class="n">join</span> <span class="p">(</span><span class="n">table</span><span class="p">,</span>
+                                    <span class="n">DB</span><span class="o">.</span><span class="n">PeopleUPeople</span><span class="o">.</span><span class="n">people_id</span> <span class="o">==</span> <span class="n">person</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">DB</span><span class="o">.</span><span class="n">PeopleUPeople</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">joined</span><span class="p">:</span>
+            <span class="c"># We have PeopleUPeople (table should be joined), no UPeople</span>
+            <span class="k">if</span> <span class="n">table</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">joined</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">Exception</span> <span class="p">(</span><span class="s">&quot;select_personsdata_uid: &quot;</span> <span class="o">+</span> \
+                                     <span class="s">&quot;If PeopleUPeople is joined, &quot;</span> <span class="o">+</span> \
+                                     <span class="nb">str</span><span class="p">(</span><span class="n">table</span><span class="p">)</span> <span class="o">+</span> <span class="s">&quot; should be joined too&quot;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">joined</span><span class="o">.</span><span class="n">append</span> <span class="p">(</span><span class="n">DB</span><span class="o">.</span><span class="n">UPeople</span><span class="p">)</span>
+            <span class="n">query</span> <span class="o">=</span> <span class="n">query</span><span class="o">.</span><span class="n">join</span> <span class="p">(</span>
+                <span class="n">DB</span><span class="o">.</span><span class="n">UPeople</span><span class="p">,</span>
+                <span class="n">DB</span><span class="o">.</span><span class="n">UPeople</span><span class="o">.</span><span class="n">id</span> <span class="o">==</span> <span class="n">DB</span><span class="o">.</span><span class="n">PeopleUPeople</span><span class="o">.</span><span class="n">upeople_id</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">table</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">joined</span><span class="p">:</span>
+            <span class="c"># We have table, and no PeopleUPeople, no UPeople</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">joined</span><span class="o">.</span><span class="n">append</span> <span class="p">(</span><span class="n">DB</span><span class="o">.</span><span class="n">PeopleUPeople</span><span class="p">)</span>
+            <span class="n">query</span> <span class="o">=</span> <span class="n">query</span><span class="o">.</span><span class="n">join</span> <span class="p">(</span><span class="n">DB</span><span class="o">.</span><span class="n">PeopleUPeople</span><span class="p">,</span>
+                                <span class="n">DB</span><span class="o">.</span><span class="n">PeopleUPeople</span><span class="o">.</span><span class="n">people_id</span> <span class="o">==</span> <span class="n">person</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">joined</span><span class="o">.</span><span class="n">append</span> <span class="p">(</span><span class="n">DB</span><span class="o">.</span><span class="n">UPeople</span><span class="p">)</span>
+            <span class="n">query</span> <span class="o">=</span> <span class="n">query</span><span class="o">.</span><span class="n">join</span> <span class="p">(</span><span class="n">DB</span><span class="o">.</span><span class="n">UPeople</span><span class="p">,</span>
+                                <span class="n">DB</span><span class="o">.</span><span class="n">UPeople</span><span class="o">.</span><span class="n">id</span> <span class="o">==</span> <span class="n">PeopleUPeople</span><span class="o">.</span><span class="n">upeople_id</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c"># No table, no PeopleUPeople, no UPeople but some other table</span>
+            <span class="k">raise</span> <span class="ne">Exception</span> <span class="p">(</span><span class="s">&quot;select_personsdata_uid: &quot;</span> <span class="o">+</span> \
+                                 <span class="s">&quot;Unknown table to join to&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">query</span>
+
+</div>
+<div class="viewcode-block" id="Query.select_changesperiod"><a class="viewcode-back" href="../../../grimoirelib_alch.query.its.html#grimoirelib_alch.query.its.Query.select_changesperiod">[docs]</a>    <span class="k">def</span> <span class="nf">select_changesperiod</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Add to select the period of the changed tickets.</span>
+
+<span class="sd">        Adds min(changes.changed_on) and max(changes.changed_on)</span>
+<span class="sd">        for selected commits.</span>
+<span class="sd">        </span>
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+
+<span class="sd">        SCMObject: Result query, with two new fields: firstdate, lastdate</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">query</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">add_columns</span> <span class="p">(</span><span class="n">label</span><span class="p">(</span><span class="s">&#39;firstdate&#39;</span><span class="p">,</span>
+                                        <span class="n">func</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">DB</span><span class="o">.</span><span class="n">Changes</span><span class="o">.</span><span class="n">changed_on</span><span class="p">)),</span>
+                                  <span class="n">label</span><span class="p">(</span><span class="s">&#39;lastdate&#39;</span><span class="p">,</span>
+                                        <span class="n">func</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">DB</span><span class="o">.</span><span class="n">Changes</span><span class="o">.</span><span class="n">changed_on</span><span class="p">)))</span>
+        <span class="k">return</span> <span class="n">query</span>
+
+</div>
+<div class="viewcode-block" id="Query.filter_period"><a class="viewcode-back" href="../../../grimoirelib_alch.query.its.html#grimoirelib_alch.query.its.Query.filter_period">[docs]</a>    <span class="k">def</span> <span class="nf">filter_period</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">start</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span> <span class="n">end</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span> <span class="n">date</span> <span class="o">=</span> <span class="s">&quot;change&quot;</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Filter variable for a period</span>
+
+<span class="sd">        - start: datetime, starting date</span>
+<span class="sd">        - end: datetime, end date</span>
+<span class="sd">        - date: &quot;change&quot;</span>
+
+<span class="sd">        Commits considered are between starting date and end date</span>
+<span class="sd">        (exactly: start &lt;= date &lt; end)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">query</span> <span class="o">=</span> <span class="bp">self</span>
+        <span class="k">if</span> <span class="n">date</span> <span class="o">==</span> <span class="s">&quot;change&quot;</span><span class="p">:</span>
+            <span class="n">date_field</span> <span class="o">=</span> <span class="n">DB</span><span class="o">.</span><span class="n">Changes</span><span class="o">.</span><span class="n">changed_on</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">Exception</span> <span class="p">(</span><span class="s">&quot;filter_period: Unknown kind of date: </span><span class="si">%s</span><span class="s">.&quot;</span> \
+                                 <span class="o">%</span> <span class="n">date</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">start</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">start</span> <span class="o">=</span> <span class="n">start</span>
+            <span class="n">query</span> <span class="o">=</span> <span class="n">query</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">date_field</span> <span class="o">&gt;=</span> <span class="n">start</span><span class="o">.</span><span class="n">isoformat</span><span class="p">())</span>
+        <span class="k">if</span> <span class="n">end</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">end</span> <span class="o">=</span> <span class="n">end</span>
+            <span class="n">query</span> <span class="o">=</span> <span class="n">query</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">date_field</span> <span class="o">&lt;</span> <span class="n">end</span><span class="o">.</span><span class="n">isoformat</span><span class="p">())</span>
+        <span class="k">return</span> <span class="n">query</span>
+
+</div>
+<div class="viewcode-block" id="Query.group_by_person"><a class="viewcode-back" href="../../../grimoirelib_alch.query.its.html#grimoirelib_alch.query.its.Query.group_by_person">[docs]</a>    <span class="k">def</span> <span class="nf">group_by_person</span> <span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Group by person</span>
+
+<span class="sd">        Uses person_id field in the query to do the grouping.</span>
+<span class="sd">        That field should be added by some other method.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+
+<span class="sd">        None</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+
+<span class="sd">        SCMQuery object, with a new field (person_id)</span>
+<span class="sd">        and a &quot;group by&quot; clause for grouping the results.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">group_by</span><span class="p">(</span><span class="s">&quot;person_id&quot;</span><span class="p">)</span>
+
+</div>
+<div class="viewcode-block" id="Query.activity"><a class="viewcode-back" href="../../../grimoirelib_alch.query.its.html#grimoirelib_alch.query.its.Query.activity">[docs]</a>    <span class="k">def</span> <span class="nf">activity</span> <span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return an ActivityList object.</span>
+
+<span class="sd">        The query has to produce rows with the following fields:</span>
+<span class="sd">        id (string),  name (string), start (datetime), end (datetime)</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="nb">list</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">all</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">ActivityList</span><span class="p">(</span><span class="nb">list</span><span class="p">)</span>
+
+</div></div>
+<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s">&quot;__main__&quot;</span><span class="p">:</span>
+
+    <span class="kn">from</span> <span class="nn">grimoirelib_alch.aux.standalone</span> <span class="kn">import</span> <span class="n">stdout_utf8</span><span class="p">,</span> <span class="n">print_banner</span>
+
+    <span class="n">stdout_utf8</span><span class="p">()</span>
+
+    <span class="n">database</span> <span class="o">=</span> <span class="n">DB</span> <span class="p">(</span><span class="n">url</span> <span class="o">=</span> <span class="s">&#39;mysql://jgb:XXX@localhost/&#39;</span><span class="p">,</span>
+                   <span class="n">schema</span> <span class="o">=</span> <span class="s">&#39;vizgrimoire_bicho&#39;</span><span class="p">,</span>
+                   <span class="n">schema_id</span> <span class="o">=</span> <span class="s">&#39;vizgrimoire_cvsanaly&#39;</span><span class="p">)</span>
+    <span class="n">session</span> <span class="o">=</span> <span class="n">database</span><span class="o">.</span><span class="n">build_session</span><span class="p">(</span><span class="n">Query</span><span class="p">,</span> <span class="n">echo</span> <span class="o">=</span> <span class="bp">False</span><span class="p">)</span>
+
+    <span class="c">#---------------------------------</span>
+    <span class="n">print_banner</span> <span class="p">(</span><span class="s">&quot;List of openers&quot;</span><span class="p">)</span>
+    <span class="n">res</span> <span class="o">=</span> <span class="n">session</span><span class="o">.</span><span class="n">query</span><span class="p">()</span> \
+        <span class="o">.</span><span class="n">select_personsdata</span><span class="p">(</span><span class="s">&quot;openers&quot;</span><span class="p">)</span> \
+        <span class="o">.</span><span class="n">group_by_person</span><span class="p">()</span>
+    <span class="k">print</span> <span class="n">res</span>
+    <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">res</span><span class="o">.</span><span class="n">limit</span><span class="p">(</span><span class="mi">10</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">():</span>
+        <span class="k">print</span> <span class="n">row</span><span class="o">.</span><span class="n">person_id</span><span class="p">,</span> <span class="n">row</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">row</span><span class="o">.</span><span class="n">email</span>
+
+    <span class="c">#---------------------------------</span>
+    <span class="n">print_banner</span> <span class="p">(</span><span class="s">&quot;Activity period for changers&quot;</span><span class="p">)</span>
+    <span class="n">res</span> <span class="o">=</span> <span class="n">session</span><span class="o">.</span><span class="n">query</span><span class="p">()</span> \
+        <span class="o">.</span><span class="n">select_personsdata</span><span class="p">(</span><span class="s">&quot;changers&quot;</span><span class="p">)</span> \
+        <span class="o">.</span><span class="n">select_changesperiod</span><span class="p">()</span> \
+        <span class="o">.</span><span class="n">group_by_person</span><span class="p">()</span>
+    <span class="k">print</span> <span class="n">res</span>
+    <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">res</span><span class="o">.</span><span class="n">limit</span><span class="p">(</span><span class="mi">10</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">():</span>
+        <span class="k">print</span> <span class="n">row</span><span class="o">.</span><span class="n">person_id</span><span class="p">,</span> <span class="n">row</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">row</span><span class="o">.</span><span class="n">email</span><span class="p">,</span> <span class="n">row</span><span class="o">.</span><span class="n">firstdate</span><span class="p">,</span> <span class="n">row</span><span class="o">.</span><span class="n">lastdate</span>
+
+    <span class="c">#---------------------------------</span>
+    <span class="n">print_banner</span> <span class="p">(</span><span class="s">&quot;Activity period for changers (uid)&quot;</span><span class="p">)</span>
+    <span class="n">res</span> <span class="o">=</span> <span class="n">session</span><span class="o">.</span><span class="n">query</span><span class="p">()</span> \
+        <span class="o">.</span><span class="n">select_personsdata_uid</span><span class="p">(</span><span class="s">&quot;changers&quot;</span><span class="p">)</span> \
+        <span class="o">.</span><span class="n">select_changesperiod</span><span class="p">()</span> \
+        <span class="o">.</span><span class="n">group_by_person</span><span class="p">()</span>
+    <span class="k">print</span> <span class="n">res</span>
+    <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">res</span><span class="o">.</span><span class="n">limit</span><span class="p">(</span><span class="mi">10</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">():</span>
+        <span class="k">print</span> <span class="n">row</span><span class="o">.</span><span class="n">person_id</span><span class="p">,</span> <span class="n">row</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">row</span><span class="o">.</span><span class="n">firstdate</span><span class="p">,</span> <span class="n">row</span><span class="o">.</span><span class="n">lastdate</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="../../../np-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">GrimoreLib 1.0 documentation</a> &raquo;</li>
+          <li><a href="../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2014, Bitergia.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+    </div>
+  </body>
+</html>

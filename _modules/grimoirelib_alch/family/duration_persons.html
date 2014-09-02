@@ -1,0 +1,443 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>grimoirelib_alch.family.duration_persons &mdash; GrimoreLib 1.0 documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <link rel="top" title="GrimoreLib 1.0 documentation" href="../../../index.html" />
+    <link rel="up" title="Module code" href="../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="../../../np-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">GrimoreLib 1.0 documentation</a> &raquo;</li>
+          <li><a href="../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for grimoirelib_alch.family.duration_persons</h1><div class="highlight"><pre>
+<span class="c">#! /usr/bin/python</span>
+<span class="c"># -*- coding: utf-8 -*-</span>
+
+<span class="c">## Copyright (C) 2014 Bitergia</span>
+<span class="c">##</span>
+<span class="c">## This program is free software; you can redistribute it and/or modify</span>
+<span class="c">## it under the terms of the GNU General Public License as published by</span>
+<span class="c">## the Free Software Foundation; either version 3 of the License, or</span>
+<span class="c">## (at your option) any later version.</span>
+<span class="c">##</span>
+<span class="c">## This program is distributed in the hope that it will be useful,</span>
+<span class="c">## but WITHOUT ANY WARRANTY; without even the implied warranty of</span>
+<span class="c">## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the</span>
+<span class="c">## GNU General Public License for more details.</span>
+<span class="c">##</span>
+<span class="c">## You should have received a copy of the GNU General Public License</span>
+<span class="c">## along with this program; if not, write to the Free Software</span>
+<span class="c">## Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.</span>
+<span class="c">##</span>
+<span class="c">## Module to deal with entities related to the duration of persons in</span>
+<span class="c">##  a project, based on information found in the *Grimoire (CVSAnalY,</span>
+<span class="c">##  Bicho, MLStats) databases.</span>
+<span class="c">##</span>
+<span class="c">## Authors:</span>
+<span class="c">##   Jesus M. Gonzalez-Barahona &lt;jgb@bitergia.com&gt;</span>
+<span class="c">##</span>
+
+<span class="kn">from</span> <span class="nn">common</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">Family</span><span class="p">,</span>
+    <span class="n">Condition</span> <span class="k">as</span> <span class="n">RootCondition</span>
+    <span class="p">)</span>
+<span class="kn">from</span> <span class="nn">activity_persons</span> <span class="kn">import</span> <span class="n">ActivityPersons</span>
+<span class="kn">from</span> <span class="nn">grimoirelib_alch.type.activity</span> <span class="kn">import</span> <span class="n">ActivityList</span>
+
+<div class="viewcode-block" id="DurationPersons"><a class="viewcode-back" href="../../../grimoirelib_alch.family.duration_persons.html#grimoirelib_alch.family.duration_persons.DurationPersons">[docs]</a><span class="k">class</span> <span class="nc">DurationPersons</span> <span class="p">(</span><span class="n">Family</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Factory of entities in the DurationPersons family.</span>
+
+<span class="sd">    This class can be used to instantiate entities from the DurationPersons</span>
+<span class="sd">    family: those related to duration of persons.</span>
+<span class="sd">    </span>
+<span class="sd">    Duration can be periods of different kinds, such as age or idle time.</span>
+<span class="sd">    </span>
+<span class="sd">    Objects of this class provide the function durations() to</span>
+<span class="sd">    obtain an ActorsDuration object.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span> <span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">datasource</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">conditions</span> <span class="o">=</span> <span class="p">()):</span>
+        <span class="sd">&quot;&quot;&quot;Instantiation of an entity of the family.</span>
+
+<span class="sd">        An ActivityPersons object is used as datasource.</span>
+
+<span class="sd">        The following entities can be produced:</span>
+
+<span class="sd">        &quot;age&quot;: Age of persons (time from first activity to snaphsot)</span>
+
+<span class="sd">        &quot;idle&quot;: Idle time (time from last activity to snapshot)</span>
+
+<span class="sd">        Snapshot is &quot;last activity in datasource&quot; if none is specified,</span>
+<span class="sd">        or the date specified by a SnapshotCondition.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        </span>
+<span class="sd">        datasource: { activity_persons.ActivityPersons | activity.ActivityList }</span>
+<span class="sd">           Object with the activity of persons to consider.</span>
+<span class="sd">           If it is ActivityPersons, object.activity() will invoked to</span>
+<span class="sd">           obtain the ActivityList.</span>
+<span class="sd">        name: {&quot;age&quot; | &quot;idle&quot;}</span>
+<span class="sd">           Enitity name.</span>
+<span class="sd">        conditions: list of Condition objects</span>
+<span class="sd">           Conditions to be applied to provide context to the entity.</span>
+<span class="sd">           (default: empty list).</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="nb">isinstance</span> <span class="p">(</span><span class="n">datasource</span><span class="p">,</span> <span class="n">ActivityPersons</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">activity</span> <span class="o">=</span> <span class="n">datasource</span><span class="o">.</span><span class="n">activity</span><span class="p">()</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span> <span class="p">(</span><span class="n">datasource</span><span class="p">,</span> <span class="n">ActivityList</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">activity</span> <span class="o">=</span> <span class="n">datasource</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">Exception</span> <span class="p">(</span><span class="s">&quot;DurationPersons: datasource must be of &quot;</span> <span class="o">+</span> \
+                                 <span class="s">&quot;ActivityPersons or ActivityList &quot;</span> <span class="o">+</span> \
+                                 <span class="s">&quot;hierarchies.&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="s">&quot;age&quot;</span><span class="p">,</span> <span class="s">&quot;idle&quot;</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">Exception</span> <span class="p">(</span><span class="s">&quot;DurationPersons: &quot;</span> <span class="o">+</span> \
+                                 <span class="s">&quot;Invalid entity name for this family: &quot;</span> <span class="o">+</span> \
+                                 <span class="n">name</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">name</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">snapshot</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="k">for</span> <span class="n">condition</span> <span class="ow">in</span> <span class="n">conditions</span><span class="p">:</span>
+            <span class="n">condition</span><span class="o">.</span><span class="n">modify</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+
+<div class="viewcode-block" id="DurationPersons.set_snapshot"><a class="viewcode-back" href="../../../grimoirelib_alch.family.duration_persons.html#grimoirelib_alch.family.duration_persons.DurationPersons.set_snapshot">[docs]</a>    <span class="k">def</span> <span class="nf">set_snapshot</span> <span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">time</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Define a snapshot time for durations.</span>
+
+<span class="sd">        Durations (age, idle) are to be calculated back from the time</span>
+<span class="sd">        specified. This can be used, for example, by conditions</span>
+<span class="sd">        defininf a certain snapshot.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+
+<span class="sd">        time: datetime.datetime</span>
+<span class="sd">           Time of snapshot.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">snapshot</span> <span class="o">=</span> <span class="n">time</span>
+</div>
+<div class="viewcode-block" id="DurationPersons.set_activity"><a class="viewcode-back" href="../../../grimoirelib_alch.family.duration_persons.html#grimoirelib_alch.family.duration_persons.DurationPersons.set_activity">[docs]</a>    <span class="k">def</span> <span class="nf">set_activity</span> <span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">activity</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Change the activity list considered by the entity.</span>
+
+<span class="sd">        This is used, for example, to apply a condition on the entity,</span>
+<span class="sd">        such as &quot;active before such and such date&quot;. For doing that</span>
+<span class="sd">        kind of stuff, the activity list is changed.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ---------</span>
+
+<span class="sd">        activity: activity.ActivityList</span>
+<span class="sd">           New list of activity per person to be used.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">activity</span> <span class="o">=</span> <span class="n">activity</span>
+</div>
+<div class="viewcode-block" id="DurationPersons.durations"><a class="viewcode-back" href="../../../grimoirelib_alch.family.duration_persons.html#grimoirelib_alch.family.duration_persons.DurationPersons.durations">[docs]</a>    <span class="k">def</span> <span class="nf">durations</span> <span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+       <span class="sd">&quot;&quot;&quot;Return durations for each person (age, idle,...) depending on entity</span>
+
+<span class="sd">       If there is no snapshot date, it considers the maximum date in the</span>
+<span class="sd">       datasource as snapshot (date to count back ages).</span>
+
+<span class="sd">       Returns</span>
+<span class="sd">       -------</span>
+
+<span class="sd">       activity.ActorsDuration: list of actors, with duration for each of them.</span>
+
+<span class="sd">       &quot;&quot;&quot;</span>
+
+       <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">snapshot</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+           <span class="n">snapshot</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">activity</span><span class="o">.</span><span class="n">maxend</span><span class="p">()</span>
+       <span class="k">else</span><span class="p">:</span>
+           <span class="n">snapshot</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">snapshot</span>
+       <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="s">&quot;age&quot;</span><span class="p">:</span>
+           <span class="n">durations</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">activity</span><span class="o">.</span><span class="n">age</span><span class="p">(</span><span class="n">date</span> <span class="o">=</span> <span class="n">snapshot</span><span class="p">)</span>
+       <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="s">&quot;idle&quot;</span><span class="p">:</span>
+           <span class="n">durations</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">activity</span><span class="o">.</span><span class="n">idle</span><span class="p">(</span><span class="n">date</span> <span class="o">=</span> <span class="n">snapshot</span><span class="p">)</span>
+       <span class="k">return</span> <span class="n">durations</span>
+
+</div></div>
+<div class="viewcode-block" id="Condition"><a class="viewcode-back" href="../../../grimoirelib_alch.family.duration_persons.html#grimoirelib_alch.family.duration_persons.Condition">[docs]</a><span class="k">class</span> <span class="nc">Condition</span> <span class="p">(</span><span class="n">RootCondition</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Root of all conditions specific for DurationPersons entities</span>
+
+<span class="sd">    Provides a modify method, which will be called by the entity</span>
+<span class="sd">    to let this condition modify it.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">_check_class</span> <span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Check that object is an instance of DurationPersons.</span>
+
+<span class="sd">        Raise exception if it is not.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span> <span class="p">(</span><span class="nb">object</span><span class="p">,</span> <span class="n">DurationPersons</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">Exception</span> <span class="p">(</span><span class="s">&quot;Condition: &quot;</span> <span class="o">+</span> \
+                                 <span class="s">&quot;This condition can only be applied to &quot;</span> <span class="o">+</span> \
+                                 <span class="s">&quot;DurationPersons entities.&quot;</span><span class="p">)</span>
+
+<div class="viewcode-block" id="Condition.modify"><a class="viewcode-back" href="../../../grimoirelib_alch.family.duration_persons.html#grimoirelib_alch.family.duration_persons.Condition.modify">[docs]</a>    <span class="k">def</span> <span class="nf">modify</span> <span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">object</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Modification produced by this condition into object.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+
+<span class="sd">        object: DurationPersons</span>
+<span class="sd">           Entity to be modified.</span>
+<span class="sd">        </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">Condition</span><span class="o">.</span><span class="n">_check_class</span> <span class="p">(</span><span class="nb">object</span><span class="p">)</span>
+        <span class="k">print</span> <span class="s">&quot;DurationPersonsCondition: &quot;</span> <span class="o">+</span> \
+            <span class="s">&quot;Root class, does nothing.&quot;</span>
+</div></div>
+<div class="viewcode-block" id="SnapshotCondition"><a class="viewcode-back" href="../../../grimoirelib_alch.family.duration_persons.html#grimoirelib_alch.family.duration_persons.SnapshotCondition">[docs]</a><span class="k">class</span> <span class="nc">SnapshotCondition</span> <span class="p">(</span><span class="n">Condition</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Condition for specifiying &quot;snapshot&quot; of durations.</span>
+
+<span class="sd">    Durations (age, idle) are to be calculated back from the date</span>
+<span class="sd">    specified by this condition. If the snapshot date is as of now,</span>
+<span class="sd">    this will be the real &quot;age&quot; or &quot;idle time&quot; in the project.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span> <span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">date</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Set the snapshot date.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+
+<span class="sd">        date: datetime.datetime</span>
+<span class="sd">           Time used as reference for the snapshot.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">date</span> <span class="o">=</span> <span class="n">date</span>
+
+<div class="viewcode-block" id="SnapshotCondition.modify"><a class="viewcode-back" href="../../../grimoirelib_alch.family.duration_persons.html#grimoirelib_alch.family.duration_persons.SnapshotCondition.modify">[docs]</a>    <span class="k">def</span> <span class="nf">modify</span> <span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">object</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Modification produced by this condition into object.</span>
+
+<span class="sd">        Specifies the time for the snapshot, and filters actors not active</span>
+<span class="sd">        before snapshot date.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">Condition</span><span class="o">.</span><span class="n">_check_class</span> <span class="p">(</span><span class="nb">object</span><span class="p">)</span>
+        <span class="nb">object</span><span class="o">.</span><span class="n">set_snapshot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">date</span><span class="p">)</span>
+        <span class="nb">object</span><span class="o">.</span><span class="n">set_activity</span><span class="p">(</span><span class="nb">object</span><span class="o">.</span><span class="n">activity</span><span class="o">.</span><span class="n">active</span><span class="p">(</span><span class="n">before</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">date</span><span class="p">))</span>
+
+</div></div>
+<div class="viewcode-block" id="ActiveCondition"><a class="viewcode-back" href="../../../grimoirelib_alch.family.duration_persons.html#grimoirelib_alch.family.duration_persons.ActiveCondition">[docs]</a><span class="k">class</span> <span class="nc">ActiveCondition</span> <span class="p">(</span><span class="n">Condition</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Condition for filtering persons active during a period</span>
+
+<span class="sd">    Only persons active during the specified period are to</span>
+<span class="sd">    be considered.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span> <span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">after</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span> <span class="n">before</span> <span class="o">=</span> <span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Instatiation of the object.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+
+<span class="sd">        after: datetime.datetime</span>
+<span class="sd">           Start of the activity period to consider (default: None).</span>
+<span class="sd">           None means &quot;since the begining of time&quot;.</span>
+<span class="sd">        before: datetime.datetime</span>
+<span class="sd">           End of the activity period to consider (default: None).</span>
+<span class="sd">           None means &quot;until the end of time&quot;.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">after</span> <span class="o">=</span> <span class="n">after</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">before</span> <span class="o">=</span> <span class="n">before</span>
+
+<div class="viewcode-block" id="ActiveCondition.modify"><a class="viewcode-back" href="../../../grimoirelib_alch.family.duration_persons.html#grimoirelib_alch.family.duration_persons.ActiveCondition.modify">[docs]</a>    <span class="k">def</span> <span class="nf">modify</span> <span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">object</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Modification for this condition.</span>
+
+<span class="sd">        Sets the new activity list, considering only active</span>
+<span class="sd">        persons during the period.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">Condition</span><span class="o">.</span><span class="n">_check_class</span> <span class="p">(</span><span class="nb">object</span><span class="p">)</span>
+        <span class="nb">object</span><span class="o">.</span><span class="n">set_activity</span><span class="p">(</span><span class="nb">object</span><span class="o">.</span><span class="n">activity</span><span class="o">.</span><span class="n">active</span><span class="p">(</span><span class="n">after</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">after</span><span class="p">,</span>
+                                                   <span class="n">before</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">before</span><span class="p">))</span>
+
+</div></div>
+<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s">&quot;__main__&quot;</span><span class="p">:</span>
+
+    <span class="kn">from</span> <span class="nn">grimoirelib_alch.aux.standalone</span> <span class="kn">import</span> <span class="n">stdout_utf8</span><span class="p">,</span> <span class="n">print_banner</span>
+    <span class="kn">from</span> <span class="nn">datetime</span> <span class="kn">import</span> <span class="n">datetime</span><span class="p">,</span> <span class="n">timedelta</span>
+    <span class="kn">from</span> <span class="nn">grimoirelib_alch.query.scm</span> <span class="kn">import</span> <span class="n">DB</span> <span class="k">as</span> <span class="n">SCMDatabase</span>
+    <span class="kn">from</span> <span class="nn">grimoirelib_alch.query.mls</span> <span class="kn">import</span> <span class="n">DB</span> <span class="k">as</span> <span class="n">MLSDatabase</span>
+
+    <span class="kn">from</span> <span class="nn">scm</span> <span class="kn">import</span> <span class="n">NomergesCondition</span> <span class="k">as</span> <span class="n">SCMNomergesCondition</span>
+    <span class="kn">from</span> <span class="nn">activity_persons</span> <span class="kn">import</span> <span class="n">SCMActivityPersons</span><span class="p">,</span> <span class="n">MLSActivityPersons</span>
+
+    <span class="n">stdout_utf8</span><span class="p">()</span>
+
+    <span class="c"># SCM database</span>
+    <span class="n">database</span> <span class="o">=</span> <span class="n">SCMDatabase</span> <span class="p">(</span><span class="n">url</span> <span class="o">=</span> <span class="s">&quot;mysql://jgb:XXX@localhost/&quot;</span><span class="p">,</span>
+                            <span class="n">schema</span> <span class="o">=</span> <span class="s">&quot;vizgrimoire_cvsanaly&quot;</span><span class="p">,</span>
+                            <span class="n">schema_id</span> <span class="o">=</span> <span class="s">&quot;vizgrimoire_cvsanaly&quot;</span><span class="p">)</span>
+    <span class="n">session</span> <span class="o">=</span> <span class="n">database</span><span class="o">.</span><span class="n">build_session</span><span class="p">()</span>
+
+    <span class="c">#---------------------------------</span>
+    <span class="n">print_banner</span><span class="p">(</span><span class="s">&quot;Age, using entity&quot;</span><span class="p">)</span>
+    <span class="n">nomerges</span> <span class="o">=</span> <span class="n">SCMNomergesCondition</span><span class="p">()</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="n">SCMActivityPersons</span> <span class="p">(</span><span class="n">datasource</span> <span class="o">=</span> <span class="n">session</span><span class="p">,</span>
+                               <span class="n">name</span> <span class="o">=</span> <span class="s">&quot;list_ucommitters&quot;</span><span class="p">,</span>
+                               <span class="n">conditions</span> <span class="o">=</span> <span class="p">(</span><span class="n">nomerges</span><span class="p">,))</span>
+    <span class="n">age</span> <span class="o">=</span> <span class="n">DurationPersons</span> <span class="p">(</span><span class="n">datasource</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">activity</span><span class="p">(),</span>
+                           <span class="n">name</span> <span class="o">=</span> <span class="s">&quot;age&quot;</span><span class="p">)</span>
+    <span class="k">print</span> <span class="n">age</span><span class="o">.</span><span class="n">durations</span><span class="p">()</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
+
+    <span class="c">#---------------------------------</span>
+    <span class="n">print_banner</span><span class="p">(</span><span class="s">&quot;Age, using entity and ActivityPersons as datasource&quot;</span><span class="p">)</span>
+    <span class="n">nomerges</span> <span class="o">=</span> <span class="n">SCMNomergesCondition</span><span class="p">()</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="n">SCMActivityPersons</span> <span class="p">(</span><span class="n">datasource</span> <span class="o">=</span> <span class="n">session</span><span class="p">,</span>
+                               <span class="n">name</span> <span class="o">=</span> <span class="s">&quot;list_ucommitters&quot;</span><span class="p">,</span>
+                               <span class="n">conditions</span> <span class="o">=</span> <span class="p">(</span><span class="n">nomerges</span><span class="p">,))</span>
+    <span class="n">age</span> <span class="o">=</span> <span class="n">DurationPersons</span> <span class="p">(</span><span class="n">name</span> <span class="o">=</span> <span class="s">&quot;age&quot;</span><span class="p">,</span>
+                           <span class="n">datasource</span> <span class="o">=</span> <span class="n">data</span><span class="p">)</span>
+    <span class="k">print</span> <span class="n">age</span><span class="o">.</span><span class="n">durations</span><span class="p">()</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
+
+    <span class="c">#---------------------------------</span>
+    <span class="n">print_banner</span><span class="p">(</span><span class="s">&quot;Using (void) root condition.&quot;</span><span class="p">)</span>
+    <span class="n">condition</span> <span class="o">=</span> <span class="n">Condition</span> <span class="p">()</span>
+    <span class="n">age</span> <span class="o">=</span> <span class="n">DurationPersons</span> <span class="p">(</span><span class="n">datasource</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">activity</span><span class="p">(),</span>
+                           <span class="n">name</span> <span class="o">=</span> <span class="s">&quot;age&quot;</span><span class="p">,</span>
+                           <span class="n">conditions</span> <span class="o">=</span> <span class="p">(</span><span class="n">condition</span><span class="p">,))</span>
+
+    <span class="c">#---------------------------------</span>
+    <span class="n">print_banner</span><span class="p">(</span><span class="s">&quot;Age, using entity and conditions&quot;</span><span class="p">)</span>
+    <span class="n">snapshot</span> <span class="o">=</span> <span class="n">SnapshotCondition</span> <span class="p">(</span><span class="n">date</span> <span class="o">=</span> <span class="n">datetime</span> <span class="p">(</span><span class="mi">2014</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">))</span>
+    <span class="n">active_period</span> <span class="o">=</span> <span class="n">ActiveCondition</span> <span class="p">(</span><span class="n">after</span> <span class="o">=</span> <span class="n">datetime</span><span class="p">(</span><span class="mi">2014</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span> <span class="o">-</span> \
+                                         <span class="n">timedelta</span><span class="p">(</span><span class="n">days</span><span class="o">=</span><span class="mi">10</span><span class="p">))</span>
+    <span class="n">age</span> <span class="o">=</span> <span class="n">DurationPersons</span> <span class="p">(</span><span class="n">datasource</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">activity</span><span class="p">(),</span>
+                           <span class="n">name</span> <span class="o">=</span> <span class="s">&quot;age&quot;</span><span class="p">,</span>
+                           <span class="n">conditions</span> <span class="o">=</span> <span class="p">(</span><span class="n">snapshot</span><span class="p">,</span> <span class="n">active_period</span><span class="p">))</span>
+    <span class="k">print</span> <span class="n">age</span><span class="o">.</span><span class="n">durations</span><span class="p">()</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
+    
+    <span class="c"># MLS database</span>
+    <span class="n">database</span> <span class="o">=</span> <span class="n">MLSDatabase</span> <span class="p">(</span><span class="n">url</span> <span class="o">=</span> <span class="s">&quot;mysql://jgb:XXX@localhost/&quot;</span><span class="p">,</span>
+                            <span class="n">schema</span> <span class="o">=</span> <span class="s">&quot;oscon_openstack_mls&quot;</span><span class="p">,</span>
+                            <span class="n">schema_id</span> <span class="o">=</span> <span class="s">&quot;oscon_openstack_scm&quot;</span><span class="p">)</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="n">MLSActivityPersons</span> <span class="p">(</span>
+        <span class="n">datasource</span> <span class="o">=</span> <span class="n">database</span><span class="p">,</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="s">&quot;list_usenders&quot;</span><span class="p">)</span>
+
+    <span class="c">#---------------------------------</span>
+    <span class="n">print_banner</span><span class="p">(</span><span class="s">&quot;MLS: Birth&quot;</span><span class="p">)</span>
+    <span class="c"># Birth has the ages of all actors, considering enddate as</span>
+    <span class="c"># current (snapshot) time</span>
+    <span class="n">enddate</span> <span class="o">=</span> <span class="n">datetime</span><span class="p">(</span><span class="mi">2014</span><span class="p">,</span><span class="mi">7</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">snapshot</span> <span class="o">=</span> <span class="n">SnapshotCondition</span> <span class="p">(</span><span class="n">date</span> <span class="o">=</span> <span class="n">enddate</span><span class="p">)</span>
+    <span class="n">birth</span> <span class="o">=</span> <span class="n">DurationPersons</span> <span class="p">(</span><span class="n">datasource</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">activity</span><span class="p">(),</span>
+                             <span class="n">name</span> <span class="o">=</span> <span class="s">&quot;age&quot;</span><span class="p">,</span>
+                             <span class="n">conditions</span> <span class="o">=</span> <span class="p">(</span><span class="n">snapshot</span><span class="p">,))</span>
+    <span class="k">print</span> <span class="n">birth</span><span class="o">.</span><span class="n">durations</span><span class="p">()</span>
+
+    <span class="c">#---------------------------------</span>
+    <span class="n">print_banner</span><span class="p">(</span><span class="s">&quot;MLS: Aging&quot;</span><span class="p">)</span>
+    <span class="c"># &quot;Aging&quot; has the ages of those actors active during the </span>
+    <span class="c"># last half year (that is, the period from enddate - half year</span>
+    <span class="c"># to enddate)</span>
+    <span class="n">active_period</span> <span class="o">=</span> <span class="n">ActiveCondition</span> <span class="p">(</span><span class="n">after</span> <span class="o">=</span> <span class="n">enddate</span> <span class="o">-</span> \
+                                         <span class="n">timedelta</span><span class="p">(</span><span class="n">days</span><span class="o">=</span><span class="mi">182</span><span class="p">))</span>
+    <span class="n">aging</span> <span class="o">=</span> <span class="n">DurationPersons</span> <span class="p">(</span><span class="n">datasource</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">activity</span><span class="p">(),</span>
+                             <span class="n">name</span> <span class="o">=</span> <span class="s">&quot;age&quot;</span><span class="p">,</span>
+                             <span class="n">conditions</span> <span class="o">=</span> <span class="p">(</span><span class="n">snapshot</span><span class="p">,</span> <span class="n">active_period</span><span class="p">))</span>
+    <span class="k">print</span> <span class="n">aging</span><span class="o">.</span><span class="n">durations</span><span class="p">()</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="../../../np-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">GrimoreLib 1.0 documentation</a> &raquo;</li>
+          <li><a href="../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2014, Bitergia.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+    </div>
+  </body>
+</html>

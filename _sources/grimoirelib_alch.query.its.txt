@@ -1,0 +1,7 @@
+grimoirelib_alch.query.its module
+=================================
+
+.. automodule:: grimoirelib_alch.query.its
+    :members:
+    :undoc-members:
+    :show-inheritance:

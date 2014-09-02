@@ -1,0 +1,237 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>vizgrimoire.filter &mdash; GrimoreLib 1.0 documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="top" title="GrimoreLib 1.0 documentation" href="../../index.html" />
+    <link rel="up" title="Module code" href="../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="../../np-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../index.html">GrimoreLib 1.0 documentation</a> &raquo;</li>
+          <li><a href="../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for vizgrimoire.filter</h1><div class="highlight"><pre>
+<span class="c">## Copyright (C) 2012, 2013 Bitergia</span>
+<span class="c">##</span>
+<span class="c">## This program is free software; you can redistribute it and/or modify</span>
+<span class="c">## it under the terms of the GNU General Public License as published by</span>
+<span class="c">## the Free Software Foundation; either version 3 of the License, or</span>
+<span class="c">## (at your option) any later version.</span>
+<span class="c">##</span>
+<span class="c">## This program is distributed in the hope that it will be useful,</span>
+<span class="c">## but WITHOUT ANY WARRANTY; without even the implied warranty of</span>
+<span class="c">## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the</span>
+<span class="c">## GNU General Public License for more details. </span>
+<span class="c">##</span>
+<span class="c">## You should have received a copy of the GNU General Public License</span>
+<span class="c">## along with this program; if not, write to the Free Software</span>
+<span class="c">## Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.</span>
+<span class="c">##</span>
+<span class="c">## This file is a part of the vizGrimoire R package</span>
+<span class="c">##  (an R library for the MetricsGrimoire and vizGrimoire systems)</span>
+<span class="c">##</span>
+<span class="c">##</span>
+<span class="c">## Authors:</span>
+<span class="c">##   Alvaro del Castillo &lt;acs@bitergia.com&gt;</span>
+
+<span class="kn">import</span> <span class="nn">logging</span>
+
+<div class="viewcode-block" id="Filter"><a class="viewcode-back" href="../../vizgrimoire.filter.html#vizgrimoire.filter.Filter">[docs]</a><span class="k">class</span> <span class="nc">Filter</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+
+    <span class="n">_filters_data</span> <span class="o">=</span> <span class="p">[</span>
+                     <span class="p">[</span><span class="s">&quot;repository&quot;</span><span class="p">,</span><span class="s">&quot;rep&quot;</span><span class="p">,</span><span class="s">&quot;repos&quot;</span><span class="p">],</span> <span class="p">[</span><span class="s">&quot;company&quot;</span><span class="p">,</span><span class="s">&quot;com&quot;</span><span class="p">,</span><span class="s">&quot;companies&quot;</span><span class="p">],</span>
+                     <span class="p">[</span><span class="s">&quot;country&quot;</span><span class="p">,</span><span class="s">&quot;cou&quot;</span><span class="p">,</span><span class="s">&quot;countries&quot;</span><span class="p">],</span> <span class="p">[</span><span class="s">&quot;domain&quot;</span><span class="p">,</span><span class="s">&quot;dom&quot;</span><span class="p">,</span><span class="s">&quot;domains&quot;</span><span class="p">],</span>
+                     <span class="p">[</span><span class="s">&quot;project&quot;</span><span class="p">,</span><span class="s">&quot;prj&quot;</span><span class="p">,</span><span class="s">&quot;projects&quot;</span><span class="p">],</span> <span class="p">[</span><span class="s">&quot;tag&quot;</span><span class="p">,</span> <span class="s">&quot;tag&quot;</span><span class="p">,</span> <span class="s">&quot;tags&quot;</span><span class="p">],</span>
+                     <span class="p">[</span><span class="s">&quot;people&quot;</span><span class="p">,</span><span class="s">&quot;people&quot;</span><span class="p">,</span><span class="s">&quot;people&quot;</span><span class="p">],</span>
+                     <span class="p">[</span><span class="s">&quot;people2&quot;</span><span class="p">,</span><span class="s">&quot;people2&quot;</span><span class="p">,</span><span class="s">&quot;people2&quot;</span><span class="p">]</span>
+                    <span class="p">]</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">item</span> <span class="o">=</span> <span class="bp">None</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">name</span>
+        <span class="k">for</span> <span class="n">filter_data</span> <span class="ow">in</span> <span class="n">Filter</span><span class="o">.</span><span class="n">_filters_data</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">filter_data</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">name_short</span> <span class="o">=</span> <span class="n">filter_data</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">name_plural</span> <span class="o">=</span> <span class="n">filter_data</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">item</span> <span class="o">=</span> <span class="n">item</span> 
+
+    <span class="nd">@staticmethod</span>
+<div class="viewcode-block" id="Filter.get_filter_from_plural"><a class="viewcode-back" href="../../vizgrimoire.filter.html#vizgrimoire.filter.Filter.get_filter_from_plural">[docs]</a>    <span class="k">def</span> <span class="nf">get_filter_from_plural</span><span class="p">(</span><span class="n">plural</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">data</span> <span class="ow">in</span> <span class="n">Filter</span><span class="o">.</span><span class="n">_filters_data</span><span class="p">:</span>
+            <span class="k">if</span> <span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">==</span> <span class="n">plural</span><span class="p">):</span>
+                <span class="k">return</span> <span class="n">Filter</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+</div>
+<div class="viewcode-block" id="Filter.get_name"><a class="viewcode-back" href="../../vizgrimoire.filter.html#vizgrimoire.filter.Filter.get_name">[docs]</a>    <span class="k">def</span> <span class="nf">get_name</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span>
+</div>
+<div class="viewcode-block" id="Filter.get_name_short"><a class="viewcode-back" href="../../vizgrimoire.filter.html#vizgrimoire.filter.Filter.get_name_short">[docs]</a>    <span class="k">def</span> <span class="nf">get_name_short</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">name_short</span>
+</div>
+<div class="viewcode-block" id="Filter.get_name_plural"><a class="viewcode-back" href="../../vizgrimoire.filter.html#vizgrimoire.filter.Filter.get_name_plural">[docs]</a>    <span class="k">def</span> <span class="nf">get_name_plural</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">name_plural</span>
+</div>
+<div class="viewcode-block" id="Filter.get_item"><a class="viewcode-back" href="../../vizgrimoire.filter.html#vizgrimoire.filter.Filter.get_item">[docs]</a>    <span class="k">def</span> <span class="nf">get_item</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">item</span>
+</div>
+<div class="viewcode-block" id="Filter.get_filename"><a class="viewcode-back" href="../../vizgrimoire.filter.html#vizgrimoire.filter.Filter.get_filename">[docs]</a>    <span class="k">def</span> <span class="nf">get_filename</span> <span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ds</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">ds</span><span class="o">.</span><span class="n">get_name</span><span class="p">()</span><span class="o">+</span><span class="s">&quot;-&quot;</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">get_name_plural</span><span class="p">()</span><span class="o">+</span><span class="s">&quot;.json&quot;</span>
+</div>
+<div class="viewcode-block" id="Filter.get_evolutionary_filename_all"><a class="viewcode-back" href="../../vizgrimoire.filter.html#vizgrimoire.filter.Filter.get_evolutionary_filename_all">[docs]</a>    <span class="k">def</span> <span class="nf">get_evolutionary_filename_all</span> <span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ds</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">ds</span><span class="o">.</span><span class="n">get_name</span><span class="p">()</span><span class="o">+</span><span class="s">&quot;-&quot;</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">get_name_short</span><span class="p">()</span><span class="o">+</span><span class="s">&quot;-all-evolutionary.json&quot;</span>
+</div>
+<div class="viewcode-block" id="Filter.get_evolutionary_filename"><a class="viewcode-back" href="../../vizgrimoire.filter.html#vizgrimoire.filter.Filter.get_evolutionary_filename">[docs]</a>    <span class="k">def</span> <span class="nf">get_evolutionary_filename</span> <span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ds</span><span class="p">):</span>
+        <span class="n">name</span>  <span class="o">=</span> <span class="bp">None</span>
+
+        <span class="k">if</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_item</span><span class="p">()</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">):</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&quot;No item defined in get_evolutionary_filename&quot;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">selfname_short</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_name_short</span><span class="p">()</span>
+            <span class="n">item</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_item</span><span class="p">()</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s">&quot;/&quot;</span><span class="p">,</span><span class="s">&quot;_&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s">&quot;&lt;&quot;</span><span class="p">,</span><span class="s">&quot;__&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s">&quot;&gt;&quot;</span><span class="p">,</span><span class="s">&quot;___&quot;</span><span class="p">)</span>
+            <span class="n">name</span> <span class="o">=</span> <span class="n">item</span><span class="o">+</span><span class="s">&quot;-&quot;</span><span class="o">+</span><span class="n">ds</span><span class="o">.</span><span class="n">get_name</span><span class="p">()</span><span class="o">+</span><span class="s">&quot;-&quot;</span><span class="o">+</span><span class="n">selfname_short</span><span class="o">+</span><span class="s">&quot;-evolutionary.json&quot;</span>
+
+        <span class="k">return</span> <span class="n">name</span>
+</div>
+<div class="viewcode-block" id="Filter.get_static_filename_all"><a class="viewcode-back" href="../../vizgrimoire.filter.html#vizgrimoire.filter.Filter.get_static_filename_all">[docs]</a>    <span class="k">def</span> <span class="nf">get_static_filename_all</span> <span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ds</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">ds</span><span class="o">.</span><span class="n">get_name</span><span class="p">()</span><span class="o">+</span><span class="s">&quot;-&quot;</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">get_name_short</span><span class="p">()</span>  <span class="o">+</span><span class="s">&quot;-all-static.json&quot;</span>
+</div>
+<div class="viewcode-block" id="Filter.get_static_filename"><a class="viewcode-back" href="../../vizgrimoire.filter.html#vizgrimoire.filter.Filter.get_static_filename">[docs]</a>    <span class="k">def</span> <span class="nf">get_static_filename</span> <span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ds</span><span class="p">):</span>
+        <span class="n">name</span>  <span class="o">=</span> <span class="bp">None</span>
+
+        <span class="k">if</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_item</span><span class="p">()</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">):</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&quot;No item defined in get_static_filename&quot;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">selfname_short</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_name_short</span><span class="p">()</span>
+            <span class="n">item</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_item</span><span class="p">()</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s">&quot;/&quot;</span><span class="p">,</span><span class="s">&quot;_&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s">&quot;&lt;&quot;</span><span class="p">,</span><span class="s">&quot;__&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s">&quot;&gt;&quot;</span><span class="p">,</span><span class="s">&quot;___&quot;</span><span class="p">)</span>
+            <span class="n">name</span> <span class="o">=</span> <span class="n">item</span><span class="o">+</span><span class="s">&quot;-&quot;</span><span class="o">+</span><span class="n">ds</span><span class="o">.</span><span class="n">get_name</span><span class="p">()</span><span class="o">+</span><span class="s">&quot;-&quot;</span><span class="o">+</span><span class="n">selfname_short</span><span class="o">+</span><span class="s">&quot;-static.json&quot;</span>
+
+        <span class="k">return</span> <span class="n">name</span>
+</div>
+<div class="viewcode-block" id="Filter.get_top_filename"><a class="viewcode-back" href="../../vizgrimoire.filter.html#vizgrimoire.filter.Filter.get_top_filename">[docs]</a>    <span class="k">def</span> <span class="nf">get_top_filename</span> <span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ds</span><span class="p">):</span>
+        <span class="n">name</span>  <span class="o">=</span> <span class="bp">None</span>
+
+        <span class="k">if</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_item</span><span class="p">()</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">):</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s">&quot;No filename for filter top &quot;</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_name</span><span class="p">())</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">item</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_item</span><span class="p">()</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s">&quot;/&quot;</span><span class="p">,</span><span class="s">&quot;_&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s">&quot;&lt;&quot;</span><span class="p">,</span><span class="s">&quot;__&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s">&quot;&gt;&quot;</span><span class="p">,</span><span class="s">&quot;___&quot;</span><span class="p">)</span>
+
+            <span class="n">name</span> <span class="o">=</span> <span class="n">item</span><span class="o">+</span><span class="s">&quot;-&quot;</span><span class="o">+</span><span class="n">ds</span><span class="o">.</span><span class="n">get_name</span><span class="p">()</span><span class="o">+</span><span class="s">&quot;-&quot;</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">get_name_short</span><span class="p">()</span><span class="o">+</span><span class="s">&quot;-top-&quot;</span>
+            <span class="k">if</span> <span class="p">(</span><span class="n">ds</span><span class="o">.</span><span class="n">get_name</span><span class="p">()</span> <span class="o">==</span> <span class="s">&quot;scm&quot;</span><span class="p">):</span>
+                <span class="n">name</span> <span class="o">+=</span> <span class="s">&quot;authors.json&quot;</span>
+            <span class="k">elif</span> <span class="p">(</span><span class="n">ds</span><span class="o">.</span><span class="n">get_name</span><span class="p">()</span> <span class="o">==</span> <span class="s">&quot;its&quot;</span><span class="p">):</span>
+                <span class="n">name</span> <span class="o">+=</span> <span class="s">&quot;closers.json&quot;</span>
+            <span class="k">elif</span> <span class="p">(</span><span class="n">ds</span><span class="o">.</span><span class="n">get_name</span><span class="p">()</span> <span class="o">==</span> <span class="s">&quot;mls&quot;</span><span class="p">):</span> 
+                <span class="n">name</span> <span class="o">+=</span> <span class="s">&quot;senders.json&quot;</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s">&quot;No filename for filter top </span><span class="si">%s</span><span class="s"> </span><span class="si">%s</span><span class="s">&quot;</span>
+                                <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_name</span><span class="p">(),</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_item</span><span class="p">()))</span>
+
+        <span class="k">return</span> <span class="n">name</span>
+</div>
+<div class="viewcode-block" id="Filter.get_summary_filename"><a class="viewcode-back" href="../../vizgrimoire.filter.html#vizgrimoire.filter.Filter.get_summary_filename">[docs]</a>    <span class="k">def</span> <span class="nf">get_summary_filename</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ds</span><span class="p">):</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">get_name</span><span class="p">()</span><span class="o">+</span><span class="s">&quot;-&quot;</span>
+
+        <span class="k">if</span> <span class="p">(</span><span class="n">ds</span><span class="o">.</span><span class="n">get_name</span><span class="p">()</span> <span class="o">==</span> <span class="s">&quot;scm&quot;</span><span class="p">):</span>
+            <span class="k">if</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_name</span><span class="p">()</span> <span class="o">==</span> <span class="s">&quot;company&quot;</span><span class="p">):</span>
+                <span class="n">name</span> <span class="o">+=</span> <span class="s">&quot;companies-commits-summary.json&quot;</span>
+        <span class="k">elif</span> <span class="p">(</span><span class="n">ds</span><span class="o">.</span><span class="n">get_name</span><span class="p">()</span> <span class="o">==</span> <span class="s">&quot;its&quot;</span><span class="p">):</span>
+            <span class="k">if</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_name</span><span class="p">()</span> <span class="o">==</span> <span class="s">&quot;company&quot;</span><span class="p">):</span>
+                <span class="n">name</span> <span class="o">+=</span> <span class="s">&quot;closed-companies-summary.json&quot;</span>
+        <span class="k">elif</span> <span class="p">(</span><span class="n">ds</span><span class="o">.</span><span class="n">get_name</span><span class="p">()</span> <span class="o">==</span> <span class="s">&quot;mls&quot;</span><span class="p">):</span>
+            <span class="k">if</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_name</span><span class="p">()</span> <span class="o">==</span> <span class="s">&quot;company&quot;</span><span class="p">):</span>
+                <span class="n">name</span> <span class="o">+=</span> <span class="s">&quot;sent-companies-summary.json&quot;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s">&quot;No filename for filter summary </span><span class="si">%s</span><span class="s"> &quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">ds</span><span class="o">.</span><span class="n">get_name</span><span class="p">()))</span>
+        <span class="k">return</span> <span class="n">name</span>
+</div>
+<div class="viewcode-block" id="Filter.get_type_analysis"><a class="viewcode-back" href="../../vizgrimoire.filter.html#vizgrimoire.filter.Filter.get_type_analysis">[docs]</a>    <span class="k">def</span> <span class="nf">get_type_analysis</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Old format for filtering&quot;&quot;&quot;</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_name</span><span class="p">()</span>
+        <span class="n">item</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_item</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">item</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span> <span class="n">item</span> <span class="o">=</span>  <span class="s">&quot;&#39;&quot;</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">get_item</span><span class="p">()</span><span class="o">+</span><span class="s">&quot;&#39;&quot;</span>
+
+        <span class="n">type_analysis</span> <span class="o">=</span> <span class="p">[</span><span class="n">name</span><span class="p">,</span> <span class="n">item</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">type_analysis</span></div></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="../../np-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../index.html">GrimoreLib 1.0 documentation</a> &raquo;</li>
+          <li><a href="../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2014, Bitergia.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+    </div>
+  </body>
+</html>

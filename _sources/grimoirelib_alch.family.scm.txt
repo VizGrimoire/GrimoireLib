@@ -1,0 +1,7 @@
+grimoirelib_alch.family.scm module
+==================================
+
+.. automodule:: grimoirelib_alch.family.scm
+    :members:
+    :undoc-members:
+    :show-inheritance:

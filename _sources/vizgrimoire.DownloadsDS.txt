@@ -1,0 +1,7 @@
+vizgrimoire.DownloadsDS module
+==============================
+
+.. automodule:: vizgrimoire.DownloadsDS
+    :members:
+    :undoc-members:
+    :show-inheritance:

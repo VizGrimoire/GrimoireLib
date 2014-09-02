@@ -1,0 +1,7 @@
+grimoirelib_alch.family.activity_persons module
+===============================================
+
+.. automodule:: grimoirelib_alch.family.activity_persons
+    :members:
+    :undoc-members:
+    :show-inheritance:

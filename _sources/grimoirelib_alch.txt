@@ -1,0 +1,31 @@
+grimoirelib_alch package
+========================
+
+Subpackages
+-----------
+
+.. toctree::
+
+    grimoirelib_alch.aux
+    grimoirelib_alch.family
+    grimoirelib_alch.query
+    grimoirelib_alch.type
+
+Submodules
+----------
+
+.. toctree::
+
+   grimoirelib_alch.report_demographics
+   grimoirelib_alch.test
+   grimoirelib_alch.test_demography
+   grimoirelib_alch.test_var
+   grimoirelib_alch.var
+
+Module contents
+---------------
+
+.. automodule:: grimoirelib_alch
+    :members:
+    :undoc-members:
+    :show-inheritance:

@@ -1,0 +1,17 @@
+grimoirelib_alch.aux package
+============================
+
+Submodules
+----------
+
+.. toctree::
+
+   grimoirelib_alch.aux.standalone
+
+Module contents
+---------------
+
+.. automodule:: grimoirelib_alch.aux
+    :members:
+    :undoc-members:
+    :show-inheritance:

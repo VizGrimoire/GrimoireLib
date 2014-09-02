@@ -1,0 +1,7 @@
+grimoirelib_alch.type.timeseries module
+=======================================
+
+.. automodule:: grimoirelib_alch.type.timeseries
+    :members:
+    :undoc-members:
+    :show-inheritance:

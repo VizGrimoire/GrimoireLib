@@ -1,0 +1,230 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>grimoirelib_alch.test &mdash; GrimoreLib 1.0 documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="top" title="GrimoreLib 1.0 documentation" href="../../index.html" />
+    <link rel="up" title="Module code" href="../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="../../np-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../index.html">GrimoreLib 1.0 documentation</a> &raquo;</li>
+          <li><a href="../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for grimoirelib_alch.test</h1><div class="highlight"><pre>
+<span class="c">#! /usr/bin/python</span>
+
+
+<span class="kn">from</span> <span class="nn">sqlalchemy</span> <span class="kn">import</span> <span class="n">create_engine</span><span class="p">,</span> <span class="n">func</span>
+<span class="kn">from</span> <span class="nn">sqlalchemy.ext.declarative</span> <span class="kn">import</span> <span class="n">declarative_base</span>
+<span class="kn">from</span> <span class="nn">sqlalchemy.orm</span> <span class="kn">import</span> <span class="n">sessionmaker</span>
+<span class="kn">from</span> <span class="nn">sqlalchemy.schema</span> <span class="kn">import</span> <span class="n">ForeignKeyConstraint</span>
+
+<span class="n">engine</span> <span class="o">=</span> <span class="n">create_engine</span><span class="p">(</span><span class="s">&#39;mysql://jgb:XXX@localhost/vizgrimoire_cvsanaly&#39;</span><span class="p">,</span>
+                       <span class="n">encoding</span><span class="o">=</span><span class="s">&#39;utf8&#39;</span><span class="p">,</span> <span class="n">echo</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+<span class="n">Base</span> <span class="o">=</span> <span class="n">declarative_base</span><span class="p">(</span><span class="n">engine</span><span class="p">)</span>
+
+<div class="viewcode-block" id="SCMLog"><a class="viewcode-back" href="../../grimoirelib_alch.test.html#grimoirelib_alch.test.SCMLog">[docs]</a><span class="k">class</span> <span class="nc">SCMLog</span><span class="p">(</span><span class="n">Base</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; &quot;&quot;&quot;</span>
+    <span class="n">__tablename__</span> <span class="o">=</span> <span class="s">&#39;scmlog&#39;</span>
+    <span class="n">__table_args__</span> <span class="o">=</span> <span class="p">{</span><span class="s">&#39;autoload&#39;</span><span class="p">:</span><span class="bp">True</span><span class="p">}</span>
+</div>
+<div class="viewcode-block" id="Actions"><a class="viewcode-back" href="../../grimoirelib_alch.test.html#grimoirelib_alch.test.Actions">[docs]</a><span class="k">class</span> <span class="nc">Actions</span><span class="p">(</span><span class="n">Base</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; &quot;&quot;&quot;</span>
+    <span class="n">__tablename__</span> <span class="o">=</span> <span class="s">&#39;actions&#39;</span>
+    <span class="n">__table_args__</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="n">ForeignKeyConstraint</span><span class="p">([</span><span class="s">&#39;commit_id&#39;</span><span class="p">],</span> <span class="p">[</span><span class="s">&#39;scmlog.id&#39;</span><span class="p">]),</span>
+        <span class="p">{</span><span class="s">&#39;autoload&#39;</span><span class="p">:</span><span class="bp">True</span><span class="p">}</span>
+        <span class="p">)</span>
+    </div>
+<div class="viewcode-block" id="loadSession"><a class="viewcode-back" href="../../grimoirelib_alch.test.html#grimoirelib_alch.test.loadSession">[docs]</a><span class="k">def</span> <span class="nf">loadSession</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot; &quot;&quot;&quot;</span>
+<span class="c">#    metadata = Base.metadata</span>
+    <span class="n">Session</span> <span class="o">=</span> <span class="n">sessionmaker</span><span class="p">(</span><span class="n">bind</span><span class="o">=</span><span class="n">engine</span><span class="p">)</span>
+    <span class="n">session</span> <span class="o">=</span> <span class="n">Session</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">session</span>
+
+<span class="c"># class VarType:</span>
+<span class="c">#     &quot;&quot;&quot;Class for specifying the kind of variable</span>
+
+<span class="c">#     Kinds of variables of interest are aggregate, count, list,</span>
+<span class="c">#     time series...</span>
+<span class="c">#     &quot;&quot;&quot;</span>
+
+<span class="c">#     def selector(self, field):</span>
+<span class="c">#         return (selector)</span>
+
+<span class="c">#     def __init__(self, selector):</span>
+<span class="c">#         self.selector = selector</span>
+
+<span class="c"># VarTypeCount = VarType (func.count)</span>
+
+<span class="c"># def getCommitsQuery (type, start, end):</span>
+<span class="c">#     &quot;&quot;&quot;</span>
+<span class="c">#     Get commits</span>
+
+<span class="c">#     Get all commits between starting date and end date</span>
+<span class="c">#       (exactly: start &lt;= date &lt; end</span>
+<span class="c">#     - selected: what is in the SELECt statement for the query,</span>
+<span class="c">#         such as func.count(func.distinct(SCMLog.id)</span>
+<span class="c">#     - start: string, starting date, such as &quot;2013-06-01&quot;</span>
+<span class="c">#     - end: string, end date, such as &quot;2014-01-01&quot;</span>
+<span class="c">#     &quot;&quot;&quot;</span>
+
+<span class="c">#     res = session.query(type.selector(func.distinct(SCMLog.id))).\</span>
+<span class="c">#         join(Actions).\</span>
+<span class="c">#         filter(SCMLog.date &gt;= start).\</span>
+<span class="c">#         filter(SCMLog.date &lt; end)</span>
+<span class="c">#     return res</span>
+</div>
+<div class="viewcode-block" id="getNCommitsQuery"><a class="viewcode-back" href="../../grimoirelib_alch.test.html#grimoirelib_alch.test.getNCommitsQuery">[docs]</a><span class="k">def</span> <span class="nf">getNCommitsQuery</span> <span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">end</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Get commits</span>
+
+<span class="sd">    Get all commits between starting date and end date</span>
+<span class="sd">      (exactly: start &lt;= date &lt; end</span>
+<span class="sd">    - start: string, starting date, such as &quot;2013-06-01&quot;</span>
+<span class="sd">    - end: string, end date, such as &quot;2014-01-01&quot;</span>
+
+<span class="sd"># SELECT count(distinct(s.id)) as commits</span>
+<span class="sd"># FROM scmlog s, actions a</span>
+<span class="sd"># WHERE s.date &gt;= &quot;2013-06-01&quot; and</span>
+<span class="sd"># 	s.date &lt; &quot;2014-01-01&quot; and </span>
+<span class="sd"># 	s.id = a.commit_id</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+    <span class="n">res</span> <span class="o">=</span> <span class="n">session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">func</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="n">func</span><span class="o">.</span><span class="n">distinct</span><span class="p">(</span><span class="n">SCMLog</span><span class="o">.</span><span class="n">id</span><span class="p">)))</span><span class="o">.</span>\
+        <span class="n">join</span><span class="p">(</span><span class="n">Actions</span><span class="p">)</span><span class="o">.</span>\
+        <span class="nb">filter</span><span class="p">(</span><span class="n">SCMLog</span><span class="o">.</span><span class="n">date</span> <span class="o">&gt;=</span> <span class="n">start</span><span class="p">)</span><span class="o">.</span>\
+        <span class="nb">filter</span><span class="p">(</span><span class="n">SCMLog</span><span class="o">.</span><span class="n">date</span> <span class="o">&lt;</span> <span class="n">end</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">res</span>
+</div>
+<div class="viewcode-block" id="getCommitsQuery"><a class="viewcode-back" href="../../grimoirelib_alch.test.html#grimoirelib_alch.test.getCommitsQuery">[docs]</a><span class="k">def</span> <span class="nf">getCommitsQuery</span> <span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">end</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Get commits</span>
+
+<span class="sd">    Get all commits between starting date and end date</span>
+<span class="sd">      (exactly: start &lt;= date &lt; end</span>
+<span class="sd">    - start: string, starting date, such as &quot;2013-06-01&quot;</span>
+<span class="sd">    - end: string, end date, such as &quot;2014-01-01&quot;</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+    <span class="n">res</span> <span class="o">=</span> <span class="n">session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">func</span><span class="o">.</span><span class="n">distinct</span><span class="p">(</span><span class="n">SCMLog</span><span class="o">.</span><span class="n">id</span><span class="p">)</span><span class="o">.</span><span class="n">label</span><span class="p">(</span><span class="s">&quot;id&quot;</span><span class="p">),</span> <span class="n">SCMLog</span><span class="o">.</span><span class="n">date</span><span class="p">)</span><span class="o">.</span>\
+        <span class="n">join</span><span class="p">(</span><span class="n">Actions</span><span class="p">)</span><span class="o">.</span>\
+        <span class="nb">filter</span><span class="p">(</span><span class="n">SCMLog</span><span class="o">.</span><span class="n">date</span> <span class="o">&gt;=</span> <span class="n">start</span><span class="p">)</span><span class="o">.</span>\
+        <span class="nb">filter</span><span class="p">(</span><span class="n">SCMLog</span><span class="o">.</span><span class="n">date</span> <span class="o">&lt;</span> <span class="n">end</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">res</span>
+</div>
+<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="n">session</span> <span class="o">=</span> <span class="n">loadSession</span><span class="p">()</span>
+    <span class="n">res</span> <span class="o">=</span> <span class="n">session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">SCMLog</span><span class="p">)</span><span class="o">.</span><span class="n">first</span><span class="p">()</span>
+    <span class="k">print</span> <span class="n">res</span><span class="o">.</span><span class="n">id</span>
+    <span class="n">res</span> <span class="o">=</span> <span class="n">session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">Actions</span><span class="o">.</span><span class="n">type</span><span class="p">,</span> <span class="n">SCMLog</span><span class="o">.</span><span class="n">rev</span><span class="p">)</span><span class="o">.</span><span class="n">distinct</span><span class="p">(</span><span class="n">SCMLog</span><span class="o">.</span><span class="n">id</span><span class="p">)</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">SCMLog</span><span class="p">)</span>
+    <span class="k">print</span> <span class="n">res</span>
+    <span class="k">print</span>
+    <span class="k">print</span>
+    <span class="n">res</span> <span class="o">=</span> <span class="n">session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">Actions</span><span class="o">.</span><span class="n">id</span><span class="p">)</span><span class="o">.</span><span class="n">distinct</span><span class="p">(</span><span class="n">Actions</span><span class="o">.</span><span class="n">type</span><span class="p">)</span>
+    <span class="k">print</span> <span class="n">res</span><span class="o">.</span><span class="n">first</span><span class="p">()</span>
+
+    <span class="c"># print &quot;Other&quot;</span>
+    <span class="c"># print</span>
+    <span class="c"># res = getCommitsQuery(selected=func.count(func.distinct(SCMLog.id)),</span>
+    <span class="c">#                       start=&quot;2013-06-01&quot;, end=&quot;2014-01-01&quot;)</span>
+    <span class="c"># print res.first()</span>
+
+    <span class="k">print</span> <span class="s">&quot;Other&quot;</span>
+    <span class="k">print</span>
+<span class="c">#    res = getCommitsQuery(selected=func.count(SCMLog.id),</span>
+<span class="c">#                          start=&quot;2013-06-01&quot;, end=&quot;2014-01-01&quot;)</span>
+<span class="c">#    res = getCommitsQuery(type=VarTypeCount,</span>
+<span class="c">#                          start=&quot;2013-06-01&quot;, end=&quot;2014-01-01&quot;)</span>
+    <span class="n">res</span> <span class="o">=</span> <span class="n">getNCommitsQuery</span><span class="p">(</span><span class="n">start</span><span class="o">=</span><span class="s">&quot;2013-06-01&quot;</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="s">&quot;2014-01-01&quot;</span><span class="p">)</span>
+    <span class="k">print</span> <span class="n">res</span><span class="o">.</span><span class="n">scalar</span><span class="p">()</span>
+    <span class="n">res</span> <span class="o">=</span> <span class="n">getCommitsQuery</span><span class="p">(</span><span class="n">start</span><span class="o">=</span><span class="s">&quot;2013-06-01&quot;</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="s">&quot;2014-01-01&quot;</span><span class="p">)</span>
+    <span class="k">print</span> <span class="n">res</span><span class="o">.</span><span class="n">column_descriptions</span>
+    <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">res</span><span class="o">.</span><span class="n">limit</span><span class="p">(</span><span class="mi">10</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">():</span>
+        <span class="k">print</span> <span class="n">row</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="n">row</span><span class="o">.</span><span class="n">date</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="../../np-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../index.html">GrimoreLib 1.0 documentation</a> &raquo;</li>
+          <li><a href="../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2014, Bitergia.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+    </div>
+  </body>
+</html>

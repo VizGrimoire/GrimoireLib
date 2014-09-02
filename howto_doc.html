@@ -1,0 +1,159 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>How to produce documentation using Sphinx &mdash; GrimoreLib 1.0 documentation</title>
+    
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="GrimoreLib 1.0 documentation" href="index.html" />
+    <link rel="prev" title="vizgrimoire.report module" href="vizgrimoire.report.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="np-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="vizgrimoire.report.html" title="vizgrimoire.report module"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">GrimoreLib 1.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="how-to-produce-documentation-using-sphinx">
+<h1>How to produce documentation using Sphinx<a class="headerlink" href="#how-to-produce-documentation-using-sphinx" title="Permalink to this headline">¶</a></h1>
+<p>If there is no change in the list of modules:</p>
+<ul class="simple">
+<li>Fix sys.path.insert in docs/conf.py, by adding the paths that must be included in PYHTONPATH to import all modules needed by those to be documented.</li>
+<li>Run:</li>
+</ul>
+<div class="highlight-python"><div class="highlight"><pre>cd docs
+make html
+</pre></div>
+</div>
+<p>This will try to build all HTML content in html directory under BUILDDIR, as defined in docs/Makefile (which should exist). Therefore, change that variable to your taste.</p>
+<p>If there are changes in the list of modules:</p>
+<div class="highlight-python"><div class="highlight"><pre>cd docs
+sphinx-apidoc --force --separate -o . ..
+make html
+</pre></div>
+</div>
+</div>
+<div class="section" id="how-to-push-documentation-to-github">
+<h1>How to push documentation to GitHub<a class="headerlink" href="#how-to-push-documentation-to-github" title="Permalink to this headline">¶</a></h1>
+<p>The directory where the HMTL content was built should be a clone of the gh-pages branch of the project. So, first clone the project, change to the gh-pages branch, and then run the above commands to populate with the new HTML files. Remember that the HTML files will be placed under the html directory of the build dir (as specified in the Makefile), so it makes sense to clone the project as html subdir. Eg, if the build dir is GrimoireLib-docs:</p>
+<div class="highlight-python"><div class="highlight"><pre>mkdir GrimoireLib-docs
+git clone https://github.com/VizGrimoire/GrimoireLib.git GrimoireLib-docs/html
+cd GrimoireLib-docs/html
+git checkout gh-pages
+</pre></div>
+</div>
+<p>Now, run the doc generation commands in the GrimoireLib/docs directory (GrimoireLib is the directory where the GrimoireLib repository is cloned, and the commands are those detailed above).</p>
+<p>After that:</p>
+<div class="highlight-python"><div class="highlight"><pre>git add .
+git commit -m &quot;Updating HTML docs&quot;
+git push origin gh-pages
+</pre></div>
+</div>
+</div>
+<div class="section" id="more-information-about-documenting-with-sphinx">
+<h1>More information about documenting with Sphinx<a class="headerlink" href="#more-information-about-documenting-with-sphinx" title="Permalink to this headline">¶</a></h1>
+<ul class="simple">
+<li><a class="reference external" href="http://sphinx-doc.org/rest.html">reStructuredText Primer</a></li>
+<li><a class="reference external" href="http://daler.github.io/sphinxdoc-test/includeme.html">Publishing sphinx-generated docs on github</a></li>
+</ul>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">How to produce documentation using Sphinx</a></li>
+<li><a class="reference internal" href="#how-to-push-documentation-to-github">How to push documentation to GitHub</a></li>
+<li><a class="reference internal" href="#more-information-about-documenting-with-sphinx">More information about documenting with Sphinx</a></li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="vizgrimoire.report.html"
+                        title="previous chapter">vizgrimoire.report module</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/howto_doc.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="np-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="vizgrimoire.report.html" title="vizgrimoire.report module"
+             >previous</a> |</li>
+        <li><a href="index.html">GrimoreLib 1.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2014, Bitergia.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+    </div>
+  </body>
+</html>

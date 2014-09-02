@@ -1,0 +1,7 @@
+grimoirelib_alch.test_demography module
+=======================================
+
+.. automodule:: grimoirelib_alch.test_demography
+    :members:
+    :undoc-members:
+    :show-inheritance:

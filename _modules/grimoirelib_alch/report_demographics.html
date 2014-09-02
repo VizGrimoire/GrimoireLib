@@ -1,0 +1,320 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>grimoirelib_alch.report_demographics &mdash; GrimoreLib 1.0 documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="top" title="GrimoreLib 1.0 documentation" href="../../index.html" />
+    <link rel="up" title="Module code" href="../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="../../np-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../index.html">GrimoreLib 1.0 documentation</a> &raquo;</li>
+          <li><a href="../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for grimoirelib_alch.report_demographics</h1><div class="highlight"><pre>
+<span class="c">#! /usr/bin/python</span>
+<span class="c"># -*- coding: utf-8 -*-</span>
+
+<span class="c">## Copyright (C) 2014 Bitergia</span>
+<span class="c">##</span>
+<span class="c">## This program is free software; you can redistribute it and/or modify</span>
+<span class="c">## it under the terms of the GNU General Public License as published by</span>
+<span class="c">## the Free Software Foundation; either version 3 of the License, or</span>
+<span class="c">## (at your option) any later version.</span>
+<span class="c">##</span>
+<span class="c">## This program is distributed in the hope that it will be useful,</span>
+<span class="c">## but WITHOUT ANY WARRANTY; without even the implied warranty of</span>
+<span class="c">## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the</span>
+<span class="c">## GNU General Public License for more details.</span>
+<span class="c">##</span>
+<span class="c">## You should have received a copy of the GNU General Public License</span>
+<span class="c">## along with this program; if not, write to the Free Software</span>
+<span class="c">## Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.</span>
+<span class="c">##</span>
+<span class="c">## Reporting of demographics-related entities (those related to the age</span>
+<span class="c">## of developers in the project, as time contributing to it).</span>
+<span class="c">##</span>
+<span class="c">## Authors:</span>
+<span class="c">##   Jesus M. Gonzalez-Barahona &lt;jgb@bitergia.com&gt;</span>
+<span class="c">##</span>
+
+<span class="kn">from</span> <span class="nn">os.path</span> <span class="kn">import</span> <span class="n">join</span>
+<span class="kn">from</span> <span class="nn">jsonpickle</span> <span class="kn">import</span> <span class="n">encode</span><span class="p">,</span> <span class="n">set_encoder_options</span>
+<span class="kn">import</span> <span class="nn">codecs</span>
+
+<div class="viewcode-block" id="produce_json"><a class="viewcode-back" href="../../grimoirelib_alch.report_demographics.html#grimoirelib_alch.report_demographics.produce_json">[docs]</a><span class="k">def</span> <span class="nf">produce_json</span> <span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">compact</span> <span class="o">=</span> <span class="bp">True</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Produce JSON content (data) into a file (filename).</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+
+<span class="sd">    filename: string</span>
+<span class="sd">       Name of file to write the content.</span>
+<span class="sd">    data: any</span>
+<span class="sd">       Content to write in JSON format. It has to be ready to pack using</span>
+<span class="sd">       jsonpickle.encode.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="n">compact</span><span class="p">:</span>
+        <span class="c"># Produce compact JSON output</span>
+        <span class="n">set_encoder_options</span><span class="p">(</span><span class="s">&#39;json&#39;</span><span class="p">,</span> <span class="n">separators</span><span class="o">=</span><span class="p">(</span><span class="s">&#39;,&#39;</span><span class="p">,</span> <span class="s">&#39;: &#39;</span><span class="p">),</span>
+                            <span class="n">ensure_ascii</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span>
+                            <span class="n">encoding</span><span class="o">=</span><span class="s">&quot;utf8&quot;</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c"># Produce pretty JSON output</span>
+        <span class="n">set_encoder_options</span><span class="p">(</span><span class="s">&#39;json&#39;</span><span class="p">,</span> <span class="n">sort_keys</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span>
+                            <span class="n">separators</span><span class="o">=</span><span class="p">(</span><span class="s">&#39;,&#39;</span><span class="p">,</span> <span class="s">&#39;: &#39;</span><span class="p">),</span>
+                            <span class="n">ensure_ascii</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span>
+                            <span class="n">encoding</span><span class="o">=</span><span class="s">&quot;utf8&quot;</span><span class="p">)</span>
+    <span class="n">data_json</span> <span class="o">=</span> <span class="n">encode</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">unpicklable</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+    <span class="k">with</span> <span class="n">codecs</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="s">&quot;w&quot;</span><span class="p">,</span> <span class="s">&quot;utf-8&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="nb">file</span><span class="p">:</span>
+        <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">data_json</span><span class="p">)</span>
+
+</div>
+<div class="viewcode-block" id="create_report"><a class="viewcode-back" href="../../grimoirelib_alch.report_demographics.html#grimoirelib_alch.report_demographics.create_report">[docs]</a><span class="k">def</span> <span class="nf">create_report</span> <span class="p">(</span><span class="n">report_files</span><span class="p">,</span> <span class="n">destdir</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Create report, by producing a collection of JSON files</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+
+<span class="sd">    report_files: dictionary</span>
+<span class="sd">       Keys are the names of JSON files to produce, values are the</span>
+<span class="sd">       data to include in those JSON files.</span>
+<span class="sd">    destdir: str</span>
+<span class="sd">       Name of the destination directory to write all JSON files</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">for</span> <span class="nb">file</span> <span class="ow">in</span> <span class="n">report_files</span><span class="p">:</span>
+        <span class="k">print</span> <span class="s">&quot;Producing file: &quot;</span><span class="p">,</span> <span class="n">join</span> <span class="p">(</span><span class="n">destdir</span><span class="p">,</span> <span class="nb">file</span><span class="p">)</span>
+        <span class="n">produce_json</span> <span class="p">(</span><span class="n">join</span> <span class="p">(</span><span class="n">destdir</span><span class="p">,</span> <span class="nb">file</span><span class="p">),</span> <span class="n">report_files</span><span class="p">[</span><span class="nb">file</span><span class="p">])</span>
+</div>
+<div class="viewcode-block" id="add_report"><a class="viewcode-back" href="../../grimoirelib_alch.report_demographics.html#grimoirelib_alch.report_demographics.add_report">[docs]</a><span class="k">def</span> <span class="nf">add_report</span> <span class="p">(</span><span class="n">report</span><span class="p">,</span> <span class="n">to_add</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Add new files (with their data) to report.</span>
+
+<span class="sd">    Adds new_files (which is a dictorionay in report format)</span>
+<span class="sd">    to report, and returns the result.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+
+<span class="sd">    report: dictionary</span>
+<span class="sd">       Base report Keys are the names of JSON files to produce, values are the</span>
+<span class="sd">       data to include in those JSON files.</span>
+<span class="sd">    to_add: dictionary</span>
+<span class="sd">       Report to add. Same format as report. Keys in to_add will</span>
+<span class="sd">       replace the same keys in report, or just be added to it.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">for</span> <span class="nb">file</span> <span class="ow">in</span> <span class="n">to_add</span><span class="p">:</span>
+        <span class="n">report</span><span class="p">[</span><span class="nb">file</span><span class="p">]</span> <span class="o">=</span> <span class="n">to_add</span><span class="p">[</span><span class="nb">file</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">report</span>
+
+</div>
+<span class="kn">from</span> <span class="nn">grimoirelib_alch.family.duration_persons</span> <span class="kn">import</span> <span class="n">DurationPersons</span>
+<span class="kn">from</span> <span class="nn">grimoirelib_alch.family.duration_persons</span> <span class="kn">import</span> <span class="n">SnapshotCondition</span><span class="p">,</span> <span class="n">ActiveCondition</span>
+
+<div class="viewcode-block" id="report_demographics"><a class="viewcode-back" href="../../grimoirelib_alch.report_demographics.html#grimoirelib_alch.report_demographics.report_demographics">[docs]</a><span class="k">def</span> <span class="nf">report_demographics</span> <span class="p">(</span><span class="n">activity_persons</span><span class="p">,</span> <span class="n">snapshot_date</span><span class="p">,</span>
+                         <span class="n">activity_period</span><span class="p">,</span> <span class="n">prefix</span><span class="p">):</span>
+
+    <span class="sd">&quot;&quot;&quot;Produce a demographics (ages) report.</span>
+
+<span class="sd">    Produces two JSON files, with information about the ages (time</span>
+<span class="sd">    since &quot;birth&quot; in the project) for all contributors (birth) and</span>
+<span class="sd">    for those still active (aging). those are named</span>
+<span class="sd">    demographics-birth.json and demographics-aging.json.</span>
+<span class="sd">    </span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+
+<span class="sd">    activity_persons: activity_persons.ActivityPersons</span>
+<span class="sd">       Periods of activity for developers</span>
+<span class="sd">    snapshot_date: datetime.datetime</span>
+<span class="sd">       Shanpshot date (when to count as &quot;now&quot;)</span>
+<span class="sd">    activity_period: datetime.timedelta</span>
+<span class="sd">       Period for determine who is still active</span>
+<span class="sd">       (somebody is active if activity is found between</span>
+<span class="sd">       snapshot_date - activity_period and snapshot_date)</span>
+<span class="sd">    prefix: str</span>
+<span class="sd">       Prefix of the files to be produced</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+
+<span class="sd">    dictionary: dictionary for create_report</span>
+<span class="sd">       Keys are the names of JSON files to produce, values are the</span>
+<span class="sd">       data to include in those JSON files.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c"># Birth has the ages of all actors, considering enddate as</span>
+    <span class="c"># current (snapshot) time</span>
+    <span class="n">snapshot</span> <span class="o">=</span> <span class="n">SnapshotCondition</span> <span class="p">(</span><span class="n">date</span> <span class="o">=</span> <span class="n">snapshot_date</span><span class="p">)</span>
+    <span class="n">birth</span> <span class="o">=</span> <span class="n">DurationPersons</span> <span class="p">(</span><span class="n">datasource</span> <span class="o">=</span> <span class="n">activity_persons</span><span class="p">,</span>
+                             <span class="n">name</span> <span class="o">=</span> <span class="s">&quot;age&quot;</span><span class="p">,</span>
+                             <span class="n">conditions</span> <span class="o">=</span> <span class="p">(</span><span class="n">snapshot</span><span class="p">,))</span>
+    <span class="n">active_period</span> <span class="o">=</span> <span class="n">ActiveCondition</span> <span class="p">(</span><span class="n">after</span> <span class="o">=</span> <span class="n">snapshot_date</span> <span class="o">-</span> <span class="n">activity_period</span><span class="p">,</span>
+                                     <span class="n">before</span> <span class="o">=</span> <span class="n">snapshot_date</span><span class="p">)</span>
+    <span class="n">aging</span> <span class="o">=</span> <span class="n">DurationPersons</span> <span class="p">(</span><span class="n">datasource</span> <span class="o">=</span> <span class="n">activity_persons</span><span class="p">,</span>
+                             <span class="n">name</span> <span class="o">=</span> <span class="s">&quot;age&quot;</span><span class="p">,</span>
+                             <span class="n">conditions</span> <span class="o">=</span> <span class="p">(</span><span class="n">snapshot</span><span class="p">,</span> <span class="n">active_period</span><span class="p">))</span>
+    <span class="n">report</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="n">prefix</span> <span class="o">+</span> <span class="s">&#39;demographics-birth.json&#39;</span><span class="p">:</span> <span class="n">birth</span><span class="o">.</span><span class="n">durations</span><span class="p">(),</span>
+        <span class="n">prefix</span> <span class="o">+</span> <span class="s">&#39;demographics-aging.json&#39;</span><span class="p">:</span> <span class="n">aging</span><span class="o">.</span><span class="n">durations</span><span class="p">()</span>
+        <span class="p">}</span>
+
+    <span class="k">return</span> <span class="n">report</span>
+</div>
+<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s">&quot;__main__&quot;</span><span class="p">:</span>
+
+    <span class="kn">from</span> <span class="nn">grimoirelib_alch.aux.standalone</span> <span class="kn">import</span> <span class="n">stdout_utf8</span><span class="p">,</span> <span class="n">print_banner</span>
+    <span class="kn">from</span> <span class="nn">datetime</span> <span class="kn">import</span> <span class="n">datetime</span><span class="p">,</span> <span class="n">timedelta</span>
+    <span class="kn">from</span> <span class="nn">grimoirelib_alch.query.scm</span> <span class="kn">import</span> <span class="n">DB</span> <span class="k">as</span> <span class="n">SCMDatabase</span>
+    <span class="kn">from</span> <span class="nn">grimoirelib_alch.family.scm</span> <span class="kn">import</span> <span class="n">NomergesCondition</span> <span class="k">as</span> <span class="n">SCMNomergesCondition</span>
+    <span class="kn">from</span> <span class="nn">grimoirelib_alch.query.its</span> <span class="kn">import</span> <span class="n">DB</span> <span class="k">as</span> <span class="n">ITSDatabase</span>
+    <span class="kn">from</span> <span class="nn">grimoirelib_alch.query.mls</span> <span class="kn">import</span> <span class="n">DB</span> <span class="k">as</span> <span class="n">MLSDatabase</span>
+    <span class="kn">from</span> <span class="nn">grimoirelib_alch.family.activity_persons</span> <span class="kn">import</span> <span class="p">(</span>
+        <span class="n">SCMActivityPersons</span><span class="p">,</span>
+        <span class="n">ITSActivityPersons</span><span class="p">,</span>
+        <span class="n">MLSActivityPersons</span>
+        <span class="p">)</span>
+    <span class="n">stdout_utf8</span><span class="p">()</span>
+
+    <span class="n">snapshot_date</span> <span class="o">=</span> <span class="n">datetime</span><span class="p">(</span><span class="mi">2014</span><span class="p">,</span><span class="mi">7</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">activity_period</span> <span class="o">=</span> <span class="n">timedelta</span><span class="p">(</span><span class="n">days</span><span class="o">=</span><span class="mi">182</span><span class="p">)</span>
+
+    <span class="c">#---------------------------------</span>
+    <span class="n">print_banner</span><span class="p">(</span><span class="s">&quot;Demographics with SCM database, OpenStack&quot;</span><span class="p">)</span>
+    <span class="n">nomerges</span> <span class="o">=</span> <span class="n">SCMNomergesCondition</span><span class="p">()</span>    
+    <span class="n">database</span> <span class="o">=</span> <span class="n">SCMDatabase</span> <span class="p">(</span><span class="n">url</span> <span class="o">=</span> <span class="s">&quot;mysql://jgb:XXX@localhost/&quot;</span><span class="p">,</span>
+                            <span class="n">schema</span> <span class="o">=</span> <span class="s">&quot;oscon_openstack_scm&quot;</span><span class="p">,</span>
+                            <span class="n">schema_id</span> <span class="o">=</span> <span class="s">&quot;oscon_openstack_scm&quot;</span><span class="p">)</span>
+    <span class="n">activity</span> <span class="o">=</span> <span class="n">SCMActivityPersons</span> <span class="p">(</span><span class="n">datasource</span> <span class="o">=</span> <span class="n">database</span><span class="p">,</span>
+                                   <span class="n">name</span> <span class="o">=</span> <span class="s">&quot;list_uauthors&quot;</span><span class="p">,</span>
+                                   <span class="n">conditions</span> <span class="o">=</span> <span class="p">(</span><span class="n">nomerges</span><span class="p">,))</span>
+
+    <span class="n">report</span> <span class="o">=</span> <span class="n">report_demographics</span> <span class="p">(</span><span class="n">activity_persons</span> <span class="o">=</span> <span class="n">activity</span><span class="p">,</span>
+                                  <span class="n">snapshot_date</span> <span class="o">=</span> <span class="n">snapshot_date</span><span class="p">,</span>
+                                  <span class="n">activity_period</span> <span class="o">=</span> <span class="n">activity_period</span><span class="p">,</span>
+                                  <span class="n">prefix</span> <span class="o">=</span> <span class="s">&#39;scm-&#39;</span><span class="p">)</span>
+    
+    <span class="c">#---------------------------------</span>
+    <span class="n">print_banner</span><span class="p">(</span><span class="s">&quot;Demographics with ITS database, OpenStack&quot;</span><span class="p">)</span>
+    
+    <span class="n">database</span> <span class="o">=</span> <span class="n">ITSDatabase</span> <span class="p">(</span><span class="n">url</span> <span class="o">=</span> <span class="s">&quot;mysql://jgb:XXX@localhost/&quot;</span><span class="p">,</span>
+                            <span class="n">schema</span> <span class="o">=</span> <span class="s">&quot;oscon_openstack_its&quot;</span><span class="p">,</span>
+                            <span class="n">schema_id</span> <span class="o">=</span> <span class="s">&quot;oscon_openstack_scm&quot;</span><span class="p">)</span>
+    <span class="n">activity</span> <span class="o">=</span> <span class="n">ITSActivityPersons</span> <span class="p">(</span>
+        <span class="n">datasource</span> <span class="o">=</span> <span class="n">database</span><span class="p">,</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="s">&quot;list_uchangers&quot;</span><span class="p">)</span>
+
+    <span class="n">report</span> <span class="o">=</span> <span class="n">add_report</span> <span class="p">(</span><span class="n">report</span><span class="p">,</span>
+                         <span class="n">report_demographics</span> <span class="p">(</span><span class="n">activity_persons</span> <span class="o">=</span> <span class="n">activity</span><span class="p">,</span>
+                                              <span class="n">snapshot_date</span> <span class="o">=</span> <span class="n">snapshot_date</span><span class="p">,</span>
+                                              <span class="n">activity_period</span> <span class="o">=</span> <span class="n">activity_period</span><span class="p">,</span>
+                                              <span class="n">prefix</span> <span class="o">=</span> <span class="s">&#39;its-&#39;</span><span class="p">)</span>
+                         <span class="p">)</span>
+
+    <span class="c">#---------------------------------</span>
+    <span class="n">print_banner</span><span class="p">(</span><span class="s">&quot;Demographics with MLS database, OpenStack&quot;</span><span class="p">)</span>
+    
+    <span class="n">database</span> <span class="o">=</span> <span class="n">MLSDatabase</span> <span class="p">(</span><span class="n">url</span> <span class="o">=</span> <span class="s">&quot;mysql://jgb:XXX@localhost/&quot;</span><span class="p">,</span>
+                            <span class="n">schema</span> <span class="o">=</span> <span class="s">&quot;oscon_openstack_mls&quot;</span><span class="p">,</span>
+                            <span class="n">schema_id</span> <span class="o">=</span> <span class="s">&quot;oscon_openstack_scm&quot;</span><span class="p">)</span>
+    <span class="n">activity</span> <span class="o">=</span> <span class="n">MLSActivityPersons</span> <span class="p">(</span>
+        <span class="n">datasource</span> <span class="o">=</span> <span class="n">database</span><span class="p">,</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="s">&quot;list_usenders&quot;</span><span class="p">)</span>
+
+    <span class="n">report</span> <span class="o">=</span> <span class="n">add_report</span> <span class="p">(</span><span class="n">report</span><span class="p">,</span>
+                         <span class="n">report_demographics</span> <span class="p">(</span><span class="n">activity_persons</span> <span class="o">=</span> <span class="n">activity</span><span class="p">,</span>
+                                              <span class="n">snapshot_date</span> <span class="o">=</span> <span class="n">snapshot_date</span><span class="p">,</span>
+                                              <span class="n">activity_period</span> <span class="o">=</span> <span class="n">activity_period</span><span class="p">,</span>
+                                              <span class="n">prefix</span> <span class="o">=</span> <span class="s">&#39;mls-&#39;</span><span class="p">)</span>
+                         <span class="p">)</span>
+
+    <span class="n">create_report</span> <span class="p">(</span><span class="n">report_files</span> <span class="o">=</span> <span class="n">report</span><span class="p">,</span> <span class="n">destdir</span> <span class="o">=</span> <span class="s">&#39;/tmp/&#39;</span><span class="p">)</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="../../np-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../index.html">GrimoreLib 1.0 documentation</a> &raquo;</li>
+          <li><a href="../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2014, Bitergia.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+    </div>
+  </body>
+</html>

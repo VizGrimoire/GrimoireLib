@@ -1,0 +1,437 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>grimoirelib_alch.query.scm_tz module &mdash; GrimoreLib 1.0 documentation</title>
+    
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="GrimoreLib 1.0 documentation" href="index.html" />
+    <link rel="up" title="grimoirelib_alch.query package" href="grimoirelib_alch.query.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="np-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="index.html">GrimoreLib 1.0 documentation</a> &raquo;</li>
+          <li><a href="modules.html" >&lt;no title&gt;</a> &raquo;</li>
+          <li><a href="grimoirelib_alch.html" >grimoirelib_alch package</a> &raquo;</li>
+          <li><a href="grimoirelib_alch.query.html" accesskey="U">grimoirelib_alch.query package</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="module-grimoirelib_alch.query.scm_tz">
+<span id="grimoirelib-alch-query-scm-tz-module"></span><h1>grimoirelib_alch.query.scm_tz module<a class="headerlink" href="#module-grimoirelib_alch.query.scm_tz" title="Permalink to this headline">¶</a></h1>
+<dl class="class">
+<dt id="grimoirelib_alch.query.scm_tz.Query">
+<em class="property">class </em><tt class="descclassname">grimoirelib_alch.query.scm_tz.</tt><tt class="descname">Query</tt><big>(</big><em>entities</em>, <em>session</em><big>)</big><a class="reference internal" href="_modules/grimoirelib_alch/query/scm_tz.html#Query"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#grimoirelib_alch.query.scm_tz.Query" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="grimoirelib_alch.query.scm.html#grimoirelib_alch.query.scm.Query" title="grimoirelib_alch.query.scm.Query"><tt class="xref py py-class docutils literal"><span class="pre">grimoirelib_alch.query.scm.Query</span></tt></a></p>
+<p>Class for dealing with SCM queries involving time zones</p>
+<p class="rubric">Methods</p>
+<table border="1" class="longtable docutils">
+<colgroup>
+<col width="10%" />
+<col width="90%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><tt class="xref py py-obj docutils literal"><span class="pre">activity</span></tt>()</td>
+<td>Return an ActivityList object.</td>
+</tr>
+<tr class="row-even"><td><tt class="xref py py-obj docutils literal"><span class="pre">add_column</span></tt>(column)</td>
+<td>Add a column expression to the list of result columns to be returned.</td>
+</tr>
+<tr class="row-odd"><td><tt class="xref py py-obj docutils literal"><span class="pre">add_columns</span></tt>(*column)</td>
+<td>Add one or more column expressions to the list of result columns to be returned.</td>
+</tr>
+<tr class="row-even"><td><tt class="xref py py-obj docutils literal"><span class="pre">add_entity</span></tt>(entity[,&nbsp;alias])</td>
+<td>add a mapped entity to the list of result columns</td>
+</tr>
+<tr class="row-odd"><td><tt class="xref py py-obj docutils literal"><span class="pre">all</span></tt>()</td>
+<td>Return the results represented by this <tt class="docutils literal"><span class="pre">Query</span></tt> as a list.</td>
+</tr>
+<tr class="row-even"><td><tt class="xref py py-obj docutils literal"><span class="pre">as_scalar</span></tt>()</td>
+<td>Return the full SELECT statement represented by this <a class="reference internal" href="#grimoirelib_alch.query.scm_tz.Query" title="grimoirelib_alch.query.scm_tz.Query"><tt class="xref py py-class docutils literal"><span class="pre">Query</span></tt></a>, converted to a scalar subquery.</td>
+</tr>
+<tr class="row-odd"><td><tt class="xref py py-obj docutils literal"><span class="pre">autoflush</span></tt>(setting)</td>
+<td>Return a Query with a specific &#8216;autoflush&#8217; setting.</td>
+</tr>
+<tr class="row-even"><td><tt class="xref py py-obj docutils literal"><span class="pre">correlate</span></tt>(*args)</td>
+<td>Return a <a class="reference internal" href="#grimoirelib_alch.query.scm_tz.Query" title="grimoirelib_alch.query.scm_tz.Query"><tt class="xref py py-class docutils literal"><span class="pre">Query</span></tt></a> construct which will correlate the given FROM clauses to that of an enclosing <a class="reference internal" href="#grimoirelib_alch.query.scm_tz.Query" title="grimoirelib_alch.query.scm_tz.Query"><tt class="xref py py-class docutils literal"><span class="pre">Query</span></tt></a> or <tt class="xref py py-func docutils literal"><span class="pre">select()</span></tt>.</td>
+</tr>
+<tr class="row-odd"><td><tt class="xref py py-obj docutils literal"><span class="pre">count</span></tt>()</td>
+<td>Return a count of rows this Query would return.</td>
+</tr>
+<tr class="row-even"><td><tt class="xref py py-obj docutils literal"><span class="pre">cte</span></tt>([name,&nbsp;recursive])</td>
+<td>Return the full SELECT statement represented by this <a class="reference internal" href="#grimoirelib_alch.query.scm_tz.Query" title="grimoirelib_alch.query.scm_tz.Query"><tt class="xref py py-class docutils literal"><span class="pre">Query</span></tt></a> represented as a common table expression (CTE).</td>
+</tr>
+<tr class="row-odd"><td><tt class="xref py py-obj docutils literal"><span class="pre">delete</span></tt>([synchronize_session])</td>
+<td>Perform a bulk delete query.</td>
+</tr>
+<tr class="row-even"><td><tt class="xref py py-obj docutils literal"><span class="pre">distinct</span></tt>(*criterion)</td>
+<td>Apply a <tt class="docutils literal"><span class="pre">DISTINCT</span></tt> to the query and return the newly resulting <tt class="docutils literal"><span class="pre">Query</span></tt>.</td>
+</tr>
+<tr class="row-odd"><td><tt class="xref py py-obj docutils literal"><span class="pre">enable_assertions</span></tt>(value)</td>
+<td>Control whether assertions are generated.</td>
+</tr>
+<tr class="row-even"><td><tt class="xref py py-obj docutils literal"><span class="pre">enable_eagerloads</span></tt>(value)</td>
+<td>Control whether or not eager joins and subqueries are rendered.</td>
+</tr>
+<tr class="row-odd"><td><tt class="xref py py-obj docutils literal"><span class="pre">except_</span></tt>(*q)</td>
+<td>Produce an EXCEPT of this Query against one or more queries.</td>
+</tr>
+<tr class="row-even"><td><tt class="xref py py-obj docutils literal"><span class="pre">except_all</span></tt>(*q)</td>
+<td>Produce an EXCEPT ALL of this Query against one or more queries.</td>
+</tr>
+<tr class="row-odd"><td><tt class="xref py py-obj docutils literal"><span class="pre">execution_options</span></tt>(**kwargs)</td>
+<td>Set non-SQL options which take effect during execution.</td>
+</tr>
+<tr class="row-even"><td><tt class="xref py py-obj docutils literal"><span class="pre">exists</span></tt>()</td>
+<td>A convenience method that turns a query into an EXISTS subquery of the form EXISTS (SELECT 1 FROM ...</td>
+</tr>
+<tr class="row-odd"><td><tt class="xref py py-obj docutils literal"><span class="pre">filter</span></tt>(*criterion)</td>
+<td>apply the given filtering criterion to a copy</td>
+</tr>
+<tr class="row-even"><td><tt class="xref py py-obj docutils literal"><span class="pre">filter_branches</span></tt>(branches)</td>
+<td>Filter variables for a set of branches</td>
+</tr>
+<tr class="row-odd"><td><tt class="xref py py-obj docutils literal"><span class="pre">filter_by</span></tt>(**kwargs)</td>
+<td>apply the given filtering criterion to a copy</td>
+</tr>
+<tr class="row-even"><td><tt class="xref py py-obj docutils literal"><span class="pre">filter_nomerges</span></tt>()</td>
+<td>Consider only commits that touch files (no merges)</td>
+</tr>
+<tr class="row-odd"><td><tt class="xref py py-obj docutils literal"><span class="pre">filter_paths</span></tt>(list)</td>
+<td>Fiter for a certain list of paths</td>
+</tr>
+<tr class="row-even"><td><tt class="xref py py-obj docutils literal"><span class="pre">filter_period</span></tt>([start,&nbsp;end,&nbsp;date])</td>
+<td>Filter variable for a period</td>
+</tr>
+<tr class="row-odd"><td><tt class="xref py py-obj docutils literal"><span class="pre">filter_persons</span></tt>(list[,&nbsp;kind])</td>
+<td>Fiter for a certain list of persons (committers, authors)</td>
+</tr>
+<tr class="row-even"><td><tt class="xref py py-obj docutils literal"><span class="pre">filterout_persons</span></tt>(list[,&nbsp;kind])</td>
+<td>Filter out a list of people ids (committers, authors)</td>
+</tr>
+<tr class="row-odd"><td><tt class="xref py py-obj docutils literal"><span class="pre">first</span></tt>()</td>
+<td>Return the first result of this <tt class="docutils literal"><span class="pre">Query</span></tt> or None if the result doesn&#8217;t contain any row.</td>
+</tr>
+<tr class="row-even"><td><tt class="xref py py-obj docutils literal"><span class="pre">from_self</span></tt>(*entities)</td>
+<td>return a Query that selects from this Query&#8217;s</td>
+</tr>
+<tr class="row-odd"><td><tt class="xref py py-obj docutils literal"><span class="pre">from_statement</span></tt>(statement)</td>
+<td>Execute the given SELECT statement and return results.</td>
+</tr>
+<tr class="row-even"><td><tt class="xref py py-obj docutils literal"><span class="pre">get</span></tt>(ident)</td>
+<td>Return an instance based on the given primary key identifier, or <tt class="docutils literal"><span class="pre">None</span></tt> if not found.</td>
+</tr>
+<tr class="row-odd"><td><tt class="xref py py-obj docutils literal"><span class="pre">group_by</span></tt>(*criterion)</td>
+<td>apply one or more GROUP BY criterion to the query and return</td>
+</tr>
+<tr class="row-even"><td><tt class="xref py py-obj docutils literal"><span class="pre">group_by_period</span></tt>()</td>
+<td>Group by time period (per month)</td>
+</tr>
+<tr class="row-odd"><td><tt class="xref py py-obj docutils literal"><span class="pre">group_by_person</span></tt>()</td>
+<td>Group by person</td>
+</tr>
+<tr class="row-even"><td><tt class="xref py py-obj docutils literal"><span class="pre">group_by_repo</span></tt>([names])</td>
+<td>Group by repository</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#grimoirelib_alch.query.scm_tz.Query.group_by_tz" title="grimoirelib_alch.query.scm_tz.Query.group_by_tz"><tt class="xref py py-obj docutils literal"><span class="pre">group_by_tz</span></tt></a>()</td>
+<td>Group by timezone (field tz).</td>
+</tr>
+<tr class="row-even"><td><tt class="xref py py-obj docutils literal"><span class="pre">having</span></tt>(criterion)</td>
+<td>apply a HAVING criterion to the query and return the</td>
+</tr>
+<tr class="row-odd"><td><tt class="xref py py-obj docutils literal"><span class="pre">instances</span></tt>(cursor[,&nbsp;_Query__context])</td>
+<td>Given a ResultProxy cursor as returned by connection.execute(), return an ORM result as an iterator.</td>
+</tr>
+<tr class="row-even"><td><tt class="xref py py-obj docutils literal"><span class="pre">intersect</span></tt>(*q)</td>
+<td>Produce an INTERSECT of this Query against one or more queries.</td>
+</tr>
+<tr class="row-odd"><td><tt class="xref py py-obj docutils literal"><span class="pre">intersect_all</span></tt>(*q)</td>
+<td>Produce an INTERSECT ALL of this Query against one or more queries.</td>
+</tr>
+<tr class="row-even"><td><tt class="xref py py-obj docutils literal"><span class="pre">join</span></tt>(*props,&nbsp;**kwargs)</td>
+<td>Create a SQL JOIN against this <a class="reference internal" href="#grimoirelib_alch.query.scm_tz.Query" title="grimoirelib_alch.query.scm_tz.Query"><tt class="xref py py-class docutils literal"><span class="pre">Query</span></tt></a> object&#8217;s criterion and apply generatively, returning the newly resulting <a class="reference internal" href="#grimoirelib_alch.query.scm_tz.Query" title="grimoirelib_alch.query.scm_tz.Query"><tt class="xref py py-class docutils literal"><span class="pre">Query</span></tt></a>.</td>
+</tr>
+<tr class="row-odd"><td><tt class="xref py py-obj docutils literal"><span class="pre">label</span></tt>(name)</td>
+<td>Return the full SELECT statement represented by this <a class="reference internal" href="#grimoirelib_alch.query.scm_tz.Query" title="grimoirelib_alch.query.scm_tz.Query"><tt class="xref py py-class docutils literal"><span class="pre">Query</span></tt></a>, converted to a scalar subquery with a label of the given name.</td>
+</tr>
+<tr class="row-even"><td><tt class="xref py py-obj docutils literal"><span class="pre">limit</span></tt>(limit)</td>
+<td>Apply a <tt class="docutils literal"><span class="pre">LIMIT</span></tt> to the query and return the newly resulting</td>
+</tr>
+<tr class="row-odd"><td><tt class="xref py py-obj docutils literal"><span class="pre">merge_result</span></tt>(iterator[,&nbsp;load])</td>
+<td>Merge a result into this <a class="reference internal" href="#grimoirelib_alch.query.scm_tz.Query" title="grimoirelib_alch.query.scm_tz.Query"><tt class="xref py py-class docutils literal"><span class="pre">Query</span></tt></a> object&#8217;s Session.</td>
+</tr>
+<tr class="row-even"><td><tt class="xref py py-obj docutils literal"><span class="pre">offset</span></tt>(offset)</td>
+<td>Apply an <tt class="docutils literal"><span class="pre">OFFSET</span></tt> to the query and return the newly resulting <tt class="docutils literal"><span class="pre">Query</span></tt>.</td>
+</tr>
+<tr class="row-odd"><td><tt class="xref py py-obj docutils literal"><span class="pre">one</span></tt>()</td>
+<td>Return exactly one result or raise an exception.</td>
+</tr>
+<tr class="row-even"><td><tt class="xref py py-obj docutils literal"><span class="pre">options</span></tt>(*args)</td>
+<td>Return a new Query object, applying the given list of mapper options.</td>
+</tr>
+<tr class="row-odd"><td><tt class="xref py py-obj docutils literal"><span class="pre">order_by</span></tt>(*criterion)</td>
+<td>apply one or more ORDER BY criterion to the query and return</td>
+</tr>
+<tr class="row-even"><td><tt class="xref py py-obj docutils literal"><span class="pre">outerjoin</span></tt>(*props,&nbsp;**kwargs)</td>
+<td>Create a left outer join against this <tt class="docutils literal"><span class="pre">Query</span></tt> object&#8217;s criterion and apply generatively, returning the newly resulting <tt class="docutils literal"><span class="pre">Query</span></tt>.</td>
+</tr>
+<tr class="row-odd"><td><tt class="xref py py-obj docutils literal"><span class="pre">params</span></tt>(*args,&nbsp;**kwargs)</td>
+<td>add values for bind parameters which may have been</td>
+</tr>
+<tr class="row-even"><td><tt class="xref py py-obj docutils literal"><span class="pre">populate_existing</span></tt>()</td>
+<td>Return a <a class="reference internal" href="#grimoirelib_alch.query.scm_tz.Query" title="grimoirelib_alch.query.scm_tz.Query"><tt class="xref py py-class docutils literal"><span class="pre">Query</span></tt></a> that will expire and refresh all instances as they are loaded, or reused from the current <tt class="xref py py-class docutils literal"><span class="pre">Session</span></tt>.</td>
+</tr>
+<tr class="row-odd"><td><tt class="xref py py-obj docutils literal"><span class="pre">prefix_with</span></tt>(*prefixes)</td>
+<td>Apply the prefixes to the query and return the newly resulting <tt class="docutils literal"><span class="pre">Query</span></tt>.</td>
+</tr>
+<tr class="row-even"><td><tt class="xref py py-obj docutils literal"><span class="pre">reset_joinpoint</span></tt>()</td>
+<td>Return a new <a class="reference internal" href="#grimoirelib_alch.query.scm_tz.Query" title="grimoirelib_alch.query.scm_tz.Query"><tt class="xref py py-class docutils literal"><span class="pre">Query</span></tt></a>, where the &#8220;join point&#8221; has been reset back to the base FROM entities of the query.</td>
+</tr>
+<tr class="row-odd"><td><tt class="xref py py-obj docutils literal"><span class="pre">scalar</span></tt>()</td>
+<td>Return the first element of the first result or None if no rows present.</td>
+</tr>
+<tr class="row-even"><td><tt class="xref py py-obj docutils literal"><span class="pre">select_commitsperiod</span></tt>()</td>
+<td>Add to select the period of the selected commits.</td>
+</tr>
+<tr class="row-odd"><td><tt class="xref py py-obj docutils literal"><span class="pre">select_entity_from</span></tt>(from_obj)</td>
+<td>Set the FROM clause of this <a class="reference internal" href="#grimoirelib_alch.query.scm_tz.Query" title="grimoirelib_alch.query.scm_tz.Query"><tt class="xref py py-class docutils literal"><span class="pre">Query</span></tt></a> to a core selectable, applying it as a replacement FROM clause for corresponding mapped entities.</td>
+</tr>
+<tr class="row-even"><td><tt class="xref py py-obj docutils literal"><span class="pre">select_from</span></tt>(*from_obj)</td>
+<td>Set the FROM clause of this <a class="reference internal" href="#grimoirelib_alch.query.scm_tz.Query" title="grimoirelib_alch.query.scm_tz.Query"><tt class="xref py py-class docutils literal"><span class="pre">Query</span></tt></a> explicitly.</td>
+</tr>
+<tr class="row-odd"><td><tt class="xref py py-obj docutils literal"><span class="pre">select_listbranches</span></tt>()</td>
+<td>Select list of branches in repo</td>
+</tr>
+<tr class="row-even"><td><tt class="xref py py-obj docutils literal"><span class="pre">select_listcommits</span></tt>()</td>
+<td>Select a list of commits</td>
+</tr>
+<tr class="row-odd"><td><tt class="xref py py-obj docutils literal"><span class="pre">select_listpersons</span></tt>([kind])</td>
+<td>Select a list of persons (authors, committers)</td>
+</tr>
+<tr class="row-even"><td><tt class="xref py py-obj docutils literal"><span class="pre">select_listpersons_uid</span></tt>([kind])</td>
+<td>Select a list of persons (authors, committers), using uids</td>
+</tr>
+<tr class="row-odd"><td><tt class="xref py py-obj docutils literal"><span class="pre">select_nbranches</span></tt>()</td>
+<td>Select number of branches in repo.</td>
+</tr>
+<tr class="row-even"><td><tt class="xref py py-obj docutils literal"><span class="pre">select_nscmlog</span></tt>(variables)</td>
+<td>Select a variable which is a field in SCMLog.</td>
+</tr>
+<tr class="row-odd"><td><tt class="xref py py-obj docutils literal"><span class="pre">select_personsdata</span></tt>(kind)</td>
+<td>Adds columns with persons data to select clause.</td>
+</tr>
+<tr class="row-even"><td><tt class="xref py py-obj docutils literal"><span class="pre">select_personsdata_uid</span></tt>(kind)</td>
+<td>Adds columns with persons data to select clause (uid version).</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#grimoirelib_alch.query.scm_tz.Query.select_tz" title="grimoirelib_alch.query.scm_tz.Query.select_tz"><tt class="xref py py-obj docutils literal"><span class="pre">select_tz</span></tt></a>()</td>
+<td>Select time zones and other related fields from database.</td>
+</tr>
+<tr class="row-even"><td><tt class="xref py py-obj docutils literal"><span class="pre">slice</span></tt>(start,&nbsp;stop)</td>
+<td>apply LIMIT/OFFSET to the <tt class="docutils literal"><span class="pre">Query</span></tt> based on a &#8220;</td>
+</tr>
+<tr class="row-odd"><td><tt class="xref py py-obj docutils literal"><span class="pre">subquery</span></tt>([name,&nbsp;with_labels,&nbsp;reduce_columns])</td>
+<td>return the full SELECT statement represented by</td>
+</tr>
+<tr class="row-even"><td><tt class="xref py py-obj docutils literal"><span class="pre">timeseries</span></tt>()</td>
+<td>Return a TimeSeries object.</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#grimoirelib_alch.query.scm_tz.Query.timezones" title="grimoirelib_alch.query.scm_tz.Query.timezones"><tt class="xref py py-obj docutils literal"><span class="pre">timezones</span></tt></a>()</td>
+<td>Return a TimeZones object.</td>
+</tr>
+<tr class="row-even"><td><tt class="xref py py-obj docutils literal"><span class="pre">union</span></tt>(*q)</td>
+<td>Produce a UNION of this Query against one or more queries.</td>
+</tr>
+<tr class="row-odd"><td><tt class="xref py py-obj docutils literal"><span class="pre">union_all</span></tt>(*q)</td>
+<td>Produce a UNION ALL of this Query against one or more queries.</td>
+</tr>
+<tr class="row-even"><td><tt class="xref py py-obj docutils literal"><span class="pre">update</span></tt>(values[,&nbsp;synchronize_session])</td>
+<td>Perform a bulk update query.</td>
+</tr>
+<tr class="row-odd"><td><tt class="xref py py-obj docutils literal"><span class="pre">value</span></tt>(column)</td>
+<td>Return a scalar result corresponding to the given column expression.</td>
+</tr>
+<tr class="row-even"><td><tt class="xref py py-obj docutils literal"><span class="pre">values</span></tt>(*columns)</td>
+<td>Return an iterator yielding result tuples corresponding</td>
+</tr>
+<tr class="row-odd"><td><tt class="xref py py-obj docutils literal"><span class="pre">with_entities</span></tt>(*entities)</td>
+<td>Return a new <a class="reference internal" href="#grimoirelib_alch.query.scm_tz.Query" title="grimoirelib_alch.query.scm_tz.Query"><tt class="xref py py-class docutils literal"><span class="pre">Query</span></tt></a> replacing the SELECT list with the given entities.</td>
+</tr>
+<tr class="row-even"><td><tt class="xref py py-obj docutils literal"><span class="pre">with_for_update</span></tt>([read,&nbsp;nowait,&nbsp;of])</td>
+<td>return a new <a class="reference internal" href="#grimoirelib_alch.query.scm_tz.Query" title="grimoirelib_alch.query.scm_tz.Query"><tt class="xref py py-class docutils literal"><span class="pre">Query</span></tt></a> with the specified options for the</td>
+</tr>
+<tr class="row-odd"><td><tt class="xref py py-obj docutils literal"><span class="pre">with_hint</span></tt>(selectable,&nbsp;text[,&nbsp;dialect_name])</td>
+<td>Add an indexing hint for the given entity or selectable to this <a class="reference internal" href="#grimoirelib_alch.query.scm_tz.Query" title="grimoirelib_alch.query.scm_tz.Query"><tt class="xref py py-class docutils literal"><span class="pre">Query</span></tt></a>.</td>
+</tr>
+<tr class="row-even"><td><tt class="xref py py-obj docutils literal"><span class="pre">with_labels</span></tt>()</td>
+<td>Apply column labels to the return value of Query.statement.</td>
+</tr>
+<tr class="row-odd"><td><tt class="xref py py-obj docutils literal"><span class="pre">with_lockmode</span></tt>(mode)</td>
+<td>Return a new <a class="reference internal" href="#grimoirelib_alch.query.scm_tz.Query" title="grimoirelib_alch.query.scm_tz.Query"><tt class="xref py py-class docutils literal"><span class="pre">Query</span></tt></a> object with the specified &#8220;locking mode&#8221;, which essentially refers to the <tt class="docutils literal"><span class="pre">FOR</span> <span class="pre">UPDATE</span></tt> clause.</td>
+</tr>
+<tr class="row-even"><td><tt class="xref py py-obj docutils literal"><span class="pre">with_parent</span></tt>(instance[,&nbsp;property])</td>
+<td>Add filtering criterion that relates the given instance to a child object or collection, using its attribute state as well as an established <tt class="xref py py-func docutils literal"><span class="pre">relationship()</span></tt> configuration.</td>
+</tr>
+<tr class="row-odd"><td><tt class="xref py py-obj docutils literal"><span class="pre">with_polymorphic</span></tt>(cls_or_mappers[,&nbsp;...])</td>
+<td>Load columns for inheriting classes.</td>
+</tr>
+<tr class="row-even"><td><tt class="xref py py-obj docutils literal"><span class="pre">with_session</span></tt>(session)</td>
+<td>Return a <a class="reference internal" href="#grimoirelib_alch.query.scm_tz.Query" title="grimoirelib_alch.query.scm_tz.Query"><tt class="xref py py-class docutils literal"><span class="pre">Query</span></tt></a> that will use the given <tt class="xref py py-class docutils literal"><span class="pre">Session</span></tt>.</td>
+</tr>
+<tr class="row-odd"><td><tt class="xref py py-obj docutils literal"><span class="pre">with_transformation</span></tt>(fn)</td>
+<td>Return a new <a class="reference internal" href="#grimoirelib_alch.query.scm_tz.Query" title="grimoirelib_alch.query.scm_tz.Query"><tt class="xref py py-class docutils literal"><span class="pre">Query</span></tt></a> object transformed by the given function.</td>
+</tr>
+<tr class="row-even"><td><tt class="xref py py-obj docutils literal"><span class="pre">yield_per</span></tt>(count)</td>
+<td>Yield only <tt class="docutils literal"><span class="pre">count</span></tt> rows at a time.</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="grimoirelib_alch.query.scm_tz.Query.group_by_tz">
+<tt class="descname">group_by_tz</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/grimoirelib_alch/query/scm_tz.html#Query.group_by_tz"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#grimoirelib_alch.query.scm_tz.Query.group_by_tz" title="Permalink to this definition">¶</a></dt>
+<dd><p>Group by timezone (field tz).</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><strong>Query object</strong> :</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="grimoirelib_alch.query.scm_tz.Query.select_tz">
+<tt class="descname">select_tz</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/grimoirelib_alch/query/scm_tz.html#Query.select_tz"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#grimoirelib_alch.query.scm_tz.Query.select_tz" title="Permalink to this definition">¶</a></dt>
+<dd><p>Select time zones and other related fields from database.</p>
+<p>Selects count of commits, count of distinct authors,
+time zone, and month / year for author_date.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><strong>Query object</strong> :</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="grimoirelib_alch.query.scm_tz.Query.timezones">
+<tt class="descname">timezones</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/grimoirelib_alch/query/scm_tz.html#Query.timezones"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#grimoirelib_alch.query.scm_tz.Query.timezones" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a TimeZones object.</p>
+<p>The query has to include a group_by_tz filter.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="grimoirelib_alch.query.scm_tz.label">
+<tt class="descclassname">grimoirelib_alch.query.scm_tz.</tt><tt class="descname">label</tt><big>(</big><em>name</em>, <em>element</em>, <em>type_=None</em><big>)</big><a class="headerlink" href="#grimoirelib_alch.query.scm_tz.label" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a <tt class="xref py py-class docutils literal"><span class="pre">Label</span></tt> object for the
+given <tt class="xref py py-class docutils literal"><span class="pre">ColumnElement</span></tt>.</p>
+<p>A label changes the name of an element in the columns clause of a
+<tt class="docutils literal"><span class="pre">SELECT</span></tt> statement, typically via the <tt class="docutils literal"><span class="pre">AS</span></tt> SQL keyword.</p>
+<p>This functionality is more conveniently available via the
+<tt class="xref py py-meth docutils literal"><span class="pre">ColumnElement.label()</span></tt> method on <tt class="xref py py-class docutils literal"><span class="pre">ColumnElement</span></tt>.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>name</strong> &#8211; label name</li>
+<li><strong>obj</strong> &#8211; a <tt class="xref py py-class docutils literal"><span class="pre">ColumnElement</span></tt>.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/grimoirelib_alch.query.scm_tz.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="np-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="index.html">GrimoreLib 1.0 documentation</a> &raquo;</li>
+          <li><a href="modules.html" >&lt;no title&gt;</a> &raquo;</li>
+          <li><a href="grimoirelib_alch.html" >grimoirelib_alch package</a> &raquo;</li>
+          <li><a href="grimoirelib_alch.query.html" >grimoirelib_alch.query package</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2014, Bitergia.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+    </div>
+  </body>
+</html>

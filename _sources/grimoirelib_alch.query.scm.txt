@@ -1,0 +1,7 @@
+grimoirelib_alch.query.scm module
+=================================
+
+.. automodule:: grimoirelib_alch.query.scm
+    :members:
+    :undoc-members:
+    :show-inheritance:

@@ -1,0 +1,370 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>grimoirelib_alch.type.activity module &mdash; GrimoreLib 1.0 documentation</title>
+    
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="GrimoreLib 1.0 documentation" href="index.html" />
+    <link rel="up" title="grimoirelib_alch.type package" href="grimoirelib_alch.type.html" />
+    <link rel="prev" title="grimoirelib_alch.type package" href="grimoirelib_alch.type.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="np-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="grimoirelib_alch.type.html" title="grimoirelib_alch.type package"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">GrimoreLib 1.0 documentation</a> &raquo;</li>
+          <li><a href="modules.html" >&lt;no title&gt;</a> &raquo;</li>
+          <li><a href="grimoirelib_alch.html" >grimoirelib_alch package</a> &raquo;</li>
+          <li><a href="grimoirelib_alch.type.html" accesskey="U">grimoirelib_alch.type package</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="module-grimoirelib_alch.type.activity">
+<span id="grimoirelib-alch-type-activity-module"></span><h1>grimoirelib_alch.type.activity module<a class="headerlink" href="#module-grimoirelib_alch.type.activity" title="Permalink to this headline">¶</a></h1>
+<dl class="class">
+<dt id="grimoirelib_alch.type.activity.ActivityList">
+<em class="property">class </em><tt class="descclassname">grimoirelib_alch.type.activity.</tt><tt class="descname">ActivityList</tt><big>(</big><em>list=</em><span class="optional">[</span><span class="optional">]</span><big>)</big><a class="reference internal" href="_modules/grimoirelib_alch/type/activity.html#ActivityList"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#grimoirelib_alch.type.activity.ActivityList" title="Permalink to this definition">¶</a></dt>
+<dd><p>Activity lists.</p>
+<p>List of actors, with activity information (start and end dates)
+for each of them.</p>
+<p class="rubric">Methods</p>
+<table border="1" class="longtable docutils">
+<colgroup>
+<col width="10%" />
+<col width="90%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><a class="reference internal" href="#grimoirelib_alch.type.activity.ActivityList.active" title="grimoirelib_alch.type.activity.ActivityList.active"><tt class="xref py py-obj docutils literal"><span class="pre">active</span></tt></a>([after,&nbsp;before])</td>
+<td>Get an ActivityList object with thse active between dates.</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#grimoirelib_alch.type.activity.ActivityList.age" title="grimoirelib_alch.type.activity.ActivityList.age"><tt class="xref py py-obj docutils literal"><span class="pre">age</span></tt></a>(date[,&nbsp;offset])</td>
+<td>Get age (in days) for each actor, relative to date.</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#grimoirelib_alch.type.activity.ActivityList.idle" title="grimoirelib_alch.type.activity.ActivityList.idle"><tt class="xref py py-obj docutils literal"><span class="pre">idle</span></tt></a>(date[,&nbsp;offset])</td>
+<td>Get idle (in days) for each actor with activity before date.</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#grimoirelib_alch.type.activity.ActivityList.json" title="grimoirelib_alch.type.activity.ActivityList.json"><tt class="xref py py-obj docutils literal"><span class="pre">json</span></tt></a>()</td>
+<td>Produce a JSON string from the object.</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#grimoirelib_alch.type.activity.ActivityList.maxend" title="grimoirelib_alch.type.activity.ActivityList.maxend"><tt class="xref py py-obj docutils literal"><span class="pre">maxend</span></tt></a>()</td>
+<td>Obtain the maximum end date for all the periods.</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="grimoirelib_alch.type.activity.ActivityList.active">
+<tt class="descname">active</tt><big>(</big><em>after=None</em>, <em>before=None</em><big>)</big><a class="reference internal" href="_modules/grimoirelib_alch/type/activity.html#ActivityList.active"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#grimoirelib_alch.type.activity.ActivityList.active" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get an ActivityList object with thse active between dates.</p>
+<p>Active actors are those with activity in the period
+after .. before.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>after: datetime.datetime</strong> :</p>
+<blockquote>
+<div><p>Start of the activity period to consider (default: None).
+None means &#8220;since the begining of time&#8221;</p>
+</div></blockquote>
+<p><strong>before: datetime.datetime</strong> :</p>
+<blockquote>
+<div><p>End of the activity period to consider (default: None).
+None means &#8220;until the end of time</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><strong>ActivityList</strong> :</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="grimoirelib_alch.type.activity.ActivityList.age">
+<tt class="descname">age</tt><big>(</big><em>date</em>, <em>offset=datetime.timedelta(0)</em><big>)</big><a class="reference internal" href="_modules/grimoirelib_alch/type/activity.html#ActivityList.age"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#grimoirelib_alch.type.activity.ActivityList.age" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get age (in days) for each actor, relative to date.</p>
+<p>The age for each actor is the difference between date and their
+first activity. Age is positive for actors who were already
+active before date, and negative for actors active only after
+date.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>date: datetime.datetime</strong> :</p>
+<blockquote>
+<div><p>shanpshot date to calculate ages</p>
+</div></blockquote>
+<p><strong>offset: datetime.timedelta</strong> :</p>
+<blockquote>
+<div><p>Delta to add to each age. This is useful for considering
+actors of age 0 as of age offset</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><strong>ActorsDuration: activity duration for each actor</strong> :</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="grimoirelib_alch.type.activity.ActivityList.idle">
+<tt class="descname">idle</tt><big>(</big><em>date</em>, <em>offset=datetime.timedelta(0)</em><big>)</big><a class="reference internal" href="_modules/grimoirelib_alch/type/activity.html#ActivityList.idle"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#grimoirelib_alch.type.activity.ActivityList.idle" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get idle (in days) for each actor with activity before date.</p>
+<p>The idle period for each actor is the difference between date
+and their last activity, if last activity is before date, 0
+otherwise.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>date: datetime.datetime</strong> :</p>
+<blockquote>
+<div><p>shanpshot date to calculate ages</p>
+</div></blockquote>
+<p><strong>offset: datetime.timedelta</strong> :</p>
+<blockquote>
+<div><p>Delta to add to each period. This is useful for considering
+actors of age 0 as of age offset</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><strong>ActorsDuration: idle duration for each actor</strong> :</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="grimoirelib_alch.type.activity.ActivityList.json">
+<tt class="descname">json</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/grimoirelib_alch/type/activity.html#ActivityList.json"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#grimoirelib_alch.type.activity.ActivityList.json" title="Permalink to this definition">¶</a></dt>
+<dd><p>Produce a JSON string from the object.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="grimoirelib_alch.type.activity.ActivityList.maxend">
+<tt class="descname">maxend</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/grimoirelib_alch/type/activity.html#ActivityList.maxend"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#grimoirelib_alch.type.activity.ActivityList.maxend" title="Permalink to this definition">¶</a></dt>
+<dd><p>Obtain the maximum end date for all the periods.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><strong>datetime.datetime: maximum end date</strong> :</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="grimoirelib_alch.type.activity.ActorsDuration">
+<em class="property">class </em><tt class="descclassname">grimoirelib_alch.type.activity.</tt><tt class="descname">ActorsDuration</tt><big>(</big><em>list=</em>, <span class="optional">[</span><span class="optional">]</span><em>date=None</em><big>)</big><a class="reference internal" href="_modules/grimoirelib_alch/type/activity.html#ActorsDuration"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#grimoirelib_alch.type.activity.ActorsDuration" title="Permalink to this definition">¶</a></dt>
+<dd><p>Duration for actors.</p>
+<p>List of actors, with duration information (timedelta)
+for each of them.</p>
+<p class="rubric">Methods</p>
+<table border="1" class="longtable docutils">
+<colgroup>
+<col width="10%" />
+<col width="90%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><a class="reference internal" href="#grimoirelib_alch.type.activity.ActorsDuration.json" title="grimoirelib_alch.type.activity.ActorsDuration.json"><tt class="xref py py-obj docutils literal"><span class="pre">json</span></tt></a>()</td>
+<td>Produce a JSON string from the object.</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#grimoirelib_alch.type.activity.ActorsDuration.long_format" title="grimoirelib_alch.type.activity.ActorsDuration.long_format"><tt class="xref py py-obj docutils literal"><span class="pre">long_format</span></tt></a>()</td>
+<td>Get long version of the object.</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="grimoirelib_alch.type.activity.ActorsDuration.json">
+<tt class="descname">json</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/grimoirelib_alch/type/activity.html#ActorsDuration.json"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#grimoirelib_alch.type.activity.ActorsDuration.json" title="Permalink to this definition">¶</a></dt>
+<dd><p>Produce a JSON string from the object.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="grimoirelib_alch.type.activity.ActorsDuration.long_format">
+<tt class="descname">long_format</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/grimoirelib_alch/type/activity.html#ActorsDuration.long_format"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#grimoirelib_alch.type.activity.ActorsDuration.long_format" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get long version of the object.</p>
+<p>The object is stored in wide format (that is, a list with
+one dictionary per entry, with components in the
+dictionary being variables for the entry). This function
+produces a long format (that is, a dictionry of lists,
+with each compoenent in the dictionary being the list
+of values for a variable).</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="grimoirelib_alch.type.activity.DatetimeHandler">
+<em class="property">class </em><tt class="descclassname">grimoirelib_alch.type.activity.</tt><tt class="descname">DatetimeHandler</tt><big>(</big><em>context</em><big>)</big><a class="reference internal" href="_modules/grimoirelib_alch/type/activity.html#DatetimeHandler"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#grimoirelib_alch.type.activity.DatetimeHandler" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">jsonpickle.handlers.BaseHandler</span></tt></p>
+<p class="rubric">Methods</p>
+<table border="1" class="longtable docutils">
+<colgroup>
+<col width="10%" />
+<col width="90%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><a class="reference internal" href="#grimoirelib_alch.type.activity.DatetimeHandler.flatten" title="grimoirelib_alch.type.activity.DatetimeHandler.flatten"><tt class="xref py py-obj docutils literal"><span class="pre">flatten</span></tt></a>(obj,&nbsp;data)</td>
+<td></td>
+</tr>
+<tr class="row-even"><td><tt class="xref py py-obj docutils literal"><span class="pre">handles</span></tt>(cls)</td>
+<td>Register this handler for the given class.</td>
+</tr>
+<tr class="row-odd"><td><tt class="xref py py-obj docutils literal"><span class="pre">restore</span></tt>(obj)</td>
+<td>Restore the json-friendly <cite>obj</cite> to the registered type</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="grimoirelib_alch.type.activity.DatetimeHandler.flatten">
+<tt class="descname">flatten</tt><big>(</big><em>obj</em>, <em>data</em><big>)</big><a class="reference internal" href="_modules/grimoirelib_alch/type/activity.html#DatetimeHandler.flatten"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#grimoirelib_alch.type.activity.DatetimeHandler.flatten" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="grimoirelib_alch.type.activity.Period">
+<em class="property">class </em><tt class="descclassname">grimoirelib_alch.type.activity.</tt><tt class="descname">Period</tt><big>(</big><em>start</em>, <em>end</em><big>)</big><a class="reference internal" href="_modules/grimoirelib_alch/type/activity.html#Period"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#grimoirelib_alch.type.activity.Period" title="Permalink to this definition">¶</a></dt>
+<dd><p>Abstract data type for activity periods.</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="grimoirelib_alch.type.activity.TimedeltaHandler">
+<em class="property">class </em><tt class="descclassname">grimoirelib_alch.type.activity.</tt><tt class="descname">TimedeltaHandler</tt><big>(</big><em>context</em><big>)</big><a class="reference internal" href="_modules/grimoirelib_alch/type/activity.html#TimedeltaHandler"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#grimoirelib_alch.type.activity.TimedeltaHandler" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">jsonpickle.handlers.BaseHandler</span></tt></p>
+<p class="rubric">Methods</p>
+<table border="1" class="longtable docutils">
+<colgroup>
+<col width="10%" />
+<col width="90%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><a class="reference internal" href="#grimoirelib_alch.type.activity.TimedeltaHandler.flatten" title="grimoirelib_alch.type.activity.TimedeltaHandler.flatten"><tt class="xref py py-obj docutils literal"><span class="pre">flatten</span></tt></a>(obj,&nbsp;data)</td>
+<td></td>
+</tr>
+<tr class="row-even"><td><tt class="xref py py-obj docutils literal"><span class="pre">handles</span></tt>(cls)</td>
+<td>Register this handler for the given class.</td>
+</tr>
+<tr class="row-odd"><td><tt class="xref py py-obj docutils literal"><span class="pre">restore</span></tt>(obj)</td>
+<td>Restore the json-friendly <cite>obj</cite> to the registered type</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="grimoirelib_alch.type.activity.TimedeltaHandler.flatten">
+<tt class="descname">flatten</tt><big>(</big><em>obj</em>, <em>data</em><big>)</big><a class="reference internal" href="_modules/grimoirelib_alch/type/activity.html#TimedeltaHandler.flatten"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#grimoirelib_alch.type.activity.TimedeltaHandler.flatten" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="grimoirelib_alch.type.activity.init_json">
+<tt class="descclassname">grimoirelib_alch.type.activity.</tt><tt class="descname">init_json</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/grimoirelib_alch/type/activity.html#init_json"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#grimoirelib_alch.type.activity.init_json" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialize JSON encoder.</p>
+</dd></dl>
+
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="grimoirelib_alch.type.html"
+                        title="previous chapter">grimoirelib_alch.type package</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/grimoirelib_alch.type.activity.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="np-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="grimoirelib_alch.type.html" title="grimoirelib_alch.type package"
+             >previous</a> |</li>
+        <li><a href="index.html">GrimoreLib 1.0 documentation</a> &raquo;</li>
+          <li><a href="modules.html" >&lt;no title&gt;</a> &raquo;</li>
+          <li><a href="grimoirelib_alch.html" >grimoirelib_alch package</a> &raquo;</li>
+          <li><a href="grimoirelib_alch.type.html" >grimoirelib_alch.type package</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2014, Bitergia.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+    </div>
+  </body>
+</html>

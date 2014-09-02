@@ -1,0 +1,346 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>grimoirelib_alch.family.common &mdash; GrimoreLib 1.0 documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <link rel="top" title="GrimoreLib 1.0 documentation" href="../../../index.html" />
+    <link rel="up" title="Module code" href="../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="../../../np-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">GrimoreLib 1.0 documentation</a> &raquo;</li>
+          <li><a href="../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for grimoirelib_alch.family.common</h1><div class="highlight"><pre>
+<span class="c">#! /usr/bin/python</span>
+<span class="c"># -*- coding: utf-8 -*-</span>
+
+<span class="c">## Copyright (C) 2014 Bitergia</span>
+<span class="c">##</span>
+<span class="c">## This program is free software; you can redistribute it and/or modify</span>
+<span class="c">## it under the terms of the GNU General Public License as published by</span>
+<span class="c">## the Free Software Foundation; either version 3 of the License, or</span>
+<span class="c">## (at your option) any later version.</span>
+<span class="c">##</span>
+<span class="c">## This program is distributed in the hope that it will be useful,</span>
+<span class="c">## but WITHOUT ANY WARRANTY; without even the implied warranty of</span>
+<span class="c">## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the</span>
+<span class="c">## GNU General Public License for more details.</span>
+<span class="c">##</span>
+<span class="c">## You should have received a copy of the GNU General Public License</span>
+<span class="c">## along with this program; if not, write to the Free Software</span>
+<span class="c">## Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.</span>
+<span class="c">##</span>
+<span class="c">## Common functionality for GrimoireLib</span>
+<span class="c">##</span>
+<span class="c">## Authors:</span>
+<span class="c">##   Jesus M. Gonzalez-Barahona &lt;jgb@bitergia.com&gt;</span>
+<span class="c">##</span>
+
+<span class="kn">from</span> <span class="nn">grimoirelib_alch.query.common</span> <span class="kn">import</span> <span class="n">GrimoireDatabase</span>
+
+<span class="kn">from</span> <span class="nn">sqlalchemy.orm</span> <span class="kn">import</span> <span class="n">Session</span>
+
+<div class="viewcode-block" id="Family"><a class="viewcode-back" href="../../../grimoirelib_alch.family.common.html#grimoirelib_alch.family.common.Family">[docs]</a><span class="k">class</span> <span class="nc">Family</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Root of hierarchy of families of entities.</span>
+
+<span class="sd">    An entity is an abstract item, with a unique name, representing</span>
+<span class="sd">    some property or measurement of the analyzed project, with some</span>
+<span class="sd">    specific semantics. An entity can be an specific measurement</span>
+<span class="sd">    (such as number of commits), but also other kinds of data</span>
+<span class="sd">    (such as developer name) or a structured combination of specific</span>
+<span class="sd">    measurements or other kinds of data (such as a time series of the</span>
+<span class="sd">    number of commits per month, or a list of developers).</span>
+
+<span class="sd">    A family is a collection of entities that have some semantic</span>
+<span class="sd">    relationship, usually coming from the same or similar tables in</span>
+<span class="sd">    the database. For example, entities directly related to the source</span>
+<span class="sd">    code management system (SCM family), to the issue tracking system</span>
+<span class="sd">    (ITS family), or maybe to the aging studies (Ages family).</span>
+<span class="sd">    </span>
+<span class="sd">    A family of entities is modeled as a class, which when instantiated</span>
+<span class="sd">    as an object corresponds to a given entity in the context of</span>
+<span class="sd">    zero or more conditions.</span>
+
+<span class="sd">    When a family class is instantiated into an entity object, a session</span>
+<span class="sd">    is created, which can be reused for further entities of the same class,</span>
+<span class="sd">    thus reusing the underlying SQLAlchemy session.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span> <span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">datasource</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">conditions</span> <span class="o">=</span> <span class="p">(),</span> <span class="n">echo</span> <span class="o">=</span> <span class="bp">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Instantiation of an entity of the family.</span>
+
+<span class="sd">        This method should be provided by each child in the hierarchy.</span>
+<span class="sd">        name are conditions are always present, datasource will be</span>
+<span class="sd">        dependent on how the value for the entity is computed</span>
+<span class="sd">        (eg, from a database, from an object, etc.)</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        </span>
+<span class="sd">        datasource: database, object, etc.</span>
+<span class="sd">           Definition of the data source used to compute values for</span>
+<span class="sd">           the entity.</span>
+<span class="sd">        name: string</span>
+<span class="sd">           Entity name.</span>
+<span class="sd">        conditions: list of Condition objects</span>
+<span class="sd">           Conditions to be applied to provide context to the entity.</span>
+<span class="sd">           (default: empty list).</span>
+<span class="sd">        echo: Boolean</span>
+<span class="sd">           Write debugging information to output stream or not.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">raise</span> <span class="ne">Exception</span> <span class="p">(</span><span class="s">&quot;__init__ should be provided by child class&quot;</span><span class="p">)</span>
+
+</div>
+<div class="viewcode-block" id="DBFamily"><a class="viewcode-back" href="../../../grimoirelib_alch.family.common.html#grimoirelib_alch.family.common.DBFamily">[docs]</a><span class="k">class</span> <span class="nc">DBFamily</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Root of hierarchy of families using a Grimoire database as data source.</span>
+
+<span class="sd">    Families of entities that produce data by querying a Grimoire database.</span>
+
+<span class="sd">    Method _produce_query() should be provided when defining</span>
+<span class="sd">    a child in this hierarchy.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span> <span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">datasource</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">conditions</span> <span class="o">=</span> <span class="p">(),</span>
+                  <span class="n">echo</span> <span class="o">=</span> <span class="bp">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Instantiation of an entity of the family.</span>
+
+<span class="sd">        Instantiation can be specified with a DatabaseDefinition</span>
+<span class="sd">        or with an SQLAlchemy session. The resulting object can be</span>
+<span class="sd">        used to obtain data about an entity, or just to get</span>
+<span class="sd">        a session suitable to be used in the creation of further objects</span>
+<span class="sd">        of this class.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+
+<span class="sd">        datasource: {sqlalchemy.orm.Session | GrimoireDatabase}</span>
+<span class="sd">           If Session, active session for working with an SQLAlchemy database.</span>
+<span class="sd">           If GrimoireDatabase, a Grimoire database object.</span>
+<span class="sd">        name: string</span>
+<span class="sd">           Entity name. Each child class will define valid strings for</span>
+<span class="sd">           the entities that can be instantiated for the corresponding</span>
+<span class="sd">           family (_init() method).</span>
+<span class="sd">        conditions: list of Condition objects</span>
+<span class="sd">           Conditions to be applied to provide context to the entity.</span>
+<span class="sd">           (default: empty list).</span>
+<span class="sd">        echo: Boolean</span>
+<span class="sd">           Write SQL queries and other debugging infor to output stream or not.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">echo</span> <span class="o">=</span> <span class="n">echo</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">datasource</span><span class="p">,</span> <span class="n">Session</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">session</span> <span class="o">=</span> <span class="n">datasource</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">datasource</span><span class="p">,</span> <span class="n">GrimoireDatabase</span><span class="p">):</span>
+            <span class="c"># Create a session using info in database</span>
+            <span class="n">query_cls</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_query_cls</span> <span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">session</span> <span class="o">=</span> <span class="n">datasource</span><span class="o">.</span><span class="n">build_session</span><span class="p">(</span><span class="n">query_cls</span> <span class="o">=</span> <span class="n">query_cls</span><span class="p">,</span>
+                                                    <span class="n">echo</span> <span class="o">=</span> <span class="n">echo</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">Exception</span> <span class="p">(</span><span class="s">&quot;DBFamily: datasource must be of &quot;</span> <span class="o">+</span> \
+                                 <span class="s">&quot;sqlalchemy.orm.Session or &quot;</span> <span class="o">+</span> \
+                                 <span class="s">&quot;GrimoreDatabase class.&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_init</span> <span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">conditions</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_query_cls</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return the default Query class.</span>
+
+<span class="sd">        If None, the underlaying Query class used by default by the</span>
+<span class="sd">        datasource will be used. This function returns None, child</span>
+<span class="sd">        classes should override that if needed (usually, when a</span>
+<span class="sd">        Query class which is not the default one for the datasource</span>
+<span class="sd">        is needed).</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+
+<span class="sd">        GrimoireQuery: Query class.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">return</span> <span class="bp">None</span>
+
+    <span class="k">def</span> <span class="nf">_init</span> <span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">conditions</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Initialize everything, once a session is ready.</span>
+
+<span class="sd">        Uses _produce_query(), which should be provided by child classes.</span>
+<span class="sd"> </span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        </span>
+<span class="sd">        name: {&quot;list_authors&quot; | &quot;list_committers&quot; |</span>
+<span class="sd">           &quot;list_uauthors&quot; | &quot;list_ucommitters&quot;}</span>
+<span class="sd">           Entity name.</span>
+<span class="sd">        conditions: list of Condition objects</span>
+<span class="sd">           Conditions to be applied to provide context to the entity.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">query</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">query</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_produce_query</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">condition</span> <span class="ow">in</span> <span class="n">conditions</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">query</span> <span class="o">=</span> <span class="n">condition</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">query</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_produce_query</span> <span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Produce the base query to obtain activity per person.</span>
+
+<span class="sd">        This function assumes that self.query was already initialized.</span>
+<span class="sd">        The produced query replaces self.query.</span>
+<span class="sd">        Conditions will be applied (as filters) later to the query</span>
+<span class="sd">        produced by this function.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        </span>
+<span class="sd">        name: string</span>
+<span class="sd">           Entity name.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">raise</span> <span class="ne">Exception</span> <span class="p">(</span><span class="s">&quot;_produce_query should be provided by child class&quot;</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="DBFamily.get_session"><a class="viewcode-back" href="../../../grimoirelib_alch.family.common.html#grimoirelib_alch.family.common.DBFamily.get_session">[docs]</a>    <span class="k">def</span> <span class="nf">get_session</span> <span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Obtain the session being used.</span>
+
+<span class="sd">        This session can be reused when instantiating other objects</span>
+<span class="sd">        of this class.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+
+<span class="sd">        SQLAlchemy session: session.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">session</span>
+
+</div></div>
+<div class="viewcode-block" id="Condition"><a class="viewcode-back" href="../../../grimoirelib_alch.family.common.html#grimoirelib_alch.family.common.Condition">[docs]</a><span class="k">class</span> <span class="nc">Condition</span> <span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;Root of all conditions</span>
+
+<span class="sd">    Provides a method to check if the object to which to apply is of the</span>
+<span class="sd">    right class.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">_check_class</span> <span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Check that object is an instance of Family.</span>
+
+<span class="sd">        Raise exception if it is not.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span> <span class="p">(</span><span class="nb">object</span><span class="p">,</span> <span class="n">Family</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">Exception</span> <span class="p">(</span><span class="s">&quot;Condition: &quot;</span> <span class="o">+</span> \
+                                 <span class="s">&quot;This condition can only be applied to &quot;</span> <span class="o">+</span> \
+                                 <span class="s">&quot;Family entities.&quot;</span><span class="p">)</span>
+
+</div>
+<div class="viewcode-block" id="DBCondition"><a class="viewcode-back" href="../../../grimoirelib_alch.family.common.html#grimoirelib_alch.family.common.DBCondition">[docs]</a><span class="k">class</span> <span class="nc">DBCondition</span> <span class="p">(</span><span class="n">Condition</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Root of all database-related conditions</span>
+
+<span class="sd">    Provides a filter method which will be called when applying the condition.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="DBCondition.filter"><a class="viewcode-back" href="../../../grimoirelib_alch.family.common.html#grimoirelib_alch.family.common.DBCondition.filter">[docs]</a>    <span class="k">def</span> <span class="nf">filter</span> <span class="p">(</span><span class="n">query</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Filter to apply for this condition</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+
+<span class="sd">        query: slalchemy.query</span>
+<span class="sd">           Query to which the filter will be applied</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">return</span> <span class="n">query</span></div></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="../../../np-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">GrimoreLib 1.0 documentation</a> &raquo;</li>
+          <li><a href="../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2014, Bitergia.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+    </div>
+  </body>
+</html>

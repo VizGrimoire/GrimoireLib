@@ -1,0 +1,232 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>grimoirelib_alch.report_demographics module &mdash; GrimoreLib 1.0 documentation</title>
+    
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="GrimoreLib 1.0 documentation" href="index.html" />
+    <link rel="up" title="grimoirelib_alch package" href="grimoirelib_alch.html" />
+    <link rel="next" title="grimoirelib_alch.test module" href="grimoirelib_alch.test.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="np-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="grimoirelib_alch.test.html" title="grimoirelib_alch.test module"
+             accesskey="N">next</a> |</li>
+        <li><a href="index.html">GrimoreLib 1.0 documentation</a> &raquo;</li>
+          <li><a href="modules.html" >&lt;no title&gt;</a> &raquo;</li>
+          <li><a href="grimoirelib_alch.html" accesskey="U">grimoirelib_alch package</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="module-grimoirelib_alch.report_demographics">
+<span id="grimoirelib-alch-report-demographics-module"></span><h1>grimoirelib_alch.report_demographics module<a class="headerlink" href="#module-grimoirelib_alch.report_demographics" title="Permalink to this headline">¶</a></h1>
+<dl class="function">
+<dt id="grimoirelib_alch.report_demographics.add_report">
+<tt class="descclassname">grimoirelib_alch.report_demographics.</tt><tt class="descname">add_report</tt><big>(</big><em>report</em>, <em>to_add</em><big>)</big><a class="reference internal" href="_modules/grimoirelib_alch/report_demographics.html#add_report"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#grimoirelib_alch.report_demographics.add_report" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add new files (with their data) to report.</p>
+<p>Adds new_files (which is a dictorionay in report format)
+to report, and returns the result.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>report: dictionary</strong> :</p>
+<blockquote>
+<div><p>Base report Keys are the names of JSON files to produce, values are the
+data to include in those JSON files.</p>
+</div></blockquote>
+<p><strong>to_add: dictionary</strong> :</p>
+<blockquote class="last">
+<div><p>Report to add. Same format as report. Keys in to_add will
+replace the same keys in report, or just be added to it.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="grimoirelib_alch.report_demographics.create_report">
+<tt class="descclassname">grimoirelib_alch.report_demographics.</tt><tt class="descname">create_report</tt><big>(</big><em>report_files</em>, <em>destdir</em><big>)</big><a class="reference internal" href="_modules/grimoirelib_alch/report_demographics.html#create_report"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#grimoirelib_alch.report_demographics.create_report" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create report, by producing a collection of JSON files</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>report_files: dictionary</strong> :</p>
+<blockquote>
+<div><p>Keys are the names of JSON files to produce, values are the
+data to include in those JSON files.</p>
+</div></blockquote>
+<p><strong>destdir: str</strong> :</p>
+<blockquote class="last">
+<div><p>Name of the destination directory to write all JSON files</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="grimoirelib_alch.report_demographics.produce_json">
+<tt class="descclassname">grimoirelib_alch.report_demographics.</tt><tt class="descname">produce_json</tt><big>(</big><em>filename</em>, <em>data</em>, <em>compact=True</em><big>)</big><a class="reference internal" href="_modules/grimoirelib_alch/report_demographics.html#produce_json"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#grimoirelib_alch.report_demographics.produce_json" title="Permalink to this definition">¶</a></dt>
+<dd><p>Produce JSON content (data) into a file (filename).</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>filename: string</strong> :</p>
+<blockquote>
+<div><p>Name of file to write the content.</p>
+</div></blockquote>
+<p><strong>data: any</strong> :</p>
+<blockquote class="last">
+<div><p>Content to write in JSON format. It has to be ready to pack using
+jsonpickle.encode.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="grimoirelib_alch.report_demographics.report_demographics">
+<tt class="descclassname">grimoirelib_alch.report_demographics.</tt><tt class="descname">report_demographics</tt><big>(</big><em>activity_persons</em>, <em>snapshot_date</em>, <em>activity_period</em>, <em>prefix</em><big>)</big><a class="reference internal" href="_modules/grimoirelib_alch/report_demographics.html#report_demographics"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#grimoirelib_alch.report_demographics.report_demographics" title="Permalink to this definition">¶</a></dt>
+<dd><p>Produce a demographics (ages) report.</p>
+<p>Produces two JSON files, with information about the ages (time
+since &#8220;birth&#8221; in the project) for all contributors (birth) and
+for those still active (aging). those are named
+demographics-birth.json and demographics-aging.json.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>activity_persons: activity_persons.ActivityPersons</strong> :</p>
+<blockquote>
+<div><p>Periods of activity for developers</p>
+</div></blockquote>
+<p><strong>snapshot_date: datetime.datetime</strong> :</p>
+<blockquote>
+<div><p>Shanpshot date (when to count as &#8220;now&#8221;)</p>
+</div></blockquote>
+<p><strong>activity_period: datetime.timedelta</strong> :</p>
+<blockquote>
+<div><p>Period for determine who is still active
+(somebody is active if activity is found between
+snapshot_date - activity_period and snapshot_date)</p>
+</div></blockquote>
+<p><strong>prefix: str</strong> :</p>
+<blockquote>
+<div><p>Prefix of the files to be produced</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>dictionary: dictionary for create_report</strong> :</p>
+<blockquote class="last">
+<div><p>Keys are the names of JSON files to produce, values are the
+data to include in those JSON files.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h4>Next topic</h4>
+  <p class="topless"><a href="grimoirelib_alch.test.html"
+                        title="next chapter">grimoirelib_alch.test module</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/grimoirelib_alch.report_demographics.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="np-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="grimoirelib_alch.test.html" title="grimoirelib_alch.test module"
+             >next</a> |</li>
+        <li><a href="index.html">GrimoreLib 1.0 documentation</a> &raquo;</li>
+          <li><a href="modules.html" >&lt;no title&gt;</a> &raquo;</li>
+          <li><a href="grimoirelib_alch.html" >grimoirelib_alch package</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2014, Bitergia.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+    </div>
+  </body>
+</html>

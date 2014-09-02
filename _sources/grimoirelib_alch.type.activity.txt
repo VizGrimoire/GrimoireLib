@@ -1,0 +1,7 @@
+grimoirelib_alch.type.activity module
+=====================================
+
+.. automodule:: grimoirelib_alch.type.activity
+    :members:
+    :undoc-members:
+    :show-inheritance:

@@ -1,0 +1,23 @@
+grimoirelib_alch.family package
+===============================
+
+Submodules
+----------
+
+.. toctree::
+
+   grimoirelib_alch.family.activity_persons
+   grimoirelib_alch.family.activity_timezones
+   grimoirelib_alch.family.common
+   grimoirelib_alch.family.duration_persons
+   grimoirelib_alch.family.its
+   grimoirelib_alch.family.mls
+   grimoirelib_alch.family.scm
+
+Module contents
+---------------
+
+.. automodule:: grimoirelib_alch.family
+    :members:
+    :undoc-members:
+    :show-inheritance:

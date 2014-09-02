@@ -1,0 +1,347 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>grimoirelib_alch.family.activity_timezones &mdash; GrimoreLib 1.0 documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <link rel="top" title="GrimoreLib 1.0 documentation" href="../../../index.html" />
+    <link rel="up" title="Module code" href="../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="../../../np-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">GrimoreLib 1.0 documentation</a> &raquo;</li>
+          <li><a href="../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for grimoirelib_alch.family.activity_timezones</h1><div class="highlight"><pre>
+<span class="c">#! /usr/bin/python</span>
+<span class="c"># -*- coding: utf-8 -*-</span>
+
+<span class="c">## Copyright (C) 2014 Bitergia</span>
+<span class="c">##</span>
+<span class="c">## This program is free software; you can redistribute it and/or modify</span>
+<span class="c">## it under the terms of the GNU General Public License as published by</span>
+<span class="c">## the Free Software Foundation; either version 3 of the License, or</span>
+<span class="c">## (at your option) any later version.</span>
+<span class="c">##</span>
+<span class="c">## This program is distributed in the hope that it will be useful,</span>
+<span class="c">## but WITHOUT ANY WARRANTY; without even the implied warranty of</span>
+<span class="c">## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the</span>
+<span class="c">## GNU General Public License for more details.</span>
+<span class="c">##</span>
+<span class="c">## You should have received a copy of the GNU General Public License</span>
+<span class="c">## along with this program; if not, write to the Free Software</span>
+<span class="c">## Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.</span>
+<span class="c">##</span>
+<span class="c">## Module to deal with timezones as found in the *Grimoire</span>
+<span class="c">##  (CVSAnalY, MLStats) databases</span>
+<span class="c">##</span>
+<span class="c">## Authors:</span>
+<span class="c">##   Jesus M. Gonzalez-Barahona &lt;jgb@bitergia.com&gt;</span>
+<span class="c">##</span>
+
+<span class="kn">from</span> <span class="nn">common</span> <span class="kn">import</span> <span class="n">DBFamily</span>
+<span class="kn">from</span> <span class="nn">grimoirelib_alch.query.scm</span> <span class="kn">import</span> <span class="n">DB</span> <span class="k">as</span> <span class="n">SCMDatabase</span>
+<span class="kn">from</span> <span class="nn">grimoirelib_alch.query.scm_tz</span> <span class="kn">import</span> <span class="n">Query</span> <span class="k">as</span> <span class="n">SCMTZQuery</span>
+<span class="kn">from</span> <span class="nn">grimoirelib_alch.query.mls</span> <span class="kn">import</span> <span class="n">DB</span> <span class="k">as</span> <span class="n">MLSDatabase</span>
+<span class="kn">from</span> <span class="nn">grimoirelib_alch.query.mls_tz</span> <span class="kn">import</span> <span class="n">Query</span> <span class="k">as</span> <span class="n">MLSTZQuery</span>
+
+<div class="viewcode-block" id="ActivityTZ"><a class="viewcode-back" href="../../../grimoirelib_alch.family.activity_timezones.html#grimoirelib_alch.family.activity_timezones.ActivityTZ">[docs]</a><span class="k">class</span> <span class="nc">ActivityTZ</span> <span class="p">(</span><span class="n">DBFamily</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Root factory of entities in the ActivityTZ family.</span>
+
+<span class="sd">    This class can be used to instantiate entities from the</span>
+<span class="sd">    ActivityTZ family: those related to timezones in dates</span>
+<span class="sd">    in git records, or in email messages.</span>
+
+<span class="sd">    This is the root of a hierarchy of classes for the ActivityTZ</span>
+<span class="sd">    families corresponding to the different data sources (SCM, MLS, etc.).</span>
+
+<span class="sd">    Objects of this class provide the function timezones() to</span>
+<span class="sd">    obtain a Timezones object, which is a dictionary with a &quot;tz&quot; key, with</span>
+<span class="sd">    a list with values for all time zones (-12 .. 11) as data, and keys</span>
+<span class="sd">    with lists of the values corresponding to all these timezones for the</span>
+<span class="sd">    values of the entities of interest.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">_query_cls</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return the default Query class.</span>
+
+<span class="sd">        If None, the underlaying Query class used by default by the</span>
+<span class="sd">        datasource will be used. This function returns None, child</span>
+<span class="sd">        classes should override that if needed (usually, when a</span>
+<span class="sd">        Query class which is not the default one for the datasource</span>
+<span class="sd">        is needed).</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+
+<span class="sd">        GrimoireQuery: Query class.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">return</span> <span class="bp">None</span>
+
+    <span class="k">def</span> <span class="nf">_produce_query</span> <span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Produce the base query to obtain activity per timezone.</span>
+
+<span class="sd">        This function assumes that self.query was already initialized.</span>
+<span class="sd">        The produced query replaces self.query.</span>
+<span class="sd">        Conditions will be applied (as filters) later to the query</span>
+<span class="sd">        produced by this function.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        </span>
+<span class="sd">        name: string</span>
+<span class="sd">           Entity name.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">raise</span> <span class="ne">Exception</span> <span class="p">(</span><span class="s">&quot;_produce_query should be provided by child class&quot;</span><span class="p">)</span>
+
+<div class="viewcode-block" id="ActivityTZ.timezones"><a class="viewcode-back" href="../../../grimoirelib_alch.family.activity_timezones.html#grimoirelib_alch.family.activity_timezones.ActivityTZ.timezones">[docs]</a>    <span class="k">def</span> <span class="nf">timezones</span> <span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Obtain the Timezones object.</span>
+
+<span class="sd">        Extracts the activity list by querying the database</span>
+<span class="sd">        according to the initialization of the object.</span>
+<span class="sd">        The result is buffered, so that this method is invoked once</span>
+<span class="sd">        again, the result is returned directly, with no need to query</span>
+<span class="sd">        the database.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+
+<span class="sd">        Timezones: activity for all timezones</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">tz</span>
+        <span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">tz</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">query</span><span class="o">.</span><span class="n">timezones</span><span class="p">()</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">tz</span>
+</div></div>
+<div class="viewcode-block" id="SCMActivityTZ"><a class="viewcode-back" href="../../../grimoirelib_alch.family.activity_timezones.html#grimoirelib_alch.family.activity_timezones.SCMActivityTZ">[docs]</a><span class="k">class</span> <span class="nc">SCMActivityTZ</span> <span class="p">(</span><span class="n">ActivityTZ</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Constructor of entities in the SCMActivityTZ family.</span>
+
+<span class="sd">    Interface to entities related to activity of persons in SCM.</span>
+<span class="sd">    </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">_query_cls</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return the default Query class.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+
+<span class="sd">        GrimoireQuery: Query class.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">return</span> <span class="n">SCMTZQuery</span>
+
+    <span class="k">def</span> <span class="nf">_produce_query</span> <span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Produce the base query to obtain activity per timezone.</span>
+
+<span class="sd">        This function assumes that self.query was already initialized.</span>
+<span class="sd">        The produced query replaces self.query.</span>
+<span class="sd">        Conditions will be applied (as filters) later to the query</span>
+<span class="sd">        produced by this function.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        </span>
+<span class="sd">        name: string</span>
+<span class="sd">           Entity name.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="n">name</span> <span class="ow">in</span> <span class="p">(</span><span class="s">&quot;authors&quot;</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">query</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">query</span><span class="o">.</span><span class="n">select_tz</span><span class="p">()</span> \
+                <span class="o">.</span><span class="n">filter_nomerges</span><span class="p">()</span> \
+                <span class="o">.</span><span class="n">group_by_tz</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">Exception</span> <span class="p">(</span><span class="s">&quot;SCMActivityTZ: &quot;</span> <span class="o">+</span> \
+                                 <span class="s">&quot;Invalid entity name for this family, &quot;</span> <span class="o">+</span> \
+                                 <span class="n">name</span><span class="p">)</span>
+
+</div>
+<div class="viewcode-block" id="MLSActivityTZ"><a class="viewcode-back" href="../../../grimoirelib_alch.family.activity_timezones.html#grimoirelib_alch.family.activity_timezones.MLSActivityTZ">[docs]</a><span class="k">class</span> <span class="nc">MLSActivityTZ</span> <span class="p">(</span><span class="n">ActivityTZ</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Constructor of entities in the MLSActivityTZ family.</span>
+
+<span class="sd">    Interface to entities related to activity of persons in MLS.</span>
+<span class="sd">    </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">_query_cls</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return the default Query class.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+
+<span class="sd">        GrimoireQuery: Query class.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">return</span> <span class="n">MLSTZQuery</span>
+
+    <span class="k">def</span> <span class="nf">_produce_query</span> <span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Produce the base query to obtain activity per timezone.</span>
+
+<span class="sd">        This function assumes that self.query was already initialized.</span>
+<span class="sd">        The produced query replaces self.query.</span>
+<span class="sd">        Conditions will be applied (as filters) later to the query</span>
+<span class="sd">        produced by this function.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        </span>
+<span class="sd">        name: string</span>
+<span class="sd">           Entity name.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="n">name</span> <span class="ow">in</span> <span class="p">(</span><span class="s">&quot;senders&quot;</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">query</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">query</span><span class="o">.</span><span class="n">select_tz</span><span class="p">()</span> \
+                <span class="o">.</span><span class="n">group_by_tz</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">Exception</span> <span class="p">(</span><span class="s">&quot;MLSActivityTZ: &quot;</span> <span class="o">+</span> \
+                                 <span class="s">&quot;Invalid entity name for this family, &quot;</span> <span class="o">+</span> \
+                                 <span class="n">name</span><span class="p">)</span>
+
+</div>
+<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s">&quot;__main__&quot;</span><span class="p">:</span>
+
+    <span class="kn">from</span> <span class="nn">grimoirelib_alch.aux.standalone</span> <span class="kn">import</span> <span class="n">stdout_utf8</span><span class="p">,</span> <span class="n">print_banner</span>
+    <span class="kn">from</span> <span class="nn">scm</span> <span class="kn">import</span> <span class="n">PeriodCondition</span> <span class="k">as</span> <span class="n">SCMPeriodCondition</span>
+    <span class="kn">from</span> <span class="nn">scm</span> <span class="kn">import</span> <span class="n">NomergesCondition</span> <span class="k">as</span> <span class="n">SCMNomergesCondition</span>
+    <span class="kn">from</span> <span class="nn">datetime</span> <span class="kn">import</span> <span class="n">datetime</span><span class="p">,</span> <span class="n">timedelta</span>
+
+    <span class="n">stdout_utf8</span><span class="p">()</span>
+
+    <span class="n">database</span> <span class="o">=</span> <span class="n">SCMDatabase</span> <span class="p">(</span><span class="n">url</span> <span class="o">=</span> <span class="s">&quot;mysql://jgb:XXX@localhost/&quot;</span><span class="p">,</span>
+                   <span class="n">schema</span> <span class="o">=</span> <span class="s">&quot;oscon_opennebula_scm_tz&quot;</span><span class="p">,</span>
+                   <span class="n">schema_id</span> <span class="o">=</span> <span class="s">&quot;oscon_opennebula_scm_tz&quot;</span><span class="p">)</span>
+
+    <span class="c">#---------------------------------</span>
+    <span class="n">print_banner</span><span class="p">(</span><span class="s">&quot;Author activity per time zone&quot;</span><span class="p">)</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="n">SCMActivityTZ</span> <span class="p">(</span>
+        <span class="n">datasource</span> <span class="o">=</span> <span class="n">database</span><span class="p">,</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="s">&quot;authors&quot;</span><span class="p">)</span>
+    <span class="n">tz</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">timezones</span><span class="p">()</span>
+    <span class="k">print</span> <span class="n">tz</span>
+
+    <span class="c">#---------------------------------</span>
+    <span class="n">print_banner</span><span class="p">(</span><span class="s">&quot;Author activity per time zone (now using session)&quot;</span><span class="p">)</span>
+    <span class="n">session</span> <span class="o">=</span> <span class="n">database</span><span class="o">.</span><span class="n">build_session</span><span class="p">(</span><span class="n">query_cls</span> <span class="o">=</span> <span class="n">SCMTZQuery</span><span class="p">)</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="n">SCMActivityTZ</span> <span class="p">(</span>
+        <span class="n">datasource</span> <span class="o">=</span> <span class="n">session</span><span class="p">,</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="s">&quot;authors&quot;</span><span class="p">)</span>
+    <span class="n">tz</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">timezones</span><span class="p">()</span>
+    <span class="k">print</span> <span class="n">tz</span>
+
+    <span class="c">#---------------------------------</span>
+    <span class="n">print_banner</span><span class="p">(</span><span class="s">&quot;Author activity per time zone (using session, conditions)&quot;</span><span class="p">)</span>
+    <span class="n">period</span> <span class="o">=</span> <span class="n">SCMPeriodCondition</span> <span class="p">(</span><span class="n">start</span> <span class="o">=</span> <span class="n">datetime</span><span class="p">(</span><span class="mi">2014</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">),</span> <span class="n">end</span> <span class="o">=</span> <span class="bp">None</span><span class="p">)</span>
+    <span class="n">nomerges</span> <span class="o">=</span> <span class="n">SCMNomergesCondition</span><span class="p">()</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="n">SCMActivityTZ</span> <span class="p">(</span>
+        <span class="n">datasource</span> <span class="o">=</span> <span class="n">session</span><span class="p">,</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="s">&quot;authors&quot;</span><span class="p">,</span>
+        <span class="n">conditions</span> <span class="o">=</span> <span class="p">(</span><span class="n">period</span><span class="p">,</span><span class="n">nomerges</span><span class="p">))</span>
+    <span class="n">tz</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">timezones</span><span class="p">()</span>
+    <span class="k">print</span> <span class="n">tz</span>
+
+    <span class="n">database</span> <span class="o">=</span> <span class="n">MLSDatabase</span> <span class="p">(</span><span class="n">url</span> <span class="o">=</span> <span class="s">&#39;mysql://jgb:XXX@localhost/&#39;</span><span class="p">,</span>
+                   <span class="n">schema</span> <span class="o">=</span> <span class="s">&#39;oscon_openstack_mls&#39;</span><span class="p">,</span>
+                   <span class="n">schema_id</span> <span class="o">=</span> <span class="s">&#39;oscon_openstack_scm&#39;</span><span class="p">)</span>
+
+    <span class="c">#---------------------------------</span>
+    <span class="n">print_banner</span><span class="p">(</span><span class="s">&quot;Sender activity per time zone&quot;</span><span class="p">)</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="n">MLSActivityTZ</span> <span class="p">(</span>
+        <span class="n">datasource</span> <span class="o">=</span> <span class="n">database</span><span class="p">,</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="s">&quot;senders&quot;</span><span class="p">)</span>
+    <span class="n">tz</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">timezones</span><span class="p">()</span>
+    <span class="k">print</span> <span class="n">tz</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="../../../np-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">GrimoreLib 1.0 documentation</a> &raquo;</li>
+          <li><a href="../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2014, Bitergia.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+    </div>
+  </body>
+</html>
