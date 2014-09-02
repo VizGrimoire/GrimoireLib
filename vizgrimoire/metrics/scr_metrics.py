@@ -25,6 +25,7 @@
 
 import logging
 import MySQLdb
+import numpy
 
 from GrimoireUtils import completePeriodIds, checkListArray, medianAndAvgByPeriod
 
@@ -107,6 +108,71 @@ class Abandoned(Metrics):
         ts = self.db.ExecuteQuery(query)
         return completePeriodIds(ts, self.filters.period,
                                  self.filters.startdate, self.filters.enddate)
+
+class BMISCR(Metrics):
+    """This class calculates the efficiency closing reviews
+
+    This class is based on the Backlog Management Index that in issues, it is
+    calculated as the number of closed issues out of the total number of opened
+    ones in a period. (The other way around also provides an interesting view). 
+    
+    In terms of the code review system, this values is measured as the number
+    of merged+abandoned reviews out of the total number of submitted ones.
+    """
+
+    id = "bmiscr"
+    name = "BMI SCR"
+    desc = "Efficiency reviewing: (merged+abandoned reviews)/(submitted reviews)"
+    data_source = SCR
+
+    def get_ts(self):
+        abandoned_reviews = Abandoned(self.db, self.filters)
+        merged_reviews = Merged(self.db, self.filters)
+        submitted_reviews = Submitted(self.db, self.filters)
+
+        abandoned = abandoned_reviews.get_ts()
+        abandoned = completePeriodIds(abandoned, self.filters.period, self.filters.startdate,
+                                      self.filters.enddate)
+        # casting the type of the variable in order to use numpy
+        # faster way to deal with datasets...
+        abandoned_array = numpy.array(abandoned["abandoned"])
+
+        merged = merged_reviews.get_ts()
+        merged = completePeriodIds(merged, self.filters.period, self.filters.startdate,
+                                      self.filters.enddate)
+        merged_array = numpy.array(merged["merged"])
+
+        submitted = submitted_reviews.get_ts()
+        submitted = completePeriodIds(submitted, self.filters.period, self.filters.startdate,
+                                      self.filters.enddate)
+        submitted_array = numpy.array(submitted["submitted"])
+        
+        bmi_array = (abandoned_array.astype(float) + merged_array.astype(float)) / submitted_array.astype(float)
+  
+        bmi = abandoned
+        bmi.pop("abandoned")
+        bmi["bmiscr"] = list(bmi_array)
+
+        return bmi
+
+    def get_agg(self):
+        abandoned_reviews = Abandoned(self.db, self.filters)
+        merged_reviews = Merged(self.db, self.filters)
+        submitted_reviews = Submitted(self.db, self.filters)
+
+        abandoned = abandoned_reviews.get_agg()
+        abandoned_data = abandoned["abandoned"]
+        merged = merged_reviews.get_agg()
+        merged_data = merged["merged"]
+        submitted = submitted_reviews.get_agg()
+        submitted_data = submitted["submitted"]
+        
+        bmi_data = float(merged_data + abandoned_data) / float(submitted_data)
+        bmi = {"bmiscr":bmi_data}
+
+        return bmi
+
+
 
 class Pending(Metrics):
     id = "pending"
@@ -804,18 +870,23 @@ if __name__ == '__main__':
     filters = MetricFilters("month", "'2012-04-01'", "'2014-07-01'", None)
     dbcon = SCRQuery("root", "", "cp_gerrit_GrimoireLibTests", "cp_cvsanaly_GrimoireLibTests")
 
-    print "Submitters info:"
-    submitters = Submitters(dbcon, filters)
-    print submitters.get_ts()
-    print submitters.get_agg()
+    print "Submitted info:"
+    submitted = Submitted(dbcon, filters)
+    print submitted.get_ts()
+    print submitted.get_agg()
     
-    print "Reviewers info:"
-    reviewers = Reviewers(dbcon, filters)
-    print reviewers.get_ts()
-    print reviewers.get_agg()
+    print "Merged info:"
+    merged = Merged(dbcon, filters)
+    print merged.get_ts()
+    print merged.get_agg()
 
-    print "Core Reviewers info:"
-    core_reviewers = CoreReviewers(dbcon, filters)
-    print core_reviewers.get_ts()
-    print core_reviewers.get_agg()
+    print "Abandoned info:"
+    abandoned = Abandoned(dbcon, filters)
+    print abandoned.get_ts()
+    print abandoned.get_agg()
+
+    print "BMI"
+    bmi = BMISCR(dbcon, filters)
+    print bmi.get_ts()
+    print bmi.get_agg()
 
