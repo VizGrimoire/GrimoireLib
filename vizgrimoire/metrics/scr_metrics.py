@@ -32,6 +32,8 @@ from metrics import Metrics
 
 from metrics_filter import MetricFilters
 
+from query_builder import SCRQuery
+
 from query_builder import ITSQuery
 
 from SCR import SCR
@@ -567,6 +569,42 @@ class Reviewers(Metrics):
                                 fields, tables, filters, evolutionary, self.filters.type_analysis)
         return q
 
+
+class CoreReviewers(Metrics):
+    """Returns a list of core reviewers in Gerrit systems.
+    
+    A core reviewer is defined as a reviewer that can use the 
+    +2 or -2 in the review system. However, given that there is not
+    a public list of core reviewers per project, this class assumes
+    that a developer is a core reviewer the point in time when she
+    uses a +2 or a -2.
+
+    """
+
+    def _get_sql(self, evolutionary):
+        fields = " count(distinct(changed_by)) as core_reviewers "
+        tables = " changes ch, issues i " + self.db.GetSQLReportFrom(self.filters.type_analysis)
+        filters  = "ch.issue_id = i.id "
+        filters += self.db.GetSQLReportWhere(self.filters.type_analysis)
+
+        if (self.filters.type_analysis is None or len (self.filters.type_analysis) != 2) :
+            #Specific case for the basic option where people_upeople table is needed
+            #and not taken into account in the initial part of the query
+            tables += ", people_upeople pup"
+            filters += " and ch.changed_by  = pup.people_id"
+        elif (self.filters.type_analysis[0] == "repository" or self.filters.type_analysis[0] == "project"):
+            #Adding people_upeople table
+            tables += ", people_upeople pup"
+            filters += " and ch.changed_by = pup.people_id "
+
+        filters += " and (ch.new_value = -2 or ch.new_value = 2) "
+        filters += " and field = 'Code-Review' "
+        q = self.db.BuildQuery (self.filters.period, self.filters.startdate,
+                                self.filters.enddate, " ch.changed_on",
+                                fields, tables, filters, evolutionary, self.filters.type_analysis)
+        return q
+
+
 class Closers(Metrics):
     id = "closers"
     name = "Closers"
@@ -755,3 +793,24 @@ class TimeToReview(Metrics):
                           self.filters.startdate, self.filters.enddate)
 
         return metrics_list
+
+
+if __name__ == '__main__':
+    filters = MetricFilters("month", "'2012-04-01'", "'2014-07-01'", None)
+    dbcon = SCRQuery("root", "", "cp_gerrit_GrimoireLibTests", "cp_cvsanaly_GrimoireLibTests")
+
+    print "Submitters info:"
+    submitters = Submitters(dbcon, filters)
+    print submitters.get_ts()
+    print submitters.get_agg()
+    
+    print "Reviewers info:"
+    reviewers = Reviewers(dbcon, filters)
+    print reviewers.get_ts()
+    print reviewers.get_agg()
+
+    print "Core Reviewers info:"
+    core_reviewers = CoreReviewers(dbcon, filters)
+    print core_reviewers.get_ts()
+    print core_reviewers.get_agg()
+
