@@ -139,9 +139,9 @@ class TimeToReviewPendingSCR(Metrics):
             if reviewers:
                 q_last_change = self.db.get_sql_last_change_for_issues_new()
                 tables += ", changes ch, (%s) t1" % q_last_change
-            tables = tables + self.db.GetSQLReportFrom(identities_db, type_analysis)
+            tables = tables + self.db.GetSQLReportFrom(type_analysis)
             filters = " people.id = i.submitted_by "
-            filters += self.db.GetSQLReportWhere(type_analysis, self.db.identities_db)
+            filters += self.db.GetSQLReportWhere(type_analysis)
             filters += " AND status<>'MERGED' AND status<>'ABANDONED' "
             filters += " AND ie.issue_id  = i.id "
             if reviewers:
@@ -190,6 +190,7 @@ class TimeToReviewPendingSCR(Metrics):
         end_month = end.year*12 + end.month
         months = end_month - start_month
         acc_pending_time_median = {"month":[],
+                                   "pending_reviews":[],
                                    "review_time_pending_days_acc_median":[],
                                    "review_time_pending_update_days_acc_median":[],
                                    "review_time_pending_ReviewsWaitingForReviewer_days_acc_median":[],
@@ -200,6 +201,7 @@ class TimeToReviewPendingSCR(Metrics):
 
             reviews = self.db.ExecuteQuery(get_sql(start_month+i))
             values = get_values_median(reviews['newtime'])
+            acc_pending_time_median['pending_reviews'].append(len(reviews['newtime']))
             acc_pending_time_median['review_time_pending_days_acc_median'].append(values)
 
             reviews = self.db.ExecuteQuery(get_sql(start_month+i, True))
