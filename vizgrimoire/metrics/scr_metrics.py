@@ -20,17 +20,21 @@
 ##
 ## Authors:
 ##   Alvaro del Castillo <acs@bitergia.com>
+##   Daniel Izquierdo <dizquierdo@bitergia.com>
 
 """ Metrics for the source code review system """
 
 import logging
 import MySQLdb
+import numpy
 
 from GrimoireUtils import completePeriodIds, checkListArray, medianAndAvgByPeriod
 
 from metrics import Metrics
 
 from metrics_filter import MetricFilters
+
+from query_builder import SCRQuery
 
 from query_builder import ITSQuery
 
@@ -105,6 +109,71 @@ class Abandoned(Metrics):
         ts = self.db.ExecuteQuery(query)
         return completePeriodIds(ts, self.filters.period,
                                  self.filters.startdate, self.filters.enddate)
+
+class BMISCR(Metrics):
+    """This class calculates the efficiency closing reviews
+
+    This class is based on the Backlog Management Index that in issues, it is
+    calculated as the number of closed issues out of the total number of opened
+    ones in a period. (The other way around also provides an interesting view). 
+    
+    In terms of the code review system, this values is measured as the number
+    of merged+abandoned reviews out of the total number of submitted ones.
+    """
+
+    id = "bmiscr"
+    name = "BMI SCR"
+    desc = "Efficiency reviewing: (merged+abandoned reviews)/(submitted reviews)"
+    data_source = SCR
+
+    def get_ts(self):
+        abandoned_reviews = Abandoned(self.db, self.filters)
+        merged_reviews = Merged(self.db, self.filters)
+        submitted_reviews = Submitted(self.db, self.filters)
+
+        abandoned = abandoned_reviews.get_ts()
+        abandoned = completePeriodIds(abandoned, self.filters.period, self.filters.startdate,
+                                      self.filters.enddate)
+        # casting the type of the variable in order to use numpy
+        # faster way to deal with datasets...
+        abandoned_array = numpy.array(abandoned["abandoned"])
+
+        merged = merged_reviews.get_ts()
+        merged = completePeriodIds(merged, self.filters.period, self.filters.startdate,
+                                      self.filters.enddate)
+        merged_array = numpy.array(merged["merged"])
+
+        submitted = submitted_reviews.get_ts()
+        submitted = completePeriodIds(submitted, self.filters.period, self.filters.startdate,
+                                      self.filters.enddate)
+        submitted_array = numpy.array(submitted["submitted"])
+        
+        bmi_array = (abandoned_array.astype(float) + merged_array.astype(float)) / submitted_array.astype(float)
+  
+        bmi = abandoned
+        bmi.pop("abandoned")
+        bmi["bmiscr"] = list(bmi_array)
+
+        return bmi
+
+    def get_agg(self):
+        abandoned_reviews = Abandoned(self.db, self.filters)
+        merged_reviews = Merged(self.db, self.filters)
+        submitted_reviews = Submitted(self.db, self.filters)
+
+        abandoned = abandoned_reviews.get_agg()
+        abandoned_data = abandoned["abandoned"]
+        merged = merged_reviews.get_agg()
+        merged_data = merged["merged"]
+        submitted = submitted_reviews.get_agg()
+        submitted_data = submitted["submitted"]
+        
+        bmi_data = float(merged_data + abandoned_data) / float(submitted_data)
+        bmi = {"bmiscr":bmi_data}
+
+        return bmi
+
+
 
 class Pending(Metrics):
     id = "pending"
@@ -264,6 +333,53 @@ class PatchesSent(Metrics):
                                        self.filters.enddate, "sent",
                                        self.filters.type_analysis, evolutionary)
         return q
+
+class PatchesPerReview(Metrics):
+    """Class that returns the mean and median of patches per review
+
+    The Submitted class or the PatchesSent class do not provide information about
+    the mean and median number of iterations (patches) per review.
+    Indeed, such information is not even available given that numbers
+    are returned in each of those classes.
+
+    Thus, this class returns two values per analyzed period: mean and median
+    of patches per review.
+
+    Finally, a review and its patches are part of a period, if such review
+    has some activity during the period of analysis. Thus, if a patch
+    was submitted before the period, but activity is registered (for instance
+    a +1 review), the whole review with all of its iterations is counted.
+
+    Having another approach would force to analyze only submitted reviews in
+    a period, but if the period is too small, iterations may not appear
+    as many as they are sometimes.
+
+    """
+
+    def get_agg(self):
+        query = """select count(distinct(ch.old_value)) as patches
+                   from changes ch,
+                        (select issue_id
+                         from changes
+                         where changed_on >= %s and
+                               changed_on < %s ) t
+                   where ch.issue_id = t.issue_id and
+                         ch.old_value = ''
+                   group by ch.issue_id
+                """ % (self.filters.startdate, self.filters.enddate)
+
+        patches_per_review = self.db.ExecuteQuery(query)
+
+        agg_data={}
+        agg_data["mean"] = round(numpy.mean(patches_per_review["patches"]), 2)
+        agg_data["median"] = round(numpy.median(patches_per_review["patches"]), 2)
+
+        return agg_data
+
+    def get_ts(self):
+        #Not implemented
+        return None
+
 
 class PatchesWaitingForReviewer(Metrics):
     id = "WaitingForReviewer"
@@ -567,6 +683,47 @@ class Reviewers(Metrics):
                                 fields, tables, filters, evolutionary, self.filters.type_analysis)
         return q
 
+
+class CoreReviewers(Metrics):
+    """Returns a list of core reviewers in Gerrit systems.
+    
+    A core reviewer is defined as a reviewer that can use the 
+    +2 or -2 in the review system. However, given that there is not
+    a public list of core reviewers per project, this class assumes
+    that a developer is a core reviewer the point in time when she
+    uses a +2 or a -2.
+
+    """
+
+    id = "core_reviewers"
+    name = "Core Reviewers"
+    desc = "Number of developers reviewing code review activities that can use a +2 or -2"
+    data_source = SCR
+
+    def _get_sql(self, evolutionary):
+        fields = " count(distinct(changed_by)) as core_reviewers "
+        tables = " changes ch, issues i " + self.db.GetSQLReportFrom(self.filters.type_analysis)
+        filters  = "ch.issue_id = i.id "
+        filters += self.db.GetSQLReportWhere(self.filters.type_analysis)
+
+        if (self.filters.type_analysis is None or len (self.filters.type_analysis) != 2) :
+            #Specific case for the basic option where people_upeople table is needed
+            #and not taken into account in the initial part of the query
+            tables += ", people_upeople pup"
+            filters += " and ch.changed_by  = pup.people_id"
+        elif (self.filters.type_analysis[0] == "repository" or self.filters.type_analysis[0] == "project"):
+            #Adding people_upeople table
+            tables += ", people_upeople pup"
+            filters += " and ch.changed_by = pup.people_id "
+
+        filters += " and (ch.new_value = -2 or ch.new_value = 2) "
+        filters += " and field = 'Code-Review' "
+        q = self.db.BuildQuery (self.filters.period, self.filters.startdate,
+                                self.filters.enddate, " ch.changed_on",
+                                fields, tables, filters, evolutionary, self.filters.type_analysis)
+        return q
+
+
 class Closers(Metrics):
     id = "closers"
     name = "Closers"
@@ -755,3 +912,32 @@ class TimeToReview(Metrics):
                           self.filters.startdate, self.filters.enddate)
 
         return metrics_list
+
+
+if __name__ == '__main__':
+    filters = MetricFilters("month", "'2012-04-01'", "'2014-07-01'", None)
+    dbcon = SCRQuery("root", "", "cp_gerrit_GrimoireLibTests", "cp_cvsanaly_GrimoireLibTests")
+
+    print "Submitted info:"
+    submitted = Submitted(dbcon, filters)
+    print submitted.get_ts()
+    print submitted.get_agg()
+    
+    print "Merged info:"
+    merged = Merged(dbcon, filters)
+    print merged.get_ts()
+    print merged.get_agg()
+
+    print "Abandoned info:"
+    abandoned = Abandoned(dbcon, filters)
+    print abandoned.get_ts()
+    print abandoned.get_agg()
+
+    print "BMI"
+    bmi = BMISCR(dbcon, filters)
+    print bmi.get_ts()
+    print bmi.get_agg()
+
+    print "Patches per review"
+    patches = PatchesPerReview(dbcon, filters)
+    print patches.get_agg()
