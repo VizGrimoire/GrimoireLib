@@ -20,6 +20,7 @@
 ##
 ## Authors:
 ##   Alvaro del Castillo <acs@bitergia.com>
+##   Daniel Izquierdo <dizquierdo@bitergia.com>
 
 """ Metrics for the source code review system """
 
@@ -332,6 +333,52 @@ class PatchesSent(Metrics):
                                        self.filters.enddate, "sent",
                                        self.filters.type_analysis, evolutionary)
         return q
+
+class PatchesPerReview(Metrics):
+    """Class that returns the mean and median of patches per review
+
+    The Submitted class or the PatchesSent class do not provide information about
+    the mean and median number of iterations (patches) per review.
+    Indeed, such information is not even available given that numbers
+    are returned in each of those classes.
+
+    Thus, this class returns two values per analyzed period: mean and median
+    of patches per review.
+
+    Finally, a review and its patches are part of a period, if such review
+    has some activity during the period of analysis. Thus, if a patch
+    was submitted before the period, but activity is registered (for instance
+    a +1 review), the whole review with all of its iterations is counted.
+
+    Having another approach would force to analyze only submitted reviews in
+    a period, but if the period is too small, iterations may not appear
+    as many as they are sometimes.
+
+    """
+
+    def get_agg(self):
+        query = """select count(distinct(ch.old_value)) as patches
+                   from changes ch,
+                        (select issue_id
+                         from changes
+                         where changed_on >= %s and
+                               changed_on < %s ) t
+                   where ch.issue_id = t.issue_id
+                   group by ch.issue_id
+                """ % (self.filters.startdate, self.filters.enddate)
+
+        patches_per_review = self.db.ExecuteQuery(query)
+
+        agg_data={}
+        agg_data["mean"] = round(numpy.mean(patches_per_review["patches"]), 2)
+        agg_data["median"] = round(numpy.median(patches_per_review["patches"]), 2)
+
+        return agg_data
+
+    def get_ts(self):
+        #Not implemented
+        return None
+
 
 class PatchesWaitingForReviewer(Metrics):
     id = "WaitingForReviewer"
@@ -890,3 +937,6 @@ if __name__ == '__main__':
     print bmi.get_ts()
     print bmi.get_agg()
 
+    print "Patches per review"
+    patches = PatchesPerReview(dbcon, filters)
+    print patches.get_agg()
