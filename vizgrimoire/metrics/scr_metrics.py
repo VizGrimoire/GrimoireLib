@@ -363,7 +363,8 @@ class PatchesPerReview(Metrics):
                          from changes
                          where changed_on >= %s and
                                changed_on < %s ) t
-                   where ch.issue_id = t.issue_id
+                   where ch.issue_id = t.issue_id and
+                         ch.old_value = ''
                    group by ch.issue_id
                 """ % (self.filters.startdate, self.filters.enddate)
 
