@@ -840,7 +840,7 @@ class SCRQuery(DSQuery):
         from report import Report
         filters += " AND i.submitted_on >= '" + Report.get_start_date() + "'"
 
-        q = self.BuildQuery (period, startdate, enddate, date_field, fields, tables, filters, evolutionary, type_analysis)
+        q = self.BuildQuery (period, startdate, enddate, date_field, fields, tables, filters, evolutionary)
 
         return q
 
