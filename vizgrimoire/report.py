@@ -156,6 +156,14 @@ class Report(object):
         return Report._automator
 
     @staticmethod
+    def get_start_date():
+        return Report._automator['r']['start_date']
+
+    @staticmethod
+    def get_end_date():
+        return Report._automator['r']['end_date']
+
+    @staticmethod
     def connect_ds(ds):
         db = Report._automator['generic'][ds.get_db_name()]
         dbuser = Report._automator['generic']['db_user']
