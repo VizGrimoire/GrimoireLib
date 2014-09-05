@@ -190,7 +190,6 @@ class TimeToReviewPendingSCR(Metrics):
         end_month = end.year*12 + end.month
         months = end_month - start_month
         acc_pending_time_median = {"month":[],
-                                   "pending_reviews":[],
                                    "review_time_pending_days_acc_median":[],
                                    "review_time_pending_update_days_acc_median":[],
                                    "review_time_pending_ReviewsWaitingForReviewer_days_acc_median":[],
@@ -201,7 +200,6 @@ class TimeToReviewPendingSCR(Metrics):
 
             reviews = self.db.ExecuteQuery(get_sql(start_month+i))
             values = get_values_median(reviews['newtime'])
-            acc_pending_time_median['pending_reviews'].append(len(reviews['newtime']))
             acc_pending_time_median['review_time_pending_days_acc_median'].append(values)
 
             reviews = self.db.ExecuteQuery(get_sql(start_month+i, True))
