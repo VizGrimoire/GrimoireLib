@@ -208,8 +208,6 @@ class TimeToReviewPendingSCR(Metrics):
             q = self.db.GetSQLGlobal('i.submitted_on', fields, tables, filters,
                         startdate,enddate)
 
-            print(q)
-
             return q
 
         def get_values_median(values):
