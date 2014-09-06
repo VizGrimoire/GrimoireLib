@@ -940,6 +940,7 @@ class SCRQuery(DSQuery):
         filters = filter_bots + " i.id = changes.issue_id "
         filters += " AND people.id = changes.changed_by "
         filters += self.GetSQLReportWhere(type_analysis, identities_db)
+        # Not all merged reviews has this event. 5% not in Wikimedia estimation
         filters += " AND field='status' AND new_value='MERGED' "
         # https://bugzilla.wikimedia.org/show_bug.cgi?id=66283
         filters += " AND summary not like '%WIP%' "
@@ -954,7 +955,8 @@ class SCRQuery(DSQuery):
 
     # Time to review accumulated for pending submissions using submit date or update date
     def GetTimeToReviewPendingQuerySQL (self, startdate, enddate, identities_db = None,
-                                        type_analysis = [], bots = [], updated = False, reviewers = False):
+                                        type_analysis = [], bots = [], updated = False,
+                                        reviewers = False, uploaded = False):
 
         filter_bots = ''
         for bot in bots:
@@ -963,7 +965,10 @@ class SCRQuery(DSQuery):
         fields = "TIMESTAMPDIFF(SECOND, submitted_on, NOW())/(24*3600) AS revtime, submitted_on "
         if (updated):
             fields = "TIMESTAMPDIFF(SECOND, mod_date, NOW())/(24*3600) AS revtime, submitted_on "
+        if (uploaded):
+            fields = "TIMESTAMPDIFF(SECOND, comm.submitted_on, NOW())/(24*3600) AS revtime, i.submitted_on as submitted_on "
         tables = "issues i, people, issues_ext_gerrit ie "
+        if (uploaded): tables += " , comments comm"
         if reviewers:
                 q_last_change = self.get_sql_last_change_for_issues_new()
                 tables += ", changes ch, (%s) t1" % q_last_change
@@ -974,6 +979,7 @@ class SCRQuery(DSQuery):
         # https://bugzilla.wikimedia.org/show_bug.cgi?id=66283
         filters += " AND summary not like '%WIP%' "
         filters += " AND ie.issue_id  = i.id "
+        if (uploaded): filters += " AND comm.issue_id  = i.id AND text like '%Patch Set%Verified%' "
         if reviewers:
                 filters += """
                     AND i.id = ch.issue_id  AND t1.id = ch.id
@@ -983,8 +989,9 @@ class SCRQuery(DSQuery):
 
         if (self.GetIssuesFiltered() != ""): filters += " AND " + self.GetIssuesFiltered()
 
-        filters += " ORDER BY  submitted_on"
-        q = self.GetSQLGlobal('submitted_on', fields, tables, filters,
+        if (uploaded): filters += " GROUP BY comm.issue_id "
+        filters += " ORDER BY  i.submitted_on"
+        q = self.GetSQLGlobal('i.submitted_on', fields, tables, filters,
                               startdate, enddate)
         return(q)
 
@@ -1135,7 +1142,7 @@ class SCRQuery(DSQuery):
     def GetIssuesFiltered(self):
         filters = ""
         if self._filter_submitter_id is not None:
-            filters = " submitted_by <> %s" % (self._filter_submitter_id)
+            filters = " i.submitted_by <> %s" % (self._filter_submitter_id)
         return filters
 
     # To be used for changes table

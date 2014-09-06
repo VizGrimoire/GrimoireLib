@@ -34,6 +34,10 @@ from metrics_filter import MetricFilters
 from SCR import SCR
 
 class TimeToReviewPendingSCR(Metrics):
+    """
+        Update time: last update in a review
+        Upload time: last patch uploaded to the review (not all reviews have patches)
+    """
     id = "review_time_pending_total"
     name = "Total Review Time Pending"
     desc = "Total time to review for pending reviews"
@@ -102,6 +106,33 @@ class TimeToReviewPendingSCR(Metrics):
             ttr_reviewers_median_update = median(removeDecimals(data))
             ttr_reviewers_avg_update = average(removeDecimals(data))
 
+        # Upload time
+        q = self.db.GetTimeToReviewPendingQuerySQL (startdate, enddate,identities_db,
+                                                    type_analysis, bots, False, False, True)
+        data = self.db.ExecuteQuery(q)
+        data = data['revtime']
+        if (isinstance(data, list) == False): data = [data]
+        if (len(data) == 0):
+            ttr_median_update = float("nan")
+            ttr_avg_update = float("nan")
+        else:
+            ttr_median_upload = median(removeDecimals(data))
+            ttr_avg_upload = average(removeDecimals(data))
+
+        # Upload time for reviewers
+        q = self.db.GetTimeToReviewPendingQuerySQL (startdate, enddate, identities_db,
+                                                    type_analysis, bots, False, reviewers_pending, True)
+        data = self.db.ExecuteQuery(q)
+        data = data['revtime']
+        if (isinstance(data, list) == False): data = [data]
+        if (len(data) == 0):
+            ttr_reviewers_median_upload = float("nan")
+            ttr_reviewers_avg_upload = float("nan")
+        else:
+            ttr_reviewers_median_upload = median(removeDecimals(data))
+            ttr_reviewers_avg_upload = average(removeDecimals(data))
+
+
         time_to = {"review_time_pending_days_median":ttr_median,
                    "review_time_pending_days_avg":ttr_avg,
                    "review_time_pending_ReviewsWaitingForReviewer_days_median":ttr_reviewers_median,
@@ -109,7 +140,11 @@ class TimeToReviewPendingSCR(Metrics):
                    "review_time_pending_update_days_median":ttr_median_update,
                    "review_time_pending_update_days_avg":ttr_avg_update,
                    "review_time_pending_update_ReviewsWaitingForReviewer_days_median":ttr_reviewers_median_update,
-                   "review_time_pending_update_ReviewsWaitingForReviewer_days_avg":ttr_reviewers_avg_update
+                   "review_time_pending_update_ReviewsWaitingForReviewer_days_avg":ttr_reviewers_avg_update,
+                   "review_time_pending_upload_days_median":ttr_median_upload,
+                   "review_time_pending_upload_days_avg":ttr_avg_upload,
+                   "review_time_pending_upload_ReviewsWaitingForReviewer_days_median":ttr_reviewers_median_upload,
+                   "review_time_pending_upload_ReviewsWaitingForReviewer_days_avg":ttr_reviewers_avg_upload
                    }
         return time_to
 
@@ -128,14 +163,17 @@ class TimeToReviewPendingSCR(Metrics):
             return (current)
 
         # SQL for all, for updated  or for waiting for reviewer reviews
-        def get_sql(month, updated=False, reviewers = False):
+        def get_sql(month, updated=False, reviewers = False, uploaded = False):
             current = get_date_from_month(month)
             # List of pending reviews before a date: time from new time and from last update
             fields  = "TIMESTAMPDIFF(SECOND, submitted_on, '"+current+"')/(24*3600) AS newtime,"
             if (updated):
                 fields = "TIMESTAMPDIFF(SECOND, mod_date, '"+current+"')/(24*3600) AS updatetime,"
-            fields += " YEAR(submitted_on)*12+MONTH(submitted_on) as month"
+            if (uploaded):
+                fields = "TIMESTAMPDIFF(SECOND, comm.submitted_on, '"+current+"')/(24*3600) AS uploadtime,"
+            fields += " YEAR(i.submitted_on)*12+MONTH(i.submitted_on) as month"
             tables = "issues i, people, issues_ext_gerrit ie "
+            if (uploaded): tables += ", comments comm"
             if reviewers:
                 q_last_change = self.db.get_sql_last_change_for_issues_new()
                 tables += ", changes ch, (%s) t1" % q_last_change
@@ -146,6 +184,7 @@ class TimeToReviewPendingSCR(Metrics):
             # https://bugzilla.wikimedia.org/show_bug.cgi?id=66283
             filters += " AND summary not like '%WIP%' "
             filters += " AND ie.issue_id  = i.id "
+            if (uploaded): filters += " AND comm.issue_id  = i.id AND comm.text like '%Patch Set%Verified%' "
             if reviewers:
                 filters += """
                     AND i.id = ch.issue_id  AND t1.id = ch.id
@@ -160,11 +199,17 @@ class TimeToReviewPendingSCR(Metrics):
             # Not include future submissions for current month analysis
             if (updated):
                 filters += " AND updatetime >= 0"
+            elif (uploaded):
+                filters += " AND uploadtime >= 0"
             else:
                 filters += " AND newtime >= 0"
-            filters += " ORDER BY  submitted_on"
-            q = self.db.GetSQLGlobal('submitted_on', fields, tables, filters,
+            if (uploaded): " GROUP by comm.issued_id "
+            filters += " ORDER BY  i.submitted_on"
+            q = self.db.GetSQLGlobal('i.submitted_on', fields, tables, filters,
                         startdate,enddate)
+
+            print(q)
+
             return q
 
         def get_values_median(values):
@@ -192,23 +237,28 @@ class TimeToReviewPendingSCR(Metrics):
         end_month = end.year*12 + end.month
         months = end_month - start_month
         acc_pending_time_median = {"month":[],
-                                   "pending_reviews":[],
                                    "review_time_pending_days_acc_median":[],
                                    "review_time_pending_update_days_acc_median":[],
+                                   "review_time_pending_upload_days_acc_median":[],
                                    "review_time_pending_ReviewsWaitingForReviewer_days_acc_median":[],
-                                   "review_time_pending_update_ReviewsWaitingForReviewer_days_acc_median":[]}
+                                   "review_time_pending_update_ReviewsWaitingForReviewer_days_acc_median":[],
+                                   "review_time_pending_upload_ReviewsWaitingForReviewer_days_acc_median":[]}
 
         for i in range(0, months+1):
             acc_pending_time_median['month'].append(start_month+i)
 
             reviews = self.db.ExecuteQuery(get_sql(start_month+i))
             values = get_values_median(reviews['newtime'])
-            acc_pending_time_median['pending_reviews'].append(len(reviews['newtime']))
             acc_pending_time_median['review_time_pending_days_acc_median'].append(values)
 
             reviews = self.db.ExecuteQuery(get_sql(start_month+i, True))
             values = get_values_median(reviews['updatetime'])
             acc_pending_time_median['review_time_pending_update_days_acc_median'].append(values)
+
+            # upload time
+            reviews = self.db.ExecuteQuery(get_sql(start_month+i, False, False, True))
+            values = get_values_median(reviews['uploadtime'])
+            acc_pending_time_median['review_time_pending_upload_days_acc_median'].append(values)
 
             # Now just for reviews waiting for Reviewer
             reviews = self.db.ExecuteQuery(get_sql(start_month+i, False, True))
@@ -218,6 +268,10 @@ class TimeToReviewPendingSCR(Metrics):
             reviews = self.db.ExecuteQuery(get_sql(start_month+i, True, True))
             values = get_values_median(reviews['updatetime'])
             acc_pending_time_median['review_time_pending_update_ReviewsWaitingForReviewer_days_acc_median'].append(values)
+
+            reviews = self.db.ExecuteQuery(get_sql(start_month+i, False, True, True))
+            values = get_values_median(reviews['uploadtime'])
+            acc_pending_time_median['review_time_pending_upload_ReviewsWaitingForReviewer_days_acc_median'].append(values)
 
         # Normalize values removing NA and converting to 0. Maybe not a good idea.
         for m in acc_pending_time_median.keys():
