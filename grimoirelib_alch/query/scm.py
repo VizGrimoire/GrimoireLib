@@ -146,10 +146,19 @@ class Query (GrimoireQuery):
 
 
     def select_nscmlog(self, variables):
-        """Select a variable which is a field in SCMLog.
+        """Select a column which is a field in SCMLog.
 
-        - variables (list): variables to select
-            Currently supported: "commits", "authors", "committers"
+        Parameters
+        ----------
+
+        variables: { "commits", "authors", "committers" }
+           Columns (variables) to select
+
+        Returns
+        -------
+
+        Query object
+
         """
 
         if not isinstance(variables, (list, tuple)):
@@ -176,13 +185,6 @@ class Query (GrimoireQuery):
                                   func.count(func.distinct(field))))
         return self.add_columns (*fields)
 
-    def select_distinct_commits(self):
-        """Select distinct commits, according to the 
-
-        - variables (list): variables to select
-            Currently supported: "commits", "authors", "committers"
-        """
-
     def select_listcommits(self):
         """Select a list of commits"""
         
@@ -195,11 +197,19 @@ class Query (GrimoireQuery):
     def select_listpersons_uid(self, kind = "all"):
         """Select a list of persons (authors, committers), using uids
 
-        - kind: kind of person to select
-           authors: authors of commits
-           committers: committers of commits
-           all: authors and committers
-        Returns a Query object, with (id, name, email) selected.
+        Parameters
+        ----------
+        
+        kind: { "authors", "committers", "all" }
+           Kind of person to select: authors (authors of commits),
+           committers (committers of commits),
+           all (authors and committers)
+          
+        Returns
+        -------
+
+        Query object: with (id, name, email) selected.
+
         """
         
         query = self.add_columns (label("id", func.distinct(DB.UPeople.id)),
