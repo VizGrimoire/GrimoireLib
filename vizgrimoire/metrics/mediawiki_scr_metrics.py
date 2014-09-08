@@ -113,8 +113,8 @@ class TimeToReviewPendingSCR(Metrics):
         data = data['revtime']
         if (isinstance(data, list) == False): data = [data]
         if (len(data) == 0):
-            ttr_median_update = float("nan")
-            ttr_avg_update = float("nan")
+            ttr_median_upload = float("nan")
+            ttr_avg_upload = float("nan")
         else:
             ttr_median_upload = median(removeDecimals(data))
             ttr_avg_upload = average(removeDecimals(data))
