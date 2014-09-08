@@ -64,7 +64,7 @@ class TestSCMQuery (unittest.TestCase):
         """Test select_ncsmlog"""
 
         self._test_select_nscmlog (["commits",],
-                                   [[(4465L,)], [(4206L,)]])
+                                   [[(3646L,)], [(3405L,)]])
         self._test_select_nscmlog (["authors",],
                                    [[(14L,)], [(14L,)]])
         self._test_select_nscmlog (["committers",],
@@ -224,11 +224,11 @@ class TestSCMQuery (unittest.TestCase):
         res = self.session.query().select_nscmlog(["commits"]) \
             .filter_persons ([2,3]) \
             .all()
-        self.assertEqual (res, [(1898L,)])
+        self.assertEqual (res, [(1303L,)])
         res = self.session.query().select_nscmlog(["commits"]) \
             .filter_persons ([1,2], "committers") \
             .all()
-        self.assertEqual (res, [(3307L,)])
+        self.assertEqual (res, [(2515L,)])
 
     def test_filter_paths (self):
         """Test filter_paths"""
@@ -236,11 +236,11 @@ class TestSCMQuery (unittest.TestCase):
         res = self.session.query().select_nscmlog(["commits"]) \
             .filter_paths (("examples",)) \
             .all()
-        self.assertEqual (res, [(996L,)])
+        self.assertEqual (res, [(708L,)])
         res = self.session.query().select_nscmlog(["commits"]) \
             .filter_paths (("src", "examples",)) \
             .all()
-        self.assertEqual (res, [(2411L,)])
+        self.assertEqual (res, [(1787L,)])
 
 
     def test_group_by_repo (self):

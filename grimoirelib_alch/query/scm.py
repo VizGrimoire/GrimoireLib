@@ -162,7 +162,7 @@ class Query (GrimoireQuery):
         for variable in variables:
             if variable == "commits":
                 name = "nocommits"
-                field = DB.SCMLog.id
+                field = DB.SCMLog.rev
             elif variable == "authors":
                 name = "nauthors"
                 field = DB.SCMLog.author_id
@@ -175,6 +175,13 @@ class Query (GrimoireQuery):
             fields.append (label (name,
                                   func.count(func.distinct(field))))
         return self.add_columns (*fields)
+
+    def select_distinct_commits(self):
+        """Select distinct commits, according to the 
+
+        - variables (list): variables to select
+            Currently supported: "commits", "authors", "committers"
+        """
 
     def select_listcommits(self):
         """Select a list of commits"""
