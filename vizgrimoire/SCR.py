@@ -253,7 +253,9 @@ class SCR(DataSource):
         # For repos aggregated data. Include metrics to sort in javascript.
         if (filter_name == "repository"):
             items_list = {"name":[],"review_time_days_median":[],"submitted":[],
-                          "review_time_pending_update_ReviewsWaitingForReviewer_days_median":[]}
+                          "review_time_pending_update_ReviewsWaitingForReviewer_days_median":[],
+                          "review_time_pending_upload_ReviewsWaitingForReviewer_days_median":[],
+                          }
         else:
             items_list = items
 
@@ -276,6 +278,7 @@ class SCR(DataSource):
             createJSON(agg, fn)
             if (filter_name == "repository"):
                 items_list["review_time_pending_update_ReviewsWaitingForReviewer_days_median"].append(agg['review_time_pending_update_ReviewsWaitingForReviewer_days_median'])
+                items_list["review_time_pending_upload_ReviewsWaitingForReviewer_days_median"].append(agg['review_time_pending_upload_ReviewsWaitingForReviewer_days_median'])
                 if 'submitted' in agg: 
                     items_list["submitted"].append(agg["submitted"])
                 else: items_list["submitted"].append("NA")

@@ -119,6 +119,7 @@ class TimeToReviewPendingSCR(Metrics):
             ttr_median_upload = median(removeDecimals(data))
             ttr_avg_upload = average(removeDecimals(data))
 
+
         # Upload time for reviewers
         q = self.db.GetTimeToReviewPendingQuerySQL (startdate, enddate, identities_db,
                                                     type_analysis, bots, False, reviewers_pending, True)
