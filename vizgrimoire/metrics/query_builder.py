@@ -1186,7 +1186,7 @@ class SCRQuery(DSQuery):
     def GetReviewsSQL (self, period, startdate, enddate, type_, type_analysis, evolutionary):
         #Building the query
         fields = " count(distinct(i.issue)) as " + type_
-        tables = "issues i" +  self.GetSQLReportFrom(type_analysis)
+        tables = "issues i, issues_ext_gerrit ie" +  self.GetSQLReportFrom(type_analysis)
         if type_ == "submitted": filters = ""
         elif type_ == "opened": filters = " (i.status = 'NEW' or i.status = 'WORKINPROGRESS') "
         elif type_ == "new": filters = " i.status = 'NEW' "
@@ -1194,11 +1194,20 @@ class SCRQuery(DSQuery):
         elif type_ == "closed": filters = " (i.status = 'MERGED' or i.status = 'ABANDONED') "
         elif type_ == "merged": filters = " i.status = 'MERGED' "
         elif type_ == "abandoned": filters = " i.status = 'ABANDONED' "
-        filters += self.GetSQLReportWhere(type_analysis)
+        filters += self.GetSQLReportWhere(type_analysis) + " AND i.id = ie.issue_id "
 
         if (self.GetIssuesFiltered() != ""): filters += " AND " + self.GetIssuesFiltered()
 
-        q = self.BuildQuery (period, startdate, enddate, "i.submitted_on", fields, tables, filters, evolutionary, type_analysis)
+        date_field = "i.submitted_on"
+        if type_ in ["closed", "merged", "abandoned"]: date_field = "ie.mod_date"
+        # Not include reviews before startdate no matter mod_date is after startdate
+        from report import Report
+        start_analysis = Report.get_start_date()
+        if 'scr_start_date' in Report.get_config()['r']:
+            start_analysis = Report.get_config()['r']['scr_start_date']
+        filters += " AND i.submitted_on >= '" + start_analysis  + "'"
+
+        q = self.BuildQuery (period, startdate, enddate, date_field, fields, tables, filters, evolutionary, type_analysis)
 
         return q
 
