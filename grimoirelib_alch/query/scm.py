@@ -400,6 +400,26 @@ class Query (GrimoireQuery):
             )
         return query
 
+    def select_nfiles(self):
+        """Select number of files in repo.
+
+        The Actions table is used because we just want the number of
+        files, considering eg. a file moved to a new pathname as the
+        same file.
+
+        Returns
+        -------
+
+        Query object
+
+        """
+
+        query = self.add_columns (
+            label("nfiles",
+                  func.count(func.distinct(DB.Actions.file_id)))
+            )
+        return query
+
     def select_listbranches(self):
         """Select list of branches in repo
 
@@ -413,6 +433,46 @@ class Query (GrimoireQuery):
                                   label("name",
                                         DB.Branches.name))
         query = query.join(DB.Branches)
+        return query
+
+    def select_repos (self, count = False, distinct = False, names = False):
+        """Select repositories data for each commit
+
+        Include repository ids and names (if names is True)
+        as columns in SELECT. The new columns are "repo" (id) and "name".
+        If distinct is True, select distinct repository ids.
+        If count is True, select the number of repositoy ids.
+
+        Parameters
+        ----------
+
+        count: Boolean
+           Produce count of repositories instead of list
+        distinct: Boolean
+           Select distinct repository ids.
+        names: Boolean
+           Include names of repositories as a column (or not).
+
+        Returns
+        -------
+
+        Query: with new new columns in SELECT
+        
+        """
+
+        id_field = DB.SCMLog.repository_id
+        if distinct:
+            id_field = func.distinct(id_field)
+        if count:
+            id_field = func.count(id_field)
+        query = self.add_columns (label("repo", id_field))
+        if names:
+            query = query.add_columns (label("name", DB.Repositories.name))
+            if DB.Repositories not in self.joined:
+                self.joined.append (DB.Repositories)
+                query = query.join (
+                    DB.Repositories,
+                    DB.SCMLog.repository_id == DB.Repositories.id)
         return query
 
     def filter_nomerges (self):
@@ -540,8 +600,17 @@ class Query (GrimoireQuery):
     def filter_paths (self, list):
         """Fiter for a certain list of paths
 
-        - list: list of strings (start of paths to filter)
-        Returns a Query object.
+        Parameters
+        ----------
+
+        list: list of strings
+          Prefixes of paths to filter
+
+        Returns
+        -------
+
+        Query object.
+
         """
 
         conditions = []
@@ -592,24 +661,29 @@ class Query (GrimoireQuery):
 
         return self.group_by("person_id")
 
-
     def group_by_repo (self, names = False):
         """Group by repository
 
-        - names: include names of repositories as a column
+        Include repository ids and names (if names is True)
+        as columns in SELECT, grouping by repository ids. The new
+        columns are "repo" (id) and "name".
 
-        Returns a Query with new columns (repository id,
-        and repository name, if names is True), grouped by
-        repository id."""
+        Parameters
+        ----------
 
-        query = self.add_columns (label("repo", DB.SCMLog.repository_id))
-        if names:
-            query = query.add_columns (label("name", DB.Repositories.name)) \
-                .join (DB.Repositories,
-                       DB.SCMLog.repository_id == DB.Repositories.id)
+        names: Boolean
+           Include names of repositories as a column (or not).
+        
+        Returns
+        -------
+
+        Query: with new new columns in SELECT
+        
+        """
+
+        query = self.select_repos (names = names)
         query = query.group_by("repo").order_by("repo")
         return query
-
 
     def timeseries (self):
         """Return a TimeSeries object.
@@ -819,3 +893,4 @@ if __name__ == "__main__":
     res = resAuth.filter_paths(("examples",))
     print res.all()
 
+    

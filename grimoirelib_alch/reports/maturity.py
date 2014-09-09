@@ -23,10 +23,21 @@
 ##   Jesus M. Gonzalez-Barahona <jgb@bitergia.com>
 ##
 
+from datetime import datetime, timedelta
+
+analysis_date = datetime(2014,2,1)
+
+# Dictionary to store values for maturity metrics 
+values = {}
+# Dictionary to store time series for maturity metrics
+timeseries = {}
+
 if __name__ == "__main__":
 
     from grimoirelib_alch.query.scm import DB as SCMDatabase
-    from grimoirelib_alch.family.scm import SCM, NomergesCondition
+    from grimoirelib_alch.family.scm import (
+        SCM, NomergesCondition, PeriodCondition, BranchesCondition
+        )
     from grimoirelib_alch.aux.standalone import stdout_utf8, print_banner
     from grimoirelib_alch.aux.reports import create_report
 
@@ -36,19 +47,28 @@ if __name__ == "__main__":
     database = SCMDatabase (url = "mysql://jgb:XXX@localhost/",
                    schema = "vizgrimoire_cvsanaly",
                    schema_id = "vizgrimoire_cvsanaly")
+    session = database.build_session()
 
     #---------------------------------
-    print_banner ("Number of commits (timeseries, total)")
+    print_banner ("SCM_COMMITS_1M: Number of commits during last month")
     nomerges = NomergesCondition()
-    data = SCM (datasource = database,
+    last_month = PeriodCondition (start = analysis_date - timedelta(days=30),
+                                  end = analysis_date,
+                                  date = "author"
+                                  )
+    master = BranchesCondition (branches = ("master",))
+    ncommits = SCM (datasource = session,
+                    name = "ncommits",
+                    conditions = (nomerges, last_month, master))
+    values ["scm_commits_1m"] = ncommits.total()
+    ncommits = SCM (datasource = session,
                 name = "ncommits",
-                conditions = (nomerges,))
-    print data.timeseries()
-    print data.total()
+                conditions = (nomerges, master))
+    timeseries ["scm_commits_1m"] = ncommits.timeseries()
 
     report = {
-        prefix + 'timeseries.json': data.timeseries(),
-        prefix + 'total.json': data.total()
+        prefix + 'values.json': values,
+        prefix + 'timeseries.json': timeseries,
         }
 
     create_report (report_files = report, destdir = '/tmp/')
