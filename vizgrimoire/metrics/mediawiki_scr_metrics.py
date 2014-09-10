@@ -171,7 +171,7 @@ class TimeToReviewPendingSCR(Metrics):
             if (updated):
                 fields = "TIMESTAMPDIFF(SECOND, mod_date, '"+current+"')/(24*3600) AS updatetime,"
             if (uploaded):
-                fields = "TIMESTAMPDIFF(SECOND, comm.submitted_on, '"+current+"')/(24*3600) AS uploadtime,"
+                fields = "MIN(TIMESTAMPDIFF(SECOND, comm.submitted_on, '"+current+"')/(24*3600)) AS uploadtime,"
             fields += " YEAR(i.submitted_on)*12+MONTH(i.submitted_on) as month"
             tables = "issues i, people, issues_ext_gerrit ie "
             if (uploaded): tables += ", comments comm"

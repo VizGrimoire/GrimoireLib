@@ -966,7 +966,7 @@ class SCRQuery(DSQuery):
         if (updated):
             fields = "TIMESTAMPDIFF(SECOND, mod_date, NOW())/(24*3600) AS revtime, submitted_on "
         if (uploaded):
-            fields = "TIMESTAMPDIFF(SECOND, comm.submitted_on, NOW())/(24*3600) AS revtime, i.submitted_on as submitted_on "
+            fields = "MIN(TIMESTAMPDIFF(SECOND, comm.submitted_on, NOW())/(24*3600)) AS revtime, i.submitted_on as submitted_on "
         tables = "issues i, people, issues_ext_gerrit ie "
         if (uploaded): tables += " , comments comm"
         if reviewers:

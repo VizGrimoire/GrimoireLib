@@ -244,7 +244,6 @@ class SCR(DataSource):
         items = SCR.get_filter_items(filter_, startdate, enddate, identities_db)
         if (items == None): return
         items = items['name']
-        items = ['gerrit.wikimedia.org_mediawiki/extensions/TorBlock']
 
         filter_name = filter_.get_name()
 
