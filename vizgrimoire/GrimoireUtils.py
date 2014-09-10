@@ -193,6 +193,11 @@ def completePeriodIds(ts_data, period, startdate, enddate):
     enddate = enddate.replace("'", "")
     start = datetime.strptime(startdate, "%Y-%m-%d")
     end = datetime.strptime(enddate, "%Y-%m-%d")
+    # In order to use the same approach in the whole GrimoireLib, the last day
+    # specified when retrieving datasets is always ignored. What means that
+    # GrimoireLib is using date >= startdate and date < enddate.
+    # For this reason, a day is substracted from the end date
+    end = end - timedelta(days=1)
 
     if period == "week":
         new_ts_data = completePeriodIdsWeeks(ts_data, start, end)
