@@ -195,6 +195,9 @@ class TimeToReviewPendingSCR(Metrics):
 
             if (self.db.GetIssuesFiltered() != ""): filters += " AND " + self.db.GetIssuesFiltered()
 
+            if (uploaded):
+                filters +=  " GROUP by comm.issue_id "
+
             # All reviews before the month: accumulated key point
             filters += " HAVING month<= " + str(month)
             # Not include future submissions for current month analysis
@@ -204,11 +207,9 @@ class TimeToReviewPendingSCR(Metrics):
                 filters += " AND uploadtime >= 0"
             else:
                 filters += " AND newtime >= 0"
-            if (uploaded): " GROUP by comm.issued_id "
             filters += " ORDER BY  i.submitted_on"
             q = self.db.GetSQLGlobal('i.submitted_on', fields, tables, filters,
                         startdate,enddate)
-
             return q
 
         def get_values_median(values):
