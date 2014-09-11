@@ -347,9 +347,6 @@ class ReviewsWaitingForReviewerTS(Metrics):
             q = self.db.GetSQLGlobal('i.submitted_on', fields, tables, filters,
                                      startdate, enddate)
 
-            print(q)
-
-
             rs = self.db.ExecuteQuery(q)
             return rs['pending']
 
