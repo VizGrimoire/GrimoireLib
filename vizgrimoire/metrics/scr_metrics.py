@@ -288,6 +288,99 @@ class PatchesWaitingForSubmitter(Metrics):
                                             self.filters.type_analysis, evolutionary)
         return q
 
+class ReviewsWaitingForReviewerTS(Metrics):
+    id = "ReviewsWaitingForReviewer_ts"
+    name = "Reviews waiting for reviewer"
+    desc = "Number of preview processes waiting for reviewer"
+    data_source = SCR
+
+    def get_ts(self):
+        from datetime import datetime
+
+        def get_date_from_month(monthid):
+            # month format: year*12+month
+            year = (monthid-1) / 12
+            month = monthid - year*12
+            # We need the last day of the month
+            import calendar
+            last_day = calendar.monthrange(year, month)[1]
+            current = str(year)+"-"+str(month)+"-"+str(last_day)
+            return (current)
+
+
+        def get_pending(month):
+            current = get_date_from_month(month)
+
+            # Last change to review move responsibility to reviewer
+            q_last_change = """
+                SELECT c.issue_id as issue_id,  max(c.id) as id
+                FROM changes c, issues i
+                WHERE c.issue_id = i.id and field<>'status'
+                GROUP BY c.issue_id
+            """
+
+            # CLOSED
+            q_closed  = "SELECT i.id as closed FROM issues i, issues_ext_gerrit ie "
+            q_closed += "WHERE submitted_on > " + startdate +" AND i.id = ie.issue_id"
+            q_closed += " AND (status='MERGED' OR status='ABANDONED') "
+            # closed date is the mod_date for merged and abandoned reviews
+            q_closed += " AND mod_date <= '"+current+"'"
+
+            fields = "COUNT(i.id) as pending"
+
+            tables = " issues i, changes c "
+            # Select last change for the review to see if reviewer should work now
+            tables += ", (" + q_last_change + ") t1 "
+            tables = tables + self.db.GetSQLReportFrom(identities_db, type_analysis)
+
+            # Pending (NEW = submitted-merged-abandoned) REVIEWS
+            filters = " i.submitted_on <= '"+current+"'"
+            filters += self.db.GetSQLReportWhere(type_analysis, self.db.identities_db)
+            # remove closed reviews
+            filters += " AND i.id NOT IN ("+ q_closed +")"
+            # select last_change
+            filters += " AND i.id = c.issue_id  AND t1.id = c.id"
+            # last change should move responsibility to reviewer
+            filters += " AND (c.field='CRVW' or c.field='Code-Review' or c.field='Verified' or c.field='VRIF')"
+            filters += " AND (c.new_value=1 or c.new_value=2)"
+
+            q = self.db.GetSQLGlobal('i.submitted_on', fields, tables, filters,
+                                     startdate, enddate)
+
+            print(q)
+
+
+            rs = self.db.ExecuteQuery(q)
+            return rs['pending']
+
+        pending = {"month":[],
+                   "ReviewsWaitingForReviewer_ts":[]}
+
+        startdate = self.filters.startdate
+        enddate = self.filters.enddate
+        period = self.filters.period
+        identities_db = self.db.identities_db
+        type_analysis =  self.filters.type_analysis
+
+        start = datetime.strptime(startdate, "'%Y-%m-%d'")
+        end = datetime.strptime(enddate, "'%Y-%m-%d'")
+
+        if (period != "month"):
+            logging.error("Period not supported in " + self.id  + " " + period)
+            return {}
+
+        start_month = start.year*12 + start.month
+        end_month = end.year*12 + end.month
+        months = end_month - start_month
+
+        for i in range(0, months+1):
+            pending['month'].append(start_month+i)
+            pending_month = get_pending(start_month+i)
+            pending['ReviewsWaitingForReviewer_ts'].append(pending_month)
+        print(pending)
+
+        return pending
+
 class ReviewsWaitingForReviewer(Metrics):
     id = "ReviewsWaitingForReviewer"
     name = "Reviews waiting for reviewer"
