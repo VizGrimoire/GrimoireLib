@@ -374,7 +374,6 @@ class ReviewsWaitingForReviewerTS(Metrics):
             pending['month'].append(start_month+i)
             pending_month = get_pending(start_month+i)
             pending['ReviewsWaitingForReviewer_ts'].append(pending_month)
-        print(pending)
 
         return pending
 
