@@ -328,7 +328,7 @@ class ReviewsWaitingForReviewerTS(Metrics):
 
             fields = "COUNT(i.id) as pending"
 
-            tables = " issues i, changes c "
+            tables = " issues i, changes ch "
             # Select last change for the review to see if reviewer should work now
             tables += ", (" + q_last_change + ") t1 "
             tables = tables + self.db.GetSQLReportFrom(identities_db, type_analysis)
@@ -339,10 +339,10 @@ class ReviewsWaitingForReviewerTS(Metrics):
             # remove closed reviews
             filters += " AND i.id NOT IN ("+ q_closed +")"
             # select last_change
-            filters += " AND i.id = c.issue_id  AND t1.id = c.id"
+            filters += " AND i.id = ch.issue_id  AND t1.id = ch.id"
             # last change should move responsibility to reviewer
-            filters += " AND (c.field='CRVW' or c.field='Code-Review' or c.field='Verified' or c.field='VRIF')"
-            filters += " AND (c.new_value=1 or c.new_value=2)"
+            filters += " AND (ch.field='CRVW' or ch.field='Code-Review' or ch.field='Verified' or ch.field='VRIF')"
+            filters += " AND (ch.new_value=1 or ch.new_value=2)"
 
             q = self.db.GetSQLGlobal('i.submitted_on', fields, tables, filters,
                                      startdate, enddate)
