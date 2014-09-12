@@ -315,9 +315,10 @@ class ReviewsWaitingForReviewerTS(Metrics):
             q_last_change = """
                 SELECT c.issue_id as issue_id,  max(c.id) as id
                 FROM changes c, issues i
-                WHERE c.issue_id = i.id and field<>'status'
+                WHERE c.issue_id = i.id AND field<>'status'
+                  AND changed_on <= '%s'
                 GROUP BY c.issue_id
-            """
+            """ % (current)
 
             # CLOSED
             # A review closed is never reopened so closed backlog is closed evolution
@@ -345,8 +346,7 @@ class ReviewsWaitingForReviewerTS(Metrics):
                 # select last_change
                 filters += " AND i.id = ch.issue_id  AND t1.id = ch.id"
                 # last change should move responsibility to reviewer
-                filters += " AND (ch.field='CRVW' or ch.field='Code-Review' or ch.field='Verified' or ch.field='VRIF')"
-                filters += " AND (ch.new_value=1 or ch.new_value=2)"
+                filters += " AND NOT (ch.field = 'Code-Review' AND ch.new_value = '-1')"
 
             q = self.db.GetSQLGlobal('i.submitted_on', fields, tables, filters,
                                      startdate, enddate)
