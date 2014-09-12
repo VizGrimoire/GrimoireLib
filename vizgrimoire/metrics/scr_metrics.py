@@ -308,7 +308,7 @@ class ReviewsWaitingForReviewerTS(Metrics):
             return (current)
 
 
-        def get_pending(month):
+        def get_pending(month, reviewers = False):
             current = get_date_from_month(month)
 
             # Last change to review move responsibility to reviewer
@@ -320,6 +320,7 @@ class ReviewsWaitingForReviewerTS(Metrics):
             """
 
             # CLOSED
+            # A review closed is never reopened so closed backlog is closed evolution
             q_closed  = "SELECT i.id as closed FROM issues i, issues_ext_gerrit ie "
             q_closed += "WHERE submitted_on > " + startdate +" AND i.id = ie.issue_id"
             q_closed += " AND (status='MERGED' OR status='ABANDONED') "
@@ -328,9 +329,10 @@ class ReviewsWaitingForReviewerTS(Metrics):
 
             fields = "COUNT(i.id) as pending"
 
-            tables = " issues i, changes ch "
+            tables = " issues i "
             # Select last change for the review to see if reviewer should work now
-            tables += ", (" + q_last_change + ") t1 "
+            if reviewers:
+                tables += ", changes ch, (" + q_last_change + ") t1 "
             tables = tables + self.db.GetSQLReportFrom(identities_db, type_analysis)
 
             # Pending (NEW = submitted-merged-abandoned) REVIEWS
@@ -338,11 +340,13 @@ class ReviewsWaitingForReviewerTS(Metrics):
             filters += self.db.GetSQLReportWhere(type_analysis, self.db.identities_db)
             # remove closed reviews
             filters += " AND i.id NOT IN ("+ q_closed +")"
-            # select last_change
-            filters += " AND i.id = ch.issue_id  AND t1.id = ch.id"
-            # last change should move responsibility to reviewer
-            filters += " AND (ch.field='CRVW' or ch.field='Code-Review' or ch.field='Verified' or ch.field='VRIF')"
-            filters += " AND (ch.new_value=1 or ch.new_value=2)"
+
+            if reviewers:
+                # select last_change
+                filters += " AND i.id = ch.issue_id  AND t1.id = ch.id"
+                # last change should move responsibility to reviewer
+                filters += " AND (ch.field='CRVW' or ch.field='Code-Review' or ch.field='Verified' or ch.field='VRIF')"
+                filters += " AND (ch.new_value=1 or ch.new_value=2)"
 
             q = self.db.GetSQLGlobal('i.submitted_on', fields, tables, filters,
                                      startdate, enddate)
@@ -351,6 +355,7 @@ class ReviewsWaitingForReviewerTS(Metrics):
             return rs['pending']
 
         pending = {"month":[],
+                   "ReviewsWaiting_ts":[],
                    "ReviewsWaitingForReviewer_ts":[]}
 
         startdate = self.filters.startdate
@@ -373,7 +378,9 @@ class ReviewsWaitingForReviewerTS(Metrics):
         for i in range(0, months+1):
             pending['month'].append(start_month+i)
             pending_month = get_pending(start_month+i)
-            pending['ReviewsWaitingForReviewer_ts'].append(pending_month)
+            pending_reviewers_month = get_pending(start_month+i, True)
+            pending['ReviewsWaiting_ts'].append(pending_month)
+            pending['ReviewsWaitingForReviewer_ts'].append(pending_reviewers_month)
 
         return pending
 
