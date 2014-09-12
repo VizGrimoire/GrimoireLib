@@ -82,6 +82,51 @@ class Query (ITSQuery):
 
     """
 
+    def select_changes (self, count = False, distinct = False,
+                        changers = False):
+        """Select fields from changes
+
+        Include fields in Changes table as columns in SELECT. If changers
+        is True, include who did the change.
+        If distinct is True, select distinct change ids.
+        If count is True, select the number of change ids.
+
+        Parameters
+        ----------
+
+        count: bool
+           Produce count of changes instead of list
+        distinct: bool
+           Select distinct change ids.
+        names: bool
+           Include id of changer as a column (or not).
+
+        Returns
+        -------
+
+        Query
+            Including new columns in SELECT
+        
+        """
+
+        id_field = DB.Changes.id
+        if distinct:
+            id_field = func.distinct(id_field)
+        if count:
+            id_field = func.count(id_field)
+        query = self.add_columns (
+            label("id", id_field),
+            label("issue_id", DB.Changes.issue_id),
+            label("field", DB.Changes.field),
+            label("old_value", DB.Changes.old_value),
+            label("new_value", DB.Changes.new_value),
+            label("date", DB.Changes.changed_on)
+        )
+        if changers:
+            query = query.add_columns (
+                label("changed_by", DB.Changes.changed_by))
+        return query
+
 
 if __name__ == "__main__":
 
@@ -103,3 +148,8 @@ if __name__ == "__main__":
     for row in res.limit(10).all():
         print row.person_id, row.name, row.email
 
+    res = session.query() \
+        .select_changes()
+    print res
+    for row in res.limit(10).all():
+        print row.id, row.issue_id, row.field, row.old_value, row.new_value, row.date
