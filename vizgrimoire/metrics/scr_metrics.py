@@ -394,17 +394,17 @@ class ReviewsWaitingForReviewer(Metrics):
         q_last_change = self.db.get_sql_last_change_for_issues_new()
 
         fields = "COUNT(DISTINCT(i.id)) as ReviewsWaitingForReviewer"
-        tables = "changes c, issues i, (%s) t1" % q_last_change
+        tables = "changes ch, issues i, (%s) t1" % q_last_change
         tables += self.db.GetSQLReportFrom(self.db.identities_db, self.filters.type_analysis)
         filters = """
-            i.id = c.issue_id  AND t1.id = c.id
-            AND (c.field='CRVW' or c.field='Code-Review' or c.field='Verified' or c.field='VRIF')
-            AND (c.new_value=1 or c.new_value=2)
+            i.id = ch.issue_id  AND t1.id = ch.id
+            AND NOT (ch.field = 'Code-Review' AND ch.new_value = '-1')
         """
+
         filters = filters + self.db.GetSQLReportWhere(self.filters.type_analysis, self.db.identities_db)
 
         q = self.db.BuildQuery (self.filters.period, self.filters.startdate,
-                                self.filters.enddate, " c.changed_on",
+                                self.filters.enddate, " i.submitted_on",
                                 fields, tables, filters, evolutionary)
         return(q)
 
