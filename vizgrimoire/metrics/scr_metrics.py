@@ -347,6 +347,8 @@ class ReviewsWaitingForReviewerTS(Metrics):
                 filters += " AND i.id = ch.issue_id  AND t1.id = ch.id"
                 # last change should move responsibility to reviewer
                 filters += " AND NOT (ch.field = 'Code-Review' AND ch.new_value = '-1')"
+                filters += " AND NOT (ch.field = 'Code-Review' AND ch.new_value = '-2')"
+                filters += " AND summary not like '%WIP%' "
 
             q = self.db.GetSQLGlobal('i.submitted_on', fields, tables, filters,
                                      startdate, enddate)
@@ -399,6 +401,8 @@ class ReviewsWaitingForReviewer(Metrics):
         filters = """
             i.id = ch.issue_id  AND t1.id = ch.id
             AND NOT (ch.field = 'Code-Review' AND ch.new_value = '-1')
+            AND NOT (ch.field = 'Code-Review' AND ch.new_value = '-2')
+            AND summary not like '%WIP%'
         """
 
         filters = filters + self.db.GetSQLReportWhere(self.filters.type_analysis, self.db.identities_db)
@@ -409,6 +413,7 @@ class ReviewsWaitingForReviewer(Metrics):
         return(q)
 
 
+# Review this metrics according to ReviewsWaitingForReviewer
 class ReviewsWaitingForSubmitter(Metrics):
     id = "ReviewsWaitingForSubmitter"
     name = "Reviews waiting for submitter"
