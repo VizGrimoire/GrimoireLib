@@ -970,21 +970,22 @@ class SCRQuery(DSQuery):
         tables = "issues i, people, issues_ext_gerrit ie "
         if (uploaded): tables += " , comments comm"
         if reviewers:
-                q_last_change = self.get_sql_last_change_for_issues_new()
+                q_last_change = self.get_sql_last_change_for_reviews()
                 tables += ", changes ch, (%s) t1" % q_last_change
         tables += self.GetSQLReportFrom(identities_db, type_analysis)
         filters = filter_bots + " people.id = i.submitted_by "
         filters += self.GetSQLReportWhere(type_analysis,identities_db)
         filters += " AND status<>'MERGED' AND status<>'ABANDONED' "
-        # https://bugzilla.wikimedia.org/show_bug.cgi?id=66283
-        filters += " AND summary not like '%WIP%' "
         filters += " AND ie.issue_id  = i.id "
+        # TODO: Improve it using new UPLOADED event in changes table
         if (uploaded): filters += " AND comm.issue_id  = i.id AND text like '%Patch Set%Verified%' "
         if reviewers:
+                filters += " AND ch.issue_id  = i.id "
+                filters += " AND t1.id  = ch.id "
                 filters += """
-                    AND i.id = ch.issue_id  AND t1.id = ch.id
-                    AND (ch.field='CRVW' or ch.field='Code-Review' or ch.field='Verified' or ch.field='VRIF')
-                    AND (ch.new_value=1 or ch.new_value=2)
+                    AND summary not like '%WIP%'
+                    AND NOT (ch.field = 'Code-Review' AND ch.new_value = '-1')
+                    AND NOT (ch.field = 'Code-Review' AND ch.new_value = '-2')
                 """
 
         if (self.GetIssuesFiltered() != ""): filters += " AND " + self.GetIssuesFiltered()
@@ -995,14 +996,19 @@ class SCRQuery(DSQuery):
                               startdate, enddate)
         return(q)
 
-    def get_sql_last_change_for_issues_new(self):
-        # last changes for reviews. Removed added change status = NEW that is "artificial"
+    def get_sql_last_change_for_reviews(self, before = None):
+        # last changes for reviews.
+        # if before specified, just for changes before this date
+        before_sql = ""
+        if before:
+            before_sql = "AND changed_on <= '"+before+"'"
+
         q_last_change = """
             SELECT c.issue_id as issue_id,  max(c.id) as id
             FROM changes c, issues i
-            WHERE c.issue_id = i.id and i.status='NEW' and field<>'status'
+            WHERE c.issue_id = i.id and field<>'status' %s
             GROUP BY c.issue_id
-        """
+        """ % (before_sql)
         return q_last_change
 
     def GetPeopleQuerySubmissions (self, developer_id, period, startdate, enddate, evol):

@@ -166,6 +166,15 @@ class TimeToReviewPendingSCR(Metrics):
         # SQL for all, for updated  or for waiting for reviewer reviews
         def get_sql(month, updated=False, reviewers = False, uploaded = False):
             current = get_date_from_month(month)
+
+            # CLOSED
+            # A review closed is never reopened so closed backlog is closed evolution
+            q_closed  = "SELECT i.id as closed FROM issues i, issues_ext_gerrit ie "
+            q_closed += "WHERE submitted_on > " + startdate +" AND i.id = ie.issue_id"
+            q_closed += " AND (status='MERGED' OR status='ABANDONED') "
+            # closed date is the mod_date for merged and abandoned reviews
+            q_closed += " AND mod_date <= '"+current+"'"
+
             # List of pending reviews before a date: time from new time and from last update
             fields  = "TIMESTAMPDIFF(SECOND, submitted_on, '"+current+"')/(24*3600) AS newtime,"
             if (updated):
@@ -176,21 +185,22 @@ class TimeToReviewPendingSCR(Metrics):
             tables = "issues i, people, issues_ext_gerrit ie "
             if (uploaded): tables += ", comments comm"
             if reviewers:
-                q_last_change = self.db.get_sql_last_change_for_issues_new()
+                q_last_change = self.db.get_sql_last_change_for_reviews(current)
                 tables += ", changes ch, (%s) t1" % q_last_change
             tables = tables + self.db.GetSQLReportFrom(identities_db, type_analysis)
             filters = " people.id = i.submitted_by "
             filters += self.db.GetSQLReportWhere(type_analysis, self.db.identities_db)
-            filters += " AND status<>'MERGED' AND status<>'ABANDONED' "
-            # https://bugzilla.wikimedia.org/show_bug.cgi?id=66283
-            filters += " AND summary not like '%WIP%' "
             filters += " AND ie.issue_id  = i.id "
+            filters += " AND i.id NOT IN ("+ q_closed +")"
+            # TODO: Improve it using new UPLOADED event in changes table
             if (uploaded): filters += " AND comm.issue_id  = i.id AND comm.text like '%Patch Set%Verified%' "
             if reviewers:
+                filters += " AND ch.issue_id  = i.id "
+                filters += " AND t1.id  = ch.id "
                 filters += """
-                    AND i.id = ch.issue_id  AND t1.id = ch.id
-                    AND (ch.field='CRVW' or ch.field='Code-Review' or ch.field='Verified' or ch.field='VRIF')
-                    AND (ch.new_value=1 or ch.new_value=2)
+                    AND summary not like '%WIP%'
+                    AND NOT (ch.field = 'Code-Review' AND ch.new_value = '-1')
+                    AND NOT (ch.field = 'Code-Review' AND ch.new_value = '-2')
                 """
 
             if (self.db.GetIssuesFiltered() != ""): filters += " AND " + self.db.GetIssuesFiltered()
@@ -237,6 +247,7 @@ class TimeToReviewPendingSCR(Metrics):
         end_month = end.year*12 + end.month
         months = end_month - start_month
         acc_pending_time_median = {"month":[],
+                                   "review_time_pending":[],
                                    "review_time_pending_days_acc_median":[],
                                    "review_time_pending_update_days_acc_median":[],
                                    "review_time_pending_upload_days_acc_median":[],
@@ -249,6 +260,7 @@ class TimeToReviewPendingSCR(Metrics):
 
             reviews = self.db.ExecuteQuery(get_sql(start_month+i))
             values = get_values_median(reviews['newtime'])
+            acc_pending_time_median['review_time_pending'].append(len(reviews['newtime']))
             acc_pending_time_median['review_time_pending_days_acc_median'].append(values)
 
             reviews = self.db.ExecuteQuery(get_sql(start_month+i, True))

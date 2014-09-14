@@ -352,7 +352,6 @@ class ReviewsWaitingForReviewerTS(Metrics):
 
             q = self.db.GetSQLGlobal('i.submitted_on', fields, tables, filters,
                                      startdate, enddate)
-
             rs = self.db.ExecuteQuery(q)
             return rs['pending']
 
@@ -393,7 +392,7 @@ class ReviewsWaitingForReviewer(Metrics):
     data_source = SCR
 
     def _get_sql(self, evolutionary):
-        q_last_change = self.db.get_sql_last_change_for_issues_new()
+        q_last_change = self.db.get_sql_last_change_for_reviews()
 
         fields = "COUNT(DISTINCT(i.id)) as ReviewsWaitingForReviewer"
         tables = "changes ch, issues i, (%s) t1" % q_last_change
@@ -422,7 +421,7 @@ class ReviewsWaitingForSubmitter(Metrics):
 
 
     def _get_sql(self, evolutionary):
-        q_last_change = self.db.get_sql_last_change_for_issues_new()
+        q_last_change = self.db.get_sql_last_change_for_reviews()
 
         fields = "COUNT(DISTINCT(i.id)) as ReviewsWaitingForSubmitter"
         tables = "changes c, issues i, (%s) t1" % q_last_change
