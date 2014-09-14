@@ -399,6 +399,7 @@ class ReviewsWaitingForReviewer(Metrics):
         tables += self.db.GetSQLReportFrom(self.db.identities_db, self.filters.type_analysis)
         filters = """
             i.id = ch.issue_id  AND t1.id = ch.id
+            AND i.status = 'NEW'
             AND NOT (ch.field = 'Code-Review' AND ch.new_value = '-1')
             AND NOT (ch.field = 'Code-Review' AND ch.new_value = '-2')
             AND summary not like '%WIP%'
