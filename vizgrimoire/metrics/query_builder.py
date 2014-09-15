@@ -986,6 +986,8 @@ class SCRQuery(DSQuery):
                     AND summary not like '%WIP%'
                     AND NOT (ch.field = 'Code-Review' AND ch.new_value = '-1')
                     AND NOT (ch.field = 'Code-Review' AND ch.new_value = '-2')
+                    AND NOT (ch.field = 'Verified' AND ch.new_value = '-1')
+                    AND NOT (ch.field = 'Verified' AND ch.new_value = '-2')
                 """
 
         if (self.GetIssuesFiltered() != ""): filters += " AND " + self.GetIssuesFiltered()

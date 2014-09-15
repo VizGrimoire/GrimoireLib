@@ -201,6 +201,8 @@ class TimeToReviewPendingSCR(Metrics):
                     AND summary not like '%WIP%'
                     AND NOT (ch.field = 'Code-Review' AND ch.new_value = '-1')
                     AND NOT (ch.field = 'Code-Review' AND ch.new_value = '-2')
+                    AND NOT (ch.field = 'Verified' AND ch.new_value = '-1')
+                    AND NOT (ch.field = 'Verified' AND ch.new_value = '-2')
                 """
 
             if (self.db.GetIssuesFiltered() != ""): filters += " AND " + self.db.GetIssuesFiltered()

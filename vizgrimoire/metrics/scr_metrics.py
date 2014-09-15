@@ -349,6 +349,9 @@ class ReviewsWaitingForReviewerTS(Metrics):
                 filters += " AND NOT (ch.field = 'Code-Review' AND ch.new_value = '-1')"
                 filters += " AND NOT (ch.field = 'Code-Review' AND ch.new_value = '-2')"
                 filters += " AND summary not like '%WIP%' "
+                filters += " AND NOT (ch.field = 'Verified' AND ch.new_value = '-1') "
+                filters += " AND NOT (ch.field = 'Verified' AND ch.new_value = '-2') "
+
 
             q = self.db.GetSQLGlobal('i.submitted_on', fields, tables, filters,
                                      startdate, enddate)
@@ -403,6 +406,8 @@ class ReviewsWaitingForReviewer(Metrics):
             AND NOT (ch.field = 'Code-Review' AND ch.new_value = '-1')
             AND NOT (ch.field = 'Code-Review' AND ch.new_value = '-2')
             AND summary not like '%WIP%'
+            AND NOT (ch.field = 'Verified' AND ch.new_value = '-1')
+            AND NOT (ch.field = 'Verified' AND ch.new_value = '-2')
         """
 
         filters = filters + self.db.GetSQLReportWhere(self.filters.type_analysis, self.db.identities_db)
