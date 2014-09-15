@@ -21,7 +21,7 @@
 
 from GrimoireSQL import SetDBChannel
 from GrimoireUtils import read_main_conf
-import logging
+import logging, time
 import SCM, ITS, MLS, SCR, Mediawiki, IRC, DownloadsDS, QAForums, ReleasesDS
 from filter import Filter
 from metrics import Metrics
@@ -56,14 +56,13 @@ class Report(object):
         # Hack because we use repos in filters
         reports = reports.replace("repositories","repos")
         filters = reports.split(",")
-        # people not a filter yet
-        if 'people' in filters: filters.remove('people')
         for name in filters:
             filter_ = Filter.get_filter_from_plural(name)
             if filter_ is not None:
                 Report._filters.append(filter_)
             else:
                 logging.error("Wrong filter " + name + ", review " + Report._automator_file)
+                raise Exception('Wrong automator config file')
 
     @staticmethod
     def _init_data_sources():
@@ -94,9 +93,15 @@ class Report(object):
         if 'companies_out' in Report._automator['r']:
             companies_out = Report._automator['r']['companies_out'].split(",")
         type_analysis = None
+        if 'start_date' not in Report._automator['r']:
+            raise Exception("Start date not configured in automator main.conf")
+        start_date = Report._automator['r']['start_date']
+        if 'end_date' in Report._automator['r']:
+            end_date = Report._automator['r']['end_date']
+        else:
+            end_date = time.strftime('%Y-%m-%d')
 
-        metric_filters = MetricFilters(Metrics.default_period,
-                                       Metrics.default_start, Metrics.default_end,
+        metric_filters = MetricFilters(Metrics.default_period, "'"+start_date+"'", "'"+end_date+"'",
                                        type_analysis,
                                        npeople, people_out, companies_out)
 
@@ -155,6 +160,14 @@ class Report(object):
     @staticmethod
     def get_config():
         return Report._automator
+
+    @staticmethod
+    def get_start_date():
+        return Report._automator['r']['start_date']
+
+    @staticmethod
+    def get_end_date():
+        return Report._automator['r']['end_date']
 
     @staticmethod
     def connect_ds(ds):

@@ -1,7 +1,36 @@
 grimoire-api
 ============
 
-Proof of concept of the Grimoire API, using SQLAlchemy. Currently only a part of the support for SCM (CVSAnalY databases) is provided.
+Proof of concept of the Grimoire API, using SQLAlchemy. Currently only a part of the complete intended support is provided.
+
+# Structure
+
+## Modules providing basic querying / computing support
+
+Basic support for SCM, ITS, MLS:
+
+* common_query: For all Grimoire databases
+* scm_query
+* its_query
+* mls_query
+
+Basic support for datatypes
+
+* timeseries
+* activity
+
+Entities:
+
+* common
+* scm
+* its
+* mls
+* demography
+
+General support modules
+
+* standalone
+* support_testing
 
 ## scm_query.py
 

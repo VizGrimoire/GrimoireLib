@@ -54,7 +54,7 @@ class QuartersData(Analyses):
         # people = self.db.GetPeopleList("'"+startdate+"'", "'"+enddate+"'", SCR.get_bots())
         people = self.db.GetPeopleList(startdate, enddate, bots)
         createJSON(people, destdir+"/scr-people-all.json", False)
-        companies = self.db.GetCompaniesName(startdate, enddate, self.db.identities_db)
+        companies = self.db.GetCompaniesName(startdate, enddate)
         createJSON(companies, destdir+"/scr-companies-all.json", False)
 
         start = datetime.strptime(startdate.replace("'",""), "%Y-%m-%d")
@@ -71,9 +71,9 @@ class QuartersData(Analyses):
             year = start.year
             quarter = (i%4)+1
             # logging.info("Analyzing companies and people quarter " + str(year) + " " +  str(quarter))
-            data = self.db.GetCompaniesQuarters(year, quarter, idb)
+            data = self.db.GetCompaniesQuarters(year, quarter)
             companies_quarters[str(year)+" "+str(quarter)] = data
-            data_people = self.db.GetPeopleQuarters(year, quarter, idb, 25, bots)
+            data_people = self.db.GetPeopleQuarters(year, quarter, 25, bots)
             people_quarters[str(year)+" "+str(quarter)] = data_people
             start = start + relativedelta(months=3)
         createJSON(companies_quarters, destdir+"/scr-companies-quarters.json")

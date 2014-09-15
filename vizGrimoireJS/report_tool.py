@@ -73,7 +73,12 @@ def create_reports_filters(period, startdate, enddate, destdir, npeople, identit
         logging.info("Creating filter reports for " + ds.get_name())
         for filter_ in Report.get_filters():
             logging.info("-> " + filter_.get_name())
-            ds.create_filter_report(filter_, period, startdate, enddate, destdir, npeople, identities_db)
+            if filter_.get_name() in ["people2","company_off"]:
+                logging.info("---> Using new filter API")
+                ds.create_filter_report_all(filter_, period, startdate, enddate, 
+                                            destdir, npeople, identities_db)
+            else:
+                ds.create_filter_report(filter_, period, startdate, enddate, destdir, npeople, identities_db)
 
 def create_report_people(startdate, enddate, destdir, npeople, identities_db):
     for ds in Report.get_data_sources():
@@ -139,7 +144,7 @@ def create_reports_studies(period, startdate, enddate, destdir):
         dbname = Report.get_config()['generic'][ds_dbname]
         dsquery = ds.get_query_builder()
         dbcon = dsquery(dbuser, dbpass, dbname, db_identities)
-        logging.info("Studies active " + str(studies))
+        # logging.info(ds.get_name() + " studies active " + str(studies))
         for study in studies:
             # logging.info("Creating report for " + study.id + " for " + ds.get_name())
             try:
@@ -205,7 +210,7 @@ def init_env():
     grimoirelib = os.path.join("..","vizgrimoire")
     metricslib = os.path.join("..","vizgrimoire","metrics")
     studieslib = os.path.join("..","vizgrimoire","analysis")
-    alchemy = os.path.join("..","grimoirelib_alch")
+    alchemy = os.path.join("..")
     for dir in [grimoirelib,metricslib,studieslib,alchemy]:
         sys.path.append(dir)
 
@@ -278,7 +283,7 @@ if __name__ == '__main__':
         create_reports_filters(period, startdate, enddate, opts.destdir, opts.npeople, identities_db)
     if not opts.filter:
         create_reports_studies(period, startdate, enddate, opts.destdir)
-    create_people_identifiers(startdate, enddate, opts.destdir)
+    # create_people_identifiers(startdate, enddate, opts.destdir)
 
 
     logging.info("Report data source analysis OK")

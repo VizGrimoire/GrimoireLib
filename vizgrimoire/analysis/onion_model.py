@@ -71,7 +71,7 @@ class CommunityStructure(Analyses):
              "      p.email <> '%jenkins@%' and "+\
              "      s.id = a.commit_id and "+\
              "      s.date>="+self.filters.startdate+" and "+\
-             "      s.date<="+self.filters.enddate+";"
+             "      s.date<"+self.filters.enddate+";"
 
         total = self.db.ExecuteQuery(q)
         total_commits = float(total['total'])
@@ -85,7 +85,7 @@ class CommunityStructure(Analyses):
             "      people p "+\
             " where s.id = a.commit_id and "+\
             "       s.date>="+self.filters.startdate+" and "+\
-            "       s.date<="+self.filters.enddate+" and "+\
+            "       s.date<"+self.filters.enddate+" and "+\
             "       s.author_id = pup.people_id and "+\
             "       s.author_id = p.id and "+\
             "       p.email <> '%gerrit@%' and "+\

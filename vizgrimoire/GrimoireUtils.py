@@ -136,6 +136,8 @@ def completePeriodIdsMonths(ts_data, start, end):
         timestamp = calendar.timegm(current.timetuple())
         new_ts_data['unixtime'].append(unicode(timestamp))
         new_ts_data['id'].append(i)
+        import locale
+        locale.setlocale(locale.LC_ALL, "en_US.UTF-8")
         new_ts_data['date'].append(datetime.strftime(current, "%b %Y"))
 
     return new_ts_data
@@ -191,6 +193,11 @@ def completePeriodIds(ts_data, period, startdate, enddate):
     enddate = enddate.replace("'", "")
     start = datetime.strptime(startdate, "%Y-%m-%d")
     end = datetime.strptime(enddate, "%Y-%m-%d")
+    # In order to use the same approach in the whole GrimoireLib, the last day
+    # specified when retrieving datasets is always ignored. What means that
+    # GrimoireLib is using date >= startdate and date < enddate.
+    # For this reason, a day is substracted from the end date
+    end = end - timedelta(days=1)
 
     if period == "week":
         new_ts_data = completePeriodIdsWeeks(ts_data, start, end)
@@ -243,6 +250,7 @@ def getPeriod(granularity, number = None):
 
 
 def removeDecimals(data):
+    """ Convert Decimal type to float """
     from decimal import Decimal
     if (isinstance(data, dict)):
         for key in data:
@@ -256,7 +264,29 @@ def removeDecimals(data):
         for i in range(0,len(data)):
             if (isinstance(data[i], Decimal)):
                 data[i] = float(data[i])
+            if (isinstance(data[i], list)):
+                data[i] = removeDecimals(data[i])
     return data
+
+def roundDecimals(data):
+    """ Limit the max number of decimals in floats """
+    from metrics import Metrics
+    if (isinstance(data, dict)):
+        for key in data:
+            if (isinstance(data[key], float)):
+                data[key] = round(data[key], Metrics.max_decimals)
+            elif (isinstance(data[key], list)):
+                data[key] = roundDecimals(data[key])
+            elif (isinstance(data[key], dict)):
+                data[key] = roundDecimals(data[key])
+    if (isinstance(data, list)):
+        for i in range(0,len(data)):
+            if (isinstance(data[i], float)):
+                data[i] = round(data[i], Metrics.max_decimals)
+            if (isinstance(data[i], list)):
+                data[i] = roundDecimals(data[i])
+    return data
+
 
 def convertDatetime(data):
     if (isinstance(data, dict)):
@@ -280,7 +310,8 @@ def createJSON(data, filepath, check=False, skip_fields = []):
     filepath_py = filepath_tokens[0]+"_py.json"
     filepath_r = filepath_tokens[0]+"_r.json"
 
-    json_data = json.dumps(convertDatetime(removeDecimals(data)), sort_keys=True)
+    checked_data = convertDatetime(roundDecimals(removeDecimals(data)))
+    json_data = json.dumps(checked_data, sort_keys=True)
     json_data = json_data.replace('NaN','"NA"')
     if check == False: #forget about R JSON checking
         jsonfile = open(filepath, 'w')

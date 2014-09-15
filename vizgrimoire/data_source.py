@@ -25,6 +25,7 @@
     support for Grimoire supported data sources """ 
 
 import logging, os
+from query_builder import DSQuery
 from GrimoireUtils import createJSON
 from metrics_filter import MetricFilters
 
@@ -294,7 +295,70 @@ class DataSource(object):
         return data
 
     @staticmethod
-    def get_metrics_data(DS, period, startdate, enddate, identities_db, filter_ = None, evol = False):
+    def _fill_items(items, data, id_field, evol = False,
+                    period = None, startdate = None, enddate = None):
+        """ Complete data dict items filling with 0 not existing items """
+        from GrimoireUtils import completePeriodIds
+
+        if evol:
+            zero_ts = completePeriodIds({id_field:[],period:[]},
+                                        period, startdate, enddate)[id_field]
+        fields = data.keys()
+        if id_field not in fields: return data
+        fields.remove(id_field)
+        for id in items:
+            if id not in data[id_field]:
+                data[id_field].append(id)
+                for field in fields:
+                    if not evol:
+                        data[field].append(0)
+                    if evol:
+                        data[field].append(zero_ts)
+        return data
+
+    @staticmethod
+    def _order_items(items, data, id_field, evol = False, period = None):
+        """ Reorder data identities using items ordering """
+        fields = data.keys()
+        if id_field not in fields: return data
+        data_ordered = {}
+        for field in fields:
+            data_ordered[field] = []
+
+        fields.remove(id_field)
+
+        if evol:
+            evol_fields = [period, 'id', 'unixtime','date']
+            for evol_field in evol_fields:
+                fields.remove(evol_field)
+                data_ordered[evol_field] = data[evol_field]
+
+        for id in items:
+            data_ordered[id_field].append(id)
+            try:
+                pos = data[id_field].index(id)
+            except:
+                print items
+                print data[id_field]
+                raise
+            for field in fields:
+                data_ordered[field].append(data[field][pos])
+
+        return data_ordered
+
+    @staticmethod
+    def _fill_and_order_items(items, data, id_field, evol = False,
+                              period = None, startdate = None, enddate = None):
+        # Only items will appear for a filter
+        if not evol: # evol is already filled (complete data) for a company, but not all companies
+            data = DataSource._fill_items(items, data, id_field)
+        if evol: data = DataSource._fill_items(items, data, id_field,
+                                               evol, period, startdate, enddate)
+        return DataSource._order_items(items, data, id_field, evol, period)
+
+    @staticmethod
+    def get_metrics_data(DS, period, startdate, enddate, identities_db, 
+                         filter_ = None, evol = False):
         """ Get basic data from all core metrics """
         data = {}
 
@@ -311,19 +375,30 @@ class DataSource(object):
         if automator_metrics in automator['r']:
             metrics_on = automator['r'][automator_metrics].split(",")
 
+        people_out = []
+        if "people_out" in Report.get_config()['r']:
+            people_out = Report.get_config()['r']["people_out"]
+            people_out = people_out.split(",")
+
         type_analysis = None
         if filter_ is not None:
             type_analysis = filter_.get_type_analysis()
+
+        if type_analysis and type_analysis[1] is None:
+            items = DS.get_filter_items(filter_, startdate, enddate, identities_db)
+            items = items.pop('name')
 
         if DS.get_name()+"_startdate" in Report.get_config()['r']:
             startdate = Report.get_config()['r'][DS.get_name()+"_startdate"]
         if DS.get_name()+"_enddate" in Report.get_config()['r']:
             enddate = Report.get_config()['r'][DS.get_name()+"_enddate"]
-        mfilter = MetricFilters(period, startdate, enddate, type_analysis)
+        # TODO: the hardcoded 10 should be removed, and use instead the npeople provided
+        #       in the config file.
+        mfilter = MetricFilters(period, startdate, enddate, type_analysis, 10, people_out, None)
         metrics_reports = DS.get_metrics_core_reports()
         all_metrics = DS.get_metrics_set(DS)
 
-        # Reports = filters not available inside filters
+        # Reports = filters metrics not available inside filters
         if type_analysis is None:
             from report import Report
             reports_on = Report.get_config()['r']['reports'].split(",")
@@ -337,6 +412,12 @@ class DataSource(object):
             if evol: mvalue = item.get_ts()
             else:    mvalue = item.get_agg()
 
+            if type_analysis and type_analysis[1] is None:
+                logging.info(item.id)
+                id_field = DSQuery.get_group_field(type_analysis[0])
+                id_field = id_field.split('.')[1] # remove table name
+                mvalue = DataSource._fill_and_order_items(items, mvalue, id_field,
+                                                          evol, period, startdate, enddate)
             data = dict(data.items() + mvalue.items())
 
             item.filters = mfilter_orig
@@ -345,6 +426,7 @@ class DataSource(object):
             init_date = DS.get_date_init(startdate, enddate, identities_db, type_analysis)
             end_date = DS.get_date_end(startdate, enddate, identities_db, type_analysis)
 
+            # TODO: grouped items metrics support
             data = dict(data.items() + init_date.items() + end_date.items())
 
             # Tendencies
@@ -359,8 +441,14 @@ class DataSource(object):
                     if item.id not in metrics_trends: continue
                     mfilter_orig = item.filters
                     item.filters = mfilter
-                    period_data = item.get_agg_diff_days(enddate, i)
+                    period_data = item.get_trends(enddate, i)
                     item.filters = mfilter_orig
+
+                    if type_analysis and type_analysis[1] is None:
+                        id_field = DSQuery.get_group_field(type_analysis[0])
+                        id_field = id_field.split('.')[1] # remove table name
+                        period_data = DataSource._fill_and_order_items(items, period_data, id_field)
+
                     data = dict(data.items() + period_data.items())
 
         return data

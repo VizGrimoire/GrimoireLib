@@ -25,7 +25,6 @@
 
 from datetime import datetime, timedelta
 from sqlalchemy.util import KeyedTuple
-from jsonpickle import encode
 import jsonpickle
 
 class DatetimeHandler(jsonpickle.handlers.BaseHandler):
@@ -364,7 +363,7 @@ init_json()
 
 if __name__ == "__main__":
 
-    from standalone import stdout_utf8, print_banner
+    from grimoirelib_alch.aux.standalone import stdout_utf8, print_banner
 
     stdout_utf8()
 
@@ -372,7 +371,7 @@ if __name__ == "__main__":
     print_banner("Period (str, json)")
     period = Period(datetime(2011,12,1), datetime(2012,11,1))
     print period
-    print encode(period, unpicklable=False)
+    print jsonpickle.encode(period, unpicklable=False)
 
     #---------------------------------
     print_banner("ActivityList (str, json)")
