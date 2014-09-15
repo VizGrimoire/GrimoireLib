@@ -426,8 +426,6 @@ class ReviewsWaitingForReviewer(Metrics):
         q = self.db.BuildQuery (self.filters.period, self.filters.startdate,
                                 self.filters.enddate, " i.submitted_on",
                                 fields, tables, filters, evolutionary)
-        print(q)
-
         return(q)
 
     def _get_sql_old (self, evolutionary):
