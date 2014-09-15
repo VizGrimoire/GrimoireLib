@@ -356,6 +356,11 @@ class PatchesPerReview(Metrics):
 
     """
 
+    id = "iterations_per_review"
+    name = "Number of patches per changeset"
+    desc = "Number of patches (iterations till a patch is closed) per changeset (a whole review process)"
+    data_source = SCR
+
     def get_agg(self):
         query = """select count(distinct(ch.old_value)) as patches
                    from changes ch,
@@ -684,20 +689,20 @@ class Reviewers(Metrics):
         return q
 
 
-class CoreReviewers(Metrics):
+class ActiveCoreReviewers(Metrics):
     """Returns a list of core reviewers in Gerrit systems.
     
     A core reviewer is defined as a reviewer that can use the 
     +2 or -2 in the review system. However, given that there is not
     a public list of core reviewers per project, this class assumes
-    that a developer is a core reviewer the point in time when she
+    that a developer is a(n active)  core reviewer the point in time when she
     uses a +2 or a -2.
 
     """
 
-    id = "core_reviewers"
-    name = "Core Reviewers"
-    desc = "Number of developers reviewing code review activities that can use a +2 or -2"
+    id = "active_core_reviewers"
+    name = "Active Core Reviewers"
+    desc = "Number of developers reviewing code review activities that are allowed to use a +2 or -2"
     data_source = SCR
 
     def _get_sql(self, evolutionary):
