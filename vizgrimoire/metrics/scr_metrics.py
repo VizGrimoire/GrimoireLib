@@ -394,7 +394,43 @@ class ReviewsWaitingForReviewer(Metrics):
     desc = "Number of preview processes waiting for reviewer"
     data_source = SCR
 
-    def _get_sql(self, evolutionary):
+
+    def _get_sql (self, evolutionary):
+
+        sql_max_patchset = """
+            SELECT issue_id, max(CAST(old_value as UNSIGNED)) maxPatchset
+            FROM changes
+            WHERE old_value<>'' and old_value<>'None'
+            group by issue_id
+        """
+
+        sql_reviews_reviewed = """
+           SELECT i.id from issues i, changes ch, (%s) t
+           WHERE  i.status='NEW'  AND i.id = t.issue_id and ch.issue_id = i.id
+             AND ch.old_value = t.maxPatchset
+             AND (    (field = 'Code-Review' AND (new_value = -1 or new_value = -2))
+                 OR  (field = 'Verified' AND (new_value = -1 or new_value = -2))
+             )
+             AND i.submitted_on >= %s
+        """ % (sql_max_patchset, self.filters.startdate)
+
+        fields = "COUNT(DISTINCT(i.id)) as ReviewsWaitingForReviewer"
+        tables = "issues i "
+        tables += self.db.GetSQLReportFrom(self.db.identities_db, self.filters.type_analysis)
+        filters = """ i.status = 'NEW'
+                      AND i.id NOT IN (%s)
+        """ % (sql_reviews_reviewed)
+
+        filters = filters + self.db.GetSQLReportWhere(self.filters.type_analysis, self.db.identities_db)
+
+        q = self.db.BuildQuery (self.filters.period, self.filters.startdate,
+                                self.filters.enddate, " i.submitted_on",
+                                fields, tables, filters, evolutionary)
+        print(q)
+
+        return(q)
+
+    def _get_sql_old (self, evolutionary):
         q_last_change = self.db.get_sql_last_change_for_reviews()
 
         fields = "COUNT(DISTINCT(i.id)) as ReviewsWaitingForReviewer"
