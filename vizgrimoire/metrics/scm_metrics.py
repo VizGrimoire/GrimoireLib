@@ -186,30 +186,36 @@ class Authors(Metrics):
         enddate = metric_filters.enddate
         project = metric_filters.type_analysis[1]
         limit = metric_filters.npeople
-        filter_bots = self.get_bots_filter_sql(metric_filters)
 
-        #projects_from = self.db.GetSQLProjectFrom()
-        projects_from = self.db.GetSQLReportFrom(self.filters)
-        projects_from = self.db._get_tables_query(projects_from)
+        tables = Set([])
+        filters = Set([])
 
-        # Remove first and
-        #projects_where = " WHERE  " + self.db.GetSQLProjectWhere(project)[3:]
-        projects_where = self.db.GetSQLReportWhere(self.filters)
-        projects_where = self.db._get_filters_query(projects_where)
-        projects_where = " where " + projects_where
+        tables = self.db.GetSQLReportFrom(self.filters)
+
+        filters = self.db.GetSQLReportWhere(self.filters)
 
         fields =  "SELECT COUNT(DISTINCT(s.id)) as commits, u.id, u.identifier as authors "
-        fields += "FROM actions a, scmlog s, people_upeople pup, upeople u "
-        projects_from = " , " + projects_from
-        q = fields + projects_from + projects_where
-        if filter_bots != "": q += " AND "+ filter_bots
-        q += " AND pup.people_id = s.author_id AND u.id = pup.upeople_id "
-        q += " and a.commit_id = s.id "
-        q += " AND s.date >= " + startdate + " and s.date < " + enddate
-        q += " GROUP by u.id ORDER BY commits DESC, authors"
-        q += " limit " + str(self.filters.npeople)
 
-        res = self.db.ExecuteQuery(q)
+        tables.add("actions a")
+        tables.add("scmlog s")
+        tables.add("people_upeople pup")
+        tables.add(self.db.identities_db + ".upeople u")
+        tables.union_update(self.db.GetSQLReportFrom(self.filters))
+        tables_str = self.db._get_tables_query(tables)
+
+        filters.add("pup.people_id = s.author_id")
+        filters.add("u.id = pup.upeople_id")
+        filters.add("a.commit_id = s.id")
+        filters.add("s.date >= " + startdate)
+        filters.add("s.date < " + enddate)
+        filters_str = self.db._get_filters_query(filters)
+
+        filters_str += " GROUP by u.id ORDER BY commits DESC, authors"
+        filters_str += " limit " + str(self.filters.npeople)
+
+        query = fields + " from " + tables_str + " where " + filters_str
+
+        res = self.db.ExecuteQuery(query)
 
         return res
 
@@ -879,24 +885,38 @@ class Companies(Metrics):
         project = self.filters.type_analysis[1]
         limit = self.filters.npeople
 
-        projects_from = self.db.GetSQLReportFrom(self.filters)
-        projects_from = self.db._get_tables_query(projects_from)
-        # Remove first and
-        projects_where = self.db.GetSQLReportWhere(self.filters)
-        projects_where = " where " + self.db._get_filters_query(projects_where)
+        tables = Set([])
+        filters = Set([])
+
+        tables.union_update(self.db.GetSQLReportFrom(self.filters))
+        tables.add("scmlog s")
+        tables.add("people_upeople pup")
+        tables.add(self.db.identities_db + ".upeople u")
+        tables.add("upeople_companies upc")
+        tables.add("companies c")
+
+        filters.union_update(self.db.GetSQLReportWhere(self.filters))
 
         fields =  "SELECT COUNT(DISTINCT(s.id)) as company_commits, c.name as companies "
-        fields += "FROM scmlog s, people_upeople pup, upeople u, upeople_companies upc, companies c "
-        projects_from = " , " + projects_from
-        q = fields + projects_from + projects_where
-        q += " AND " + fbots + " pup.people_id = s.author_id AND u.id = pup.upeople_id "
-        q += " AND u.id = upc.upeople_id AND c.id = upc.company_id "
-        q += " AND s.date >= " + startdate + " and s.date < " + enddate
-        q += " AND s.date >= upc.init AND s.date < upc.end "
-        q += " GROUP by c.name ORDER BY company_commits DESC, c.name"
-        q += " limit " + str(self.filters.npeople)
 
-        return q
+        filters.add("pup.people_id = s.author_id")
+        filters.add("u.id = pup.upeople_id")
+        filters.add("u.id = upc.upeople_id")
+        filters.add("c.id = upc.company_id")
+        filters.add("s.date >= " + startdate)
+        filters.add("s.date < " + enddate)
+        filters.add("s.date >= upc.init")
+        filters.add("s.date < upc.end")
+
+        tables_str = self.db._get_tables_query(tables)
+        filters_str = self.db._get_filters_query(filters)
+
+        filters_str += " GROUP by c.name ORDER BY company_commits DESC, c.name"
+        filters_str += " limit " + str(self.filters.npeople)
+
+        query = fields + " from " + tables_str + " where " + filters_str
+
+        return query
 
     def _get_top(self, fbots = None):
         if fbots is not None and fbots !='': fbots += " AND "
@@ -940,7 +960,6 @@ class Companies(Metrics):
 
         # Restore original filter for the metric
         self.filters = metric_filters_orig
-
         return self.db.ExecuteQuery(q)
 
 class Countries(Metrics):
@@ -1075,7 +1094,7 @@ class Projects(Metrics):
 
 
 if __name__ == '__main__':
-    filters1 = MetricFilters("week", "'2014-04-01'", "'2014-07-01'", ["repository,company", "'nova.git','Red Hat'"])
+    filters1 = MetricFilters("month", "'2014-04-01'", "'2014-07-01'", ["repository,company", "'nova.git','Red Hat'"])
     filters2 = MetricFilters("week", "'2014-04-01'", "'2014-07-01'", ["repository,company", "'nova.git','Red Hat'"], 10, "OpenStack Jenkins")
     filters3 = MetricFilters("week", "'2014-04-01'", "'2014-07-01'", None, 10, "OpenStack Jenkins,Jenkins")
     filters4 = MetricFilters("week", "'2014-04-01'", "'2014-07-01'", None, 10)
