@@ -311,14 +311,22 @@ class ReviewsWaitingForReviewerTS(Metrics):
         def get_pending(month, reviewers = False):
             current = get_date_from_month(month)
 
-            # Last change to review move responsibility to reviewer
-            q_last_change = """
-                SELECT c.issue_id as issue_id,  max(c.id) as id
-                FROM changes c, issues i
-                WHERE c.issue_id = i.id AND field<>'status'
-                  AND changed_on <= '%s'
-                GROUP BY c.issue_id
-            """ % (current)
+            sql_max_patchset = """
+                SELECT issue_id, max(CAST(old_value as UNSIGNED)) maxPatchset
+                FROM changes
+                WHERE old_value<>'' and old_value<>'None'
+                group by issue_id
+            """
+
+            sql_reviews_reviewed = """
+               SELECT i.id from issues i, changes ch, (%s) t
+               WHERE  i.id = t.issue_id and ch.issue_id = i.id
+                 AND ch.old_value = t.maxPatchset
+                 AND (    (field = 'Code-Review' AND (new_value = -1 or new_value = -2))
+                     OR  (field = 'Verified' AND (new_value = -1 or new_value = -2))
+                 )
+                 AND i.submitted_on >= %s
+            """ % (sql_max_patchset, self.filters.startdate)
 
             # CLOSED
             # A review closed is never reopened so closed backlog is closed evolution
@@ -328,12 +336,9 @@ class ReviewsWaitingForReviewerTS(Metrics):
             # closed date is the mod_date for merged and abandoned reviews
             q_closed += " AND mod_date <= '"+current+"'"
 
-            fields = "COUNT(i.id) as pending"
+            fields = "COUNT(DISTINCT(i.id)) as pending"
 
             tables = " issues i "
-            # Select last change for the review to see if reviewer should work now
-            if reviewers:
-                tables += ", changes ch, (" + q_last_change + ") t1 "
             tables = tables + self.db.GetSQLReportFrom(identities_db, type_analysis)
 
             # Pending (NEW = submitted-merged-abandoned) REVIEWS
@@ -343,18 +348,12 @@ class ReviewsWaitingForReviewerTS(Metrics):
             filters += " AND i.id NOT IN ("+ q_closed +")"
 
             if reviewers:
-                # select last_change
-                filters += " AND i.id = ch.issue_id  AND t1.id = ch.id"
-                # last change should move responsibility to reviewer
-                filters += " AND NOT (ch.field = 'Code-Review' AND ch.new_value = '-1')"
-                filters += " AND NOT (ch.field = 'Code-Review' AND ch.new_value = '-2')"
-                filters += " AND summary not like '%WIP%' "
-                filters += " AND NOT (ch.field = 'Verified' AND ch.new_value = '-1') "
-                filters += " AND NOT (ch.field = 'Verified' AND ch.new_value = '-2') "
-
+                filters += """ AND i.id NOT IN (%s)
+                """ % (sql_reviews_reviewed)
 
             q = self.db.GetSQLGlobal('i.submitted_on', fields, tables, filters,
                                      startdate, enddate)
+
             rs = self.db.ExecuteQuery(q)
             return rs['pending']
 
