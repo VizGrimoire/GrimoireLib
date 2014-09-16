@@ -676,7 +676,7 @@ if __name__ == '__main__':
         bar_chart("Merged and abandoned reviews " + project, labels, merged, "submitted_reviews" + project_name, abandoned, ["merged", "abandoned"])
         createCSV({"labels":labels, "merged":merged, "abandoned":abandoned, "bmi":bmiscr}, "./release/submitted_reviews"+project_name+".csv")
 
-        bar_chart("Changesets efficienty " + project, labels, bmiscr, "bmiscr" + project_name)
+        bar_chart("Changesets efficiency " + project, labels, bmiscr, "bmiscr" + project_name)
 
         bar_chart("Patchsets per Changeset " + project, labels, iters_reviews_avg, "patchsets_avg" + project_name, iters_reviews_median, ["mean", "median"])
         createCSV({"labels":labels, "meanpatchsets":iters_reviews_avg, "medianpatchsets":iters_reviews_median}, "./release/scr_patchsets_iterations" + project_name+".csv")
