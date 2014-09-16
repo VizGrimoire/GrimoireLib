@@ -219,7 +219,8 @@ class TimeToReviewPendingSCR(Metrics):
 
             # All reviews before the month: accumulated key point
             filters += " HAVING month<= " + str(month)
-            # Not include future submissions for current month analysis
+            # Not include future submissions for current month analysis. 
+            # We should no need it with the actual SQL which is correct 
             if (updated):
                 filters += " AND updatetime >= 0"
             elif (uploaded):
@@ -229,8 +230,6 @@ class TimeToReviewPendingSCR(Metrics):
             filters += " ORDER BY  i.submitted_on"
             q = self.db.GetSQLGlobal('i.submitted_on', fields, tables, filters,
                         startdate,enddate)
-
-            print(q)
             return q
 
         def get_values_median(values):
