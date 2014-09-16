@@ -955,7 +955,7 @@ class SCRQuery(DSQuery):
 
     # Time to review accumulated for pending submissions using submit date or update date
     def GetTimeToReviewPendingQuerySQL (self, startdate, enddate, identities_db = None,
-                                        type_analysis = [], bots = [], updated = False,
+                                        type_analysis = [], bots = [],
                                         reviewers = False, uploaded = False):
 
         filter_bots = ''
@@ -981,8 +981,6 @@ class SCRQuery(DSQuery):
 
 
         fields = "TIMESTAMPDIFF(SECOND, submitted_on, NOW())/(24*3600) AS revtime, submitted_on "
-        if (updated):
-            fields = "TIMESTAMPDIFF(SECOND, mod_date, NOW())/(24*3600) AS revtime, submitted_on "
         if (uploaded):
             fields = "TIMESTAMPDIFF(SECOND, ch.changed_on, NOW())/(24*3600) AS revtime, i.submitted_on as submitted_on "
         tables = "issues i, people, issues_ext_gerrit ie "

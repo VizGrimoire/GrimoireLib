@@ -35,7 +35,6 @@ from SCR import SCR
 
 class TimeToReviewPendingSCR(Metrics):
     """
-        Update time: last update in a review
         Upload time: last patch uploaded to the review (not all reviews have patches)
     """
     id = "review_time_pending_total"
@@ -44,7 +43,7 @@ class TimeToReviewPendingSCR(Metrics):
     data_source = SCR
 
     def get_agg(self):
-        # Show review and update time for all pending reviews 
+        # Show review and upload time for all pending reviews
         # and just for reviews pending for reviewers
         reviewers_pending = True
 
@@ -69,7 +68,7 @@ class TimeToReviewPendingSCR(Metrics):
 
         # Review time for reviewers
         q = self.db.GetTimeToReviewPendingQuerySQL(startdate, enddate,identities_db,
-                                                   type_analysis, bots, False, reviewers_pending)
+                                                   type_analysis, bots, reviewers_pending)
         data = self.db.ExecuteQuery(q)
         data = data['revtime']
         if (isinstance(data, list) == False): data = [data]
@@ -80,35 +79,9 @@ class TimeToReviewPendingSCR(Metrics):
             ttr_reviewers_median = median(removeDecimals(data))
             ttr_reviewers_avg = average(removeDecimals(data))
 
-        # Update time
-        q = self.db.GetTimeToReviewPendingQuerySQL (startdate, enddate,identities_db,
-                                                    type_analysis, bots, True)
-        data = self.db.ExecuteQuery(q)
-        data = data['revtime']
-        if (isinstance(data, list) == False): data = [data]
-        if (len(data) == 0):
-            ttr_median_update = float("nan")
-            ttr_avg_update = float("nan")
-        else:
-            ttr_median_update = median(removeDecimals(data))
-            ttr_avg_update = average(removeDecimals(data))
-
-        # Update time for reviewers
-        q = self.db.GetTimeToReviewPendingQuerySQL (startdate, enddate, identities_db,
-                                                    type_analysis, bots, True, reviewers_pending)
-        data = self.db.ExecuteQuery(q)
-        data = data['revtime']
-        if (isinstance(data, list) == False): data = [data]
-        if (len(data) == 0):
-            ttr_reviewers_median_update = float("nan")
-            ttr_reviewers_avg_update = float("nan")
-        else:
-            ttr_reviewers_median_update = median(removeDecimals(data))
-            ttr_reviewers_avg_update = average(removeDecimals(data))
-
         # Upload time
         q = self.db.GetTimeToReviewPendingQuerySQL (startdate, enddate,identities_db,
-                                                    type_analysis, bots, False, False, True)
+                                                    type_analysis, bots, False, True)
         data = self.db.ExecuteQuery(q)
         data = data['revtime']
         if (isinstance(data, list) == False): data = [data]
@@ -122,7 +95,7 @@ class TimeToReviewPendingSCR(Metrics):
 
         # Upload time for reviewers
         q = self.db.GetTimeToReviewPendingQuerySQL (startdate, enddate, identities_db,
-                                                    type_analysis, bots, False, reviewers_pending, True)
+                                                    type_analysis, bots, reviewers_pending, True)
         data = self.db.ExecuteQuery(q)
         data = data['revtime']
         if (isinstance(data, list) == False): data = [data]
@@ -138,10 +111,6 @@ class TimeToReviewPendingSCR(Metrics):
                    "review_time_pending_days_avg":ttr_avg,
                    "review_time_pending_ReviewsWaitingForReviewer_days_median":ttr_reviewers_median,
                    "review_time_pending_ReviewsWaitingForReviewer_days_avg":ttr_reviewers_avg,
-                   "review_time_pending_update_days_median":ttr_median_update,
-                   "review_time_pending_update_days_avg":ttr_avg_update,
-                   "review_time_pending_update_ReviewsWaitingForReviewer_days_median":ttr_reviewers_median_update,
-                   "review_time_pending_update_ReviewsWaitingForReviewer_days_avg":ttr_reviewers_avg_update,
                    "review_time_pending_upload_days_median":ttr_median_upload,
                    "review_time_pending_upload_days_avg":ttr_avg_upload,
                    "review_time_pending_upload_ReviewsWaitingForReviewer_days_median":ttr_reviewers_median_upload,
@@ -163,8 +132,8 @@ class TimeToReviewPendingSCR(Metrics):
             current = str(year)+"-"+str(month)+"-"+str(last_day)
             return (current)
 
-        # SQL for all, for updated  or for waiting for reviewer reviews
-        def get_sql(month, updated=False, reviewers = False, uploaded = False):
+        # SQL for all, for upload  or for waiting for reviewer reviews
+        def get_sql(month, reviewers = False, uploaded = False):
             current = get_date_from_month(month)
 
             sql_max_patchset = """
@@ -192,10 +161,8 @@ class TimeToReviewPendingSCR(Metrics):
             # closed date is the mod_date for merged and abandoned reviews
             q_closed += " AND mod_date <= '"+current+"'"
 
-            # List of pending reviews before a date: time from new time and from last update
+            # List of pending reviews before a date: time from new time and from last upload
             fields  = "TIMESTAMPDIFF(SECOND, submitted_on, '"+current+"')/(24*3600) AS newtime,"
-            if (updated):
-                fields = "TIMESTAMPDIFF(SECOND, mod_date, '"+current+"')/(24*3600) AS updatetime,"
             if (uploaded):
                 fields = "TIMESTAMPDIFF(SECOND, ch.changed_on, '"+current+"')/(24*3600) AS uploadtime,"
             fields += " YEAR(i.submitted_on)*12+MONTH(i.submitted_on) as month"
@@ -221,9 +188,7 @@ class TimeToReviewPendingSCR(Metrics):
             filters += " HAVING month<= " + str(month)
             # Not include future submissions for current month analysis. 
             # We should no need it with the actual SQL which is correct 
-            if (updated):
-                filters += " AND updatetime >= 0"
-            elif (uploaded):
+            if (uploaded):
                 filters += " AND uploadtime >= 0"
             else:
                 filters += " AND newtime >= 0"
@@ -259,10 +224,8 @@ class TimeToReviewPendingSCR(Metrics):
         acc_pending_time_median = {"month":[],
                                    # "review_time_pending":[],
                                    "review_time_pending_days_acc_median":[],
-                                   "review_time_pending_update_days_acc_median":[],
                                    "review_time_pending_upload_days_acc_median":[],
                                    "review_time_pending_ReviewsWaitingForReviewer_days_acc_median":[],
-                                   "review_time_pending_update_ReviewsWaitingForReviewer_days_acc_median":[],
                                    "review_time_pending_upload_ReviewsWaitingForReviewer_days_acc_median":[]}
 
         for i in range(0, months+1):
@@ -272,26 +235,17 @@ class TimeToReviewPendingSCR(Metrics):
             values = get_values_median(reviews['newtime'])
             # acc_pending_time_median['review_time_pending'].append(len(reviews['newtime']))
             acc_pending_time_median['review_time_pending_days_acc_median'].append(values)
-
-            reviews = self.db.ExecuteQuery(get_sql(start_month+i, True))
-            values = get_values_median(reviews['updatetime'])
-            acc_pending_time_median['review_time_pending_update_days_acc_median'].append(values)
-
             # upload time
-            reviews = self.db.ExecuteQuery(get_sql(start_month+i, False, False, True))
+            reviews = self.db.ExecuteQuery(get_sql(start_month+i, False, True))
             values = get_values_median(reviews['uploadtime'])
             acc_pending_time_median['review_time_pending_upload_days_acc_median'].append(values)
 
             # Now just for reviews waiting for Reviewer
-            reviews = self.db.ExecuteQuery(get_sql(start_month+i, False, True))
+            reviews = self.db.ExecuteQuery(get_sql(start_month+i, True))
             values = get_values_median(reviews['newtime'])
             acc_pending_time_median['review_time_pending_ReviewsWaitingForReviewer_days_acc_median'].append(values)
 
             reviews = self.db.ExecuteQuery(get_sql(start_month+i, True, True))
-            values = get_values_median(reviews['updatetime'])
-            acc_pending_time_median['review_time_pending_update_ReviewsWaitingForReviewer_days_acc_median'].append(values)
-
-            reviews = self.db.ExecuteQuery(get_sql(start_month+i, False, True, True))
             values = get_values_median(reviews['uploadtime'])
             acc_pending_time_median['review_time_pending_upload_ReviewsWaitingForReviewer_days_acc_median'].append(values)
 
