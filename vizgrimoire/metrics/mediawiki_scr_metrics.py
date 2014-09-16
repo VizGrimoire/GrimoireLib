@@ -170,9 +170,9 @@ class TimeToReviewPendingSCR(Metrics):
             sql_max_patchset = """
                 SELECT issue_id, max(CAST(old_value as UNSIGNED)) maxPatchset
                 FROM changes
-                WHERE old_value<>'' and old_value<>'None'
+                WHERE old_value<>'' and old_value<>'None' and changed_on <'%s'
                 group by issue_id
-            """
+            """ % (current)
 
             sql_reviews_reviewed = """
                SELECT i.id from issues i, changes ch, (%s) t
