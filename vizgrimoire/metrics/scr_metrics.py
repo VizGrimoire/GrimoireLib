@@ -364,12 +364,12 @@ class PatchesPerReview(Metrics):
     def get_agg(self):
         query = """select count(distinct(ch.old_value)) as patches
                    from changes ch,
-                        (select issue_id
+                        (select distinct(issue_id) as issue_id
                          from changes
                          where changed_on >= %s and
                                changed_on < %s ) t
                    where ch.issue_id = t.issue_id and
-                         ch.old_value = ''
+                         ch.old_value <> ''
                    group by ch.issue_id
                 """ % (self.filters.startdate, self.filters.enddate)
 
