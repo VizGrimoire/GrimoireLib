@@ -167,6 +167,23 @@ class TimeToReviewPendingSCR(Metrics):
         def get_sql(month, updated=False, reviewers = False, uploaded = False):
             current = get_date_from_month(month)
 
+            sql_max_patchset = """
+                SELECT issue_id, max(CAST(old_value as UNSIGNED)) maxPatchset
+                FROM changes
+                WHERE old_value<>'' and old_value<>'None'
+                group by issue_id
+            """
+
+            sql_reviews_reviewed = """
+               SELECT i.id from issues i, changes ch, (%s) t
+               WHERE  i.id = t.issue_id and ch.issue_id = i.id
+                 AND ch.old_value = t.maxPatchset
+                 AND (    (field = 'Code-Review' AND (new_value = -1 or new_value = -2))
+                     OR  (field = 'Verified' AND (new_value = -1 or new_value = -2))
+                 )
+                 AND i.submitted_on >= %s
+            """ % (sql_max_patchset, startdate)
+
             # CLOSED
             # A review closed is never reopened so closed backlog is closed evolution
             q_closed  = "SELECT i.id as closed FROM issues i, issues_ext_gerrit ie "
@@ -180,35 +197,25 @@ class TimeToReviewPendingSCR(Metrics):
             if (updated):
                 fields = "TIMESTAMPDIFF(SECOND, mod_date, '"+current+"')/(24*3600) AS updatetime,"
             if (uploaded):
-                fields = "MIN(TIMESTAMPDIFF(SECOND, comm.submitted_on, '"+current+"')/(24*3600)) AS uploadtime,"
+                fields = "TIMESTAMPDIFF(SECOND, ch.changed_on, '"+current+"')/(24*3600) AS uploadtime,"
             fields += " YEAR(i.submitted_on)*12+MONTH(i.submitted_on) as month"
+
             tables = "issues i, people, issues_ext_gerrit ie "
-            if (uploaded): tables += ", comments comm"
-            if reviewers:
-                q_last_change = self.db.get_sql_last_change_for_reviews(current)
-                tables += ", changes ch, (%s) t1" % q_last_change
+            if (uploaded): tables += ", changes ch, ("+sql_max_patchset+") last_patch "
             tables = tables + self.db.GetSQLReportFrom(identities_db, type_analysis)
+
             filters = " people.id = i.submitted_by "
             filters += self.db.GetSQLReportWhere(type_analysis, self.db.identities_db)
             filters += " AND ie.issue_id  = i.id "
             filters += " AND i.id NOT IN ("+ q_closed +")"
-            # TODO: Improve it using new UPLOADED event in changes table
-            if (uploaded): filters += " AND comm.issue_id  = i.id AND comm.text like '%Patch Set%Verified%' "
+            if (uploaded):
+                filters += " AND ch.issue_id  = i.id AND i.id = last_patch.issue_id "
+                filters += " AND ch.old_value = last_patch.maxPatchset  AND ch.field = 'Upload'"
             if reviewers:
-                filters += " AND ch.issue_id  = i.id "
-                filters += " AND t1.id  = ch.id "
-                filters += """
-                    AND summary not like '%WIP%'
-                    AND NOT (ch.field = 'Code-Review' AND ch.new_value = '-1')
-                    AND NOT (ch.field = 'Code-Review' AND ch.new_value = '-2')
-                    AND NOT (ch.field = 'Verified' AND ch.new_value = '-1')
-                    AND NOT (ch.field = 'Verified' AND ch.new_value = '-2')
-                """
+                filters += """ AND i.id NOT IN (%s)
+                """ % (sql_reviews_reviewed)
 
             if (self.db.GetIssuesFiltered() != ""): filters += " AND " + self.db.GetIssuesFiltered()
-
-            if (uploaded):
-                filters +=  " GROUP by comm.issue_id "
 
             # All reviews before the month: accumulated key point
             filters += " HAVING month<= " + str(month)
@@ -222,6 +229,8 @@ class TimeToReviewPendingSCR(Metrics):
             filters += " ORDER BY  i.submitted_on"
             q = self.db.GetSQLGlobal('i.submitted_on', fields, tables, filters,
                         startdate,enddate)
+
+            print(q)
             return q
 
         def get_values_median(values):
