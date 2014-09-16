@@ -362,16 +362,30 @@ class PatchesPerReview(Metrics):
     data_source = SCR
 
     def get_agg(self):
-        query = """select count(distinct(ch.old_value)) as patches
-                   from changes ch,
-                        (select distinct(issue_id) as issue_id
-                         from changes
-                         where changed_on >= %s and
-                               changed_on < %s ) t
-                   where ch.issue_id = t.issue_id and
-                         ch.old_value <> ''
-                   group by ch.issue_id
-                """ % (self.filters.startdate, self.filters.enddate)
+        fields = "count(distinct(ch.old_value)) as patches"
+        tables_from = self.db.GetSQLReportFrom(self.filters.type_analysis)
+        filters_where = self.db.GetSQLReportWhere(self.filters.type_analysis)
+
+  
+        tables = " changes ch, issues i, " +\
+                 " (select distinct(issue_id) as issue_id " +\
+                 "  from changes " + \
+                 "  where changed_on >= "+self.filters.startdate+" and " +\
+                 "        changed_on < "+self.filters.enddate+" ) t "
+        if len(tables_from) > 0:
+            tables = tables +  tables_from
+
+
+        filters = " ch.issue_id = t.issue_id and "
+        filters = filters + " ch.issue_id = i.id and "
+        filters = filters + " ch.old_value <> '' "
+
+        if len(filters_where) > 0:
+            filters = filters + filters_where
+
+        filters = filters + " group by i.id "
+
+        query = "select " + fields + " from " + tables + " where " + filters
 
         patches_per_review = self.db.ExecuteQuery(query)
 
@@ -921,7 +935,7 @@ class TimeToReview(Metrics):
 
 if __name__ == '__main__':
     filters = MetricFilters("month", "'2012-04-01'", "'2014-07-01'", None)
-    dbcon = SCRQuery("root", "", "cp_gerrit_GrimoireLibTests", "cp_cvsanaly_GrimoireLibTests")
+    dbcon = SCRQuery("root", "", "dic_bicho_gerrit_openstack_3359_bis2", "dic_cvsanaly_openstack_4114")
 
     print "Submitted info:"
     submitted = Submitted(dbcon, filters)
@@ -945,4 +959,17 @@ if __name__ == '__main__':
 
     print "Patches per review"
     patches = PatchesPerReview(dbcon, filters)
+    print patches.get_agg()
+
+    patches.filters.type_analysis=["repository", "review.openstack.org_openstack/nova"]
+    print patches.get_agg()
+
+    patches.filters.type_analysis=["project", "integrated"]
+    print patches.get_agg()
+
+    patches.filters.type_analysis=["project", "Infrastructure"]
+    print patches.get_agg()
+
+    patches.filters.startdate = "'2014-01-01'"
+    patches.filters.type_analysis=["project", "Infrastructure"]
     print patches.get_agg()
