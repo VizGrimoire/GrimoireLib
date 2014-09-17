@@ -1316,48 +1316,103 @@ class SCRQuery(DSQuery):
         return (q)
 
     # Time to review accumulated for pending submissions using submit date or update date
-    def GetTimeToReviewPendingQuerySQL (self, startdate, enddate,
-                                        type_analysis = [], bots = [], updated = False, reviewers = False):
+    def GetTimeToReviewPendingQuerySQL (self, startdate, enddate, identities_db = None,
+                                        type_analysis = [], bots = [],
+                                        reviewers = False, uploaded = False):
 
         filter_bots = ''
         for bot in bots:
             filter_bots = filter_bots + " people.name<>'"+bot+"' AND "
 
+        sql_max_patchset = self.get_sql_max_patchset_for_reviews()
+        sql_reviews_reviewed = self.get_sql_reviews_reviewed(startdate)
+
         fields = "TIMESTAMPDIFF(SECOND, submitted_on, NOW())/(24*3600) AS revtime, submitted_on "
-        if (updated):
-            fields = "TIMESTAMPDIFF(SECOND, mod_date, NOW())/(24*3600) AS revtime, submitted_on "
+        if (uploaded):
+            fields = "TIMESTAMPDIFF(SECOND, ch.changed_on, NOW())/(24*3600) AS revtime, i.submitted_on as submitted_on "
         tables = "issues i, people, issues_ext_gerrit ie "
-        if reviewers:
-                q_last_change = self.get_sql_last_change_for_issues_new()
-                tables += ", changes ch, (%s) t1" % q_last_change
+        if (uploaded): tables += " , changes ch, ("+sql_max_patchset+") last_patch "
         tables += self.GetSQLReportFrom(type_analysis)
         filters = filter_bots + " people.id = i.submitted_by "
         filters += self.GetSQLReportWhere(type_analysis)
         filters += " AND status<>'MERGED' AND status<>'ABANDONED' "
         filters += " AND ie.issue_id  = i.id "
+        if (uploaded):
+            filters += " AND ch.issue_id  = i.id AND i.id = last_patch.issue_id "
+            filters += " AND ch.old_value = last_patch.maxPatchset  AND ch.field = 'Upload'"
         if reviewers:
-                filters += """
-                    AND i.id = ch.issue_id  AND t1.id = ch.id
-                    AND (ch.field='CRVW' or ch.field='Code-Review' or ch.field='Verified' or ch.field='VRIF')
-                    AND (ch.new_value=1 or ch.new_value=2)
-                """
+                filters += """ AND i.id NOT IN (%s)
+                """ % (sql_reviews_reviewed)
 
         if (self.GetIssuesFiltered() != ""): filters += " AND " + self.GetIssuesFiltered()
 
-        filters += " ORDER BY  submitted_on"
-        q = self.GetSQLGlobal('submitted_on', fields, tables, filters,
+        # if (uploaded): filters += " GROUP BY comm.issue_id "
+        filters += " ORDER BY  i.submitted_on"
+        q = self.GetSQLGlobal('i.submitted_on', fields, tables, filters,
                               startdate, enddate)
+
         return(q)
 
-    def get_sql_last_change_for_issues_new(self):
-        # last changes for reviews. Removed added change status = NEW that is "artificial"
+    def get_sql_last_change_for_reviews(self, before = None):
+        # last changes for reviews
+        # if before specified, just for changes before this date
+        before_sql = ""
+        if before:
+            before_sql = "AND changed_on <= '"+before+"'"
+
         q_last_change = """
             SELECT c.issue_id as issue_id,  max(c.id) as id
             FROM changes c, issues i
-            WHERE c.issue_id = i.id and i.status='NEW' and field<>'status'
+            WHERE c.issue_id = i.id and field<>'status' %s
             GROUP BY c.issue_id
-        """
+        """ % (before_sql)
         return q_last_change
+
+    def get_sql_max_patchset_for_reviews(self, date_analysis = None):
+        # SQL for getting the number of the last patchset sent to a review
+        # If date_analysis is specified, only analyze changes before this date
+
+        before_sql = ""
+        if date_analysis:
+            before_sql = "AND changed_on <= '"+date_analysis+"'"
+
+        sql_max_patchset = """
+            SELECT issue_id, max(CAST(old_value as UNSIGNED)) maxPatchset
+            FROM changes
+            WHERE old_value<>'' and old_value<>'None' %s
+            group by issue_id
+        """ % (before_sql)
+
+        return sql_max_patchset
+
+    def get_sql_reviews_reviewed(self, startdate, date_analysis = None):
+        # SQL for getting the list of reviews already reviewed
+
+        sql_max_patchset = self.get_sql_max_patchset_for_reviews(date_analysis)
+
+        sql_reviews_reviewed = """
+           SELECT i.id from issues i, changes ch, (%s) t
+           WHERE  i.id = t.issue_id and ch.issue_id = i.id
+             AND ch.old_value = t.maxPatchset
+             AND (    (field = 'Code-Review' AND (new_value = -1 or new_value = -2))
+                 OR  (field = 'Verified' AND (new_value = -1 or new_value = -2))
+             )
+             AND i.submitted_on >= %s
+        """ % (sql_max_patchset, startdate)
+
+        return sql_reviews_reviewed
+
+    def get_sql_reviews_closed (self, startdate, date_analysis):
+        # closed date is the mod_date for merged and abandoned reviews
+
+        sql_reviews_closed = """
+            SELECT i.id as closed FROM issues i, issues_ext_gerrit ie
+            WHERE submitted_on >= %s AND i.id = ie.issue_id
+            AND (status='MERGED' OR status='ABANDONED')
+            AND mod_date <= '%s'
+        """ % (startdate, date_analysis)
+
+        return sql_reviews_closed
 
     def GetPeopleQuerySubmissions (self, developer_id, period, startdate, enddate, evol):
         fields = "COUNT(i.id) AS submissions"

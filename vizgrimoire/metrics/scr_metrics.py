@@ -425,31 +425,110 @@ class PatchesWaitingForSubmitter(Metrics):
                                             self.filters.type_analysis, evolutionary)
         return q
 
+class ReviewsWaitingForReviewerTS(Metrics):
+    id = "ReviewsWaitingForReviewer_ts"
+    name = "Reviews waiting for reviewer"
+    desc = "Number of preview processes waiting for reviewer"
+    data_source = SCR
+
+    def get_ts(self):
+        from datetime import datetime
+
+        def get_date_from_month(monthid):
+            # month format: year*12+month
+            year = (monthid-1) / 12
+            month = monthid - year*12
+            # We need the last day of the month
+            import calendar
+            last_day = calendar.monthrange(year, month)[1]
+            current = str(year)+"-"+str(month)+"-"+str(last_day)
+            return (current)
+
+
+        def get_pending(month, reviewers = False):
+            current = get_date_from_month(month)
+
+            sql_max_patchset = self.db.get_sql_max_patchset_for_reviews (current)
+            sql_reviews_reviewed = self.db.get_sql_reviews_reviewed(self.filters.startdate, current)
+            sql_reviews_closed = self.db.get_sql_reviews_closed(self.filters.startdate, current)
+
+            fields = "COUNT(DISTINCT(i.id)) as pending"
+
+            tables = " issues i "
+            tables = tables + self.db.GetSQLReportFrom(type_analysis)
+
+            # Pending (NEW = submitted-merged-abandoned) REVIEWS
+            filters = " i.submitted_on <= '"+current+"'"
+            filters += self.db.GetSQLReportWhere(type_analysis)
+            # remove closed reviews
+            filters += " AND i.id NOT IN ("+ sql_reviews_closed +")"
+
+            if reviewers:
+                filters += """ AND i.id NOT IN (%s)
+                """ % (sql_reviews_reviewed)
+
+            q = self.db.GetSQLGlobal('i.submitted_on', fields, tables, filters,
+                                     startdate, enddate)
+
+            rs = self.db.ExecuteQuery(q)
+            return rs['pending']
+
+        pending = {"month":[],
+                   "ReviewsWaiting_ts":[],
+                   "ReviewsWaitingForReviewer_ts":[]}
+
+        startdate = self.filters.startdate
+        enddate = self.filters.enddate
+        period = self.filters.period
+        identities_db = self.db.identities_db
+        type_analysis =  self.filters.type_analysis
+
+        start = datetime.strptime(startdate, "'%Y-%m-%d'")
+        end = datetime.strptime(enddate, "'%Y-%m-%d'")
+
+        if (period != "month"):
+            logging.error("Period not supported in " + self.id  + " " + period)
+            return {}
+
+        start_month = start.year*12 + start.month
+        end_month = end.year*12 + end.month
+        months = end_month - start_month
+
+        for i in range(0, months+1):
+            pending['month'].append(start_month+i)
+            pending_month = get_pending(start_month+i)
+            pending_reviewers_month = get_pending(start_month+i, True)
+            pending['ReviewsWaiting_ts'].append(pending_month)
+            pending['ReviewsWaitingForReviewer_ts'].append(pending_reviewers_month)
+
+        return pending
+
+
 class ReviewsWaitingForReviewer(Metrics):
     id = "ReviewsWaitingForReviewer"
     name = "Reviews waiting for reviewer"
     desc = "Number of preview processes waiting for reviewer"
     data_source = SCR
 
-    def _get_sql(self, evolutionary):
-        q_last_change = self.db.get_sql_last_change_for_issues_new()
+
+    def _get_sql (self, evolutionary):
+
+        sql_max_patchset = self.db.get_sql_max_patchset_for_reviews ()
+        sql_reviews_reviewed = self.db.get_sql_reviews_reviewed(self.filters.startdate)
 
         fields = "COUNT(DISTINCT(i.id)) as ReviewsWaitingForReviewer"
-        tables = "changes c, issues i, (%s) t1" % q_last_change
+        tables = "issues i "
         tables += self.db.GetSQLReportFrom(self.filters.type_analysis)
-        filters = """
-            i.id = c.issue_id  AND t1.id = c.id
-            AND (c.field='CRVW' or c.field='Code-Review' or c.field='Verified' or c.field='VRIF')
-            AND (c.new_value=1 or c.new_value=2)
-        """
+        filters = " i.status = 'NEW' AND i.id NOT IN (%s) " % (sql_reviews_reviewed)
+
         filters = filters + self.db.GetSQLReportWhere(self.filters.type_analysis)
 
         q = self.db.BuildQuery (self.filters.period, self.filters.startdate,
-                                self.filters.enddate, " c.changed_on",
+                                self.filters.enddate, "i.submitted_on",
                                 fields, tables, filters, evolutionary, self.filters.type_analysis)
         return(q)
 
-
+# Review this metrics according to ReviewsWaitingForReviewer
 class ReviewsWaitingForSubmitter(Metrics):
     id = "ReviewsWaitingForSubmitter"
     name = "Reviews waiting for submitter"
@@ -458,7 +537,7 @@ class ReviewsWaitingForSubmitter(Metrics):
 
 
     def _get_sql(self, evolutionary):
-        q_last_change = self.db.get_sql_last_change_for_issues_new()
+        q_last_change = self.db.get_sql_last_change_for_reviews()
 
         fields = "COUNT(DISTINCT(i.id)) as ReviewsWaitingForSubmitter"
         tables = "changes c, issues i, (%s) t1" % q_last_change
