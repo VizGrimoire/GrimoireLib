@@ -962,23 +962,8 @@ class SCRQuery(DSQuery):
         for bot in bots:
             filter_bots = filter_bots + " people.name<>'"+bot+"' AND "
 
-        sql_max_patchset = """
-            SELECT issue_id, max(CAST(old_value as UNSIGNED)) maxPatchset
-            FROM changes
-            WHERE old_value<>'' and old_value<>'None'
-            group by issue_id
-        """
-
-        sql_reviews_reviewed = """
-           SELECT i.id from issues i, changes ch, (%s) t
-           WHERE  i.status = 'NEW' and i.id = t.issue_id and ch.issue_id = i.id
-             AND ch.old_value = t.maxPatchset
-             AND (    (field = 'Code-Review' AND (new_value = -1 or new_value = -2))
-                 OR  (field = 'Verified' AND (new_value = -1 or new_value = -2))
-             )
-             AND i.submitted_on >= %s
-        """ % (sql_max_patchset, startdate)
-
+        sql_max_patchset = self.get_sql_max_patchset_for_reviews()
+        sql_reviews_reviewed = self.get_sql_reviews_reviewed(startdate)
 
         fields = "TIMESTAMPDIFF(SECOND, submitted_on, NOW())/(24*3600) AS revtime, submitted_on "
         if (uploaded):
@@ -1003,10 +988,11 @@ class SCRQuery(DSQuery):
         filters += " ORDER BY  i.submitted_on"
         q = self.GetSQLGlobal('i.submitted_on', fields, tables, filters,
                               startdate, enddate)
+
         return(q)
 
     def get_sql_last_change_for_reviews(self, before = None):
-        # last changes for reviews.
+        # last changes for reviews
         # if before specified, just for changes before this date
         before_sql = ""
         if before:
@@ -1019,6 +1005,52 @@ class SCRQuery(DSQuery):
             GROUP BY c.issue_id
         """ % (before_sql)
         return q_last_change
+
+    def get_sql_max_patchset_for_reviews(self, date_analysis = None):
+        # SQL for getting the number of the last patchset sent to a review
+        # If date_analysis is specified, only analyze changes before this date      
+
+        before_sql = ""
+        if date_analysis:
+            before_sql = "AND changed_on <= '"+date_analysis+"'"
+
+        sql_max_patchset = """
+            SELECT issue_id, max(CAST(old_value as UNSIGNED)) maxPatchset
+            FROM changes
+            WHERE old_value<>'' and old_value<>'None' %s
+            group by issue_id
+        """ % (before_sql)
+
+        return sql_max_patchset
+
+    def get_sql_reviews_reviewed(self, startdate, date_analysis = None):
+        # SQL for getting the list of reviews already reviewed
+
+        sql_max_patchset = self.get_sql_max_patchset_for_reviews(date_analysis)
+
+        sql_reviews_reviewed = """
+           SELECT i.id from issues i, changes ch, (%s) t
+           WHERE  i.id = t.issue_id and ch.issue_id = i.id
+             AND ch.old_value = t.maxPatchset
+             AND (    (field = 'Code-Review' AND (new_value = -1 or new_value = -2))
+                 OR  (field = 'Verified' AND (new_value = -1 or new_value = -2))
+             )
+             AND i.submitted_on >= %s
+        """ % (sql_max_patchset, startdate)
+
+        return sql_reviews_reviewed
+
+    def get_sql_reviews_closed (self, startdate, date_analysis):
+        # closed date is the mod_date for merged and abandoned reviews
+
+        sql_reviews_closed = """
+            SELECT i.id as closed FROM issues i, issues_ext_gerrit ie
+            WHERE submitted_on >= %s AND i.id = ie.issue_id
+            AND (status='MERGED' OR status='ABANDONED')
+            AND mod_date <= '%s'
+        """ % (startdate, date_analysis)
+
+        return sql_reviews_closed
 
     def GetPeopleQuerySubmissions (self, developer_id, period, startdate, enddate, evol):
         fields = "COUNT(i.id) AS submissions"

@@ -136,30 +136,9 @@ class TimeToReviewPendingSCR(Metrics):
         def get_sql(month, reviewers = False, uploaded = False):
             current = get_date_from_month(month)
 
-            sql_max_patchset = """
-                SELECT issue_id, max(CAST(old_value as UNSIGNED)) maxPatchset
-                FROM changes
-                WHERE old_value<>'' and old_value<>'None' and changed_on <'%s'
-                group by issue_id
-            """ % (current)
-
-            sql_reviews_reviewed = """
-               SELECT i.id from issues i, changes ch, (%s) t
-               WHERE  i.id = t.issue_id and ch.issue_id = i.id
-                 AND ch.old_value = t.maxPatchset
-                 AND (    (field = 'Code-Review' AND (new_value = -1 or new_value = -2))
-                     OR  (field = 'Verified' AND (new_value = -1 or new_value = -2))
-                 )
-                 AND i.submitted_on >= %s
-            """ % (sql_max_patchset, startdate)
-
-            # CLOSED
-            # A review closed is never reopened so closed backlog is closed evolution
-            q_closed  = "SELECT i.id as closed FROM issues i, issues_ext_gerrit ie "
-            q_closed += "WHERE submitted_on > " + startdate +" AND i.id = ie.issue_id"
-            q_closed += " AND (status='MERGED' OR status='ABANDONED') "
-            # closed date is the mod_date for merged and abandoned reviews
-            q_closed += " AND mod_date <= '"+current+"'"
+            sql_max_patchset = self.db.get_sql_max_patchset_for_reviews (current)
+            sql_reviews_reviewed = self.db.get_sql_reviews_reviewed(startdate, current)
+            sql_reviews_closed = self.db.get_sql_reviews_closed(startdate, current)
 
             # List of pending reviews before a date: time from new time and from last upload
             fields  = "TIMESTAMPDIFF(SECOND, submitted_on, '"+current+"')/(24*3600) AS newtime,"
@@ -174,7 +153,7 @@ class TimeToReviewPendingSCR(Metrics):
             filters = " people.id = i.submitted_by "
             filters += self.db.GetSQLReportWhere(type_analysis, self.db.identities_db)
             filters += " AND ie.issue_id  = i.id "
-            filters += " AND i.id NOT IN ("+ q_closed +")"
+            filters += " AND i.id NOT IN ("+ sql_reviews_closed +")"
             if (uploaded):
                 filters += " AND ch.issue_id  = i.id AND i.id = last_patch.issue_id "
                 filters += " AND ch.old_value = last_patch.maxPatchset  AND ch.field = 'Upload'"
@@ -194,7 +173,8 @@ class TimeToReviewPendingSCR(Metrics):
                 filters += " AND newtime >= 0"
             filters += " ORDER BY  i.submitted_on"
             q = self.db.GetSQLGlobal('i.submitted_on', fields, tables, filters,
-                        startdate,enddate)
+                                     startdate,enddate)
+
             return q
 
         def get_values_median(values):

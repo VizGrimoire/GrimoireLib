@@ -311,30 +311,9 @@ class ReviewsWaitingForReviewerTS(Metrics):
         def get_pending(month, reviewers = False):
             current = get_date_from_month(month)
 
-            sql_max_patchset = """
-                SELECT issue_id, max(CAST(old_value as UNSIGNED)) maxPatchset
-                FROM changes
-                WHERE old_value<>'' and old_value<>'None'
-                group by issue_id
-            """
-
-            sql_reviews_reviewed = """
-               SELECT i.id from issues i, changes ch, (%s) t
-               WHERE  i.id = t.issue_id and ch.issue_id = i.id
-                 AND ch.old_value = t.maxPatchset
-                 AND (    (field = 'Code-Review' AND (new_value = -1 or new_value = -2))
-                     OR  (field = 'Verified' AND (new_value = -1 or new_value = -2))
-                 )
-                 AND i.submitted_on >= %s
-            """ % (sql_max_patchset, self.filters.startdate)
-
-            # CLOSED
-            # A review closed is never reopened so closed backlog is closed evolution
-            q_closed  = "SELECT i.id as closed FROM issues i, issues_ext_gerrit ie "
-            q_closed += "WHERE submitted_on > " + startdate +" AND i.id = ie.issue_id"
-            q_closed += " AND (status='MERGED' OR status='ABANDONED') "
-            # closed date is the mod_date for merged and abandoned reviews
-            q_closed += " AND mod_date <= '"+current+"'"
+            sql_max_patchset = self.db.get_sql_max_patchset_for_reviews (current)
+            sql_reviews_reviewed = self.db.get_sql_reviews_reviewed(self.filters.startdate, current)
+            sql_reviews_closed = self.db.get_sql_reviews_closed(self.filters.startdate, current)
 
             fields = "COUNT(DISTINCT(i.id)) as pending"
 
@@ -345,7 +324,7 @@ class ReviewsWaitingForReviewerTS(Metrics):
             filters = " i.submitted_on <= '"+current+"'"
             filters += self.db.GetSQLReportWhere(type_analysis, self.db.identities_db)
             # remove closed reviews
-            filters += " AND i.id NOT IN ("+ q_closed +")"
+            filters += " AND i.id NOT IN ("+ sql_reviews_closed +")"
 
             if reviewers:
                 filters += """ AND i.id NOT IN (%s)
@@ -396,29 +375,13 @@ class ReviewsWaitingForReviewer(Metrics):
 
     def _get_sql (self, evolutionary):
 
-        sql_max_patchset = """
-            SELECT issue_id, max(CAST(old_value as UNSIGNED)) maxPatchset
-            FROM changes
-            WHERE old_value<>'' and old_value<>'None'
-            group by issue_id
-        """
-
-        sql_reviews_reviewed = """
-           SELECT i.id from issues i, changes ch, (%s) t
-           WHERE  i.status='NEW'  AND i.id = t.issue_id and ch.issue_id = i.id
-             AND ch.old_value = t.maxPatchset
-             AND (    (field = 'Code-Review' AND (new_value = -1 or new_value = -2))
-                 OR  (field = 'Verified' AND (new_value = -1 or new_value = -2))
-             )
-             AND i.submitted_on >= %s
-        """ % (sql_max_patchset, self.filters.startdate)
+        sql_max_patchset = self.db.get_sql_max_patchset_for_reviews ()
+        sql_reviews_reviewed = self.db.get_sql_reviews_reviewed(self.filters.startdate)
 
         fields = "COUNT(DISTINCT(i.id)) as ReviewsWaitingForReviewer"
         tables = "issues i "
         tables += self.db.GetSQLReportFrom(self.db.identities_db, self.filters.type_analysis)
-        filters = """ i.status = 'NEW'
-                      AND i.id NOT IN (%s)
-        """ % (sql_reviews_reviewed)
+        filters = " i.status = 'NEW' AND i.id NOT IN (%s) " % (sql_reviews_reviewed)
 
         filters = filters + self.db.GetSQLReportWhere(self.filters.type_analysis, self.db.identities_db)
 
@@ -426,30 +389,6 @@ class ReviewsWaitingForReviewer(Metrics):
                                 self.filters.enddate, " i.submitted_on",
                                 fields, tables, filters, evolutionary)
         return(q)
-
-    def _get_sql_old (self, evolutionary):
-        q_last_change = self.db.get_sql_last_change_for_reviews()
-
-        fields = "COUNT(DISTINCT(i.id)) as ReviewsWaitingForReviewer"
-        tables = "changes ch, issues i, (%s) t1" % q_last_change
-        tables += self.db.GetSQLReportFrom(self.db.identities_db, self.filters.type_analysis)
-        filters = """
-            i.id = ch.issue_id  AND t1.id = ch.id
-            AND i.status = 'NEW'
-            AND NOT (ch.field = 'Code-Review' AND ch.new_value = '-1')
-            AND NOT (ch.field = 'Code-Review' AND ch.new_value = '-2')
-            AND summary not like '%WIP%'
-            AND NOT (ch.field = 'Verified' AND ch.new_value = '-1')
-            AND NOT (ch.field = 'Verified' AND ch.new_value = '-2')
-        """
-
-        filters = filters + self.db.GetSQLReportWhere(self.filters.type_analysis, self.db.identities_db)
-
-        q = self.db.BuildQuery (self.filters.period, self.filters.startdate,
-                                self.filters.enddate, " i.submitted_on",
-                                fields, tables, filters, evolutionary)
-        return(q)
-
 
 # Review this metrics according to ReviewsWaitingForReviewer
 class ReviewsWaitingForSubmitter(Metrics):
