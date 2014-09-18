@@ -174,7 +174,7 @@ class TimeToReviewPendingSCR(Metrics):
             filters += " ORDER BY  i.submitted_on"
             q = self.db.GetSQLGlobal('i.submitted_on', fields, tables, filters,
                                      startdate,enddate)
-
+            print(q)
             return q
 
         def get_values_median(values):
@@ -202,31 +202,49 @@ class TimeToReviewPendingSCR(Metrics):
         end_month = end.year*12 + end.month
         months = end_month - start_month
         acc_pending_time_median = {"month":[],
-                                   # "review_time_pending":[],
+                                   "review_time_pending_reviews":[],
                                    "review_time_pending_days_acc_median":[],
+                                   "review_time_pending_upload_reviews":[],
                                    "review_time_pending_upload_days_acc_median":[],
                                    "review_time_pending_ReviewsWaitingForReviewer_days_acc_median":[],
-                                   "review_time_pending_upload_ReviewsWaitingForReviewer_days_acc_median":[]}
+                                   "review_time_pending_ReviewsWaitingForReviewer_reviews":[],
+                                   "review_time_pending_upload_ReviewsWaitingForReviewer_days_acc_median":[],
+                                   "review_time_pending_upload_ReviewsWaitingForReviewer_reviews":[],}
 
         for i in range(0, months+1):
             acc_pending_time_median['month'].append(start_month+i)
 
             reviews = self.db.ExecuteQuery(get_sql(start_month+i))
             values = get_values_median(reviews['newtime'])
-            # acc_pending_time_median['review_time_pending'].append(len(reviews['newtime']))
+            if isinstance(reviews['newtime'], list): nreviews = len(reviews['newtime'])
+            else: nreviews = 1
+            print i, nreviews
+            acc_pending_time_median['review_time_pending_reviews'].append(nreviews)
             acc_pending_time_median['review_time_pending_days_acc_median'].append(values)
             # upload time
             reviews = self.db.ExecuteQuery(get_sql(start_month+i, False, True))
             values = get_values_median(reviews['uploadtime'])
+            if isinstance(reviews['uploadtime'], list): nreviews = len(reviews['uploadtime'])
+            else: nreviews = 1
+            print i, nreviews
+            acc_pending_time_median['review_time_pending_upload_reviews'].append(nreviews)
             acc_pending_time_median['review_time_pending_upload_days_acc_median'].append(values)
 
             # Now just for reviews waiting for Reviewer
             reviews = self.db.ExecuteQuery(get_sql(start_month+i, True))
             values = get_values_median(reviews['newtime'])
+            if isinstance(reviews['newtime'], list): nreviews = len(reviews['newtime'])
+            else: nreviews = 1
+            print i, nreviews
+            acc_pending_time_median['review_time_pending_ReviewsWaitingForReviewer_reviews'].append(nreviews)
             acc_pending_time_median['review_time_pending_ReviewsWaitingForReviewer_days_acc_median'].append(values)
 
             reviews = self.db.ExecuteQuery(get_sql(start_month+i, True, True))
             values = get_values_median(reviews['uploadtime'])
+            if isinstance(reviews['uploadtime'], list): nreviews = len(reviews['uploadtime'])
+            else: nreviews = 1
+            print i, nreviews
+            acc_pending_time_median['review_time_pending_upload_ReviewsWaitingForReviewer_reviews'].append(nreviews)
             acc_pending_time_median['review_time_pending_upload_ReviewsWaitingForReviewer_days_acc_median'].append(values)
 
         # Normalize values removing NA and converting to 0. Maybe not a good idea.
