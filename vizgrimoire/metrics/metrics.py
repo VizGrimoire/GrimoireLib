@@ -37,7 +37,7 @@ class Metrics(object):
     desc = None
     data_source = None
     domains_limit = 30
-    max_decimals = 4
+    max_decimals = 2
 
     def __init__(self, dbcon = None, filters = None):
         """db connection and filter to be used"""
