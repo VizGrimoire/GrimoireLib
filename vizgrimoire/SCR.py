@@ -125,7 +125,7 @@ class SCR(DataSource):
             metrics_on = list(set(metrics_on) - set(metrics_not_filters))
             if filter_.get_name() == "repository": 
                 metrics_on += ['review_time','submitted','ReviewsWaitingForReviewer', 'ReviewsWaitingForSubmitter']
-                metrics_on += ['review_time_pending_update_ReviewsWaitingForReviewer_days_median']
+                metrics_on += ['review_time_pending_total']
         # END SCR specific
 
         for item in all_metrics:
@@ -253,7 +253,6 @@ class SCR(DataSource):
         # For repos aggregated data. Include metrics to sort in javascript.
         if (filter_name == "repository"):
             items_list = {"name":[],"review_time_days_median":[],"submitted":[],
-                          "review_time_pending_update_ReviewsWaitingForReviewer_days_median":[],
                           "review_time_pending_upload_ReviewsWaitingForReviewer_days_median":[],
                           }
         else:
@@ -277,7 +276,6 @@ class SCR(DataSource):
             fn = os.path.join(destdir, filter_item.get_static_filename(SCR()))
             createJSON(agg, fn)
             if (filter_name == "repository"):
-                items_list["review_time_pending_update_ReviewsWaitingForReviewer_days_median"].append(agg['review_time_pending_update_ReviewsWaitingForReviewer_days_median'])
                 items_list["review_time_pending_upload_ReviewsWaitingForReviewer_days_median"].append(agg['review_time_pending_upload_ReviewsWaitingForReviewer_days_median'])
                 if 'submitted' in agg: 
                     items_list["submitted"].append(agg["submitted"])
