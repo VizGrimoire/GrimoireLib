@@ -186,6 +186,7 @@ class Authors(Metrics):
         enddate = metric_filters.enddate
         project = metric_filters.type_analysis[1]
         limit = metric_filters.npeople
+        filter_bots = self.get_bots_filter_sql(metric_filters)
 
         tables = Set([])
         filters = Set([])
@@ -208,6 +209,7 @@ class Authors(Metrics):
         filters.add("a.commit_id = s.id")
         filters.add("s.date >= " + startdate)
         filters.add("s.date < " + enddate)
+        filters.add(filter_bots)
         filters_str = self.db._get_filters_query(filters)
 
         filters_str += " GROUP by u.id ORDER BY commits DESC, authors"
@@ -878,8 +880,6 @@ class Companies(Metrics):
         return q
 
     def _get_top_project(self, fbots = None, days = None):
-        if fbots is not None and fbots != '': fbots += " AND "
-
         startdate = self.filters.startdate
         enddate = self.filters.enddate
         project = self.filters.type_analysis[1]
@@ -907,6 +907,7 @@ class Companies(Metrics):
         filters.add("s.date < " + enddate)
         filters.add("s.date >= upc.init")
         filters.add("s.date < upc.end")
+        filters.add(fbots)
 
         tables_str = self.db._get_tables_query(tables)
         filters_str = self.db._get_filters_query(filters)
