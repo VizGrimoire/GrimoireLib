@@ -174,7 +174,6 @@ class TimeToReviewPendingSCR(Metrics):
             filters += " ORDER BY  i.submitted_on"
             q = self.db.GetSQLGlobal('i.submitted_on', fields, tables, filters,
                                      startdate,enddate)
-            print(q)
             return q
 
         def get_values_median(values):
@@ -217,8 +216,7 @@ class TimeToReviewPendingSCR(Metrics):
             reviews = self.db.ExecuteQuery(get_sql(start_month+i))
             values = get_values_median(reviews['newtime'])
             if isinstance(reviews['newtime'], list): nreviews = len(reviews['newtime'])
-            else: nreviews = 1
-            print i, nreviews
+            else: nreviews = 1 # sure 1?
             acc_pending_time_median['review_time_pending_reviews'].append(nreviews)
             acc_pending_time_median['review_time_pending_days_acc_median'].append(values)
             # upload time
@@ -226,7 +224,6 @@ class TimeToReviewPendingSCR(Metrics):
             values = get_values_median(reviews['uploadtime'])
             if isinstance(reviews['uploadtime'], list): nreviews = len(reviews['uploadtime'])
             else: nreviews = 1
-            print i, nreviews
             acc_pending_time_median['review_time_pending_upload_reviews'].append(nreviews)
             acc_pending_time_median['review_time_pending_upload_days_acc_median'].append(values)
 
@@ -235,7 +232,6 @@ class TimeToReviewPendingSCR(Metrics):
             values = get_values_median(reviews['newtime'])
             if isinstance(reviews['newtime'], list): nreviews = len(reviews['newtime'])
             else: nreviews = 1
-            print i, nreviews
             acc_pending_time_median['review_time_pending_ReviewsWaitingForReviewer_reviews'].append(nreviews)
             acc_pending_time_median['review_time_pending_ReviewsWaitingForReviewer_days_acc_median'].append(values)
 
@@ -243,7 +239,6 @@ class TimeToReviewPendingSCR(Metrics):
             values = get_values_median(reviews['uploadtime'])
             if isinstance(reviews['uploadtime'], list): nreviews = len(reviews['uploadtime'])
             else: nreviews = 1
-            print i, nreviews
             acc_pending_time_median['review_time_pending_upload_ReviewsWaitingForReviewer_reviews'].append(nreviews)
             acc_pending_time_median['review_time_pending_upload_ReviewsWaitingForReviewer_days_acc_median'].append(values)
 
