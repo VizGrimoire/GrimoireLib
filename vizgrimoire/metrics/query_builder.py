@@ -273,6 +273,18 @@ class DSQuery(object):
 
         return field
 
+    @staticmethod
+    def get_bots_filter_sql (data_source, metric_filters = None):
+        bots = data_source.get_bots()
+        if metric_filters is not None:
+            if metric_filters.people_out is not None:
+                bots = metric_filters.people_out
+        filter_bots = ''
+        for bot in bots:
+            filter_bots = filter_bots + " u.identifier<>'"+bot+"' AND "
+        if filter_bots != '': filter_bots = filter_bots[:-4]
+        return filter_bots
+
 class SCMQuery(DSQuery):
     """ Specific query builders for source code management system data source """
 

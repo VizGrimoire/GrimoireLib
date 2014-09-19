@@ -114,7 +114,7 @@ class Openers(Metrics):
         startdate = metric_filters.startdate
         enddate = metric_filters.enddate
         limit = metric_filters.npeople
-        filter_bots = self.get_bots_filter_sql(metric_filters)
+        filter_bots = self.db.get_bots_filter_sql(self.data_source, metric_filters)
         if filter_bots != "": filter_bots += " AND "
 
         dtables = dfilters = ""
@@ -180,7 +180,7 @@ class Closers(Metrics):
         enddate = metric_filters.enddate
         company_name = metric_filters.type_analysis[1]
         limit = metric_filters.npeople
-        filter_bots = self.get_bots_filter_sql(metric_filters)
+        filter_bots = self.db.get_bots_filter_sql(self.data_source, metric_filters)
         closed_condition =  ITS._get_closed_condition()
 
         if filter_bots != '': filter_bots = " AND " + filter_bots
@@ -206,7 +206,7 @@ class Closers(Metrics):
         enddate = metric_filters.enddate
         domain_name = metric_filters.type_analysis[1]
         limit = metric_filters.npeople
-        filter_bots = self.get_bots_filter_sql(metric_filters)
+        filter_bots = self.db.get_bots_filter_sql(self.data_source, metric_filters)
         closed_condition =  ITS._get_closed_condition()
         if filter_bots != '': filter_bots = " AND " + filter_bots
 
@@ -231,7 +231,7 @@ class Closers(Metrics):
         enddate = metric_filters.enddate
         repo_name = metric_filters.type_analysis[1]
         limit = metric_filters.npeople
-        filter_bots = self.get_bots_filter_sql(metric_filters)
+        filter_bots = self.db.get_bots_filter_sql(self.data_source, metric_filters)
         closed_condition =  ITS._get_closed_condition()
         if filter_bots != '': filter_bots = " AND " + filter_bots
 
@@ -267,7 +267,7 @@ class Closers(Metrics):
         startdate = metric_filters.startdate
         enddate = metric_filters.enddate
         limit = metric_filters.npeople
-        filter_bots = self.get_bots_filter_sql(metric_filters)
+        filter_bots = self.db.get_bots_filter_sql(self.data_source, metric_filters)
         if filter_bots != "": filter_bots += " AND "
         closed_condition =  ITS._get_closed_condition()
 

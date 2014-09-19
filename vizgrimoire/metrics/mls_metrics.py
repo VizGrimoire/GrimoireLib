@@ -76,7 +76,7 @@ class EmailsSenders(Metrics):
         enddate = metric_filters.enddate
         repo = metric_filters.type_analysis[1]
         limit = metric_filters.npeople
-        filter_bots = self.get_bots_filter_sql(metric_filters)
+        filter_bots = self.db.get_bots_filter_sql(self.data_source, metric_filters)
         rfield = MLS.get_repo_field()
 
         dtables = dfilters = ""
@@ -109,7 +109,7 @@ class EmailsSenders(Metrics):
         enddate = metric_filters.enddate
         country_name = metric_filters.type_analysis[1]
         limit = metric_filters.npeople
-        filter_bots = self.get_bots_filter_sql(metric_filters)
+        filter_bots = self.db.get_bots_filter_sql(self.data_source, metric_filters)
 
         #TODO: instead of directly using the private method for building 
         # from or where clauses, this code should use GetSQLReportFrom/Where
@@ -135,7 +135,7 @@ class EmailsSenders(Metrics):
         enddate = metric_filters.enddate
         company_name = metric_filters.type_analysis[1]
         limit = metric_filters.npeople
-        filter_bots = self.get_bots_filter_sql(metric_filters)
+        filter_bots = self.db.get_bots_filter_sql(self.data_source, metric_filters)
 
         #TODO: instead of directly using the private method for building 
         # from or where clauses, this code should use GetSQLReportFrom/Where
@@ -161,7 +161,7 @@ class EmailsSenders(Metrics):
         enddate = metric_filters.enddate
         domain_name = metric_filters.type_analysis[1]
         limit = metric_filters.npeople
-        filter_bots = self.get_bots_filter_sql(metric_filters)
+        filter_bots = self.db.get_bots_filter_sql(self.data_source, metric_filters)
 
         domains_tables = self.db._get_tables_query(self.db.GetSQLDomainsFrom())
         domains_filters = self.db._get_filters_query(self.db.GetSQLDomainsWhere(domain_name))
@@ -190,7 +190,7 @@ class EmailsSenders(Metrics):
         startdate = metric_filters.startdate
         enddate = metric_filters.enddate
         limit = metric_filters.npeople
-        filter_bots = self.get_bots_filter_sql(metric_filters)
+        filter_bots = self.db.get_bots_filter_sql(self.data_source, metric_filters)
         if filter_bots != "": filter_bots += " AND "
 
         dtables = dfilters = ""

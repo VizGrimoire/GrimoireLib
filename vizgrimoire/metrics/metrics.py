@@ -156,7 +156,7 @@ class Metrics(object):
         """ Returns the trend metrics between now and now-days values """
 
         if self.filters.type_analysis and self.filters.type_analysis[1] is None:
-            return self.get_trends_all_items(date, days)
+            return self._get_trends_all_items(date, days)
 
         # Keeping state of origin filters
         filters = self.filters
@@ -180,7 +180,7 @@ class Metrics(object):
         self.filters = filters
         return (data)
 
-    def get_trends_all_items(self, date, days):
+    def _get_trends_all_items(self, date, days):
         """ Returns the trend metrics between now and now-days values """
         from GrimoireUtils import check_array_values
         from query_builder import DSQuery
@@ -272,30 +272,3 @@ class Metrics(object):
         if metric_filters is not None: self.filters = metric_filters_orig
 
         return mlist
-
-    def get_items_out_filter_sql (self, filter_, metric_filters = None):
-        # The items_out *must* come in metric_filters
-        filter_items = ''
-        if metric_filters is None:
-            metric_filters = self.filters
-
-        if filter_ == "company":
-            items_out = metric_filters.companies_out
-            if items_out is not None:
-                for item in items_out:
-                    filter_items += " c.name<>'"+item+"' AND "
-
-        if filter_items != '': filter_items = filter_items[:-4]
-        return filter_items
-
-    # TODO: Join with get_items_out_filter_sql once People is a filter
-    def get_bots_filter_sql (self, metric_filters = None):
-        bots = self.data_source.get_bots()
-        if metric_filters is not None:
-            if metric_filters.people_out is not None:
-                bots = metric_filters.people_out
-        filter_bots = ''
-        for bot in bots:
-            filter_bots = filter_bots + " u.identifier<>'"+bot+"' AND "
-        if filter_bots != '': filter_bots = filter_bots[:-4]
-        return filter_bots
