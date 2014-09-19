@@ -123,6 +123,11 @@ class Report(object):
                 metrics = metrics_class(builder(dbuser, dbpass, db, db_identities), metric_filters)
                 ds.add_metrics(metrics, ds)
 
+                # Specific filters
+                if ds.get_name() == "scr":
+                    if 'scr_start_date' in Report._automator['r']:
+                        metrics.filters.start_date = Report._automator['r']['scr_start_date']
+
     @staticmethod
     def _init_studies(studies_path):
         """Register all available studies"""
