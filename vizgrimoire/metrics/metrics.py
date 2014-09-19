@@ -27,6 +27,18 @@ from query_builder import DSQuery
 from metrics_filter import MetricFilters
 
 class Metrics(object):
+    """Root of hierarchy of Entities (Metrics)
+
+    This is the root hierarchy of the of the metric classes
+    defined for each of the data sources. A class that inherits
+    from this meta-class is an abstract representation of all of
+    the typical metrics related to such class.
+
+    Thus, when instantiated, we can obtain specific representations
+    of such entity. Timeseries of datasets (get_ts method), aggregated
+    data (get_agg method) or lists of elements (get_list method).
+
+    """
 
     default_period = "month"
     default_start = "'2010-01-01'"
@@ -66,7 +78,25 @@ class Metrics(object):
         return Metrics.data_source
 
     def _get_sql(self, evolutionary):
-        """ Returns specific sql for the provided filters """
+        """Private method that returns a valid SQL query
+
+        That query is built based on the information provided
+        in the self.filters parameter, that is a instance of
+        the MetricFilter class.
+
+        Among other parameters in the MetricFilters class,
+        we find the start and end analysis date or identitites to
+        ignore.
+
+        Parameters
+        ----------
+
+        evolutionary: boolean
+            If True, an evolutionary analysis sql is provided
+            If False, an aggregated analysis sql is provided
+
+        """
+
         raise NotImplementedError
 
     def _get_sql_filter_all (self, evolutionary):
@@ -132,7 +162,17 @@ class Metrics(object):
         return ts
 
     def get_ts (self):
-        """ Returns a time series of values """
+        """Returns a time series of a specific class
+
+        A timeseries consists of a unixtime date, labels, some other
+        fields and the data of the specific instantiated class per
+        period. This is built on a hash table.
+
+        This also returns a proper timeseries with a 0-filled array
+        if needed.
+
+        """
+
         query = self._get_sql(True)
         ts = self.db.ExecuteQuery(query)
         if self.filters.type_analysis and self.filters.type_analysis[1] is None:
