@@ -41,6 +41,9 @@ if __name__ == "__main__":
     from grimoirelib_alch.aux.standalone import stdout_utf8, print_banner
     from grimoirelib_alch.aux.reports import create_report
 
+    from sqlalchemy import func, and_
+    from sqlalchemy.sql import label
+
     stdout_utf8()
 
     prefix = "maturity-"
@@ -49,11 +52,22 @@ if __name__ == "__main__":
                    schema_id = "vizgrimoire_cvsanaly")
     session = database.build_session()
 
+    month_end = analysis_date
+    month_start = analysis_date - timedelta(days=30)
+    scm_repos_name = ['VizGrimoireJS.git', 'VizGrimoireJS-lib.git'] 
+
+    query = session.query(
+        label("id", SCMDatabase.Repositories.id)
+        ) \
+        .filter (SCMDatabase.Repositories.name.in_ (scm_repos_name))
+    scm_repos = [row.id for row in query.all()]
+    print scm_repos
+
     #---------------------------------
     print_banner ("SCM_COMMITS_1M: Number of commits during last month")
     nomerges = NomergesCondition()
-    last_month = PeriodCondition (start = analysis_date - timedelta(days=30),
-                                  end = analysis_date,
+    last_month = PeriodCondition (start = month_start,
+                                  end = month_end,
                                   date = "author"
                                   )
     master = BranchesCondition (branches = ("master",))
@@ -65,6 +79,23 @@ if __name__ == "__main__":
                 name = "ncommits",
                 conditions = (nomerges, master))
     timeseries ["scm_commits_1m"] = ncommits.timeseries()
+
+    #---------------------------------
+    print_banner ("SCM_FILES_1M: Number of files during last month")
+
+    query = session.query(
+        label(
+            "files",
+            func.count (func.distinct(SCMDatabase.Actions.file_id))
+            )
+        ) \
+        .join (SCMDatabase.SCMLog) \
+        .filter(and_(
+                SCMDatabase.SCMLog.author_date > month_start,
+                SCMDatabase.SCMLog.author_date <= month_end,
+                SCMDatabase.SCMLog.repository_id.in_ (scm_repos)
+                ))
+    values ["scm_files_1m"] = query.one().files
 
     report = {
         prefix + 'values.json': values,
