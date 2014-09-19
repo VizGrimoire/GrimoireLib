@@ -55,13 +55,20 @@ if __name__ == "__main__":
     month_end = analysis_date
     month_start = analysis_date - timedelta(days=30)
     scm_repos_name = ['VizGrimoireJS.git', 'VizGrimoireJS-lib.git'] 
-
+    scm_branches_name = ['master']
+    # Get SCM repository ids
     query = session.query(
         label("id", SCMDatabase.Repositories.id)
         ) \
         .filter (SCMDatabase.Repositories.name.in_ (scm_repos_name))
     scm_repos = [row.id for row in query.all()]
-    print scm_repos
+    # Get SCM branche ids
+    query = session.query(
+        label("id", SCMDatabase.Branches.id)
+        ) \
+        .filter (SCMDatabase.Branches.name.in_ (scm_branches_name))
+    scm_branches = [row.id for row in query.all()]
+    print scm_branches
 
     #---------------------------------
     print_banner ("SCM_COMMITS_1M: Number of commits during last month")
@@ -81,7 +88,7 @@ if __name__ == "__main__":
     timeseries ["scm_commits_1m"] = ncommits.timeseries()
 
     #---------------------------------
-    print_banner ("SCM_FILES_1M: Number of files during last month")
+    print_banner ("SCM_COMMITTED_FILES_1M: Number of files during last month")
 
     query = session.query(
         label(
@@ -91,12 +98,33 @@ if __name__ == "__main__":
         ) \
         .join (SCMDatabase.SCMLog) \
         .filter(and_(
+                SCMDatabase.Actions.branch_id.in_ (scm_branches),
+                SCMDatabase.SCMLog.repository_id.in_ (scm_repos),
                 SCMDatabase.SCMLog.author_date > month_start,
-                SCMDatabase.SCMLog.author_date <= month_end,
-                SCMDatabase.SCMLog.repository_id.in_ (scm_repos)
+                SCMDatabase.SCMLog.author_date <= month_end
                 ))
-    values ["scm_files_1m"] = query.one().files
+    values ["scm_committed_files_1m"] = query.one().files
 
+    #---------------------------------
+    print_banner ("SCM_COMMITTERS_1M: Number of committers during last month")
+    query = session.query(
+        label(
+            "authors",
+            func.count (func.distinct(SCMDatabase.SCMLog.author_id))
+            )
+        ) \
+        .join (SCMDatabase.Actions) \
+        .filter(and_(
+                SCMDatabase.Actions.branch_id.in_ (scm_branches),
+                SCMDatabase.SCMLog.repository_id.in_ (scm_repos),
+                SCMDatabase.SCMLog.author_date > month_start,
+                SCMDatabase.SCMLog.author_date <= month_end
+                ))
+    values ["scm_committers_1m"] = query.one().authors
+
+
+    #---------------------------------
+    print_banner ("Generate JSON report")
     report = {
         prefix + 'values.json': values,
         prefix + 'timeseries.json': timeseries,
