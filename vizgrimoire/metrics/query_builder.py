@@ -273,6 +273,18 @@ class DSQuery(object):
 
         return field
 
+    @staticmethod
+    def get_bots_filter_sql (data_source, metric_filters = None):
+        bots = data_source.get_bots()
+        if metric_filters is not None:
+            if metric_filters.people_out is not None:
+                bots = metric_filters.people_out
+        filter_bots = ''
+        for bot in bots:
+            filter_bots = filter_bots + " u.identifier<>'"+bot+"' AND "
+        if filter_bots != '': filter_bots = filter_bots[:-4]
+        return filter_bots
+
 class SCMQuery(DSQuery):
     """ Specific query builders for source code management system data source """
 
@@ -1201,13 +1213,10 @@ class SCRQuery(DSQuery):
         date_field = "i.submitted_on"
         if type_ in ["closed", "merged", "abandoned"]: date_field = "ie.mod_date"
         # Not include reviews before startdate no matter mod_date is after startdate
-        from report import Report
-        start_analysis = Report.get_start_date()
-        if 'scr_start_date' in Report.get_config()['r']:
-            start_analysis = Report.get_config()['r']['scr_start_date']
-        filters += " AND i.submitted_on >= '" + start_analysis  + "'"
+        filters += " AND i.submitted_on >= " + startdate
 
-        q = self.BuildQuery (period, startdate, enddate, date_field, fields, tables, filters, evolutionary, type_analysis)
+        q = self.BuildQuery (period, startdate, enddate, date_field, fields, tables,
+                             filters, evolutionary, type_analysis)
 
         return q
 

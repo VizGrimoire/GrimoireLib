@@ -121,7 +121,7 @@ class Authors(Metrics):
         enddate = metric_filters.enddate
         repo = metric_filters.type_analysis[1]
         limit = metric_filters.npeople
-        filter_bots = self.get_bots_filter_sql(metric_filters)
+        filter_bots = self.db.get_bots_filter_sql(self.data_source, metric_filters)
 
         #TODO: accessing private methods, please remove at some point
         repos_from = Set([])
@@ -159,7 +159,7 @@ class Authors(Metrics):
         enddate = metric_filters.enddate
         company = metric_filters.type_analysis[1]
         limit = metric_filters.npeople
-        filter_bots = self.get_bots_filter_sql(metric_filters)
+        filter_bots = self.db.get_bots_filter_sql(self.data_source, metric_filters)
         if filter_bots != '': filter_bots += " AND "
 
         q = """
@@ -186,7 +186,7 @@ class Authors(Metrics):
         enddate = metric_filters.enddate
         project = metric_filters.type_analysis[1]
         limit = metric_filters.npeople
-        filter_bots = self.get_bots_filter_sql(metric_filters)
+        filter_bots = self.db.get_bots_filter_sql(self.data_source, metric_filters)
 
         tables = Set([])
         filters = Set([])
@@ -231,7 +231,7 @@ class Authors(Metrics):
         startdate = metric_filters.startdate
         enddate = metric_filters.enddate
         limit = metric_filters.npeople
-        filter_bots = self.get_bots_filter_sql(metric_filters)
+        filter_bots = self.db.get_bots_filter_sql(self.data_source, metric_filters)
         if filter_bots != "": filter_bots = "WHERE " + filter_bots
 
         dtables = dfilters = ""
@@ -938,6 +938,22 @@ class Companies(Metrics):
         """ % (fbots, self.filters.startdate, self.filters.enddate)
         return q
 
+
+    def _get_items_out_filter_sql (self, filter_, metric_filters = None):
+        # The items_out *must* come in metric_filters
+        filter_items = ''
+        if metric_filters is None:
+            metric_filters = self.filters
+
+        if filter_ == "company":
+            items_out = metric_filters.companies_out
+            if items_out is not None:
+                for item in items_out:
+                    filter_items += " c.name<>'"+item+"' AND "
+
+        if filter_items != '': filter_items = filter_items[:-4]
+        return filter_items
+
     def get_list(self, metric_filters = None):
         from data_source import DataSource
         from filter import Filter
@@ -948,7 +964,7 @@ class Companies(Metrics):
 
         # Store current filter to restore it
         metric_filters_orig = self.filters
-        items_out = self.get_items_out_filter_sql("company", metric_filters)
+        items_out = self._get_items_out_filter_sql("company", metric_filters)
 
         if metric_filters is not None and metric_filters.type_analysis is not None:
             self.filters = metric_filters
