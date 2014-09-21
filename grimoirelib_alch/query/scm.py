@@ -28,7 +28,7 @@ from grimoirelib_alch.type.timeseries import TimeSeries
 from grimoirelib_alch.type.activity import ActivityList
 from common import GrimoireDatabase, GrimoireQuery
 
-from sqlalchemy import func, Column, Integer, ForeignKey, or_
+from sqlalchemy import func, Column, Integer, ForeignKey, PrimaryKeyConstraint, or_
 from sqlalchemy.sql import label
 from datetime import datetime
 
@@ -109,10 +109,22 @@ class DB (GrimoireDatabase):
             tablename = 'people_upeople',
             schemaname = self.schema,
             columns = dict (
-                upeople_id = Column(Integer,
-                                    ForeignKey(self.schema_id + '.' + 'upeople.id')
-                                    )
-                ))
+                upeople_id = Column(
+                    Integer,
+                    ForeignKey(self.schema_id + '.' + 'upeople.id'),
+                    primary_key = True
+                    ),
+                people_id = Column(
+                    Integer,
+                    ForeignKey(self.schema + '.' + 'people.id'),
+                    primary_key = True
+                    ),
+                )
+            )
+        # DB.PeopleUPeople.__table_args__ = (
+        #     PrimaryKeyConstraint(DB.PeopleUPeople.upeople_id,
+        #                          DB.PeopleUPeople.people_id),)
+        
         DB.Repositories = GrimoireDatabase._table (
             bases = (self.Base,),
             name = 'Repositories',
@@ -418,6 +430,8 @@ class Query (GrimoireQuery):
             label("nfiles",
                   func.count(func.distinct(DB.Actions.file_id)))
             )
+        if DB.Actions not in self.joined:
+            self.joined.append (DB.Actions)
         return query
 
     def select_listbranches(self):
@@ -446,17 +460,18 @@ class Query (GrimoireQuery):
         Parameters
         ----------
 
-        count: Boolean
+        count: bool
            Produce count of repositories instead of list
-        distinct: Boolean
+        distinct: bool
            Select distinct repository ids.
-        names: Boolean
+        names: bool
            Include names of repositories as a column (or not).
 
         Returns
         -------
 
-        Query: with new new columns in SELECT
+        Query
+            Including new columns in SELECT
         
         """
 

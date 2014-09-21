@@ -81,7 +81,11 @@ class DB (GrimoireDatabase):
                 message_id = Column(
                     String,
                     ForeignKey(self.schema + '.' + \
-                                   'messages.message_ID'))     
+                                   'messages.message_ID')),
+                email_address = Column(
+                    String,
+                    ForeignKey(self.schema + '.' + \
+                                   'people.email_address'))     
                 ))
         DB.People = GrimoireDatabase._table (
             bases = (self.Base,), name = 'People',
@@ -94,8 +98,16 @@ class DB (GrimoireDatabase):
             columns = dict (
                 upeople_id = Column(
                     Integer,
-                    ForeignKey(self.schema + '.' + 'upeople.id'))
-                ))
+                    ForeignKey(self.schema_id + '.' + 'upeople.id'),
+                    primary_key = True
+                    ),
+                people_id = Column(
+                    Integer,
+                    ForeignKey(self.schema + '.' + 'people.email_address'),
+                    primary_key = True
+                    ),
+                )
+            )
         DB.MailingLists = GrimoireDatabase._table (
             bases = (self.Base,), name = 'MailingLists',
             tablename = 'mailing_lists',

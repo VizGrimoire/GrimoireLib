@@ -205,7 +205,7 @@ if __name__ == "__main__":
     values ["mls_dev_vol_1m"] = query.one().posts
 
     #---------------------------------
-    print_banner ("MLS_DEV_AUTH_1M: Number of distinct authors in the developer mailing list during last month")
+    print_banner ("MLS_DEV_AUTH_1M: Number of distinct authors in developer mailing lists during last month")
     query = session.query(
         label(
             "authors",
@@ -227,8 +227,32 @@ if __name__ == "__main__":
             MLSDatabase.Messages.arrival_date > month_start,
             MLSDatabase.Messages.arrival_date <= month_end
             )
-    print query
     values ["mls_dev_auth_1m"] = query.one().authors
+
+    #---------------------------------
+    print_banner ("MLS_USR_AUTH_1M: Number of distinct authors in user mailing lists during last month")
+    query = session.query(
+        label(
+            "authors",
+            func.count (func.distinct(MLSDatabase.PeopleUPeople.upeople_id))
+            )
+        ) \
+        .join (
+            MLSDatabase.MessagesPeople,
+            MLSDatabase.PeopleUPeople.people_id == \
+                MLSDatabase.MessagesPeople.email_address
+            ) \
+        .join (MLSDatabase.Messages) \
+        .join (MLSDatabase.MailingLists) \
+        .filter (
+            MLSDatabase.MessagesPeople.type_of_recipient == "From",
+            MLSDatabase.MailingLists.mailing_list_url.in_ (
+                mls_users
+                ),
+            MLSDatabase.Messages.arrival_date > month_start,
+            MLSDatabase.Messages.arrival_date <= month_end
+            )
+    values ["mls_usr_auth_1m"] = query.one().authors
 
 
     #---------------------------------
