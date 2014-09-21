@@ -27,6 +27,22 @@ from datetime import datetime, timedelta
 
 analysis_date = datetime(2014,2,1)
 
+scm_database = {
+    "url": "mysql://jgb:XXX@localhost/",
+    "schema": "cp_cvsanaly_Eclipse_3328",
+    "schema_id": "cp_cvsanaly_Eclipse_3328"
+    }
+scm_repos_name = ['org.eclipse.ptp.git',] 
+scm_branches_name = ['master']
+
+mls_database = {
+    "url": "mysql://jgb:XXX@localhost/",
+    "schema": "cp_mlstats_Eclipse_3623",
+    "schema_id": "cp_cvsanaly_Eclipse_3328"
+    }
+mls_devels_name = ['ptp-dev.mbox',] 
+mls_users_name = ['ptp-dev.mbox',]
+
 # Dictionary to store values for maturity metrics 
 values = {}
 # Dictionary to store time series for maturity metrics
@@ -35,6 +51,7 @@ timeseries = {}
 if __name__ == "__main__":
 
     from grimoirelib_alch.query.scm import DB as SCMDatabase
+    from grimoirelib_alch.query.mls import DB as MLSDatabase
     from grimoirelib_alch.family.scm import (
         SCM, NomergesCondition, PeriodCondition, BranchesCondition
         )
@@ -47,15 +64,18 @@ if __name__ == "__main__":
     stdout_utf8()
 
     prefix = "maturity-"
-    database = SCMDatabase (url = "mysql://jgb:XXX@localhost/",
-                   schema = "vizgrimoire_cvsanaly",
-                   schema_id = "vizgrimoire_cvsanaly")
-    session = database.build_session()
-
     month_end = analysis_date
     month_start = analysis_date - timedelta(days=30)
-    scm_repos_name = ['VizGrimoireJS.git', 'VizGrimoireJS-lib.git'] 
-    scm_branches_name = ['master']
+
+    #
+    # SCM
+    #
+
+    database = SCMDatabase (url = scm_database["url"],
+                   schema = scm_database["schema"],
+                   schema_id = scm_database["schema_id"])
+    session = database.build_session()
+
     # Get SCM repository ids
     query = session.query(
         label("id", SCMDatabase.Repositories.id)
@@ -72,20 +92,35 @@ if __name__ == "__main__":
 
     #---------------------------------
     print_banner ("SCM_COMMITS_1M: Number of commits during last month")
-    nomerges = NomergesCondition()
-    last_month = PeriodCondition (start = month_start,
-                                  end = month_end,
-                                  date = "author"
-                                  )
-    master = BranchesCondition (branches = ("master",))
-    ncommits = SCM (datasource = session,
-                    name = "ncommits",
-                    conditions = (nomerges, last_month, master))
-    values ["scm_commits_1m"] = ncommits.total()
-    ncommits = SCM (datasource = session,
-                name = "ncommits",
-                conditions = (nomerges, master))
-    timeseries ["scm_commits_1m"] = ncommits.timeseries()
+    # nomerges = NomergesCondition()
+    # last_month = PeriodCondition (start = month_start,
+    #                               end = month_end,
+    #                               date = "author"
+    #                               )
+    # master = BranchesCondition (branches = ("master",))
+    # ncommits = SCM (datasource = session,
+    #                 name = "ncommits",
+    #                 conditions = (nomerges, last_month, master))
+    # values ["scm_commits_1m"] = ncommits.total()
+    # ncommits = SCM (datasource = session,
+    #             name = "ncommits",
+    #             conditions = (nomerges, master))
+    # timeseries ["scm_commits_1m"] = ncommits.timeseries()
+
+    query = session.query(
+        label(
+            "commits",
+            func.count (func.distinct(SCMDatabase.SCMLog.rev))
+            )
+        ) \
+        .join (SCMDatabase.Actions) \
+        .filter(
+            SCMDatabase.Actions.branch_id.in_ (scm_branches),
+            SCMDatabase.SCMLog.repository_id.in_ (scm_repos),
+            SCMDatabase.SCMLog.author_date > month_start,
+            SCMDatabase.SCMLog.author_date <= month_end
+            )
+    values ["scm_commits_1m"] = query.one().commits
 
     #---------------------------------
     print_banner ("SCM_COMMITTED_FILES_1M: Number of files during last month")
@@ -97,12 +132,12 @@ if __name__ == "__main__":
             )
         ) \
         .join (SCMDatabase.SCMLog) \
-        .filter(and_(
-                SCMDatabase.Actions.branch_id.in_ (scm_branches),
-                SCMDatabase.SCMLog.repository_id.in_ (scm_repos),
-                SCMDatabase.SCMLog.author_date > month_start,
-                SCMDatabase.SCMLog.author_date <= month_end
-                ))
+        .filter(
+            SCMDatabase.Actions.branch_id.in_ (scm_branches),
+            SCMDatabase.SCMLog.repository_id.in_ (scm_repos),
+            SCMDatabase.SCMLog.author_date > month_start,
+            SCMDatabase.SCMLog.author_date <= month_end
+            )
     values ["scm_committed_files_1m"] = query.one().files
 
     #---------------------------------
@@ -110,17 +145,90 @@ if __name__ == "__main__":
     query = session.query(
         label(
             "authors",
-            func.count (func.distinct(SCMDatabase.SCMLog.author_id))
+            func.count (func.distinct(SCMDatabase.PeopleUPeople.upeople_id))
             )
         ) \
+        .join (
+            SCMDatabase.SCMLog,
+            SCMDatabase.PeopleUPeople.people_id == SCMDatabase.SCMLog.author_id
+            ) \
         .join (SCMDatabase.Actions) \
-        .filter(and_(
-                SCMDatabase.Actions.branch_id.in_ (scm_branches),
+        .filter(SCMDatabase.Actions.branch_id.in_ (scm_branches),
                 SCMDatabase.SCMLog.repository_id.in_ (scm_repos),
                 SCMDatabase.SCMLog.author_date > month_start,
                 SCMDatabase.SCMLog.author_date <= month_end
-                ))
+                )
     values ["scm_committers_1m"] = query.one().authors
+
+
+    #
+    # MLS
+    #
+
+    database = MLSDatabase (url = mls_database["url"],
+                   schema = mls_database["schema"],
+                   schema_id = mls_database["schema_id"])
+    session = database.build_session()
+
+    # Get MLS repository ids (urls)
+    query = session.query(
+        label("id", MLSDatabase.MailingLists.mailing_list_url)
+        ) \
+        .filter (MLSDatabase.MailingLists.mailing_list_name.in_ (
+                mls_devels_name)
+                 )
+    mls_devels = [row.id for row in query.all()]
+    query = session.query(
+        label("id", MLSDatabase.MailingLists.mailing_list_url)
+        ) \
+        .filter (MLSDatabase.MailingLists.mailing_list_name.in_ (
+                mls_users_name)
+                 )
+    mls_users = [row.id for row in query.all()]
+
+    #---------------------------------
+    print_banner ("MLS_DEV_VOL_1M: Number of posts in the developer mailing list during last month")
+    query = session.query(
+        label(
+            "posts",
+            func.count (MLSDatabase.Messages.message_ID)
+            )
+        ) \
+        .join (MLSDatabase.MailingLists) \
+        .filter (
+            MLSDatabase.MailingLists.mailing_list_url.in_ (
+                mls_devels
+                ),
+            MLSDatabase.Messages.arrival_date > month_start,
+            MLSDatabase.Messages.arrival_date <= month_end
+            )
+    values ["mls_dev_vol_1m"] = query.one().posts
+
+    #---------------------------------
+    print_banner ("MLS_DEV_AUTH_1M: Number of distinct authors in the developer mailing list during last month")
+    query = session.query(
+        label(
+            "authors",
+            func.count (func.distinct(MLSDatabase.PeopleUPeople.upeople_id))
+            )
+        ) \
+        .join (
+            MLSDatabase.MessagesPeople,
+            MLSDatabase.PeopleUPeople.people_id == \
+                MLSDatabase.MessagesPeople.email_address
+            ) \
+        .join (MLSDatabase.Messages) \
+        .join (MLSDatabase.MailingLists) \
+        .filter (
+            MLSDatabase.MessagesPeople.type_of_recipient == "From",
+            MLSDatabase.MailingLists.mailing_list_url.in_ (
+                mls_devels
+                ),
+            MLSDatabase.Messages.arrival_date > month_start,
+            MLSDatabase.Messages.arrival_date <= month_end
+            )
+    print query
+    values ["mls_dev_auth_1m"] = query.one().authors
 
 
     #---------------------------------
