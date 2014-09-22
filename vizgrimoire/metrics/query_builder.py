@@ -421,6 +421,30 @@ class SCMQuery(DSQuery):
 
         return filters
 
+    def GetSQLFileTypeFrom(self):
+        # tables necessary to filter by type of file
+        tables = Set([])
+        tables.add("actions a")
+        tables.add("file_types ft")
+
+        return tables
+
+    def GetSQLFileTypeWhere(self, filetype):
+        """ Filters necessary to filter by type of file.
+
+        As specified by CVSAnalY, there are 9 different types:
+        unknown, devel-doc, build, code, i18n, documentation,
+        image, ui, package.
+
+        Those strings are the one expected in the value of filetype
+        """
+        filters = Set([])
+        filters.add("a.commit_id = s.id")
+        filters.add("a.file_id = ft.file_id")
+        filters.add("ft.type =" + filetype)
+
+        return filters
+
     def GetSQLPeopleFrom (self):
         #tables necessaries for companies
         tables = Set([])
@@ -489,6 +513,7 @@ class SCMQuery(DSQuery):
                 elif analysis == 'project': From.union_update(self.GetSQLProjectFrom())
                 elif analysis == 'branch': From.union_update(self.GetSQLBranchFrom())
                 elif analysis == 'module': From.union_update(self.GetSQLModuleFrom())
+                elif analysis == 'filetype': From.union_update(self.GetSQLFileTypeFrom())
                 elif analysis == 'people': From.union_update(self.GetSQLPeopleFrom())
                 elif analysis == 'people2': From.union_update(self.GetSQLPeopleFrom())
                 else: raise Exception( analysis + " not supported")
@@ -527,6 +552,7 @@ class SCMQuery(DSQuery):
                 elif analysis == 'project': where.union_update(self.GetSQLProjectWhere(value))
                 elif analysis == 'branch': where.union_update(self.GetSQLBranchWhere(value))
                 elif analysis == 'module': where.union_update(self.GetSQLModuleWhere(value))
+                elif analysis == 'filetype': where.union_update(self.GetSQLFileTypeWhere(value))
                 elif analysis == 'people': where.union_update(self.GetSQLPeopleWhere(value))
                 elif analysis == 'people2': where.union_update(self.GetSQLPeopleWhere(value))
                 else: raise Exception( analysis + " not supported")
