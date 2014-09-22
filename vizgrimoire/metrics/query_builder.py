@@ -388,6 +388,23 @@ class SCMQuery(DSQuery):
 
         return fields
 
+    def GetSQLBranchFrom(self):
+        # tables necessary to limit the analysis to certain branches
+        tables = Set([])
+        tables.add("actions a")
+        tables.add("branches b")
+
+        return tables
+
+    def GetSQLBranchWhere(self, branch):
+        # filters necessary to limit the analysis to certain branches
+        fields = Set([])
+        fields.add("a.commit_id = s.id")
+        fields.add("a.branch_id = b.id")
+        fields.add("b.name =" + branch)
+
+        return fields
+
     def GetSQLPeopleFrom (self):
         #tables necessaries for companies
         tables = Set([])
@@ -454,6 +471,7 @@ class SCMQuery(DSQuery):
                 elif analysis == 'country': From.union_update(self.GetSQLCountriesFrom())
                 elif analysis == 'domain': From.union_update(self.GetSQLDomainsFrom())
                 elif analysis == 'project': From.union_update(self.GetSQLProjectFrom())
+                elif analysis == 'branch': From.union_update(self.GetSQLBranchFrom())
                 elif analysis == 'people': From.union_update(self.GetSQLPeopleFrom())
                 elif analysis == 'people2': From.union_update(self.GetSQLPeopleFrom())
                 else: raise Exception( analysis + " not supported")
@@ -490,6 +508,7 @@ class SCMQuery(DSQuery):
                 elif analysis == 'country': where.union_update(self.GetSQLCountriesWhere(value, role))
                 elif analysis == 'domain': where.union_update(self.GetSQLDomainsWhere(value, role))
                 elif analysis == 'project': where.union_update(self.GetSQLProjectWhere(value))
+                elif analysis == 'branch': where.union_update(self.GetSQLBranchWhere(value))
                 elif analysis == 'people': where.union_update(self.GetSQLPeopleWhere(value))
                 elif analysis == 'people2': where.union_update(self.GetSQLPeopleWhere(value))
                 else: raise Exception( analysis + " not supported")
