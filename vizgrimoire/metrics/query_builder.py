@@ -979,6 +979,7 @@ class SCRQuery(DSQuery):
             filters += " AND ch.issue_id  = i.id AND i.id = last_patch.issue_id "
             filters += " AND ch.old_value = last_patch.maxPatchset  AND ch.field = 'Upload'"
         if reviewers:
+                filters += " AND i.summary not like '%WIP%' "
                 filters += """ AND i.id NOT IN (%s)
                 """ % (sql_reviews_reviewed)
 

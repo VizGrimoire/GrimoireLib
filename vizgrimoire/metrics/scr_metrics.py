@@ -327,6 +327,7 @@ class ReviewsWaitingForReviewerTS(Metrics):
             filters += " AND i.id NOT IN ("+ sql_reviews_closed +")"
 
             if reviewers:
+                filters += " AND i.summary not like '%WIP%' "
                 filters += """ AND i.id NOT IN (%s)
                 """ % (sql_reviews_reviewed)
 
@@ -382,6 +383,7 @@ class ReviewsWaitingForReviewer(Metrics):
         tables = "issues i "
         tables += self.db.GetSQLReportFrom(self.db.identities_db, self.filters.type_analysis)
         filters = " i.status = 'NEW' AND i.id NOT IN (%s) " % (sql_reviews_reviewed)
+        filters += " AND i.summary not like '%WIP%' "
 
         filters = filters + self.db.GetSQLReportWhere(self.filters.type_analysis, self.db.identities_db)
 
