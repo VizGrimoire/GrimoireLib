@@ -254,6 +254,51 @@ if __name__ == "__main__":
             )
     values ["mls_usr_auth_1m"] = query.one().authors
 
+    #---------------------------------
+    print_banner ("MLS_USR_SUBJ_1M: Number of threads in the user mailing list during last month")
+
+    query = session.query(
+        label("parents", func.count(MLSDatabase.Messages.message_ID)),
+        ) \
+        .join (MLSDatabase.MailingLists) \
+        .filter (
+            MLSDatabase.MailingLists.mailing_list_url.in_ (
+                mls_users
+                ),
+            MLSDatabase.Messages.arrival_date > month_start,
+            MLSDatabase.Messages.arrival_date <= month_end,
+            MLSDatabase.Messages.is_response_of == None
+            )
+    values ["mls_usr_subu_1m"] = query.one().parents
+
+    # parents = {}
+    # threads = {}
+    # query = session.query(
+    #     label("message", MLSDatabase.Messages.message_ID),
+    #     label("parent", MLSDatabase.Messages.is_response_of),
+    #     ) \
+    #     .join (MLSDatabase.MailingLists) \
+    #     .filter (
+    #         MLSDatabase.MailingLists.mailing_list_url.in_ (
+    #             mls_users
+    #             ),
+    #         MLSDatabase.Messages.arrival_date > month_start,
+    #         MLSDatabase.Messages.arrival_date <= month_end
+    #         )
+    # count = 0
+    # for row in query.all():
+    #     parents[row.message] = row.parent
+    #     threads[row.message] = count
+    #     count = count + 1
+    # print "Messages found: " + str(len(messages))
+    # for message, parent in parents.items():
+    #     if parent in parents
+    #         thread[message] = count
+    #     elif parent not in parents:
+    #         # Parent is not in this group of messages
+    #         thread[message] = count
+    #     else:
+    #         thread[message] = thread[parent]
 
     #---------------------------------
     print_banner ("Generate JSON report")
