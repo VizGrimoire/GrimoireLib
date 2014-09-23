@@ -128,6 +128,29 @@ class CompaniesActivity(Analyses):
 
         return (sql)
 
+    def get_sql_sloc(self, year = None):
+        where = ""
+        field = "sloc"
+        from_ =  self.get_scm_from_companies()
+
+        # Remove commits from cvs2svn migration with removed lines issues
+        where = "WHERE  message NOT LIKE '%cvs2svn%'"
+        if year is not None:
+            where += " AND YEAR(s.date) = " + str(year)
+            field = field + "_" + str(year)
+
+        sql = """
+            select name, added-removed as %s FROM (
+              select c.name, SUM(removed) as removed, SUM(added) as added
+              %s JOIN commits_lines cl ON cl.commit_id = s.id
+              %s
+              group by c.id
+            ) t
+            order by %s desc, name
+        """ % (field, from_, where, field)
+
+        return (sql)
+
     def get_sql_tickets(self, field = None, year = None):
         where = "WHERE"
         from_ =  self.get_its_from_companies()
@@ -215,7 +238,7 @@ class CompaniesActivity(Analyses):
             if not isinstance(data[item], list): data[item] = [data[item]]
 
     def add_metric_years(self, metric, activity, start, end):
-        metrics = ['commits','authors','actions','opened','closed','sent']
+        metrics = ['commits','authors','actions','sloc','opened','closed','sent']
         if metric not in metrics:
             logging.error(metric + " not supported in companies activity.")
             return
@@ -226,6 +249,8 @@ class CompaniesActivity(Analyses):
                 data = self.db.ExecuteQuery(self.get_sql_authors(i))
             elif metric == "actions":
                 data = self.db.ExecuteQuery(self.get_sql_actions(i))
+            elif metric == "sloc":
+                data = self.db.ExecuteQuery(self.get_sql_sloc(i))
             elif metric == "opened":
                 data = self.db.ExecuteQuery(self.get_sql_opened(i))
             elif metric == "closed":
@@ -254,6 +279,7 @@ class CompaniesActivity(Analyses):
 
         activity = {}
         activity['name'] = []
+
         # Commits
         data = self.db.ExecuteQuery(self.get_sql_commits())
         activity = self.add_companies_data (activity, data)
@@ -266,6 +292,10 @@ class CompaniesActivity(Analyses):
         data = self.db.ExecuteQuery(self.get_sql_actions())
         activity = self.add_companies_data (activity, data)
         self.add_metric_years("actions",activity,start_year,end_year)
+        # Source lines of code
+        data = self.db.ExecuteQuery(self.get_sql_sloc())
+        activity = self.add_companies_data (activity, data)
+        self.add_metric_years("sloc",activity,start_year,end_year)
 
         # We need to change the db to tickets
         dbname = automator["generic"]["db_bicho"]
