@@ -135,6 +135,13 @@ class CompaniesActivity(Analyses):
 
         # Remove commits from cvs2svn migration with removed lines issues
         where = "WHERE  message NOT LIKE '%cvs2svn%'"
+        # Remove commits creating branches from svn that adds huge artificial lines
+        where += """
+            AND message not like '%release tag.%'
+            AND message not like '% branch creation.%'
+            AND message not like '%Creating the branch for the release %'
+            AND message not like '%create a branch%'
+        """
         if year is not None:
             where += " AND YEAR(s.date) = " + str(year)
             field = field + "_" + str(year)
