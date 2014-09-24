@@ -288,7 +288,7 @@ class CompaniesActivity(Analyses):
             if not isinstance(data[item], list): data[item] = [data[item]]
 
     def add_metric_years(self, metric, activity, start, end):
-        metrics = ['commits','authors','actions','sloc','lines_added','lines_removed','opened','closed','sent']
+        metrics = ['commits','authors','actions','sloc','lines-added','lines-removed','opened','closed','sent']
         if metric not in metrics:
             logging.error(metric + " not supported in companies activity.")
             return
@@ -301,10 +301,16 @@ class CompaniesActivity(Analyses):
                 data = self.db.ExecuteQuery(self.get_sql_actions(i))
             elif metric == "sloc":
                 data = self.db.ExecuteQuery(self.get_sql_sloc(i))
-            elif metric == "lines_added":
+            elif metric == "lines-added":
                 data = self.db.ExecuteQuery(self.get_sql_lines_added(i))
-            elif metric == "lines_removed":
+                field_key = data.keys()[0]
+                field_key_new = field_key.replace("lines_added","lines-added")
+                data[field_key_new] = data.pop(field_key)
+            elif metric == "lines-removed":
                 data = self.db.ExecuteQuery(self.get_sql_lines_removed(i))
+                field_key = data.keys()[0]
+                field_key_new = field_key.replace("lines_removed","lines-removed")
+                data[field_key_new] = data.pop(field_key)
             elif metric == "opened":
                 data = self.db.ExecuteQuery(self.get_sql_opened(i))
             elif metric == "closed":
@@ -348,12 +354,18 @@ class CompaniesActivity(Analyses):
         self.add_metric_years("actions",activity,start_year,end_year)
         # Source lines of code added
         data = self.db.ExecuteQuery(self.get_sql_lines_added())
+        field_key = data.keys()[0]
+        field_key_new = field_key.replace("lines_added","lines-added")
+        data[field_key_new] = data.pop(field_key)
         activity = self.add_companies_data (activity, data)
-        self.add_metric_years("lines_added",activity,start_year,end_year)
+        self.add_metric_years("lines-added",activity,start_year,end_year)
         # Source lines of code removed
         data = self.db.ExecuteQuery(self.get_sql_lines_removed())
+        field_key = data.keys()[0]
+        field_key_new = field_key.replace("lines_removed","lines-removed")
+        data[field_key_new] = data.pop(field_key)
         activity = self.add_companies_data (activity, data)
-        self.add_metric_years("lines_removed",activity,start_year,end_year)
+        self.add_metric_years("lines-removed",activity,start_year,end_year)
 
         # We need to change the db to tickets
         dbname = automator["generic"]["db_bicho"]
