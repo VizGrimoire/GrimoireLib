@@ -129,6 +129,7 @@ class CompaniesActivity(Analyses):
         return (sql)
 
     def get_sql_sloc(self, year = None):
+        """ Metric not used. Use lines_added and lines_removed """
         where = ""
         field = "sloc"
         from_ =  self.get_scm_from_companies()
@@ -149,6 +150,48 @@ class CompaniesActivity(Analyses):
         sql = """
             select name, added-removed as %s FROM (
               select c.name, SUM(removed) as removed, SUM(added) as added
+              %s JOIN commits_lines cl ON cl.commit_id = s.id
+              %s
+              group by c.id
+            ) t
+            order by %s desc, name
+        """ % (field, from_, where, field)
+
+        return (sql)
+
+    def get_sql_lines_added(self, year = None):
+        where = ""
+        field = "lines_added"
+        from_ =  self.get_scm_from_companies()
+
+        if year is not None:
+            where += " WHERE YEAR(s.date) = " + str(year)
+            field = field + "_" + str(year)
+
+        sql = """
+            select name, added as %s FROM (
+              select c.name, SUM(added) as added
+              %s JOIN commits_lines cl ON cl.commit_id = s.id
+              %s
+              group by c.id
+            ) t
+            order by %s desc, name
+        """ % (field, from_, where, field)
+
+        return (sql)
+
+    def get_sql_lines_removed(self, year = None):
+        where = ""
+        field = "lines_removed"
+        from_ =  self.get_scm_from_companies()
+
+        if year is not None:
+            where += " WHERE YEAR(s.date) = " + str(year)
+            field = field + "_" + str(year)
+
+        sql = """
+            select name, removed as %s FROM (
+              select c.name, SUM(removed) as removed
               %s JOIN commits_lines cl ON cl.commit_id = s.id
               %s
               group by c.id
@@ -245,7 +288,7 @@ class CompaniesActivity(Analyses):
             if not isinstance(data[item], list): data[item] = [data[item]]
 
     def add_metric_years(self, metric, activity, start, end):
-        metrics = ['commits','authors','actions','sloc','opened','closed','sent']
+        metrics = ['commits','authors','actions','sloc','lines_added','lines_removed','opened','closed','sent']
         if metric not in metrics:
             logging.error(metric + " not supported in companies activity.")
             return
@@ -258,6 +301,10 @@ class CompaniesActivity(Analyses):
                 data = self.db.ExecuteQuery(self.get_sql_actions(i))
             elif metric == "sloc":
                 data = self.db.ExecuteQuery(self.get_sql_sloc(i))
+            elif metric == "lines_added":
+                data = self.db.ExecuteQuery(self.get_sql_lines_added(i))
+            elif metric == "lines_removed":
+                data = self.db.ExecuteQuery(self.get_sql_lines_removed(i))
             elif metric == "opened":
                 data = self.db.ExecuteQuery(self.get_sql_opened(i))
             elif metric == "closed":
@@ -299,10 +346,14 @@ class CompaniesActivity(Analyses):
         data = self.db.ExecuteQuery(self.get_sql_actions())
         activity = self.add_companies_data (activity, data)
         self.add_metric_years("actions",activity,start_year,end_year)
-        # Source lines of code
-        data = self.db.ExecuteQuery(self.get_sql_sloc())
+        # Source lines of code added
+        data = self.db.ExecuteQuery(self.get_sql_lines_added())
         activity = self.add_companies_data (activity, data)
-        self.add_metric_years("sloc",activity,start_year,end_year)
+        self.add_metric_years("lines_added",activity,start_year,end_year)
+        # Source lines of code removed
+        data = self.db.ExecuteQuery(self.get_sql_lines_removed())
+        activity = self.add_companies_data (activity, data)
+        self.add_metric_years("lines_removed",activity,start_year,end_year)
 
         # We need to change the db to tickets
         dbname = automator["generic"]["db_bicho"]
