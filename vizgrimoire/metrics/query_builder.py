@@ -445,6 +445,21 @@ class SCMQuery(DSQuery):
 
         return filters
 
+    def GetSQLLogMessageFrom(self):
+        # tables necessary to filter by message left by developers
+        tables = Set([])
+        tables.add("scmlog s")
+
+        return tables
+
+    def GetSQLLogMessageWhere(self, message):
+        # filters necessary to filter by message left by developers
+        filters = Set([])
+        message = message.replace("'", "")
+        filters.add("s.message like '%"+message+"%'")
+
+        return filters
+
     def GetSQLPeopleFrom (self):
         #tables necessaries for companies
         tables = Set([])
@@ -473,10 +488,13 @@ class SCMQuery(DSQuery):
 
         return tables
 
-    def GetSQLBotWhere(self, bots):
+    def GetSQLBotWhere(self, bots_str):
         # Based on the tables provided in GetSQLBotFrom method, 
         # this method provides the clauses to join the several tables
 
+        bots = bots_str
+        if not isinstance(bots_str, list):
+            bots = bots_str.split(",")
         where = Set([])
         where.add("s.author_id = p.id")
         where.add("p.id = pup.people_id")
@@ -514,6 +532,7 @@ class SCMQuery(DSQuery):
                 elif analysis == 'branch': From.union_update(self.GetSQLBranchFrom())
                 elif analysis == 'module': From.union_update(self.GetSQLModuleFrom())
                 elif analysis == 'filetype': From.union_update(self.GetSQLFileTypeFrom())
+                elif analysis == 'logmessage': From.union_update(self.GetSQLLogMessageFrom())
                 elif analysis == 'people': From.union_update(self.GetSQLPeopleFrom())
                 elif analysis == 'people2': From.union_update(self.GetSQLPeopleFrom())
                 else: raise Exception( analysis + " not supported")
@@ -553,6 +572,7 @@ class SCMQuery(DSQuery):
                 elif analysis == 'branch': where.union_update(self.GetSQLBranchWhere(value))
                 elif analysis == 'module': where.union_update(self.GetSQLModuleWhere(value))
                 elif analysis == 'filetype': where.union_update(self.GetSQLFileTypeWhere(value))
+                elif analysis == 'logmessage': where.union_update(self.GetSQLLogMessageWhere(value))
                 elif analysis == 'people': where.union_update(self.GetSQLPeopleWhere(value))
                 elif analysis == 'people2': where.union_update(self.GetSQLPeopleWhere(value))
                 else: raise Exception( analysis + " not supported")
