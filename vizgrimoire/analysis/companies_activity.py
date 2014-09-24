@@ -303,14 +303,10 @@ class CompaniesActivity(Analyses):
                 data = self.db.ExecuteQuery(self.get_sql_sloc(i))
             elif metric == "lines-added":
                 data = self.db.ExecuteQuery(self.get_sql_lines_added(i))
-                field_key = data.keys()[0]
-                field_key_new = field_key.replace("lines_added","lines-added")
-                data[field_key_new] = data.pop(field_key)
+                data = self._convert_dict_field(data, "lines_added","lines-added")
             elif metric == "lines-removed":
                 data = self.db.ExecuteQuery(self.get_sql_lines_removed(i))
-                field_key = data.keys()[0]
-                field_key_new = field_key.replace("lines_removed","lines-removed")
-                data[field_key_new] = data.pop(field_key)
+                data = self._convert_dict_field(data, "lines_removed","lines-removed")
             elif metric == "opened":
                 data = self.db.ExecuteQuery(self.get_sql_opened(i))
             elif metric == "closed":
@@ -319,6 +315,15 @@ class CompaniesActivity(Analyses):
                 data = self.db.ExecuteQuery(self.get_sql_sent(i))
             self.check_array_values(data)
             activity = self.add_companies_data (activity, data)
+
+
+    def _convert_dict_field(self, dict, str_old, str_new):
+        """ Change field dict names replacing str_old with str_new in the field names"""
+        for key in dict.keys():
+            if str_old in key:
+                new_key = key.replace(str_old, str_new)
+                dict[new_key] = dict.pop(key)
+        return dict
 
     def result(self, data_source = None, destdir = None):
         if data_source != SCM or destdir is None: return None
@@ -354,16 +359,12 @@ class CompaniesActivity(Analyses):
         self.add_metric_years("actions",activity,start_year,end_year)
         # Source lines of code added
         data = self.db.ExecuteQuery(self.get_sql_lines_added())
-        field_key = data.keys()[0]
-        field_key_new = field_key.replace("lines_added","lines-added")
-        data[field_key_new] = data.pop(field_key)
+        data = self._convert_dict_field(data, "lines_added", "lines-added")
         activity = self.add_companies_data (activity, data)
         self.add_metric_years("lines-added",activity,start_year,end_year)
         # Source lines of code removed
         data = self.db.ExecuteQuery(self.get_sql_lines_removed())
-        field_key = data.keys()[0]
-        field_key_new = field_key.replace("lines_removed","lines-removed")
-        data[field_key_new] = data.pop(field_key)
+        data = self._convert_dict_field(data, "lines_removed","lines-removed")
         activity = self.add_companies_data (activity, data)
         self.add_metric_years("lines-removed",activity,start_year,end_year)
 
