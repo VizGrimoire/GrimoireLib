@@ -95,18 +95,11 @@ class Authors(Metrics):
         #specific parts of the query depending on the report needed
         tables.union_update(self.db.GetSQLReportFrom(self.filters))
 
-        # Hack to cover SCMQuery probs
-        if (self.filters.type_analysis is None or len (self.filters.type_analysis) != 2):
-            #Specific case for the basic option where people_upeople table is needed
-            #and not taken into account in the initial part of the query
-            if "people_upeople pup" not in tables:
-                tables.add("people_upeople pup")
-                filters.add("s.author_id = pup.people_id")
-
-        elif (self.filters.type_analysis[0] == "repository" or self.filters.type_analysis[0] == "project"):
-            if "people_upeople pup" not in tables:
-                tables.add("people_upeople pup")
-                filters.add("s.author_id = pup.people_id")
+        # This may be redundant code. However this is needed for specific analysis
+        # such as repositories or projects. Given that we're using sets, this is not 
+        # an issue. Not repeated tables or filters will appear in the final query.
+        tables.add("people_upeople pup")
+        filters.add("s.author_id = pup.people_id")
 
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                self.filters.enddate, " s.date ", fields,
@@ -651,18 +644,10 @@ class CommitsAuthor(Metrics):
         #specific parts of the query depending on the report needed
         tables.union_update(self.db.GetSQLReportFrom(self.filters))
  
-        if (self.filters.type_analysis is None or len (self.filters.type_analysis) != 2) :
-            #Specific case for the basic option where people_upeople table is needed
-            #and not taken into account in the initial part of the query
-            if "people_upeople pup" not in tables:
-                tables.add("people_upeople pup")
-                filters.add("s.author_id = pup.people_id")
-
-        elif (self.filters.type_analysis[0] == "repository" or self.filters.type_analysis[0] == "project"):
-            #Adding people_upeople table
-            if "people_upeople pup" not in tables:
-                tables.add("people_upeople pup")
-                filters.add("s.author_id = pup.people_id")
+        # Needed code for specific analysis such as repositories or projects
+        # Given that we're using sets, this does not add extra tables or filters.
+        tables.add("people_upeople pup")
+        filters.add("s.author_id = pup.people_id")
 
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                self.filters.enddate, " s.date ", fields,
@@ -693,18 +678,10 @@ class AuthorsPeriod(Metrics):
         #specific parts of the query depending on the report needed
         tables.union_update(self.db.GetSQLReportFrom(self.filters))
 
-        if (self.filters.type_analysis is None or len (self.filters.type_analysis) != 2) :
-            #Specific case for the basic option where people_upeople table is needed
-            #and not taken into account in the initial part of the query
-            if "people_upeople pup" not in tables:
-                tables.add("people_upeople pup")
-                filters.add("s.author_id = pup.people_id")
-
-        elif (self.filters.type_analysis[0] == "repository" or self.filters.type_analysis[0] == "project"):
-            #Adding people_upeople table
-            if "people_upeople pup" not in tables:
-                tables.add("people_upeople pup")
-                filters.add("s.author_id = pup.people_id")
+        # Needed code for specific analysis such as repositories or projects
+        # Given that we're using sets, this does not add extra tables or filters.
+        tables.add("people_upeople pup")
+        filters.add("s.author_id = pup.people_id")
 
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                self.filters.enddate, " s.date ", fields,
@@ -792,18 +769,10 @@ class FilesAuthor(Metrics):
         #specific parts of the query depending on the report needed
         tables.union_update(self.db.GetSQLReportFrom(self.filters))
 
-        if (self.filters.type_analysis is None or len (self.filters.type_analysis) != 2) :
-            #Specific case for the basic option where people_upeople table is needed
-            #and not taken into account in the initial part of the query
-            if "people_upeople pup" not in tables:
-                tables.add("people_upeople pup")
-                filters.add("s.author_id = pup.people_id")
-
-        elif (self.filters.type_analysis[0] == "repository" or self.filters.type_analysis[0] == "project"):
-            #Adding people_upeople table
-            if "people_upeople pup" not in tables:
-                tables.add("people_upeople pup")
-                filters.add("s.author_id = pup.people_id")
+        # Needed code for specific analysis such as repositories or projects
+        # Given that we're using sets, this does not add extra tables or filters.
+        tables.add("people_upeople pup")
+        filters.add("s.author_id = pup.people_id")
 
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                self.filters.enddate, " s.date ", fields,
