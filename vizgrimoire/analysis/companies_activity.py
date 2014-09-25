@@ -129,12 +129,20 @@ class CompaniesActivity(Analyses):
         return (sql)
 
     def get_sql_sloc(self, year = None):
+        """ Metric not used. Use lines_added and lines_removed """
         where = ""
         field = "sloc"
         from_ =  self.get_scm_from_companies()
 
         # Remove commits from cvs2svn migration with removed lines issues
         where = "WHERE  message NOT LIKE '%cvs2svn%'"
+        # Remove commits creating branches from svn that adds huge artificial lines
+        where += """
+            AND message not like '%release tag.%'
+            AND message not like '% branch creation.%'
+            AND message not like '%Creating the branch for the release %'
+            AND message not like '%create a branch%'
+        """
         if year is not None:
             where += " AND YEAR(s.date) = " + str(year)
             field = field + "_" + str(year)
@@ -142,6 +150,68 @@ class CompaniesActivity(Analyses):
         sql = """
             select name, added-removed as %s FROM (
               select c.name, SUM(removed) as removed, SUM(added) as added
+              %s JOIN commits_lines cl ON cl.commit_id = s.id
+              %s
+              group by c.id
+            ) t
+            order by %s desc, name
+        """ % (field, from_, where, field)
+
+        return (sql)
+
+    def get_sql_lines_added(self, year = None):
+        where = ""
+        field = "lines_added"
+        from_ =  self.get_scm_from_companies()
+
+        # Remove commits from cvs2svn migration with removed lines issues
+        where = "WHERE  message NOT LIKE '%cvs2svn%'"
+        # Remove commits creating branches from svn that adds huge artificial lines
+        where += """
+            AND message not like '%release tag.%'
+            AND message not like '% branch creation.%'
+            AND message not like '%Creating the branch for the release %'
+            AND message not like '%create a branch%'
+        """
+
+        if year is not None:
+            where += " AND YEAR(s.date) = " + str(year)
+            field = field + "_" + str(year)
+
+        sql = """
+            select name, added as %s FROM (
+              select c.name, SUM(added) as added
+              %s JOIN commits_lines cl ON cl.commit_id = s.id
+              %s
+              group by c.id
+            ) t
+            order by %s desc, name
+        """ % (field, from_, where, field)
+
+        return (sql)
+
+    def get_sql_lines_removed(self, year = None):
+        where = ""
+        field = "lines_removed"
+        from_ =  self.get_scm_from_companies()
+
+        # Remove commits from cvs2svn migration with removed lines issues
+        where = "WHERE  message NOT LIKE '%cvs2svn%'"
+        # Remove commits creating branches from svn that adds huge artificial lines
+        where += """
+            AND message not like '%release tag.%'
+            AND message not like '% branch creation.%'
+            AND message not like '%Creating the branch for the release %'
+            AND message not like '%create a branch%'
+        """
+
+        if year is not None:
+            where += " AND YEAR(s.date) = " + str(year)
+            field = field + "_" + str(year)
+
+        sql = """
+            select name, removed as %s FROM (
+              select c.name, SUM(removed) as removed
               %s JOIN commits_lines cl ON cl.commit_id = s.id
               %s
               group by c.id
@@ -238,7 +308,7 @@ class CompaniesActivity(Analyses):
             if not isinstance(data[item], list): data[item] = [data[item]]
 
     def add_metric_years(self, metric, activity, start, end):
-        metrics = ['commits','authors','actions','sloc','opened','closed','sent']
+        metrics = ['commits','authors','actions','sloc','lines-added','lines-removed','opened','closed','sent']
         if metric not in metrics:
             logging.error(metric + " not supported in companies activity.")
             return
@@ -251,6 +321,12 @@ class CompaniesActivity(Analyses):
                 data = self.db.ExecuteQuery(self.get_sql_actions(i))
             elif metric == "sloc":
                 data = self.db.ExecuteQuery(self.get_sql_sloc(i))
+            elif metric == "lines-added":
+                data = self.db.ExecuteQuery(self.get_sql_lines_added(i))
+                data = self._convert_dict_field(data, "lines_added","lines-added")
+            elif metric == "lines-removed":
+                data = self.db.ExecuteQuery(self.get_sql_lines_removed(i))
+                data = self._convert_dict_field(data, "lines_removed","lines-removed")
             elif metric == "opened":
                 data = self.db.ExecuteQuery(self.get_sql_opened(i))
             elif metric == "closed":
@@ -259,6 +335,15 @@ class CompaniesActivity(Analyses):
                 data = self.db.ExecuteQuery(self.get_sql_sent(i))
             self.check_array_values(data)
             activity = self.add_companies_data (activity, data)
+
+
+    def _convert_dict_field(self, dict, str_old, str_new):
+        """ Change field dict names replacing str_old with str_new in the field names"""
+        for key in dict.keys():
+            if str_old in key:
+                new_key = key.replace(str_old, str_new)
+                dict[new_key] = dict.pop(key)
+        return dict
 
     def result(self, data_source = None, destdir = None):
         if data_source != SCM or destdir is None: return None
@@ -292,10 +377,16 @@ class CompaniesActivity(Analyses):
         data = self.db.ExecuteQuery(self.get_sql_actions())
         activity = self.add_companies_data (activity, data)
         self.add_metric_years("actions",activity,start_year,end_year)
-        # Source lines of code
-        data = self.db.ExecuteQuery(self.get_sql_sloc())
+        # Source lines of code added
+        data = self.db.ExecuteQuery(self.get_sql_lines_added())
+        data = self._convert_dict_field(data, "lines_added", "lines-added")
         activity = self.add_companies_data (activity, data)
-        self.add_metric_years("sloc",activity,start_year,end_year)
+        self.add_metric_years("lines-added",activity,start_year,end_year)
+        # Source lines of code removed
+        data = self.db.ExecuteQuery(self.get_sql_lines_removed())
+        data = self._convert_dict_field(data, "lines_removed","lines-removed")
+        activity = self.add_companies_data (activity, data)
+        self.add_metric_years("lines-removed",activity,start_year,end_year)
 
         # We need to change the db to tickets
         dbname = automator["generic"]["db_bicho"]
