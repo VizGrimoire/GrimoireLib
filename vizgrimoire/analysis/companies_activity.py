@@ -164,8 +164,18 @@ class CompaniesActivity(Analyses):
         field = "lines_added"
         from_ =  self.get_scm_from_companies()
 
+        # Remove commits from cvs2svn migration with removed lines issues
+        where = "WHERE  message NOT LIKE '%cvs2svn%'"
+        # Remove commits creating branches from svn that adds huge artificial lines
+        where += """
+            AND message not like '%release tag.%'
+            AND message not like '% branch creation.%'
+            AND message not like '%Creating the branch for the release %'
+            AND message not like '%create a branch%'
+        """
+
         if year is not None:
-            where += " WHERE YEAR(s.date) = " + str(year)
+            where += " AND YEAR(s.date) = " + str(year)
             field = field + "_" + str(year)
 
         sql = """
@@ -185,8 +195,18 @@ class CompaniesActivity(Analyses):
         field = "lines_removed"
         from_ =  self.get_scm_from_companies()
 
+        # Remove commits from cvs2svn migration with removed lines issues
+        where = "WHERE  message NOT LIKE '%cvs2svn%'"
+        # Remove commits creating branches from svn that adds huge artificial lines
+        where += """
+            AND message not like '%release tag.%'
+            AND message not like '% branch creation.%'
+            AND message not like '%Creating the branch for the release %'
+            AND message not like '%create a branch%'
+        """
+
         if year is not None:
-            where += " WHERE YEAR(s.date) = " + str(year)
+            where += " AND YEAR(s.date) = " + str(year)
             field = field + "_" + str(year)
 
         sql = """
