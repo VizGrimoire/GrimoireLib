@@ -227,6 +227,12 @@ def mls_report(dbcon, filters):
     #vizr = importr("vizgrimoire")
     #vizr.SetDBChannel(database=dbcon.database, user=dbcon.user, password=dbcon.password)
     #vizr.ReportTimeToAttendMLS("./")
+    timeto = mls.TimeToFirstReply(dbcon, filters)
+    timeto_list = timeto.get_agg()
+    dhesa = DHESA(timeto_list)
+    mls_usr_resp_time_med_1m = dhesa.data["median"]
+    mls_usr_resp_time_med_1m = mls_usr_resp_time_med_1m / 3600.0
+    mls_usr_resp_time_med_1m = round(mls_usr_resp_time_med_1m / 24.0, 2)
 
     # Name: Developer ML subjects
     # Mnemo: MLS_DEV_SUBJ_1M
@@ -251,6 +257,7 @@ def mls_report(dbcon, filters):
     dataset["mls_dev_vol_1m"] = mls_dev_vol_1m
     dataset["mls_dev_subj_1m"] = mls_dev_subj_1m
     dataset["mls_dev_resp_ratio_1m"] = mls_dev_resp_ratio_1m
+    dataset["mls_usr_resp_time_med_1m"] = mls_usr_resp_time_med_1m
 
     return dataset
 
