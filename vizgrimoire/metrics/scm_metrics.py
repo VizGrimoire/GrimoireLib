@@ -876,7 +876,7 @@ class Companies(Metrics):
         filters.add("s.date < " + enddate)
         filters.add("s.date >= upc.init")
         filters.add("s.date < upc.end")
-        filters.add(fbots)
+        if fbots is not None and fbots<>'': filters.add(fbots)
 
         tables_str = self.db._get_tables_query(tables)
         filters_str = self.db._get_filters_query(filters)
