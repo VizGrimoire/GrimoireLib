@@ -648,9 +648,13 @@ class Projects(Metrics):
         # Loop all projects getting reviews
         for project in projects['name']:
             type_analysis = ['project', project]
-            period = None
-            evol = False
-            reviews = SCR.get_metrics("submitted", SCR).get_agg()
+
+            metric = SCR.get_metrics("submitted", SCR)
+            type_analysis_orig = metric.filters.type_analysis
+            metric.filters.type_analysis = type_analysis
+            reviews = metric.get_agg()
+            metric.filters.type_analysis = type_analysis_orig
+
             reviews = reviews['submitted']
             if (reviews > 0):
                 data.append([reviews,project])
