@@ -202,7 +202,7 @@ class Authors(Metrics):
         filters.add("a.commit_id = s.id")
         filters.add("s.date >= " + startdate)
         filters.add("s.date < " + enddate)
-        filters.add(filter_bots)
+        if filter_bots<>'': filters.add(filter_bots)
         filters_str = self.db._get_filters_query(filters)
 
         filters_str += " GROUP by u.id ORDER BY commits DESC, authors"
