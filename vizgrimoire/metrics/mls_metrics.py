@@ -76,7 +76,7 @@ class EmailsSenders(Metrics):
         enddate = metric_filters.enddate
         repo = metric_filters.type_analysis[1]
         limit = metric_filters.npeople
-        filter_bots = self.get_bots_filter_sql(metric_filters)
+        filter_bots = self.db.get_bots_filter_sql(self.data_source, metric_filters)
         rfield = MLS.get_repo_field()
 
         dtables = dfilters = ""
@@ -109,7 +109,7 @@ class EmailsSenders(Metrics):
         enddate = metric_filters.enddate
         country_name = metric_filters.type_analysis[1]
         limit = metric_filters.npeople
-        filter_bots = self.get_bots_filter_sql(metric_filters)
+        filter_bots = self.db.get_bots_filter_sql(self.data_source, metric_filters)
 
         #TODO: instead of directly using the private method for building 
         # from or where clauses, this code should use GetSQLReportFrom/Where
@@ -135,7 +135,7 @@ class EmailsSenders(Metrics):
         enddate = metric_filters.enddate
         company_name = metric_filters.type_analysis[1]
         limit = metric_filters.npeople
-        filter_bots = self.get_bots_filter_sql(metric_filters)
+        filter_bots = self.db.get_bots_filter_sql(self.data_source, metric_filters)
 
         #TODO: instead of directly using the private method for building 
         # from or where clauses, this code should use GetSQLReportFrom/Where
@@ -161,7 +161,7 @@ class EmailsSenders(Metrics):
         enddate = metric_filters.enddate
         domain_name = metric_filters.type_analysis[1]
         limit = metric_filters.npeople
-        filter_bots = self.get_bots_filter_sql(metric_filters)
+        filter_bots = self.db.get_bots_filter_sql(self.data_source, metric_filters)
 
         domains_tables = self.db._get_tables_query(self.db.GetSQLDomainsFrom())
         domains_filters = self.db._get_filters_query(self.db.GetSQLDomainsWhere(domain_name))
@@ -190,7 +190,7 @@ class EmailsSenders(Metrics):
         startdate = metric_filters.startdate
         enddate = metric_filters.enddate
         limit = metric_filters.npeople
-        filter_bots = self.get_bots_filter_sql(metric_filters)
+        filter_bots = self.db.get_bots_filter_sql(self.data_source, metric_filters)
         if filter_bots != "": filter_bots += " AND "
 
         dtables = dfilters = ""
@@ -303,6 +303,56 @@ class SendersResponse(Metrics):
                                    self.filters.enddate, " m.first_date ", fields,
                                    tables, filters, evolutionary, self.filters.type_analysis)
         return query
+
+class TimeToFirstReply(Metrics):
+    """ Statistical numbers to the time to first reply in threads that take
+        place in the specified period
+
+        In first place all of the emails are retrieved using the specific filters
+        found in self.filters. For those, their father is checked and if the
+        father is the root of a thread, the time between both emails is calculated.
+    """
+
+    id = "timeto_attention"
+    name = "Time to Attention"
+    desc = "Time to first reply in a new thread"
+    data_source = MLS
+
+    def get_agg(self):
+        fields = Set([])
+        tables = Set([])
+        filters = Set([])
+
+        # If the TZ is positive that means that we need to substract that date to the original date (eg - (+3600))
+        # And  if the TZ is negative, we need to substract that date from the original date (eg - (-3600))
+        fields.add("(UNIX_TIMESTAMP(t.first_date) - t.first_date_tz) - (UNIX_TIMESTAMP(m.first_date) - m.first_date_tz) as diffdate")
+
+        tables.add("messages m")
+        subquery = """(select distinct message_id,
+                              is_response_of,
+                              first_date,
+                              first_date_tz
+                       from messages
+                       where first_date>= %s and
+                             first_date< %s and
+                             is_response_of is not NULL) t
+                   """ % (self.filters.startdate, self.filters.enddate)
+        tables.add(subquery)
+        tables.union_update(self.db.GetSQLReportFrom(self.filters))
+
+        filters.add("m.message_ID = t.is_response_of")
+        filters.add("m.is_response_of is NULL")
+        filters.union_update(self.db.GetSQLReportWhere(self.filters))
+
+        fields_str = "select " + self.db._get_fields_query(fields)
+        tables_str = " from " + self.db._get_tables_query(tables)
+        filters_str = " where " + self.db._get_filters_query(filters)
+
+        query = fields_str + tables_str + filters_str
+
+        timeframes = self.db.ExecuteQuery(query)
+
+        return timeframes["diffdate"]
 
 
 class SendersInit(Metrics):

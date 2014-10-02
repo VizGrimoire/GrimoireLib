@@ -27,6 +27,18 @@ from query_builder import DSQuery
 from metrics_filter import MetricFilters
 
 class Metrics(object):
+    """Root of hierarchy of Entities (Metrics)
+
+    This is the root hierarchy of the of the metric classes
+    defined for each of the data sources. A class that inherits
+    from this meta-class is an abstract representation of all of
+    the typical metrics related to such class.
+
+    Thus, when instantiated, we can obtain specific representations
+    of such entity. Timeseries of datasets (get_ts method), aggregated
+    data (get_agg method) or lists of elements (get_list method).
+
+    """
 
     default_period = "month"
     default_start = "'2010-01-01'"
@@ -37,7 +49,7 @@ class Metrics(object):
     desc = None
     data_source = None
     domains_limit = 30
-    max_decimals = 4
+    max_decimals = 2
 
     def __init__(self, dbcon = None, filters = None):
         """db connection and filter to be used"""
@@ -66,7 +78,25 @@ class Metrics(object):
         return Metrics.data_source
 
     def _get_sql(self, evolutionary):
-        """ Returns specific sql for the provided filters """
+        """Private method that returns a valid SQL query
+
+        That query is built based on the information provided
+        in the self.filters parameter, that is a instance of
+        the MetricFilter class.
+
+        Among other parameters in the MetricFilters class,
+        we find the start and end analysis date or identitites to
+        ignore.
+
+        Parameters
+        ----------
+
+        evolutionary: boolean
+            If True, an evolutionary analysis sql is provided
+            If False, an aggregated analysis sql is provided
+
+        """
+
         raise NotImplementedError
 
     def _get_sql_filter_all (self, evolutionary):
@@ -132,7 +162,17 @@ class Metrics(object):
         return ts
 
     def get_ts (self):
-        """ Returns a time series of values """
+        """Returns a time series of a specific class
+
+        A timeseries consists of a unixtime date, labels, some other
+        fields and the data of the specific instantiated class per
+        period. This is built on a hash table.
+
+        This also returns a proper timeseries with a 0-filled array
+        if needed.
+
+        """
+
         query = self._get_sql(True)
         ts = self.db.ExecuteQuery(query)
         if self.filters.type_analysis and self.filters.type_analysis[1] is None:
@@ -156,7 +196,7 @@ class Metrics(object):
         """ Returns the trend metrics between now and now-days values """
 
         if self.filters.type_analysis and self.filters.type_analysis[1] is None:
-            return self.get_trends_all_items(date, days)
+            return self._get_trends_all_items(date, days)
 
         # Keeping state of origin filters
         filters = self.filters
@@ -180,7 +220,7 @@ class Metrics(object):
         self.filters = filters
         return (data)
 
-    def get_trends_all_items(self, date, days):
+    def _get_trends_all_items(self, date, days):
         """ Returns the trend metrics between now and now-days values """
         from GrimoireUtils import check_array_values
         from query_builder import DSQuery
@@ -272,30 +312,3 @@ class Metrics(object):
         if metric_filters is not None: self.filters = metric_filters_orig
 
         return mlist
-
-    def get_items_out_filter_sql (self, filter_, metric_filters = None):
-        # The items_out *must* come in metric_filters
-        filter_items = ''
-        if metric_filters is None:
-            metric_filters = self.filters
-
-        if filter_ == "company":
-            items_out = metric_filters.companies_out
-            if items_out is not None:
-                for item in items_out:
-                    filter_items += " c.name<>'"+item+"' AND "
-
-        if filter_items != '': filter_items = filter_items[:-4]
-        return filter_items
-
-    # TODO: Join with get_items_out_filter_sql once People is a filter
-    def get_bots_filter_sql (self, metric_filters = None):
-        bots = self.data_source.get_bots()
-        if metric_filters is not None:
-            if metric_filters.people_out is not None:
-                bots = metric_filters.people_out
-        filter_bots = ''
-        for bot in bots:
-            filter_bots = filter_bots + " u.identifier<>'"+bot+"' AND "
-        if filter_bots != '': filter_bots = filter_bots[:-4]
-        return filter_bots

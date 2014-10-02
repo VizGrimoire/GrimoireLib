@@ -40,6 +40,8 @@ from query_builder import ITSQuery
 
 from SCR import SCR
 
+from sets import Set
+
 class Submitted(Metrics):
     id = "submitted"
     name = "Submitted reviews"
@@ -362,16 +364,30 @@ class PatchesPerReview(Metrics):
     data_source = SCR
 
     def get_agg(self):
-        query = """select count(distinct(ch.old_value)) as patches
-                   from changes ch,
-                        (select issue_id
-                         from changes
-                         where changed_on >= %s and
-                               changed_on < %s ) t
-                   where ch.issue_id = t.issue_id and
-                         ch.old_value = ''
-                   group by ch.issue_id
-                """ % (self.filters.startdate, self.filters.enddate)
+        fields = "count(distinct(ch.old_value)) as patches"
+        tables_from = self.db.GetSQLReportFrom(self.filters.type_analysis)
+        filters_where = self.db.GetSQLReportWhere(self.filters.type_analysis)
+
+  
+        tables = " changes ch, issues i, " +\
+                 " (select distinct(issue_id) as issue_id " +\
+                 "  from changes " + \
+                 "  where changed_on >= "+self.filters.startdate+" and " +\
+                 "        changed_on < "+self.filters.enddate+" ) t "
+        if len(tables_from) > 0:
+            tables = tables +  tables_from
+
+
+        filters = " ch.issue_id = t.issue_id and "
+        filters = filters + " ch.issue_id = i.id and "
+        filters = filters + " ch.old_value <> '' "
+
+        if len(filters_where) > 0:
+            filters = filters + filters_where
+
+        filters = filters + " group by i.id "
+
+        query = "select " + fields + " from " + tables + " where " + filters
 
         patches_per_review = self.db.ExecuteQuery(query)
 
@@ -411,31 +427,110 @@ class PatchesWaitingForSubmitter(Metrics):
                                             self.filters.type_analysis, evolutionary)
         return q
 
+class ReviewsWaitingForReviewerTS(Metrics):
+    id = "ReviewsWaitingForReviewer_ts"
+    name = "Reviews waiting for reviewer"
+    desc = "Number of preview processes waiting for reviewer"
+    data_source = SCR
+
+    def get_ts(self):
+        from datetime import datetime
+
+        def get_date_from_month(monthid):
+            # month format: year*12+month
+            year = (monthid-1) / 12
+            month = monthid - year*12
+            # We need the last day of the month
+            import calendar
+            last_day = calendar.monthrange(year, month)[1]
+            current = str(year)+"-"+str(month)+"-"+str(last_day)
+            return (current)
+
+
+        def get_pending(month, reviewers = False):
+            current = get_date_from_month(month)
+
+            sql_max_patchset = self.db.get_sql_max_patchset_for_reviews (current)
+            sql_reviews_reviewed = self.db.get_sql_reviews_reviewed(self.filters.startdate, current)
+            sql_reviews_closed = self.db.get_sql_reviews_closed(self.filters.startdate, current)
+
+            fields = "COUNT(DISTINCT(i.id)) as pending"
+
+            tables = " issues i "
+            tables = tables + self.db.GetSQLReportFrom(type_analysis)
+
+            # Pending (NEW = submitted-merged-abandoned) REVIEWS
+            filters = " i.submitted_on <= '"+current+"'"
+            filters += self.db.GetSQLReportWhere(type_analysis)
+            # remove closed reviews
+            filters += " AND i.id NOT IN ("+ sql_reviews_closed +")"
+
+            if reviewers:
+                filters += """ AND i.id NOT IN (%s)
+                """ % (sql_reviews_reviewed)
+
+            q = self.db.GetSQLGlobal('i.submitted_on', fields, tables, filters,
+                                     startdate, enddate)
+
+            rs = self.db.ExecuteQuery(q)
+            return rs['pending']
+
+        pending = {"month":[],
+                   "ReviewsWaiting_ts":[],
+                   "ReviewsWaitingForReviewer_ts":[]}
+
+        startdate = self.filters.startdate
+        enddate = self.filters.enddate
+        period = self.filters.period
+        identities_db = self.db.identities_db
+        type_analysis =  self.filters.type_analysis
+
+        start = datetime.strptime(startdate, "'%Y-%m-%d'")
+        end = datetime.strptime(enddate, "'%Y-%m-%d'")
+
+        if (period != "month"):
+            logging.error("Period not supported in " + self.id  + " " + period)
+            return {}
+
+        start_month = start.year*12 + start.month
+        end_month = end.year*12 + end.month
+        months = end_month - start_month
+
+        for i in range(0, months+1):
+            pending['month'].append(start_month+i)
+            pending_month = get_pending(start_month+i)
+            pending_reviewers_month = get_pending(start_month+i, True)
+            pending['ReviewsWaiting_ts'].append(pending_month)
+            pending['ReviewsWaitingForReviewer_ts'].append(pending_reviewers_month)
+
+        return pending
+
+
 class ReviewsWaitingForReviewer(Metrics):
     id = "ReviewsWaitingForReviewer"
     name = "Reviews waiting for reviewer"
     desc = "Number of preview processes waiting for reviewer"
     data_source = SCR
 
-    def _get_sql(self, evolutionary):
-        q_last_change = self.db.get_sql_last_change_for_issues_new()
+
+    def _get_sql (self, evolutionary):
+
+        sql_max_patchset = self.db.get_sql_max_patchset_for_reviews ()
+        sql_reviews_reviewed = self.db.get_sql_reviews_reviewed(self.filters.startdate)
 
         fields = "COUNT(DISTINCT(i.id)) as ReviewsWaitingForReviewer"
-        tables = "changes c, issues i, (%s) t1" % q_last_change
+        tables = "issues i "
         tables += self.db.GetSQLReportFrom(self.filters.type_analysis)
-        filters = """
-            i.id = c.issue_id  AND t1.id = c.id
-            AND (c.field='CRVW' or c.field='Code-Review' or c.field='Verified' or c.field='VRIF')
-            AND (c.new_value=1 or c.new_value=2)
-        """
+        filters = " i.status = 'NEW' AND i.id NOT IN (%s) " % (sql_reviews_reviewed)
+
         filters = filters + self.db.GetSQLReportWhere(self.filters.type_analysis)
 
         q = self.db.BuildQuery (self.filters.period, self.filters.startdate,
-                                self.filters.enddate, " c.changed_on",
+                                self.filters.enddate, "i.submitted_on",
                                 fields, tables, filters, evolutionary, self.filters.type_analysis)
         return(q)
 
-
+# Review this metrics according to ReviewsWaitingForReviewer
 class ReviewsWaitingForSubmitter(Metrics):
     id = "ReviewsWaitingForSubmitter"
     name = "Reviews waiting for submitter"
@@ -444,7 +539,7 @@ class ReviewsWaitingForSubmitter(Metrics):
 
 
     def _get_sql(self, evolutionary):
-        q_last_change = self.db.get_sql_last_change_for_issues_new()
+        q_last_change = self.db.get_sql_last_change_for_reviews()
 
         fields = "COUNT(DISTINCT(i.id)) as ReviewsWaitingForSubmitter"
         tables = "changes c, issues i, (%s) t1" % q_last_change
@@ -555,9 +650,13 @@ class Projects(Metrics):
         # Loop all projects getting reviews
         for project in projects['name']:
             type_analysis = ['project', project]
-            period = None
-            evol = False
-            reviews = SCR.get_metrics("submitted", SCR).get_agg()
+
+            metric = SCR.get_metrics("submitted", SCR)
+            type_analysis_orig = metric.filters.type_analysis
+            metric.filters.type_analysis = type_analysis
+            reviews = metric.get_agg()
+            metric.filters.type_analysis = type_analysis_orig
+
             reviews = reviews['submitted']
             if (reviews > 0):
                 data.append([reviews,project])
@@ -639,7 +738,7 @@ class Reviewers(Metrics):
         startdate = metric_filters.startdate
         enddate = metric_filters.enddate
         limit = metric_filters.npeople
-        filter_bots = self.get_bots_filter_sql(metric_filters)
+        filter_bots = self.db.get_bots_filter_sql(self.data_source, metric_filters)
         if filter_bots != "": filter_bots += " AND "
         date_limit = ""
 
@@ -744,7 +843,7 @@ class Closers(Metrics):
         startdate = metric_filters.startdate
         enddate = metric_filters.enddate
         limit = metric_filters.npeople
-        filter_bots = self.get_bots_filter_sql(metric_filters)
+        filter_bots = self.db.get_bots_filter_sql(self.data_source, metric_filters)
         if filter_bots != "": filter_bots += " AND "
         date_limit = ""
 
@@ -838,7 +937,7 @@ class Submitters(Metrics):
         startdate = metric_filters.startdate
         enddate = metric_filters.enddate
         limit = metric_filters.npeople
-        filter_bots = self.get_bots_filter_sql(metric_filters)
+        filter_bots = self.db.get_bots_filter_sql(self.data_source, metric_filters)
         if filter_bots != "": filter_bots += " AND "
 
         date_limit = ""
@@ -919,9 +1018,261 @@ class TimeToReview(Metrics):
         return metrics_list
 
 
+class TimeToReviewPatch(Metrics):
+    """ This class returns the time that a submitter or a reviewer has been waiting
+
+    This class considers that a review process is a two states machine:
+    - Waiting for a submitter action
+    - Waiting for a reviewer action
+
+    A patch is considered as waiting for a submitter action in the
+    following conditions:
+    - A Code-Review action is detected, being this a -1 or -2
+    - A Verified action is detected, being this a -1 or -2
+
+    A patch is considered as waiting for a reviewer action in the
+    following conditions:
+    - A new Patch upload is detected (eg: new patch, rebase or restore action)
+
+    Existing limitations:
+    - There are cases where the time of the review found in the db took place before
+    the last upload. This takes places when trivial changes are requested to the
+    patch submitter. Given this, those negative time-waiting-for-a-submitter-action
+    are simply ignored from the final dataset. This takes place when using +2 or
+    when using -2.
+    - This analysis is based on the Changes table. There may appear issues whose life
+    is out of the timeframe limits provided in the self.filters variable.
+
+    """
+
+    id = "timewaiting_reviewer_n_submitter"
+    name = "Time waiting for reviewer and submitter"
+    desc = "Time waiting for reviewer and submitter"
+    data_source = SCR
+
+    def get_agg(self):
+        # Building query
+        fields = Set([])
+        tables = Set([])
+        filters = Set([])
+
+        fields.add("ch.issue_id")
+        fields.add("ch.field")
+        fields.add("ch.old_value")
+        fields.add("ch.new_value")
+        fields.add("UNIX_TIMESTAMP(ch.changed_on) as changed_on")
+        fields.add("ch.changed_on as date")
+        tables.add("changes ch")
+
+        filters.add("""(field='Upload' or
+                   (field='Verified' and (new_value=-1 or new_value=-2)) or
+                   (field='Code-Review' and (new_value=-1 or new_value=-2 or new_value=2)))""")
+        filters.add("ch.changed_on >= " + self.filters.startdate)
+        filters.add("ch.changed_on < " + self.filters.enddate)
+
+        # Migrating those sets to strings
+        fields_str = self.db._get_fields_query(fields)
+        tables_str = self.db._get_tables_query(tables)
+        filters_str = self.db._get_filters_query(filters)
+
+        # Adding extra filters
+        tables_str = tables_str + self.db.GetSQLReportFrom(self.filters.type_analysis)
+        filters_str = filters_str + self.db.GetSQLReportFrom(self.filters.type_analysis)
+        filters_str = filters_str + " order by issue_id, cast(old_value as DECIMAL) asc"
+
+        query = "select " + fields_str + " from " + tables_str + " where " + filters_str
+        changes = self.db.ExecuteQuery(query)
+
+        # Starting the analysis of time waiting for reviewer or for submitter
+        waiting4reviewer = []
+        waiting4submitter = []
+
+        query = """select UNIX_TIMESTAMP(min(changed_on)) as first_date,
+                          min(changed_on) as first_date_str,
+                          UNIX_TIMESTAMP(max(changed_on)) as end_date,
+                          max(changed_on) as end_date_str
+                   from changes
+                   where changed_on >= %s and
+                         changed_on < %s""" % (self.filters.startdate, self.filters.enddate)
+        dates = self.db.ExecuteQuery(query)
+        min_date = int(dates["first_date"])
+        max_date = int(dates["end_date"])
+
+        count = 0
+        old_issue = 1 # assuming we always start with the first issue_id
+        old_patchset = 1 # assuming we always start with the first patchset
+
+        # This analysis is based on a two states machine.
+        # A patch is either waiting for a reviewer action or by a submitter action.
+        # In any of the two states there is an exit: this could be the end time of the
+        # analysis or that the review was closed.
+        # In any case, the initial state is always waiting for the reviewer.
+        old_issue_id = -1
+        old_field = ""
+        old_patchset = -1
+        old_new_value = ""
+        old_changed_on = -1
+        is_new_review = True
+        current_state = 1
+        for issue_id in changes["issue_id"]:
+            field = changes["field"][count]
+            patchset = int(changes["old_value"][count])
+            new_value = changes["new_value"][count]
+            if new_value <> '':
+                new_value = int(new_value)
+            changed_on = int(changes["changed_on"][count])
+            date = changes["date"][count]
+
+            if issue_id <> old_issue_id and old_issue_id > 0:
+                is_new_review = True
+
+            if current_state == 1:
+                # First state: Waiting for a reviewer response
+                if field == "Upload" and not is_new_review:
+                    current_state = 1
+                    # Time waiting for a reviewer action. Upload -> Upload
+                    waiting4reviewer.append(changed_on - old_changed_on)
+                    old_changed_on = changed_on
+                if field == "Upload" and is_new_review:
+                    current_state = 1
+                    is_new_review = False
+                    # Time waiting for a reviewer action. Given that there is a ne
+                    # review, the time goes from the old_changed_on till the end
+                    # of the timeframe analysis (max_date)
+                    waiting4reviewer.append(max_date - old_changed_on)
+                    if old_changed_on == -1:
+                        # first case
+                        waiting4reviewer = []
+                    old_changed_on = changed_on
+                if (field == "Code-Review" or "Verified") and (new_value == -1 or new_value == -2) and not is_new_review:
+                    current_state = 2
+                    # In any of these cases the reviewer gives up reviewing.
+                    # The submitter needs to upload a new version
+                    waiting4reviewer.append(changed_on - old_changed_on)
+                    old_changed_on = changed_on
+                if (field == "Code-Review" or "Verified") and (new_value == -1 or new_value == -2) and is_new_review:
+                    current_state = 2
+                    is_new_review = False
+                    # There are 2 actions taking place here:
+                    # - There's a reviewer that needed to review (Case 1)
+                    # - And there's a new review that at some point (before the time of this analysis) (Case 2)
+                    #   was uploaded.
+                    waiting4reviewer.append(max_date - old_changed_on) # Case 1
+                    waiting4reviewer.append(changed_on - min_date) # Case 2
+                    old_changed_on = changed_on
+                if field == "Code-Review" and new_value == 2 and not is_new_review:
+                    current_state = 3
+                    # The review finishes at this point.
+                    waiting4reviewer.append(changed_on - old_changed_on)
+                if field == "Code-Review" and new_value == 2 and is_new_review:
+                    current_state = 3
+                    is_new_review = False
+                    # There are 2 actions taking place here:
+                    # - There's a reviewer that needed to review (Case 1)
+                    # - And there's a new review that at some point (before the time of this analysis) (Case 2)
+                    #   was uploaded
+                    waiting4reviewer.append(max_date - old_changed_on) # Case 1
+                    waiting4reviewer.append(changed_on - min_date) # Case 2
+                    old_changed_on = changed_on
+            elif current_state == 2:
+                # Second state: Waiting for a submitter response
+                if field == "Upload" and not is_new_review:
+                    current_state = 1
+                    # A new upload was updated, the time waiting for the submitter ends here
+                    waiting4submitter.append(changed_on - old_changed_on)
+                    old_changed_on = changed_on
+                if field == "Upload" and is_new_review:
+                    current_state = 1
+                    is_new_review = False
+                    # Two actions take place here:
+                    # - A submitter is still required to act
+                    # - A new review is submitted
+                    waiting4submitter.append(max_date - old_changed_on)
+                    old_changed_on = changed_on
+                if (field == "Code-Review" or "Verified") and (new_value == -1 or new_value == -2) and not is_new_review:
+                    current_state = 2
+                    # This implies extra actions on the same changeset and patchset
+                    # Thus, this is still time waiting for a submitter action
+                    # The value of old_changed_on keeps the same.
+                    pass
+                if (field == "Code-Review" or "Verified") and (new_value == -1 or new_value == -2) and is_new_review:
+                    current_state = 2
+                    is_new_review = False
+                    # Two actions take place in this case:
+                    # - An action by the submitter is still required.
+                    # - And a new review started before the period of this analysis.
+                    #   Thus, there should be a previous Upload action
+                    waiting4submitter.append(max_date - old_changed_on)
+                    waiting4reviewer.append(changed_on - min_date)
+                    old_changed_on = changed_on
+                if field == "Code-Review" and new_value == 2 and not is_new_review:
+                    current_state = 3
+                    # In some cases, during the time waiting for a submitter action
+                    # a +2 review may appear. Thus, the time waiting for a submitter ends
+                    waiting4submitter.append(changed_on - old_changed_on)
+                    old_changed_on = changed_on
+                if field == "Code-Review" and new_value == 2 and is_new_review:
+                    current_state = 3
+                    is_new_review = False
+                    # Two actions take place in this case:
+                    # - A previous action by a submitter is required
+                    # - A new review took place by another reviewer.
+                    waiting4submitter.append(max_date - old_changed_on)
+                    waiting4reviewer.append(changed_on - min_date)
+                    old_changed_on = changed_on
+            elif current_state == 3:
+                # Third state: end of review. It is assumed that any action after the
+                # Code-Review +2 does not matter.
+                if field == "Upload" and not is_new_review:
+                    # If this is not a new review, the review is closed as assumption
+                    pass
+                if field == "Upload" and is_new_review:
+                    current_state = 1
+                    is_new_review = False
+                    old_changed_on = changed_on
+                if (field == "Code-Review" or "Verified") and (new_value == -1 or new_value == -2) and not is_new_review:
+                    # If this is not a new review, the review is closed as assumption
+                    pass
+                if (field == "Code-Review" or "Verified") and (new_value == -1 or new_value == -2) and is_new_review:
+                    current_state = 2
+                    is_new_review = False
+                    # Two actions takes place:
+                    # - the current review process finishes (case 1 nothing done)
+                    # - a new one appears whose upload patch took place before the
+                    #   period of this analysis (case 2)
+                    waiting4reviewer.append(changed_on - min_date) # case 2
+                    old_changed_on = changed_on
+                if field == "Code-Review" and new_value == 2 and not is_new_review:
+                    # If this is not a new review, the review is already closed
+                    pass
+                if field == "Code-Review" and new_value == 2 and is_new_review:
+                    current_state = 3
+                    is_new_review = False
+                    # Two actions take place in this case:
+                    # - The current review finishes (case 1, no action required)
+                    # - A new review appears, and the upload took place
+                    #   before the timeframe analysis (case 2)
+                    waiting4reviewer.append(changed_on - min_date) # case 2
+                    old_changed_on = changed_on
+            else:
+                print "ERROR, not existing state"
+
+            old_field = field
+            old_patchset = patchset
+            old_issue_id = issue_id
+            count = count + 1
+
+        dataset = {}
+        dataset["waitingtime4reviewer"] = waiting4reviewer
+        dataset["waitingtime4submitter"] = waiting4submitter
+        return dataset
+
 if __name__ == '__main__':
-    filters = MetricFilters("month", "'2012-04-01'", "'2014-07-01'", None)
-    dbcon = SCRQuery("root", "", "cp_gerrit_GrimoireLibTests", "cp_cvsanaly_GrimoireLibTests")
+    filters = MetricFilters("month", "'2014-07-01'", "'2014-09-01'", None)
+    dbcon = SCRQuery("root", "", "dic_bicho_gerrit_openstack_3359_bis3", "dic_cvsanaly_openstack_4114")
+
+    timewaiting = TimeToReviewPatch(dbcon, filters)
+    print timewaiting.get_agg()
 
     print "Submitted info:"
     submitted = Submitted(dbcon, filters)
@@ -945,4 +1296,17 @@ if __name__ == '__main__':
 
     print "Patches per review"
     patches = PatchesPerReview(dbcon, filters)
+    print patches.get_agg()
+
+    patches.filters.type_analysis=["repository", "review.openstack.org_openstack/nova"]
+    print patches.get_agg()
+
+    patches.filters.type_analysis=["project", "integrated"]
+    print patches.get_agg()
+
+    patches.filters.type_analysis=["project", "Infrastructure"]
+    print patches.get_agg()
+
+    patches.filters.startdate = "'2014-01-01'"
+    patches.filters.type_analysis=["project", "Infrastructure"]
     print patches.get_agg()

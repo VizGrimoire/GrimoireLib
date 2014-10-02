@@ -22,7 +22,7 @@
 ##   Daniel Izquierdo-Cortazar <dizquierdo@bitergia.com>
 ##   Luis Cañas-Díaz <lcanas@bitergia.com>
 ##
-## python openstack_report.py -a dic_cvsanaly_openstack_2259 -d dic_bicho_openstack_gerrit_3392_bis -i dic_cvsanaly_openstack_2259 -r 2013-07-01,2013-10-01,2014-01-01,2014-04-01,2014-07-01 -c lcanas_bicho_openstack_1376 -b lcanas_mlstats_openstack_1376 -f dic_sibyl_openstack_3194_new -e dic_irc_openstack_3277
+## python openstack_report.py -a dic_cvsanaly_openstack_4114 -d dic_bicho_gerrit_openstack_3359_bis2 -i dic_cvsanaly_openstack_4114 -r 2013-07-01,2013-10-01,2014-01-01,2014-04-01,2014-07-01 -c lcanas_bicho_openstack_1376 -b lcanas_mlstats_openstack_1376 -f dic_sibyl_openstack_3194_new
 
 
 import imp, inspect
@@ -270,6 +270,15 @@ def scr_report(dbcon, filters):
     abandoned = scr.Abandoned(dbcon, filters)
     createJSON(abandoned.get_agg(), "./release/scr_abandoned_"+project_name+".json")
 
+    bmi = scr.BMISCR(dbcon, filters)
+    createJSON(bmi.get_agg(), "./release_scr_bmi_"+project_name+".json")
+
+    active_core = scr.ActiveCoreReviewers(dbcon, filters)
+    createJSON(active_core.get_agg(), "./release/scr_activecore_"+project_name+".json")
+
+    iterations = scr.PatchesPerReview(dbcon, filters)
+    createJSON(iterations.get_agg()["median"], "./release/scr_iterations_"+project_name+".json")
+
     waiting4reviewer = scr.ReviewsWaitingForReviewer(dbcon, filters)
     createJSON(waiting4reviewer.get_agg(), "./release/scr_waiting4reviewer_"+project_name+".json")
 
@@ -283,10 +292,14 @@ def scr_report(dbcon, filters):
     dataset["submitted"] = submitted.get_agg()["submitted"]
     dataset["merged"] = merged.get_agg()["merged"]
     dataset["abandoned"] = abandoned.get_agg()["abandoned"]
+    dataset["bmiscr"] = bmi.get_agg()["bmiscr"]
+    dataset["active_core"] = active_core.get_agg()["core_reviewers"]
     dataset["waiting4reviewer"] = waiting4reviewer.get_agg()["ReviewsWaitingForReviewer"]
     dataset["waiting4submitter"] = waiting4submitter.get_agg()["ReviewsWaitingForSubmitter"]
     dataset["review_time_days_median"] = time2review.get_agg()["review_time_days_median"]
     dataset["review_time_days_avg"] = time2review.get_agg()["review_time_days_avg"]
+    dataset["iterations_mean"] = iterations.get_agg()["mean"]
+    dataset["iterations_median"] = iterations.get_agg()["median"]
 
     return dataset
 
@@ -407,6 +420,7 @@ def qaforums_report(dbcon, filters):
     return dataset
 
 def irc_report(dbcon, filters):
+    pass
     sent = irc.Sent(dbcon, filters)
     createJSON(sent.get_agg(), "./release/irc_sent.json")
 
@@ -492,7 +506,7 @@ def general_info(opts, releases, people_out, affs_out):
     for release in releases:
         startdate = "'" + release[0] + "'"
         enddate = "'" + release[1] + "'"
-        filters = MetricFilters("month", startdate, enddate, [], opts.npeople, people_out, affs_out)
+        filters = MetricFilters("month", startdate, enddate, None, opts.npeople, people_out, affs_out)
         # SCM info
         scm_dbcon = SCMQuery(opts.dbuser, opts.dbpassword, opts.dbcvsanaly, opts.dbidentities)
         dataset = scm_general(scm_dbcon, filters)
@@ -520,10 +534,10 @@ def general_info(opts, releases, people_out, affs_out):
         qsenders.append(dataset["qsenders"])
 
         # IRC info
-        irc_dbcon = IRCQuery(opts.dbuser, opts.dbpassword, opts.dbirc, opts.dbidentities)
-        dataset = irc_report(irc_dbcon, filters)
-        irc_sent.append(dataset["sent"])
-        irc_senders.append(dataset["senders"])
+        #irc_dbcon = IRCQuery(opts.dbuser, opts.dbpassword, opts.dbirc, opts.dbidentities)
+        #dataset = irc_report(irc_dbcon, filters)
+        #irc_sent.append(dataset["sent"])
+        #irc_senders.append(dataset["senders"])
 
 
     #labels = ["2012-Q3", "2012-Q4", "2013-Q1", "2013-Q2", "2013-Q3", "2013-Q4", "2014-Q1", "2014-Q2"]
@@ -542,10 +556,10 @@ def general_info(opts, releases, people_out, affs_out):
     createCSV({"labels":labels, "comments":comments}, "./release/comments.csv")
     barh_chart("People asking Questions", labels, qsenders, "question_senders")
     createCSV({"labels":labels, "senders":qsenders}, "./release/question_senders.csv")
-    barh_chart("Messages in IRC channels", labels, irc_sent, "irc_sent")
-    createCSV({"labels":labels, "messages":irc_sent}, "./release/irc_sent.csv")
-    barh_chart("People in IRC channels", labels, irc_senders, "irc_senders")
-    createCSV({"labels":labels, "senders":irc_senders}, "./release/irc_senders.csv")
+    #barh_chart("Messages in IRC channels", labels, irc_sent, "irc_sent")
+    #createCSV({"labels":labels, "messages":irc_sent}, "./release/irc_sent.csv")
+    #barh_chart("People in IRC channels", labels, irc_senders, "irc_senders")
+    #createCSV({"labels":labels, "senders":irc_senders}, "./release/irc_senders.csv")
     
     bar_chart("Community structure", labels, regular, "onion", core, ["regular", "core"])
     createCSV({"labels":labels, "core":core, "regular":regular, "occasional":occasional}, "./release/onion_model.csv")
@@ -554,7 +568,7 @@ def general_info(opts, releases, people_out, affs_out):
 
 if __name__ == '__main__':
 
-    locale.setlocale(locale.LC_ALL, 'en_US')
+    locale.setlocale(locale.LC_ALL, 'en_US.utf8')
 
     init_env()
 
@@ -614,7 +628,11 @@ if __name__ == '__main__':
         submitted = []
         merged = []
         abandoned = []
+        bmiscr = []
         closed = []
+        active_core_reviewers = []
+        iters_reviews_avg = []
+        iters_reviews_median = []
         bmi = []
         review_avg = []
         review_median = []
@@ -636,6 +654,10 @@ if __name__ == '__main__':
             abandoned.append(releases_data[release]["scr"]["abandoned"])
             review_avg.append(releases_data[release]["scr"]["review_time_days_avg"])
             review_median.append(releases_data[release]["scr"]["review_time_days_median"])
+            active_core_reviewers.append(releases_data[release]["scr"]["active_core"])
+            iters_reviews_avg.append(releases_data[release]["scr"]["iterations_mean"])
+            iters_reviews_median.append(releases_data[release]["scr"]["iterations_median"])
+            bmiscr.append(releases_data[release]["scr"]["bmiscr"])
         
         #labels = ["2012-Q3", "2012-Q4", "2013-Q1", "2013-Q2", "2013-Q3", "2013-Q4", "2014-Q1", "2014-Q2"]        
         labels = ["2013-Q3", "2013-Q4", "2014-Q1", "2014-Q2"]
@@ -652,7 +674,15 @@ if __name__ == '__main__':
         createCSV({"labels":labels, "bmi":bmi}, "./release/bmi"+project_name+".csv")
 
         bar_chart("Merged and abandoned reviews " + project, labels, merged, "submitted_reviews" + project_name, abandoned, ["merged", "abandoned"])
-        createCSV({"labels":labels, "merged":merged, "abandoned":abandoned}, "./release/submitted_reviews"+project_name+".csv")
+        createCSV({"labels":labels, "merged":merged, "abandoned":abandoned, "bmi":bmiscr}, "./release/submitted_reviews"+project_name+".csv")
+
+        bar_chart("Changesets efficiency " + project, labels, bmiscr, "bmiscr" + project_name)
+
+        bar_chart("Patchsets per Changeset " + project, labels, iters_reviews_avg, "patchsets_avg" + project_name, iters_reviews_median, ["mean", "median"])
+        createCSV({"labels":labels, "meanpatchsets":iters_reviews_avg, "medianpatchsets":iters_reviews_median}, "./release/scr_patchsets_iterations" + project_name+".csv")
+
+        bar_chart("Active Core Reviewers " + project, labels, active_core_reviewers, "active_core_scr"+project_name)
+        createCSV({"labels":labels, "activecorereviewers":active_core_reviewers}, "./release/active_core_scr"+project_name+".csv")
 
         bar_chart("Time to review (days)  " + project, labels, review_avg, "timetoreview_median" + project_name, review_median, ["mean", "median"])
         createCSV({"labels":labels, "mediantime":review_median, "meantime":review_avg}, "./release/timetoreview_median"+project_name+".csv")

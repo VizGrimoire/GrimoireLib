@@ -273,6 +273,18 @@ class DSQuery(object):
 
         return field
 
+    @staticmethod
+    def get_bots_filter_sql (data_source, metric_filters = None):
+        bots = data_source.get_bots()
+        if metric_filters is not None:
+            if metric_filters.people_out is not None:
+                bots = metric_filters.people_out
+        filter_bots = ''
+        for bot in bots:
+            filter_bots = filter_bots + " u.identifier<>'"+bot+"' AND "
+        if filter_bots != '': filter_bots = filter_bots[:-4]
+        return filter_bots
+
 class SCMQuery(DSQuery):
     """ Specific query builders for source code management system data source """
 
@@ -376,6 +388,78 @@ class SCMQuery(DSQuery):
 
         return fields
 
+    def GetSQLBranchFrom(self):
+        # tables necessary to limit the analysis to certain branches
+        tables = Set([])
+        tables.add("actions a")
+        tables.add("branches b")
+
+        return tables
+
+    def GetSQLBranchWhere(self, branch):
+        # filters necessary to limit the analysis to certain branches
+        fields = Set([])
+        fields.add("a.commit_id = s.id")
+        fields.add("a.branch_id = b.id")
+        fields.add("b.name =" + branch)
+
+        return fields
+
+    def GetSQLModuleFrom(self):
+        # tables necessary to limit the analysis to specific directories path
+        tables = Set([])
+        tables.add("file_links fl")
+
+        return tables 
+
+    def GetSQLModuleWhere(self, module):
+        # filters necessary to limit the analysis to specific directories path
+        filters = Set([])
+        filters.add("fl.commit_id = s.id")
+        module = module.replace("'", "")
+        filters.add("fl.file_path like '" + module + "%'")
+
+        return filters
+
+    def GetSQLFileTypeFrom(self):
+        # tables necessary to filter by type of file
+        tables = Set([])
+        tables.add("actions a")
+        tables.add("file_types ft")
+
+        return tables
+
+    def GetSQLFileTypeWhere(self, filetype):
+        """ Filters necessary to filter by type of file.
+
+        As specified by CVSAnalY, there are 9 different types:
+        unknown, devel-doc, build, code, i18n, documentation,
+        image, ui, package.
+
+        Those strings are the one expected in the value of filetype
+        """
+        filters = Set([])
+        filters.add("a.commit_id = s.id")
+        filters.add("a.file_id = ft.file_id")
+        filters.add("ft.type =" + filetype)
+
+        return filters
+
+    def GetSQLLogMessageFrom(self):
+        # tables necessary to filter by message left by developers
+        tables = Set([])
+        tables.add("scmlog s")
+
+        return tables
+
+    def GetSQLLogMessageWhere(self, message):
+        # filters necessary to filter by message left by developers
+        filters = Set([])
+        message = message.replace("'", "")
+        filters.add("s.message like '%"+message+"%'")
+
+        return filters
+
     def GetSQLPeopleFrom (self):
         #tables necessaries for companies
         tables = Set([])
@@ -404,10 +488,13 @@ class SCMQuery(DSQuery):
 
         return tables
 
-    def GetSQLBotWhere(self, bots):
+    def GetSQLBotWhere(self, bots_str):
         # Based on the tables provided in GetSQLBotFrom method, 
         # this method provides the clauses to join the several tables
 
+        bots = bots_str
+        if not isinstance(bots_str, list):
+            bots = bots_str.split(",")
         where = Set([])
         where.add("s.author_id = p.id")
         where.add("p.id = pup.people_id")
@@ -442,6 +529,10 @@ class SCMQuery(DSQuery):
                 elif analysis == 'country': From.union_update(self.GetSQLCountriesFrom())
                 elif analysis == 'domain': From.union_update(self.GetSQLDomainsFrom())
                 elif analysis == 'project': From.union_update(self.GetSQLProjectFrom())
+                elif analysis == 'branch': From.union_update(self.GetSQLBranchFrom())
+                elif analysis == 'module': From.union_update(self.GetSQLModuleFrom())
+                elif analysis == 'filetype': From.union_update(self.GetSQLFileTypeFrom())
+                elif analysis == 'logmessage': From.union_update(self.GetSQLLogMessageFrom())
                 elif analysis == 'people': From.union_update(self.GetSQLPeopleFrom())
                 elif analysis == 'people2': From.union_update(self.GetSQLPeopleFrom())
                 else: raise Exception( analysis + " not supported")
@@ -478,6 +569,10 @@ class SCMQuery(DSQuery):
                 elif analysis == 'country': where.union_update(self.GetSQLCountriesWhere(value, role))
                 elif analysis == 'domain': where.union_update(self.GetSQLDomainsWhere(value, role))
                 elif analysis == 'project': where.union_update(self.GetSQLProjectWhere(value))
+                elif analysis == 'branch': where.union_update(self.GetSQLBranchWhere(value))
+                elif analysis == 'module': where.union_update(self.GetSQLModuleWhere(value))
+                elif analysis == 'filetype': where.union_update(self.GetSQLFileTypeWhere(value))
+                elif analysis == 'logmessage': where.union_update(self.GetSQLLogMessageWhere(value))
                 elif analysis == 'people': where.union_update(self.GetSQLPeopleWhere(value))
                 elif analysis == 'people2': where.union_update(self.GetSQLPeopleWhere(value))
                 else: raise Exception( analysis + " not supported")
@@ -1201,13 +1296,10 @@ class SCRQuery(DSQuery):
         date_field = "i.submitted_on"
         if type_ in ["closed", "merged", "abandoned"]: date_field = "ie.mod_date"
         # Not include reviews before startdate no matter mod_date is after startdate
-        from report import Report
-        start_analysis = Report.get_start_date()
-        if 'scr_start_date' in Report.get_config()['r']:
-            start_analysis = Report.get_config()['r']['scr_start_date']
-        filters += " AND i.submitted_on >= '" + start_analysis  + "'"
+        filters += " AND i.submitted_on >= " + startdate
 
-        q = self.BuildQuery (period, startdate, enddate, date_field, fields, tables, filters, evolutionary, type_analysis)
+        q = self.BuildQuery (period, startdate, enddate, date_field, fields, tables,
+                             filters, evolutionary, type_analysis)
 
         return q
 
@@ -1316,48 +1408,103 @@ class SCRQuery(DSQuery):
         return (q)
 
     # Time to review accumulated for pending submissions using submit date or update date
-    def GetTimeToReviewPendingQuerySQL (self, startdate, enddate,
-                                        type_analysis = [], bots = [], updated = False, reviewers = False):
+    def GetTimeToReviewPendingQuerySQL (self, startdate, enddate, identities_db = None,
+                                        type_analysis = [], bots = [],
+                                        reviewers = False, uploaded = False):
 
         filter_bots = ''
         for bot in bots:
             filter_bots = filter_bots + " people.name<>'"+bot+"' AND "
 
+        sql_max_patchset = self.get_sql_max_patchset_for_reviews()
+        sql_reviews_reviewed = self.get_sql_reviews_reviewed(startdate)
+
         fields = "TIMESTAMPDIFF(SECOND, submitted_on, NOW())/(24*3600) AS revtime, submitted_on "
-        if (updated):
-            fields = "TIMESTAMPDIFF(SECOND, mod_date, NOW())/(24*3600) AS revtime, submitted_on "
+        if (uploaded):
+            fields = "TIMESTAMPDIFF(SECOND, ch.changed_on, NOW())/(24*3600) AS revtime, i.submitted_on as submitted_on "
         tables = "issues i, people, issues_ext_gerrit ie "
-        if reviewers:
-                q_last_change = self.get_sql_last_change_for_issues_new()
-                tables += ", changes ch, (%s) t1" % q_last_change
+        if (uploaded): tables += " , changes ch, ("+sql_max_patchset+") last_patch "
         tables += self.GetSQLReportFrom(type_analysis)
         filters = filter_bots + " people.id = i.submitted_by "
         filters += self.GetSQLReportWhere(type_analysis)
         filters += " AND status<>'MERGED' AND status<>'ABANDONED' "
         filters += " AND ie.issue_id  = i.id "
+        if (uploaded):
+            filters += " AND ch.issue_id  = i.id AND i.id = last_patch.issue_id "
+            filters += " AND ch.old_value = last_patch.maxPatchset  AND ch.field = 'Upload'"
         if reviewers:
-                filters += """
-                    AND i.id = ch.issue_id  AND t1.id = ch.id
-                    AND (ch.field='CRVW' or ch.field='Code-Review' or ch.field='Verified' or ch.field='VRIF')
-                    AND (ch.new_value=1 or ch.new_value=2)
-                """
+                filters += """ AND i.id NOT IN (%s)
+                """ % (sql_reviews_reviewed)
 
         if (self.GetIssuesFiltered() != ""): filters += " AND " + self.GetIssuesFiltered()
 
-        filters += " ORDER BY  submitted_on"
-        q = self.GetSQLGlobal('submitted_on', fields, tables, filters,
+        # if (uploaded): filters += " GROUP BY comm.issue_id "
+        filters += " ORDER BY  i.submitted_on"
+        q = self.GetSQLGlobal('i.submitted_on', fields, tables, filters,
                               startdate, enddate)
+
         return(q)
 
-    def get_sql_last_change_for_issues_new(self):
-        # last changes for reviews. Removed added change status = NEW that is "artificial"
+    def get_sql_last_change_for_reviews(self, before = None):
+        # last changes for reviews
+        # if before specified, just for changes before this date
+        before_sql = ""
+        if before:
+            before_sql = "AND changed_on <= '"+before+"'"
+
         q_last_change = """
             SELECT c.issue_id as issue_id,  max(c.id) as id
             FROM changes c, issues i
-            WHERE c.issue_id = i.id and i.status='NEW' and field<>'status'
+            WHERE c.issue_id = i.id and field<>'status' %s
             GROUP BY c.issue_id
-        """
+        """ % (before_sql)
         return q_last_change
+
+    def get_sql_max_patchset_for_reviews(self, date_analysis = None):
+        # SQL for getting the number of the last patchset sent to a review
+        # If date_analysis is specified, only analyze changes before this date
+
+        before_sql = ""
+        if date_analysis:
+            before_sql = "AND changed_on <= '"+date_analysis+"'"
+
+        sql_max_patchset = """
+            SELECT issue_id, max(CAST(old_value as UNSIGNED)) maxPatchset
+            FROM changes
+            WHERE old_value<>'' and old_value<>'None' %s
+            group by issue_id
+        """ % (before_sql)
+
+        return sql_max_patchset
+
+    def get_sql_reviews_reviewed(self, startdate, date_analysis = None):
+        # SQL for getting the list of reviews already reviewed
+
+        sql_max_patchset = self.get_sql_max_patchset_for_reviews(date_analysis)
+
+        sql_reviews_reviewed = """
+           SELECT i.id from issues i, changes ch, (%s) t
+           WHERE  i.id = t.issue_id and ch.issue_id = i.id
+             AND ch.old_value = t.maxPatchset
+             AND (    (field = 'Code-Review' AND (new_value = -1 or new_value = -2))
+                 OR  (field = 'Verified' AND (new_value = -1 or new_value = -2))
+             )
+             AND i.submitted_on >= %s
+        """ % (sql_max_patchset, startdate)
+
+        return sql_reviews_reviewed
+
+    def get_sql_reviews_closed (self, startdate, date_analysis):
+        # closed date is the mod_date for merged and abandoned reviews
+
+        sql_reviews_closed = """
+            SELECT i.id as closed FROM issues i, issues_ext_gerrit ie
+            WHERE submitted_on >= %s AND i.id = ie.issue_id
+            AND (status='MERGED' OR status='ABANDONED')
+            AND mod_date <= '%s'
+        """ % (startdate, date_analysis)
+
+        return sql_reviews_closed
 
     def GetPeopleQuerySubmissions (self, developer_id, period, startdate, enddate, evol):
         fields = "COUNT(i.id) AS submissions"

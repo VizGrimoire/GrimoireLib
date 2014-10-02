@@ -186,7 +186,7 @@ class Participants(Metrics):
         startdate = metric_filters.startdate
         enddate = metric_filters.enddate
         limit = metric_filters.npeople
-        filter_bots = self.get_bots_filter_sql(metric_filters)
+        filter_bots = self.db.get_bots_filter_sql(self.data_source, metric_filters)
         if filter_bots != "": filter_bots += " AND "
         date_limit = ""
 
@@ -259,4 +259,3 @@ class Tags(Metrics):
                    order by total desc, name;""" % (self.filters.startdate, self.filters.enddate)
         data = self.db.ExecuteQuery(query)
         return data
-        
