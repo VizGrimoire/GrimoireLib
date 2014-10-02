@@ -166,6 +166,40 @@ class Closed(Metrics):
             changed.filters = cfilters
         return q
 
+class TimeToClose(Metrics):
+    """ Time to close since an issue is opened till this is close
+
+    An issue is opened when this is submitted to the issue tracking system
+    and this is closed once in the status field this is identified as closed.
+
+    Depending on the ITS, this condition may be different, even when using the
+    same product. Those conditions are specified through the use of the ITS._backend
+    attribute
+
+    For a given period, limited by two dates, this class provides the time to close
+    for those tickets that were closed in such period.
+
+    """
+
+    def get_agg(self):
+
+        fields = "select TIMESTAMPDIFF(SECOND, i.submitted_on, t1.changed_on) as timeto "
+        tables = "from  issues i "
+        tables = tables + self.db.GetSQLReportFrom(self.filters.type_analysis)
+
+        closed_condition = ITS._get_closed_condition()
+        # TODO: if RESOLVED and CLOSED appear in the same period of study, this 
+        # will affect the total time to close the issue. Both timeframes will
+        # be taken into account.
+        table_extra = ", (select issue_id, changed_on from changes where "+closed_condition+" and changed_on < "+self.filters.enddate+" and changed_on >= "+self.filters.startdate+") t1 "
+        tables = tables + table_extra
+
+        filters = " where i.id=t1.issue_id and"
+        filters = filters + self.db.GetSQLReportWhere(self.filters.type_analysis)
+
+        return self.db.ExecuteQuery(fields+tables+filters)
+
+
 #closers
 class Closers(Metrics):
     """ Tickets Closers metric class for issue tracking systems """

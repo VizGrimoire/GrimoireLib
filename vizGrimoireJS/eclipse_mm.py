@@ -21,7 +21,7 @@
 ## Authors:
 ##   Daniel Izquierdo-Cortazar <dizquierdo@bitergia.com>
 ##
-## python eclipse_mm.py -a cp_cvsanaly_Eclipse_3328 -d cp_gerrit_Eclipse_3328 -i cp_cvsanaly_Eclipse_3328 -r 2014-04-01,2014-07-01 -c cp_bicho_Eclipse_3328 -b cp_mlstats_Eclipse_3623
+## python eclipse_mm.py -a cp_cvsanaly_Eclipse_3328 -d cp_gerrit_Eclipse_3328 -i cp_cvsanaly_Eclipse_3328 -r 2014-04-01,2014-07-01 -c cp_bicho_Eclipse_3328 -b cp_mlstats_Eclipse_4134
 
 
 import imp, inspect
@@ -35,6 +35,7 @@ import numpy as np
 from datetime import datetime
 
 PROJECT = "tools.cdt"
+NLOC = 914354
 
 def read_options():
 
@@ -125,10 +126,10 @@ def scm_report(dbcon, filters):
     # Mnemo: SCM_COMMITTERS_1M
     # Description: Total number of different user logins found in commits 
     # during last month.
-    committers = scm.Committers(dbcon, filters)
+    authors = scm.Authors(dbcon, filters)
     # NOTE: We should probably calculate authors instead of committers.
     # In addition: SCM_COMMITTERS and SCM_AUTHORS point to the same metric
-    scm_committers_1m = committers.get_trends(filters.enddate, 30)["committers_30"]
+    scm_committers_1m = authors.get_trends(filters.enddate, 30)["authors_30"]
 
     dataset = {}
     dataset["scm_commits_1m"] = scm_commits_1m
@@ -137,9 +138,8 @@ def scm_report(dbcon, filters):
     
     return dataset
     
-7
 def its_report(dbcon, filters):
-    
+
     # Name: ITS updates
     # Mnemo: ITS_UPDATES_1M
     # Description: The number of updates to the issue tracking system during 
@@ -147,7 +147,10 @@ def its_report(dbcon, filters):
     changes = its.Changed(dbcon, filters)
     # NOTE: this metric is defined as CPI and to not be retrieved by Grimoire
     # We should probably retrieve it.
+    # updates = opened issues + changes in the period.
     its_updates_1m = changes.get_trends(filters.enddate, 30)["changed_30"]
+    opened = its.Opened(dbcon, filters)
+    its_updates_1m += opened.get_agg()["opened"]
 
     # Name: ITS authors
     # Mnemo: ITS_AUTH_1M
@@ -167,16 +170,28 @@ def its_report(dbcon, filters):
     #vizr = importr("vizgrimoire")
     #vizr.SetDBChannel(database=dbcon.database, user=dbcon.user, password=dbcon.password)
     #vizr.ReportTimeToCloseITS("bugzilla", "./")
+    timeto = its.TimeToClose(dbcon, filters)
+    timeto_list = timeto.get_agg()
+    dhesa = DHESA(timeto_list["timeto"])
+    its_fix_med_1m = dhesa.data["median"]
+    its_fix_med_1m = its_fix_med_1m / 3600.0
+    its_fix_med_1m = round(its_fix_med_1m / 24.0, 2)
+
 
     # Name: Defect density
     # Mnemo: ITS_BUGS_DENSITY
     # Description: Overall total number of bugs on product divided by 1000's 
     # of lines (KLOC).
     # TBD
+    opened = its.Opened(dbcon, filters)
+    kloc = float(NLOC) / 1000.0
+    its_bugs_density = float(opened.get_agg()["opened"]) / kloc
 
     dataset = {}
     dataset["its_updates_1m"] = its_updates_1m
     dataset["its_auth_1m"] = its_auth_1m
+    dataset["its_bugs_density"] = its_bugs_density
+    dataset["its_fix_med_1m"] = its_fix_med_1m
    
     return dataset 
 
@@ -188,7 +203,7 @@ def mls_report(dbcon, filters):
     # MLS project info is not supported yet. Thus, instead of using the 
     # "project" type of analysis, the "repository" type of analysis is used.
     #filters.type_analysis = ["repository", "'/mnt/mailman_archives/cdt-dev.mbox'"]
-    
+
     # Name:Developer ML posts
     # Mnemo: MLS_DEV_VOL_1M
     # Description: Total number of posts on the developer mailing list during 
@@ -212,6 +227,12 @@ def mls_report(dbcon, filters):
     #vizr = importr("vizgrimoire")
     #vizr.SetDBChannel(database=dbcon.database, user=dbcon.user, password=dbcon.password)
     #vizr.ReportTimeToAttendMLS("./")
+    timeto = mls.TimeToFirstReply(dbcon, filters)
+    timeto_list = timeto.get_agg()
+    dhesa = DHESA(timeto_list)
+    mls_usr_resp_time_med_1m = dhesa.data["median"]
+    mls_usr_resp_time_med_1m = mls_usr_resp_time_med_1m / 3600.0
+    mls_usr_resp_time_med_1m = round(mls_usr_resp_time_med_1m / 24.0, 2)
 
     # Name: Developer ML subjects
     # Mnemo: MLS_DEV_SUBJ_1M
@@ -226,12 +247,17 @@ def mls_report(dbcon, filters):
     # mailing list during last month.
     emails = mls.EmailsSentResponse(dbcon, filters)
     mls_dev_resp_ratio_1m = emails.get_trends(filters.enddate, 30)["sent_response_30"]
-    mls_dev_resp_ratio_1m = float(mls_dev_resp_ratio_1m) / float(mls_dev_subj_1m)
+
+    if mls_dev_subj_1m > 0:
+        mls_dev_resp_ratio_1m = float(mls_dev_resp_ratio_1m) / float(mls_dev_subj_1m)
+    else:
+        mls_dev_resp_ratio_1m = 0
 
     dataset = {}
     dataset["mls_dev_vol_1m"] = mls_dev_vol_1m
     dataset["mls_dev_subj_1m"] = mls_dev_subj_1m
     dataset["mls_dev_resp_ratio_1m"] = mls_dev_resp_ratio_1m
+    dataset["mls_usr_resp_time_med_1m"] = mls_usr_resp_time_med_1m
 
     return dataset
 
@@ -240,8 +266,9 @@ def init_env():
     grimoirelib = path.join("..","vizgrimoire")
     metricslib = path.join("..","vizgrimoire","metrics")
     studieslib = path.join("..","vizgrimoire","analysis")
+    datahandler = path.join("..","vizgrimoire","datahandlers")
     alchemy = path.join("..")
-    for dir in [grimoirelib,metricslib,studieslib,alchemy]:
+    for dir in [grimoirelib,metricslib,studieslib,alchemy, datahandler]:
         sys.path.append(dir)
 
     # env vars for R
@@ -265,6 +292,8 @@ if __name__ == '__main__':
     from GrimoireUtils import createJSON
     from GrimoireSQL import SetDBChannel
     from rpy2.robjects.packages import importr
+    from ITS import ITS
+    from data_handler import DHESA
 
     # parse options
     opts = read_options()    
@@ -283,13 +312,16 @@ if __name__ == '__main__':
 
     filters = MetricFilters("month", startdate, enddate, ["project", "'"+PROJECT+"'"], opts.npeople,
                              people_out, affs_out)
+    filters_scm = MetricFilters("month", startdate, enddate, ["project,branch", "'"+PROJECT+"','master'"], opts.npeople, people_out, affs_out)
+
     #SCM report
     scm_dbcon = SCMQuery(opts.dbuser, opts.dbpassword, opts.dbcvsanaly, opts.dbidentities)
-    data["scm"] = scm_report(scm_dbcon, filters)
+    data.update(scm_report(scm_dbcon, filters_scm))
 
     #ITS report
+    ITS.set_backend("bg")
     its_dbcon = ITSQuery(opts.dbuser, opts.dbpassword, opts.dbbicho, opts.dbidentities)
-    data["its"] = its_report(its_dbcon, filters)
+    data.update(its_report(its_dbcon, filters))
 
     #SCR Report
     #scr_dbcon = SCRQuery(opts.dbuser, opts.dbpassword, opts.dbreview, opts.dbidentities)
@@ -297,7 +329,7 @@ if __name__ == '__main__':
 
     #MLS Report
     mls_dbcon = MLSQuery(opts.dbuser, opts.dbpassword, opts.dbmlstats, opts.dbidentities)
-    data["mls"] = mls_report(mls_dbcon, filters)
+    data.update(mls_report(mls_dbcon, filters))
 
     print data
 
