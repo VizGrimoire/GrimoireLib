@@ -22,7 +22,7 @@
 ##   Daniel Izquierdo-Cortazar <dizquierdo@bitergia.com>
 ##   Luis Cañas-Díaz <lcanas@bitergia.com>
 ##
-## python openstack_report.py -a dic_cvsanaly_openstack_4114 -d dic_bicho_gerrit_openstack_3359_bis2 -i dic_cvsanaly_openstack_4114 -r 2013-07-01,2013-10-01,2014-01-01,2014-04-01,2014-07-01 -c lcanas_bicho_openstack_1376 -b lcanas_mlstats_openstack_1376 -f dic_sibyl_openstack_3194_new
+## python openstack_report.py -a dic_cvsanaly_openstack_4114 -d dic_bicho_gerrit_openstack_3359_bis3 -i dic_cvsanaly_openstack_4114 -r 2013-07-01,2013-10-01,2014-01-01,2014-04-01,2014-07-01 -c lcanas_bicho_openstack_1376 -b lcanas_mlstats_openstack_1376 -f dic_sibyl_openstack_3194_new
 
 
 import imp, inspect
@@ -40,6 +40,8 @@ import prettyplotlib as ppl
 from prettyplotlib import brewer2mpl
 import numpy as np
 from datetime import datetime
+#from data_handler import DHESA
+
 
 def bar_chart(title, labels, data1, file_name, data2 = None, legend=["", ""]):
 
@@ -288,6 +290,15 @@ def scr_report(dbcon, filters):
     filters.period = "month"
     time2review = scr.TimeToReview(dbcon, filters)
 
+    time2reviewpatch = scr.TimeToReviewPatch(dbcon, filters)
+    time2 = time2reviewpatch.get_agg()
+    data = DHESA(time2["waitingtime4reviewer"])
+    waiting4reviewer_mean = float(data.data["mean"]) / 86400.0 # seconds in a day
+    waiting4reviewer_median = float(data.data["median"]) / 86400.0
+    data = DHESA(time2["waitingtime4submitter"])
+    waiting4submitter_mean = float(data.data["mean"]) / 86400.0
+    waiting4submitter_median = float(data.data["median"]) / 86400.0
+
     dataset = {}
     dataset["submitted"] = submitted.get_agg()["submitted"]
     dataset["merged"] = merged.get_agg()["merged"]
@@ -300,6 +311,10 @@ def scr_report(dbcon, filters):
     dataset["review_time_days_avg"] = time2review.get_agg()["review_time_days_avg"]
     dataset["iterations_mean"] = iterations.get_agg()["mean"]
     dataset["iterations_median"] = iterations.get_agg()["median"]
+    dataset["waiting4submitter_mean"] = waiting4submitter_mean
+    dataset["waiting4submitter_median"] = waiting4submitter_median
+    dataset["waiting4reviewer_mean"] = waiting4reviewer_mean
+    dataset["waiting4reviewer_median"] = waiting4reviewer_median
 
     return dataset
 
@@ -470,8 +485,9 @@ def init_env():
     grimoirelib = path.join("..","vizgrimoire")
     metricslib = path.join("..","vizgrimoire","metrics")
     studieslib = path.join("..","vizgrimoire","analysis")
-    alchemy = path.join("..","grimoirelib_alch")
-    for dir in [grimoirelib,metricslib,studieslib,alchemy]:
+    datahandler = path.join("..","vizgrimoire","datahandlers")
+    alchemy = path.join("..")
+    for dir in [grimoirelib,metricslib,studieslib,datahandler,alchemy]:
         sys.path.append(dir)
 
     # env vars for R
@@ -583,6 +599,7 @@ if __name__ == '__main__':
     import irc_metrics as irc
     from GrimoireUtils import createJSON
     from GrimoireSQL import SetDBChannel
+    from data_handler import DHESA
 
     # parse options
     opts = read_options()    
@@ -636,6 +653,10 @@ if __name__ == '__main__':
         bmi = []
         review_avg = []
         review_median = []
+        waiting4submitter_mean = []
+        waiting4submitter_median = []
+        waiting4reviewer_mean = []
+        waiting4reviewer_median = []
         for release in releases:
             labels.append(release[1])
             #scm
@@ -658,6 +679,10 @@ if __name__ == '__main__':
             iters_reviews_avg.append(releases_data[release]["scr"]["iterations_mean"])
             iters_reviews_median.append(releases_data[release]["scr"]["iterations_median"])
             bmiscr.append(releases_data[release]["scr"]["bmiscr"])
+            waiting4submitter_mean.append(releases_data[release]["scr"]["waiting4submitter_mean"])
+            waiting4submitter_median.append(releases_data[release]["scr"]["waiting4submitter_median"])
+            waiting4reviewer_mean.append(releases_data[release]["scr"]["waiting4reviewer_mean"])
+            waiting4reviewer_median.append(releases_data[release]["scr"]["waiting4reviewer_median"])
         
         #labels = ["2012-Q3", "2012-Q4", "2013-Q1", "2013-Q2", "2013-Q3", "2013-Q4", "2014-Q1", "2014-Q2"]        
         labels = ["2013-Q3", "2013-Q4", "2014-Q1", "2014-Q2"]
@@ -687,6 +712,11 @@ if __name__ == '__main__':
         bar_chart("Time to review (days)  " + project, labels, review_avg, "timetoreview_median" + project_name, review_median, ["mean", "median"])
         createCSV({"labels":labels, "mediantime":review_median, "meantime":review_avg}, "./release/timetoreview_median"+project_name+".csv")
 
+        bar_chart("Time waiting for the reviewer " + project, labels, waiting4reviewer_mean, "waiting4reviewer_avg" + project_name, waiting4reviewer_median, ["avg, median"])
+        createCSV({"labels":labels, "mediantime":waiting4reviewer_median, "meantime":waiting4reviewer_mean}, "./release/timewaiting4reviewer_median"+project_name+".csv")
+
+        bar_chart("Time waiting for the submitter " + project, labels, waiting4submitter_mean, "waiting4submitter_avg" + project_name, waiting4submitter_median, ["avg, median"])
+        createCSV({"labels":labels, "mediantime":waiting4submitter_median, "meantime":waiting4submitter_mean}, "./release/timewaiting4submitter_median"+project_name+".csv")
 
     # general info: scm, mls, irc and qaforums
     general_info(opts, releases, people_out, affs_out)
