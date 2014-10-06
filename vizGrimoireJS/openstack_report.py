@@ -23,7 +23,7 @@
 ##   Luis Cañas-Díaz <lcanas@bitergia.com>
 ##
 ## python openstack_report.py -a dic_cvsanaly_openstack_4114 -d dic_bicho_gerrit_openstack_3359_bis3 -i dic_cvsanaly_openstack_4114 -r 2013-07-01,2013-10-01,2014-01-01,2014-04-01,2014-07-01 -c lcanas_bicho_openstack_1376 -b lcanas_mlstats_openstack_1376 -f dic_sibyl_openstack_3194_new
-
+## python openstack_report.py -a dic_cvsanaly_openstack_4114 -d dic_bicho_gerrit_openstack_3359_bis3 -i dic_cvsanaly_openstack_4114 -r 2012-10-01,2013-01-01,2013-04-01,2013-07-01,2013-10-01,2014-01-01,2014-04-01,2014-07-01,2014-10-01 -c lcanas_bicho_openstack_1376 -b lcanas_mlstats_openstack_1376 -f dic_sibyl_openstack_3194_new
 
 import imp, inspect
 from optparse import OptionParser
@@ -569,8 +569,8 @@ def general_info(opts, releases, people_out, affs_out):
         #irc_senders.append(dataset["senders"])
 
 
-    #labels = ["2012-Q3", "2012-Q4", "2013-Q1", "2013-Q2", "2013-Q3", "2013-Q4", "2014-Q1", "2014-Q2"]
-    labels = ["2013-Q3", "2013-Q4", "2014-Q1", "2014-Q2"]
+    labels = ["12-Q4", "13-Q1", "13-Q2", "13-Q3", "13-Q4", "14-Q1", "14-Q2","14-Q3"]
+    #labels = ["2013-Q3", "2013-Q4", "2014-Q1", "2014-Q2"]
     barh_chart("Emails sent", labels, emails, "emails")
     createCSV({"labels":labels, "emails":emails}, "./release/emails.csv")
     barh_chart("People sending emails", labels, emails_senders, "emails_senders")
@@ -621,8 +621,8 @@ def releases_info(startdate, enddate, project, opts, people_out, affs_out):
 def print_n_draw(agg_data, project):
     # The releases information is print in CSV/JSON format and specific charts are built
 
-    #labels = ["2012-Q3", "2012-Q4", "2013-Q1", "2013-Q2", "2013-Q3", "2013-Q4", "2014-Q1", "2014-Q2"]        
-    labels = ["2013-Q3", "2013-Q4", "2014-Q1", "2014-Q2"]
+    labels = ["12-Q4", "13-Q1", "13-Q2", "13-Q3", "13-Q4", "14-Q1", "14-Q2", "14-Q3"]        
+    #labels = ["2013-Q3", "2013-Q4", "2014-Q1", "2014-Q2"]
     project_name = project.replace(" ", "")
 
     commits = agg_data["commits"]
