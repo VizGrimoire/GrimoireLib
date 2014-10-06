@@ -1062,13 +1062,16 @@ class TimeToReviewPatch(Metrics):
         fields.add("ch.new_value")
         fields.add("UNIX_TIMESTAMP(ch.changed_on) as changed_on")
         fields.add("ch.changed_on as date")
+
         tables.add("changes ch")
+        tables.add("issues i")
 
         filters.add("""(field='Upload' or
                    (field='Verified' and (new_value=-1 or new_value=-2)) or
                    (field='Code-Review' and (new_value=-1 or new_value=-2 or new_value=2)))""")
         filters.add("ch.changed_on >= " + self.filters.startdate)
         filters.add("ch.changed_on < " + self.filters.enddate)
+        filters.add("ch.issue_id = i.id")
 
         # Migrating those sets to strings
         fields_str = self.db._get_fields_query(fields)
@@ -1076,8 +1079,8 @@ class TimeToReviewPatch(Metrics):
         filters_str = self.db._get_filters_query(filters)
 
         # Adding extra filters
-        tables_str = tables_str + self.db.GetSQLReportFrom(self.filters.type_analysis)
-        filters_str = filters_str + self.db.GetSQLReportFrom(self.filters.type_analysis)
+        tables_str = tables_str + " " + self.db.GetSQLReportFrom(self.filters.type_analysis)
+        filters_str = filters_str + " " + self.db.GetSQLReportWhere(self.filters.type_analysis)
         filters_str = filters_str + " order by issue_id, cast(old_value as DECIMAL) asc"
 
         query = "select " + fields_str + " from " + tables_str + " where " + filters_str
@@ -1268,6 +1271,7 @@ class TimeToReviewPatch(Metrics):
         return dataset
 
 if __name__ == '__main__':
+
     filters = MetricFilters("month", "'2014-07-01'", "'2014-09-01'", None)
     dbcon = SCRQuery("root", "", "dic_bicho_gerrit_openstack_3359_bis3", "dic_cvsanaly_openstack_4114")
 
