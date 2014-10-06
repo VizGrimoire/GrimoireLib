@@ -188,6 +188,8 @@ def build_releases(releases_dates):
     return releases
 
 def scm_general(dbcon, filters):
+    # Aggregated information for SCM data source
+
     from onion_model import CommunityStructure
     onion = CommunityStructure(dbcon, filters)
     result = onion.result()
@@ -207,6 +209,7 @@ def scm_general(dbcon, filters):
     return dataset
 
 def scm_report(dbcon, filters):
+    # Per release aggregated information
 
     project_name = filters.type_analysis[1]
     project_name = project_name.replace(" ", "")
@@ -234,12 +237,17 @@ def scm_report(dbcon, filters):
     #top_companies = top_companies.result()
     companies = scm.Companies(dbcon, filters)
     top_companies = companies.get_list(filters)
+    if not isinstance(top_companies["company_commits"], list):
+        top_companies["company_commits"] = [top_companies["company_commits"]]
+        top_companies["companies"] = [top_companies["companies"]]
     createJSON(top_companies, "./release/scm_top_companies_project_"+project_name+".json")
     createCSV(top_companies, "./release/scm_top_companies_project_"+project_name+".csv")
 
     return dataset
 
 def its_report(dbcon, filters):
+    # Per release its information
+
     from ITS import ITS
     ITS.set_backend("launchpad")
 
@@ -258,7 +266,7 @@ def its_report(dbcon, filters):
 
 
 def scr_report(dbcon, filters):
-
+    # Per release code review information
     project_name = filters.type_analysis[1]
     project_name = project_name.replace(" ", "")
 
@@ -319,7 +327,8 @@ def scr_report(dbcon, filters):
     return dataset
 
 def serialize_threads(threads, crowded, threads_object):
-
+    # Function needed to reorder information coming from the
+    # Threads class
     l_threads = {}
     if crowded:
         l_threads['people'] = []
@@ -346,7 +355,7 @@ def serialize_threads(threads, crowded, threads_object):
     return l_threads
 
 def mls_report(dbcon, filters):
-    
+    # Per release MLS information
     emails = mls.EmailsSent(dbcon, filters)
     createJSON(emails.get_agg(), "./release/mls_emailssent.json")
 
@@ -378,6 +387,7 @@ def mls_report(dbcon, filters):
 
 
 def parse_urls(urls):
+    # Funtion needed to remove "odd" characters
     qs_aux = []
     for url in urls:
         url = url.replace("https://ask.openstack.org/en/question/", "")
@@ -387,6 +397,7 @@ def parse_urls(urls):
 
 
 def qaforums_report(dbcon, filters):
+    # Aggregated information per release 
     questions = qa.Questions(dbcon, filters)
     createJSON(questions.get_agg(), "./release/qaforums_questions.json")
 
@@ -435,6 +446,7 @@ def qaforums_report(dbcon, filters):
     return dataset
 
 def irc_report(dbcon, filters):
+    # per release information for IRC
     pass
     sent = irc.Sent(dbcon, filters)
     createJSON(sent.get_agg(), "./release/irc_sent.json")
@@ -482,6 +494,7 @@ def createCSV(data, filepath, skip_fields = []):
     fd.close()
 
 def init_env():
+    # Init environment
     grimoirelib = path.join("..","vizgrimoire")
     metricslib = path.join("..","vizgrimoire","metrics")
     studieslib = path.join("..","vizgrimoire","analysis")
@@ -496,13 +509,13 @@ def init_env():
 
 
 def projects(user, password, database):
+    # List projects to be analyzed
     dbcon = DSQuery(user, password, database, None)
     query = "select id from projects"
     return dbcon.ExecuteQuery(query)["id"]
 
 
 def general_info(opts, releases, people_out, affs_out):
-
     # General info from MLS, IRC and QAForums.
     core = []
     regular = []
@@ -582,6 +595,123 @@ def general_info(opts, releases, people_out, affs_out):
     bar_chart("Developers per month", labels, authors_month, "authors_month")
     createCSV({"labels":labels, "authormonth":authors_month}, "./release/authors_month.csv")
 
+def releases_info(startdate, enddate, project, opts, people_out, affs_out):
+    # Releases information.
+    data = {}
+    filters = MetricFilters("month", startdate, enddate, ["project", str(project)], opts.npeople,
+                             people_out, affs_out)
+    # SCM report
+    scm_dbcon = SCMQuery(opts.dbuser, opts.dbpassword, opts.dbcvsanaly, opts.dbidentities)
+    dataset = scm_report(scm_dbcon, filters)
+    data["scm"] = dataset
+
+    #ITS report
+    its_dbcon = ITSQuery(opts.dbuser, opts.dbpassword, opts.dbbicho, opts.dbidentities)
+    dataset = its_report(its_dbcon, filters)
+    data["its"] = dataset
+
+    #SCR Report
+    scr_dbcon = SCRQuery(opts.dbuser, opts.dbpassword, opts.dbreview, opts.dbidentities)
+    dataset = scr_report(scr_dbcon, filters)
+    data["scr"] = dataset
+
+    return data
+
+
+def print_n_draw(agg_data, project):
+    # The releases information is print in CSV/JSON format and specific charts are built
+
+    #labels = ["2012-Q3", "2012-Q4", "2013-Q1", "2013-Q2", "2013-Q3", "2013-Q4", "2014-Q1", "2014-Q2"]        
+    labels = ["2013-Q3", "2013-Q4", "2014-Q1", "2014-Q2"]
+    project_name = project.replace(" ", "")
+
+    commits = agg_data["commits"]
+    submitted = agg_data["submitted"]
+    bar_chart("Commits and reviews" + project, labels, commits, "commits"  + project_name, submitted, ["commits", "reviews"])
+    createCSV({"labels":labels, "commits":commits, "submitted":submitted}, "./release/commits"+project_name+".csv")
+
+    authors = agg_data["authors"]
+    bar_chart("Authors " + project, labels, authors, "authors" + project_name)
+    createCSV({"labels":labels, "authors":authors}, "./release/authors"+project_name+".csv")
+
+    opened = agg_data["opened"]
+    closed = agg_data["closed"]
+    bar_chart("Opened and closed tickets " + project, labels, opened, "closed" + project_name, closed, ["opened", "closed"])
+    createCSV({"labels":labels, "closed":closed, "opened":opened}, "./release/closed"+project_name+".csv")
+
+    bmi = agg_data["bmi"]
+    bar_chart("Efficiency closing tickets " + project, labels, bmi, "bmi" + project_name)
+    createCSV({"labels":labels, "bmi":bmi}, "./release/bmi"+project_name+".csv")
+
+    merged = agg_data["merged"]
+    abandoned = agg_data["abandoned"]
+    bmiscr = agg_data["bmiscr"]
+    bar_chart("Merged and abandoned reviews " + project, labels, merged, "submitted_reviews" + project_name, abandoned, ["merged", "abandoned"])
+    createCSV({"labels":labels, "merged":merged, "abandoned":abandoned, "bmi":bmiscr}, "./release/submitted_reviews"+project_name+".csv")
+
+    bmiscr = agg_data["bmiscr"]
+    bar_chart("Changesets efficiency " + project, labels, bmiscr, "bmiscr" + project_name)
+
+    iters_reviews_avg = agg_data["iters_reviews_avg"]
+    iters_reviews_median = agg_data["iters_reviews_median"]
+    bar_chart("Patchsets per Changeset " + project, labels, iters_reviews_avg, "patchsets_avg" + project_name, iters_reviews_median, ["mean", "median"])
+    createCSV({"labels":labels, "meanpatchsets":iters_reviews_avg, "medianpatchsets":iters_reviews_median}, "./release/scr_patchsets_iterations" + project_name+".csv")
+
+    active_core_reviewers = agg_data["active_core_reviewers"]
+    bar_chart("Active Core Reviewers " + project, labels, active_core_reviewers, "active_core_scr"+project_name)
+    createCSV({"labels":labels, "activecorereviewers":active_core_reviewers}, "./release/active_core_scr"+project_name+".csv")
+
+    review_avg = agg_data["review_avg"]
+    review_median = agg_data["review_median"]
+    bar_chart("Time to review (days)  " + project, labels, review_avg, "timetoreview_median" + project_name, review_median, ["mean", "median"])
+    createCSV({"labels":labels, "mediantime":review_median, "meantime":review_avg}, "./release/timetoreview_median"+project_name+".csv")
+
+    waiting4reviewer_mean = agg_data["waiting4reviewer_mean"]
+    waiting4reviewer_median = agg_data["waiting4reviewer_median"]
+    bar_chart("Time waiting for the reviewer " + project, labels, waiting4reviewer_mean, "waiting4reviewer_avg" + project_name, waiting4reviewer_median, ["avg, median"])
+    createCSV({"labels":labels, "mediantime":waiting4reviewer_median, "meantime":waiting4reviewer_mean}, "./release/timewaiting4reviewer_median"+project_name+".csv")
+
+    waiting4submitter_mean = agg_data["waiting4submitter_mean"]
+    waiting4submitter_median = agg_data["waiting4submitter_median"]
+    bar_chart("Time waiting for the submitter " + project, labels, waiting4submitter_mean, "waiting4submitter_avg" + project_name, waiting4submitter_median, ["avg, median"])
+    createCSV({"labels":labels, "mediantime":waiting4submitter_median, "meantime":waiting4submitter_mean}, "./release/timewaiting4submitter_median"+project_name+".csv")
+
+
+def order_data(agg_data, releases):
+    # Ordering dta coming from releases
+    for release in releases:
+        agg_data["labels"].append(release[1])
+
+        #scm
+        agg_data["commits"].append(releases_data[release]["scm"]["commits"])
+        agg_data["authors"].append(releases_data[release]["scm"]["authors"])
+
+        #its
+        agg_data["opened"].append(releases_data[release]["its"]["opened"])
+        agg_data["closed"].append(releases_data[release]["its"]["closed"])
+        if releases_data[release]["its"]["opened"] > 0:
+           agg_data["bmi"].append(float(releases_data[release]["its"]["closed"])/float(releases_data[release]["its"]["opened"]))
+        else:
+           agg_data["bmi"].append(0)
+   
+        #scr
+        agg_data["submitted"].append(releases_data[release]["scr"]["submitted"])
+        agg_data["merged"].append(releases_data[release]["scr"]["merged"])
+        agg_data["abandoned"].append(releases_data[release]["scr"]["abandoned"])
+        agg_data["review_avg"].append(releases_data[release]["scr"]["review_time_days_avg"])
+        agg_data["review_median"].append(releases_data[release]["scr"]["review_time_days_median"])
+        agg_data["active_core_reviewers"].append(releases_data[release]["scr"]["active_core"])
+        agg_data["iters_reviews_avg"].append(releases_data[release]["scr"]["iterations_mean"])
+        agg_data["iters_reviews_median"].append(releases_data[release]["scr"]["iterations_median"])
+        agg_data["bmiscr"].append(releases_data[release]["scr"]["bmiscr"])
+        agg_data["waiting4submitter_mean"].append(releases_data[release]["scr"]["waiting4submitter_mean"])
+        agg_data["waiting4submitter_median"].append(releases_data[release]["scr"]["waiting4submitter_median"])
+        agg_data["waiting4reviewer_mean"].append(releases_data[release]["scr"]["waiting4reviewer_mean"])
+        agg_data["waiting4reviewer_median"].append(releases_data[release]["scr"]["waiting4reviewer_median"])
+
+    return agg_data
+
+
 if __name__ == '__main__':
 
     locale.setlocale(locale.LC_ALL, 'en_US.utf8')
@@ -613,110 +743,37 @@ if __name__ == '__main__':
     people_out = ["OpenStack Jenkins","Launchpad Translations on behalf of nova-core","Jenkins","OpenStack Hudson","gerrit2@review.openstack.org","linuxdatacenter@gmail.com","Openstack Project Creator","Openstack Gerrit","openstackgerrit"]
     affs_out = ["-Bot","-Individual","-Unknown"]
 
+    # Analysis per project
     for project in projects_list:
         releases_data = {}
+        # For each project, a filter by release date is calculated
+        print "Project: " + str(project)
         for release in releases:
+            print "    Release: " + str(release[0]) + " - " + str(release[1])
             releases_data[release] = {}
 
             startdate = "'" + release[0] + "'"
             enddate = "'" + release[1] + "'"
-            filters = MetricFilters("month", startdate, enddate, ["project", str(project)], opts.npeople,
-                                    people_out, affs_out)
-            scm_dbcon = SCMQuery(opts.dbuser, opts.dbpassword, opts.dbcvsanaly, opts.dbidentities)
-            #SCM report
-            dataset = scm_report(scm_dbcon, filters)
-            releases_data[release]["scm"] = dataset
+            # Per release and project, an analysis is undertaken
+            releases_data[release] = releases_info(startdate, enddate, project, opts, people_out, affs_out)
 
-            #ITS report
-            its_dbcon = ITSQuery(opts.dbuser, opts.dbpassword, opts.dbbicho, opts.dbidentities)
-            dataset = its_report(its_dbcon, filters)
-            releases_data[release]["its"] = dataset
+        # Information is now stored in lists. Each list for each metric contains the values
+        # of the releases analysis. Each entry in the list corresponds to the value of such 
+        # metric in such release and in such project.
+        print "    Ordering data"
+        metrics = ["labels", "commits", "authors", "opened", "submitted", "merged", "abandoned", "bmiscr",
+                   "closed", "active_core_reviewers", "iters_reviews_avg", "iters_reviews_median", "bmi",
+                   "review_avg", "review_median", "waiting4submitter_mean", "waiting4submitter_median",
+                   "waiting4reviewer_mean", "waiting4reviewer_median"]
+        agg_data = {}
+        for metric in metrics:
+            # init agg_data structure
+            agg_data[metric] = []
 
-            #SCR Report
-            scr_dbcon = SCRQuery(opts.dbuser, opts.dbpassword, opts.dbreview, opts.dbidentities)
-            dataset = scr_report(scr_dbcon, filters)
-            releases_data[release]["scr"] = dataset
+        agg_data = order_data(agg_data, releases)
 
+        print_n_draw(agg_data, project)
 
-        labels = []
-        commits = []
-        authors = []
-        opened = []
-        submitted = []
-        merged = []
-        abandoned = []
-        bmiscr = []
-        closed = []
-        active_core_reviewers = []
-        iters_reviews_avg = []
-        iters_reviews_median = []
-        bmi = []
-        review_avg = []
-        review_median = []
-        waiting4submitter_mean = []
-        waiting4submitter_median = []
-        waiting4reviewer_mean = []
-        waiting4reviewer_median = []
-        for release in releases:
-            labels.append(release[1])
-            #scm
-            commits.append(releases_data[release]["scm"]["commits"])
-            authors.append(releases_data[release]["scm"]["authors"])
-            #its
-            opened.append(releases_data[release]["its"]["opened"])
-            closed.append(releases_data[release]["its"]["closed"])
-            if releases_data[release]["its"]["opened"] > 0:
-                bmi.append(float(releases_data[release]["its"]["closed"])/float(releases_data[release]["its"]["opened"]))
-            else:
-                bmi.append(0)
-            #scr
-            submitted.append(releases_data[release]["scr"]["submitted"])
-            merged.append(releases_data[release]["scr"]["merged"])
-            abandoned.append(releases_data[release]["scr"]["abandoned"])
-            review_avg.append(releases_data[release]["scr"]["review_time_days_avg"])
-            review_median.append(releases_data[release]["scr"]["review_time_days_median"])
-            active_core_reviewers.append(releases_data[release]["scr"]["active_core"])
-            iters_reviews_avg.append(releases_data[release]["scr"]["iterations_mean"])
-            iters_reviews_median.append(releases_data[release]["scr"]["iterations_median"])
-            bmiscr.append(releases_data[release]["scr"]["bmiscr"])
-            waiting4submitter_mean.append(releases_data[release]["scr"]["waiting4submitter_mean"])
-            waiting4submitter_median.append(releases_data[release]["scr"]["waiting4submitter_median"])
-            waiting4reviewer_mean.append(releases_data[release]["scr"]["waiting4reviewer_mean"])
-            waiting4reviewer_median.append(releases_data[release]["scr"]["waiting4reviewer_median"])
-        
-        #labels = ["2012-Q3", "2012-Q4", "2013-Q1", "2013-Q2", "2013-Q3", "2013-Q4", "2014-Q1", "2014-Q2"]        
-        labels = ["2013-Q3", "2013-Q4", "2014-Q1", "2014-Q2"]
-        project_name = project.replace(" ", "")
-        bar_chart("Commits and reviews" + project, labels, commits, "commits"  + project_name, submitted, ["commits", "reviews"])
-        createCSV({"labels":labels, "commits":commits, "submitted":submitted}, "./release/commits"+project_name+".csv")
-        bar_chart("Authors " + project, labels, authors, "authors" + project_name)
-        createCSV({"labels":labels, "authors":authors}, "./release/authors"+project_name+".csv")
-
-        bar_chart("Opened and closed tickets " + project, labels, opened, "closed" + project_name, closed, ["opened", "closed"])
-        createCSV({"labels":labels, "closed":closed, "opened":opened}, "./release/closed"+project_name+".csv")
-
-        bar_chart("Efficiency closing tickets " + project, labels, bmi, "bmi" + project_name)
-        createCSV({"labels":labels, "bmi":bmi}, "./release/bmi"+project_name+".csv")
-
-        bar_chart("Merged and abandoned reviews " + project, labels, merged, "submitted_reviews" + project_name, abandoned, ["merged", "abandoned"])
-        createCSV({"labels":labels, "merged":merged, "abandoned":abandoned, "bmi":bmiscr}, "./release/submitted_reviews"+project_name+".csv")
-
-        bar_chart("Changesets efficiency " + project, labels, bmiscr, "bmiscr" + project_name)
-
-        bar_chart("Patchsets per Changeset " + project, labels, iters_reviews_avg, "patchsets_avg" + project_name, iters_reviews_median, ["mean", "median"])
-        createCSV({"labels":labels, "meanpatchsets":iters_reviews_avg, "medianpatchsets":iters_reviews_median}, "./release/scr_patchsets_iterations" + project_name+".csv")
-
-        bar_chart("Active Core Reviewers " + project, labels, active_core_reviewers, "active_core_scr"+project_name)
-        createCSV({"labels":labels, "activecorereviewers":active_core_reviewers}, "./release/active_core_scr"+project_name+".csv")
-
-        bar_chart("Time to review (days)  " + project, labels, review_avg, "timetoreview_median" + project_name, review_median, ["mean", "median"])
-        createCSV({"labels":labels, "mediantime":review_median, "meantime":review_avg}, "./release/timetoreview_median"+project_name+".csv")
-
-        bar_chart("Time waiting for the reviewer " + project, labels, waiting4reviewer_mean, "waiting4reviewer_avg" + project_name, waiting4reviewer_median, ["avg, median"])
-        createCSV({"labels":labels, "mediantime":waiting4reviewer_median, "meantime":waiting4reviewer_mean}, "./release/timewaiting4reviewer_median"+project_name+".csv")
-
-        bar_chart("Time waiting for the submitter " + project, labels, waiting4submitter_mean, "waiting4submitter_avg" + project_name, waiting4submitter_median, ["avg, median"])
-        createCSV({"labels":labels, "mediantime":waiting4submitter_median, "meantime":waiting4submitter_mean}, "./release/timewaiting4submitter_median"+project_name+".csv")
 
     # general info: scm, mls, irc and qaforums
     general_info(opts, releases, people_out, affs_out)
