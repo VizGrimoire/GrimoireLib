@@ -643,26 +643,37 @@ class ITSQuery(DSQuery):
     """ Specific query builders for issue tracking system data source """
     def GetSQLRepositoriesFrom (self):
         # tables necessary for repositories 
-        return (", trackers t")
+        tables = Set([])
+        tables.add("trackers t")
+
+        return tables
 
     def GetSQLRepositoriesWhere (self, repository):
         # fields necessary to match info among tables
-        return (" i.tracker_id = t.id and t.url = "+repository+" ")
+        filters = Set([])
+        filters.add("i.tracker_id = t.id")
+        filters.add("t.url = "+repository)
+
+        return filters
 
     def GetSQLProjectsFrom (self):
         # tables necessary for repositories
-        return (", trackers t")
+        tables = Set([])
+        tables.add("trackers t")
+
+        return tables
 
     def GetSQLProjectsWhere (self, project):
         # include all repositories for a project and its subprojects
         # Remove '' from project name
+        filters = Set([])
         if len(project) > 1 :
             if (project[0] == "'" and project[-1] == "'"):
                 project = project[1:-1]
 
         subprojects = self.get_subprojects(project)
 
-        repos = """ t.url IN (
+        repos = """t.url IN (
                SELECT repository_name
                FROM   %s.projects p, %s.project_repositories pr
                WHERE  p.project_id = pr.project_id AND pr.data_source='its'
@@ -671,161 +682,217 @@ class ITSQuery(DSQuery):
         if subprojects != "[]":
             repos += " AND p.project_id IN (%s) " % subprojects
 
-        return (repos   + ") and t.id = i.tracker_id")
+        filters.add(repos + ")")
+        filters.add("t.id = i.tracker_id")
+
+        return filters
 
     def GetSQLCompaniesFrom (self):
         # fields necessary for the companies analysis
+        tables = Set([])
+        tables.add("people_upeople pup")
+        tables.add(self.identities_db + ".companies c")
+        tables.add(self.identities_db + ".upeople_companies upc")
 
-        return(" , people_upeople pup, "+\
-               self.identities_db + ".companies c, "+\
-               self.identities_db + ".upeople_companies upc")
+        return tables
 
     def GetSQLCompaniesWhere (self, name):
         # filters for the companies analysis
-        return(" i.submitted_by = pup.people_id and "+\
-               "pup.upeople_id = upc.upeople_id and "+\
-               "upc.company_id = c.id and "+\
-               "i.submitted_on >= upc.init and "+\
-               "i.submitted_on < upc.end and "+\
-               "c.name = "+name)
+        filters = Set([])
+        filters.add("i.submitted_by = pup.people_id")
+        filters.add("pup.upeople_id = upc.upeople_id")
+        filters.add("upc.company_id = c.id")
+        filters.add("i.submitted_on >= upc.init")
+        filters.add("i.submitted_on < upc.end")
+        filters.add("c.name = "+name)
+
+        return filters
 
     def GetSQLCountriesFrom (self):
         # fields necessary for the countries analysis
+        tables = Set([])
+        tables.add("people_upeople pup")
+        tables.add(self.identities_db + ".countries c")
+        tables.add(self.identities_db + ".upeople_countries upc")
 
-        return(" , people_upeople pup, "+\
-               self.identities_db + ".countries c, "+\
-               self.identities_db + ".upeople_countries upc")
+        return tables
 
     def GetSQLCountriesWhere (self, name):
         # filters for the countries analysis
-        return(" i.submitted_by = pup.people_id and "+\
-               "pup.upeople_id = upc.upeople_id and "+\
-               "upc.country_id = c.id and "+\
-               "c.name = "+name)
+        filters = Set([])
+        filters.add("i.submitted_by = pup.people_id")
+        filters.add("pup.upeople_id = upc.upeople_id")
+        filters.add("upc.country_id = c.id")
+        filters.add("c.name = "+name)
 
+        return filters
 
     def GetSQLDomainsFrom (self):
         # fields necessary for the domains analysis
+        tables = Set([])
+        tables.add("people_upeople pup")
+        tables.add(self.identities_db + ".domains d")
+        tables.add(self.identities_db + ".upeople_domains upd")
 
-        return(" , people_upeople pup, "+\
-               self.identities_db + ".domains d, "+\
-               self.identities_db + ".upeople_domains upd")
-
+        return tables
 
     def GetSQLDomainsWhere (self, name):
         # filters for the domains analysis
-        return(" i.submitted_by = pup.people_id and "+\
-               "pup.upeople_id = upd.upeople_id and "+\
-               "upd.domain_id = d.id and "+\
-               "d.name = "+name)
+        filters = Set([])
+        filters.add("i.submitted_by = pup.people_id")
+        filters.add("pup.upeople_id = upd.upeople_id")
+        filters.add("upd.domain_id = d.id")
+        filters.add("d.name = " + name)
+
+        return filters
 
     def GetSQLPeopleFrom (self):
-        return (" , people_upeople pup, " + self.identities_db + ".upeople up ")
+        tables = Set([])
+        tables.add("people_upeople pup")
+        tables.add(self.identities_db + ".upeople up")
+
+        return tables
 
     def GetSQLPeopleWhere (self, name, table = "changes"):
+        filters = Set([])
 
         field = "ch.changed_by"
 
         if table == "issues": field = "i.submitted_by"
 
-        fields = " " + field + " = pup.people_id " + \
-                 " AND up.id = pup.upeople_id "
-        if name is not None: fields += " AND up.identifier = "+name
-        return fields
+        filters.add(field + " = pup.people_id")
+        filters.add("up.id = pup.upeople_id")
+
+        if name is not None: filters.add("up.identifier = " + name)
+
+        return filters
 
     def GetSQLReportFrom (self, type_analysis):
         #generic function to generate 'from' clauses
         #"type" is a list of two values: type of analysis and value of 
         #such analysis
 
-        From = ""
+        From = Set([])
 
         if (type_analysis is None or len(type_analysis) != 2): return From
 
         analysis = type_analysis[0]
         value = type_analysis[1]
 
-        if analysis == 'repository': From = self.GetSQLRepositoriesFrom()
-        elif analysis == 'company': From = self.GetSQLCompaniesFrom()
-        elif analysis == 'country': From = self.GetSQLCountriesFrom()
-        elif analysis == 'domain': From = self.GetSQLDomainsFrom()
-        elif analysis == 'project': From = self.GetSQLProjectsFrom()
-        elif analysis == 'people2': From = self.GetSQLPeopleFrom()
+        if analysis == 'repository': From.union_update(self.GetSQLRepositoriesFrom())
+        elif analysis == 'company': From.union_update(self.GetSQLCompaniesFrom())
+        elif analysis == 'country': From.union_update(self.GetSQLCountriesFrom())
+        elif analysis == 'domain': From.union_update(self.GetSQLDomainsFrom())
+        elif analysis == 'project': From.union_update(self.GetSQLProjectsFrom())
+        elif analysis == 'people2': From.union_update(self.GetSQLPeopleFrom())
         else: raise Exception( analysis + " not supported")
 
-        return (From)
+        return From
 
     def GetSQLReportWhere (self, type_analysis, table = "changes"):
         #generic function to generate 'where' clauses
 
         #"type" is a list of two values: type of analysis and value of 
         #such analysis
-        where = ""
+        where = Set([])
 
         if (type_analysis is None or len(type_analysis) != 2): return where
 
         analysis = type_analysis[0]
         value = type_analysis[1]
 
-        if analysis == 'repository': where = self.GetSQLRepositoriesWhere(value)
-        elif analysis == 'company': where = self.GetSQLCompaniesWhere(value)
-        elif analysis == 'country': where = self.GetSQLCountriesWhere(value)
-        elif analysis == 'domain': where = self.GetSQLDomainsWhere(value)
-        elif analysis == 'project': where = self.GetSQLProjectsWhere(value)
-        elif analysis == 'people2': where = self.GetSQLPeopleWhere(value, table)
+        if analysis == 'repository': where.union_update(self.GetSQLRepositoriesWhere(value))
+        elif analysis == 'company': where.union_update(self.GetSQLCompaniesWhere(value))
+        elif analysis == 'country': where.union_update(self.GetSQLCountriesWhere(value))
+        elif analysis == 'domain': where.union_update(self.GetSQLDomainsWhere(value))
+        elif analysis == 'project': where.union_update(self.GetSQLProjectsWhere(value))
+        elif analysis == 'people2': where.union_update(self.GetSQLPeopleWhere(value, table))
         else: raise Exception( analysis + " not supported")
 
-        return (where)
+        return where
 
     def GetSQLIssuesStudies (self, period, startdate, enddate, identities_db, type_analysis, evolutionary, study):
         # Generic function that counts evolution/agg number of specific studies with similar
         # database schema such as domains, companies and countries
-        fields = ' count(distinct(name)) as ' + study
-        tables = " issues i " + self.GetSQLReportFrom(type_analysis)
-        filters = self.GetSQLReportWhere(type_analysis)
+        fields = Set([])
+        tables = Set([])
+        filters = Set([])
+
+        fields.add("count(distinct(name)) as " + study)
+        tables.add("issues i")
+        tables.union_update(self.GetSQLReportFrom(type_analysis))
+        filters.union_update(self.GetSQLReportWhere(type_analysis))
 
         #Filtering last part of the query, not used in this case
         #filters = gsub("and\n( )+(d|c|cou|com).name =.*$", "", filters)
 
-        q = self.BuildQuery(period, startdate, enddate, " i.submitted_on ", fields, tables, filters, evolutionary)
-        q = re.sub(r'and (d|c|cou|com).name.*=', "", q)
+        filters_ext = Set([])
+        for i in range(0, len(filters)):
+            filter_str = filters.pop()
+            if not re.match("(d|c|cou|com).name.*=", filter_str):
+                filters_ext.add(filter_str)
 
-        return (q)
+        query = self.BuildQuery(period, startdate, enddate, " i.submitted_on ", fields, tables, filters_ext, evolutionary)
+
+        return query
 
     # TODO: use this queries en GetSQLReportWhere and From
     def GetTablesOwnUniqueIds (self, table='') :
-        tables = 'changes c, people_upeople pup'
-        if (table == "issues"): tables = 'issues i, people_upeople pup'
+        tables = Set([])
+        # TODO: The acronym "c" is already used for companies
+        tables.add("changes c")
+        tables.add("people_upeople pup")
+        if (table == "issues"):
+            tables = Set([])
+            tables.add("issues i")
+            tables.add("people_upeople pup")
+
         return (tables)
 
     def GetFiltersOwnUniqueIds (self, table='') :
-        filters = 'pup.people_id = c.changed_by'
-        if (table == "issues"): filters = 'pup.people_id = i.submitted_by'
+        filters = Set([])
+        filters.add("pup.people_id = c.changed_by")
+        if (table == "issues"):
+            filters = Set([])
+            filters.add("pup.people_id = i.submitted_by")
+
         return (filters)
 
     # TODO: Companies using unique ids
     def GetTablesCompanies (self, table='') :
-        tables = self.GetTablesOwnUniqueIds(table)
-        tables += ','+self.identities_db+'.upeople_companies upc'
+        tables = Set([])
+        tables.union_update(self.GetTablesOwnUniqueIds(table))
+        tables.add(self.identities_db + ".upeople_companies upc")
+
         return (tables)
 
     def GetFiltersCompanies (self, table='') :
-        filters = self.GetFiltersOwnUniqueIds(table)
-        filters += " AND pup.upeople_id = upc.upeople_id"
+        filters = Set([])
+        filters.union_update(self.GetFiltersOwnUniqueIds(table))
+        filters.add("pup.upeople_id = upc.upeople_id")
         if (table == 'issues') :
-            filters += " AND submitted_on >= upc.init AND submitted_on < upc.end"
+            filters.add("submitted_on >= upc.init")
+            filters.add("submitted_on < upc.end")
         else :
-             filters += " AND changed_on >= upc.init AND changed_on < upc.end"
+             filters.add("changed_on >= upc.init")
+             filters.add("changed_on < upc.end")
+
         return (filters)
 
     def GetTablesDomains (self, table='') :
-        tables = self.GetTablesOwnUniqueIds(table)
-        tables += ','+self.identities_db+'.upeople_domains upd'
+        tables = Set([])
+
+        tables.union_update(self.GetTablesOwnUniqueIds(table))
+        tables.add(self.identities_db + ".upeople_domains upd")
+
         return(tables)
 
     def GetFiltersDomains (self, table='') :
-        filters = self.GetFiltersOwnUniqueIds(table)
-        filters += " AND pup.upeople_id = upd.upeople_id"
+        filters = Set([])
+
+        filters.union_update(self.GetFiltersOwnUniqueIds(table))
+        filters.add("pup.upeople_id = upd.upeople_id")
+
         return(filters)
 
 class MLSQuery(DSQuery):
