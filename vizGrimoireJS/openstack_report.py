@@ -23,7 +23,7 @@
 ##   Luis Cañas-Díaz <lcanas@bitergia.com>
 ##
 ## python openstack_report.py -a dic_cvsanaly_openstack_4114 -d dic_bicho_gerrit_openstack_3359_bis3 -i dic_cvsanaly_openstack_4114 -r 2013-07-01,2013-10-01,2014-01-01,2014-04-01,2014-07-01 -c lcanas_bicho_openstack_1376 -b lcanas_mlstats_openstack_1376 -f dic_sibyl_openstack_3194_new
-## python openstack_report.py -a dic_cvsanaly_openstack_4114 -d dic_bicho_gerrit_openstack_3359_bis3 -i dic_cvsanaly_openstack_4114 -r 2012-10-01,2013-01-01,2013-04-01,2013-07-01,2013-10-01,2014-01-01,2014-04-01,2014-07-01,2014-10-01 -c lcanas_bicho_openstack_1376 -b lcanas_mlstats_openstack_1376 -f dic_sibyl_openstack_3194_new
+## python openstack_report.py -a dic_cvsanaly_openstack_4114 -d dic_bicho_gerrit_openstack_3359_bis3 -i dic_cvsanaly_openstack_4114 -r 2012-10-01,2013-01-01,2013-04-01,2013-07-01,2013-10-01,2014-01-01,2014-04-01,2014-07-01,2014-10-01 -c lcanas_bicho_openstack_1376 -b lcanas_mlstats_openstack_1376 -f dic_sibyl_openstack_3194_new -e dic_irc_openstack_3277 -f dic_sibyl_openstack_3194_new
 
 import imp, inspect
 from optparse import OptionParser
@@ -225,16 +225,15 @@ def scm_report(dbcon, filters):
     dataset["authors"] = authors.get_agg()["authors"]
 
     # tops authors activity
-    #from top_authors_projects import TopAuthorsProjects
-    #top_authors = TopAuthorsProjects(dbcon, filters)
     top_authors = authors.get_list()
+    if not isinstance(top_authors["commits"], list):
+        top_authors["commits"] = [top_authors["commits"]]
+        top_authors["id"] = [top_authors["id"]]
+        top_authors["authors"] = [top_authors["authors"]]
     createJSON(top_authors, "./release/scm_top_authors_project_"+project_name+".json")
     createCSV(top_authors, "./release/scm_top_authors_project_"+project_name+".csv", ["id"])
 
     # top companies activity
-    from top_companies_projects import TopCompaniesProjects
-    #top_companies = TopCompaniesProjects(dbcon, filters)
-    #top_companies = top_companies.result()
     companies = scm.Companies(dbcon, filters)
     top_companies = companies.get_list(filters)
     if not isinstance(top_companies["company_commits"], list):
@@ -311,18 +310,18 @@ def scr_report(dbcon, filters):
     dataset["submitted"] = submitted.get_agg()["submitted"]
     dataset["merged"] = merged.get_agg()["merged"]
     dataset["abandoned"] = abandoned.get_agg()["abandoned"]
-    dataset["bmiscr"] = bmi.get_agg()["bmiscr"]
+    dataset["bmiscr"] = round(bmi.get_agg()["bmiscr"], 2)
     dataset["active_core"] = active_core.get_agg()["core_reviewers"]
-    dataset["waiting4reviewer"] = waiting4reviewer.get_agg()["ReviewsWaitingForReviewer"]
-    dataset["waiting4submitter"] = waiting4submitter.get_agg()["ReviewsWaitingForSubmitter"]
-    dataset["review_time_days_median"] = time2review.get_agg()["review_time_days_median"]
-    dataset["review_time_days_avg"] = time2review.get_agg()["review_time_days_avg"]
-    dataset["iterations_mean"] = iterations.get_agg()["mean"]
-    dataset["iterations_median"] = iterations.get_agg()["median"]
-    dataset["waiting4submitter_mean"] = waiting4submitter_mean
-    dataset["waiting4submitter_median"] = waiting4submitter_median
-    dataset["waiting4reviewer_mean"] = waiting4reviewer_mean
-    dataset["waiting4reviewer_median"] = waiting4reviewer_median
+    dataset["waiting4reviewer"] = round(waiting4reviewer.get_agg()["ReviewsWaitingForReviewer"], 2)
+    dataset["waiting4submitter"] = round(waiting4submitter.get_agg()["ReviewsWaitingForSubmitter"], 2)
+    dataset["review_time_days_median"] = round(time2review.get_agg()["review_time_days_median"], 2)
+    dataset["review_time_days_avg"] = round(time2review.get_agg()["review_time_days_avg"], 2)
+    dataset["iterations_mean"] = round(iterations.get_agg()["mean"], 2)
+    dataset["iterations_median"] = round(iterations.get_agg()["median"], 2)
+    dataset["waiting4submitter_mean"] = round(waiting4submitter_mean, 2)
+    dataset["waiting4submitter_median"] = round(waiting4submitter_median, 2)
+    dataset["waiting4reviewer_mean"] = round(waiting4reviewer_mean, 2)
+    dataset["waiting4reviewer_median"] = round(waiting4reviewer_median, 2)
 
     return dataset
 
@@ -514,9 +513,195 @@ def projects(user, password, database):
     query = "select id from projects"
     return dbcon.ExecuteQuery(query)["id"]
 
+def data_source_increment_activity(opts, people_out, affs_out):
+    # Per data source, the increment or decrement of the activity is displayed
+    dataset = {}
+
+    data_sources = ["Gits", "Tickets", "Mailing Lists", "Gerrit", "Askbot", "IRC"]
+    action = ["commits", "closed tickets", "sent emails", "submitted reviews", "posted questions", "messages"]
+    net_values = []
+    rel_values = [] #percentage wrt the previous 365 days
+
+    scm_dbcon = SCMQuery(opts.dbuser, opts.dbpassword, opts.dbcvsanaly, opts.dbidentities) 
+    its_dbcon = ITSQuery(opts.dbuser, opts.dbpassword, opts.dbbicho, opts.dbidentities)
+    mls_dbcon = MLSQuery(opts.dbuser, opts.dbpassword, opts.dbmlstats, opts.dbidentities)
+    scr_dbcon = SCRQuery(opts.dbuser, opts.dbpassword, opts.dbreview, opts.dbidentities)
+    qaforums_dbcon = QAForumsQuery(opts.dbuser, opts.dbpassword, opts.dbqaforums, opts.dbidentities)
+    irc_dbcon = IRCQuery(opts.dbuser, opts.dbpassword, opts.dbirc, opts.dbidentities)
+
+    period = "month"
+    type_analysis = None
+    releases = opts.releases.split(",")[-2:]
+    startdate = "'"+releases[0]+"'"
+    enddate = "'"+releases[1]+"'"
+    filters = MetricFilters(period, startdate, enddate, None, 10, people_out, affs_out)
+
+    commits = scm.Commits(scm_dbcon, filters)
+    closed = its.Closed(its_dbcon, filters)
+    emails = mls.EmailsSent(mls_dbcon, filters)
+    submitted = scr.Submitted(scr_dbcon, filters)
+    questions = qa.Questions(qaforums_dbcon, filters)
+    messages = irc.Sent(irc_dbcon, filters)
+
+
+    from ITS import ITS
+    ITS.set_backend("launchpad")
+
+    net_values.append(commits.get_trends(releases[1], 365)["commits_365"])
+    rel_values.append(commits.get_trends(releases[1], 365)["percentage_commits_365"])
+    net_values.append(closed.get_trends(releases[1], 365)["closed_365"])
+    rel_values.append(closed.get_trends(releases[1], 365)["percentage_closed_365"])
+    net_values.append(emails.get_trends(releases[1], 365)["sent_365"])
+    rel_values.append(emails.get_trends(releases[1], 365)["percentage_sent_365"])
+    net_values.append(submitted.get_trends(releases[1], 365)["submitted_365"])
+    rel_values.append(submitted.get_trends(releases[1], 365)["percentage_submitted_365"])
+    net_values.append(questions.get_trends(releases[1], 365)["qsent_365"])
+    rel_values.append(questions.get_trends(releases[1], 365)["percentage_qsent_365"])
+    net_values.append(messages.get_trends(releases[1], 365)["sent_365"])
+    rel_values.append(messages.get_trends(releases[1], 365)["percentage_sent_365"])
+
+    createCSV({"datasource":data_sources, "metricsnames":action, "relativevalues":rel_values, "netvalues":net_values}, "./release/data_source_evolution.csv")
+
+def integrated_projects(dbcon):
+    # List of projects that are under the integrated umbrella
+    query = """ select b.id as subproject_id
+                from projects p, 
+                     project_children pc,
+                     projects b
+                where p.title='integrated'  and 
+                      p.project_id=pc.project_id and
+                      pc.subproject_id = b.project_id
+            """
+    projects = dbcon.ExecuteQuery(query)
+
+    return projects
+
+def integrated_projects_activity(dbcon, opts, people_out, affs_out):
+    # Commits per integrated project
+
+    projects = integrated_projects(dbcon)
+
+    projects_ids = projects["subproject_id"]
+    projects_list = []
+    commits_list = []
+
+    period = "month"
+    releases = opts.releases.split(",")[-2:]
+    startdate = "'"+releases[0]+"'"
+    enddate = "'"+releases[1]+"'"
+    
+    for project_id in projects_ids:
+        project_title = "'" + project_id + "'"
+        type_analysis = ["project", project_title]
+        project_filters = MetricFilters(period, startdate, enddate, type_analysis, 10,
+                                        people_out, affs_out)
+
+        commits = scm.Commits(dbcon, project_filters)
+
+        projects_list.append(project_id)
+        commits_list.append(int(commits.get_agg()["commits"]))
+
+    createCSV({"projects":projects_list, "commits":commits_list}, "./release/integrated_projects_commits.csv")
+
+
+def integrated_projects_top_orgs(dbcon, people_out, affs_out):
+    # Top orgs contributing to each integrated project
+    # The two first companies are depicted.
+    projects = integrated_projects(dbcon)
+
+    projects_ids = projects["subproject_id"]
+    projects_list = []
+    commits_top1 = []
+    commits_top2 = []
+    orgs_top1 = []
+    orgs_top2 = []
+
+    period = "month"
+    releases = opts.releases.split(",")[-2:]
+    startdate = "'"+releases[0]+"'"
+    enddate = "'"+releases[1]+"'"
+    
+    for project_id in projects_ids:
+        project_title = "'" + project_id + "'"
+        type_analysis = ["project", project_title]
+        project_filters = MetricFilters(period, startdate, enddate, type_analysis, 10,
+                                        people_out, affs_out)
+        
+        companies = scm.Companies(dbcon, project_filters)
+        activity = companies.get_list()
+
+        projects_list.append(project_id)
+        commits_top1.append(activity["company_commits"][0])
+        commits_top2.append(activity["company_commits"][1])
+        orgs_top1.append(activity["companies"][0])
+        orgs_top2.append(activity["companies"][1])
+
+    createCSV({"projects":projects_list, "commitstopone":commits_top1, "commitstoptwo":commits_top2, "orgstopone":orgs_top1, "orgstoptwo":orgs_top2}, "./release/integrated_projects_top_orgs.csv")
+
+def integrated_projects_top_contributors(scm_dbcon, people_out, affs_out):
+    # Top contributor per integrated project
+    projects = integrated_projects(scm_dbcon)
+
+    projects_ids = projects["subproject_id"]
+    projects_list = []
+    commits = []
+    top_contributors = []
+
+    period = "month"
+    releases = opts.releases.split(",")[-2:]
+    startdate = "'"+releases[0]+"'"
+    enddate = "'"+releases[1]+"'"
+
+    for project_id in projects_ids:
+        project_title = "'" + project_id + "'"
+        type_analysis = ["project", project_title]
+        project_filters = MetricFilters(period, startdate, enddate, type_analysis, 10,
+                                        people_out, affs_out)
+        authors = scm.Authors(scm_dbcon, project_filters)
+        activity = authors.get_list()
+
+        projects_list.append(project_id)
+        commits.append(activity["commits"][0])
+        top_contributors.append(activity["authors"][0])
+
+    createCSV({"projects":projects_list, "commits":commits, "contributors":top_contributors}, "./release/integrated_projects_top_contributors.csv")
+
+def projects_efficiency(opts, people_out, affs_out):
+    # BMI and time to review in mean per general project
+    scr_dbcon = SCRQuery(opts.dbuser, opts.dbpassword, opts.dbreview, opts.dbidentities)
+    scm_dbcon = SCMQuery(opts.dbuser, opts.dbpassword, opts.dbcvsanaly, opts.dbidentities)
+
+    projects = integrated_projects(scm_dbcon)
+
+    projects_ids = projects["subproject_id"]
+    projects_list = []
+    bmi_list = []
+    time2review_list = []
+
+    period = "month"
+    releases = opts.releases.split(",")[-2:]
+    startdate = "'"+releases[0]+"'"
+    enddate = "'"+releases[1]+"'"
+
+    for project_id in projects_ids:
+        project_title = "'" + project_id + "'"
+        type_analysis = ["project", project_id]
+        project_filters = MetricFilters(period, startdate, enddate, type_analysis, 10,
+                                        people_out, affs_out)
+        scr_bmi = scr.BMISCR(scr_dbcon, project_filters)
+        time2review = scr.TimeToReview(scr_dbcon, project_filters)
+
+        projects_list.append(project_id)
+        bmi_list.append(round(scr_bmi.get_agg()["bmiscr"], 2))
+        time2review_list.append(round(time2review.get_agg()["review_time_days_median"], 2))
+
+
+    createCSV({"projects":projects_list, "bmi":bmi_list, "timereview":time2review_list}, "./release/integrated_projects_efficiency.csv")    
 
 def general_info(opts, releases, people_out, affs_out):
     # General info from MLS, IRC and QAForums.
+    scm_dbcon = SCMQuery(opts.dbuser, opts.dbpassword, opts.dbcvsanaly, opts.dbidentities)
+
     core = []
     regular = []
     occasional = []
@@ -535,8 +720,10 @@ def general_info(opts, releases, people_out, affs_out):
     for release in releases:
         startdate = "'" + release[0] + "'"
         enddate = "'" + release[1] + "'"
+        print "General info per release: " + startdate + " - " + enddate
         filters = MetricFilters("month", startdate, enddate, None, opts.npeople, people_out, affs_out)
         # SCM info
+        print "    General info: SCM"
         scm_dbcon = SCMQuery(opts.dbuser, opts.dbpassword, opts.dbcvsanaly, opts.dbidentities)
         dataset = scm_general(scm_dbcon, filters)
         core.append(dataset["core"])
@@ -548,6 +735,7 @@ def general_info(opts, releases, people_out, affs_out):
         createCSV(top_authors, "./release/top_authors_release" + str(release_pos)+ ".csv")
   
         # MLS info
+        print "    General info: MLS"
         mls_dbcon = MLSQuery(opts.dbuser, opts.dbpassword, opts.dbmlstats, opts.dbidentities)
         dataset = mls_report(mls_dbcon, filters)
         emails.append(dataset["sent"])
@@ -555,6 +743,7 @@ def general_info(opts, releases, people_out, affs_out):
         emails_senders_init.append(dataset["senders_init"])
 
         # QAForums info 
+        print "    General info: QAForums"
         qaforums_dbcon = QAForumsQuery(opts.dbuser, opts.dbpassword, opts.dbqaforums, opts.dbidentities)
         dataset = qaforums_report(qaforums_dbcon, filters)
         questions.append(dataset["questions"])
@@ -563,10 +752,11 @@ def general_info(opts, releases, people_out, affs_out):
         qsenders.append(dataset["qsenders"])
 
         # IRC info
-        #irc_dbcon = IRCQuery(opts.dbuser, opts.dbpassword, opts.dbirc, opts.dbidentities)
-        #dataset = irc_report(irc_dbcon, filters)
-        #irc_sent.append(dataset["sent"])
-        #irc_senders.append(dataset["senders"])
+        print "    General info: IRC"
+        irc_dbcon = IRCQuery(opts.dbuser, opts.dbpassword, opts.dbirc, opts.dbidentities)
+        dataset = irc_report(irc_dbcon, filters)
+        irc_sent.append(dataset["sent"])
+        irc_senders.append(dataset["senders"])
 
 
     labels = ["12-Q4", "13-Q1", "13-Q2", "13-Q3", "13-Q4", "14-Q1", "14-Q2","14-Q3"]
@@ -585,15 +775,35 @@ def general_info(opts, releases, people_out, affs_out):
     createCSV({"labels":labels, "comments":comments}, "./release/comments.csv")
     barh_chart("People asking Questions", labels, qsenders, "question_senders")
     createCSV({"labels":labels, "senders":qsenders}, "./release/question_senders.csv")
-    #barh_chart("Messages in IRC channels", labels, irc_sent, "irc_sent")
-    #createCSV({"labels":labels, "messages":irc_sent}, "./release/irc_sent.csv")
-    #barh_chart("People in IRC channels", labels, irc_senders, "irc_senders")
-    #createCSV({"labels":labels, "senders":irc_senders}, "./release/irc_senders.csv")
+    barh_chart("Messages in IRC channels", labels, irc_sent, "irc_sent")
+    createCSV({"labels":labels, "messages":irc_sent}, "./release/irc_sent.csv")
+    barh_chart("People in IRC channels", labels, irc_senders, "irc_senders")
+    createCSV({"labels":labels, "senders":irc_senders}, "./release/irc_senders.csv")
     
     bar_chart("Community structure", labels, regular, "onion", core, ["regular", "core"])
     createCSV({"labels":labels, "core":core, "regular":regular, "occasional":occasional}, "./release/onion_model.csv")
     bar_chart("Developers per month", labels, authors_month, "authors_month")
     createCSV({"labels":labels, "authormonth":authors_month}, "./release/authors_month.csv")
+
+    # other analysis
+    print "Other analysis"
+    scm_dbcon = SCMQuery(opts.dbuser, opts.dbpassword, opts.dbcvsanaly, opts.dbidentities)
+        
+    # Increment of activity in the last 365 days by data source
+    data_source_increment_activity(opts, people_out, affs_out)
+
+    # Commits and reviews per integrated project
+    integrated_projects_activity(scm_dbcon, opts, people_out, affs_out)
+
+    # Top orgs per integrated project
+    integrated_projects_top_orgs(scm_dbcon, people_out, affs_out)
+
+    # Top contributors per integrated project 
+    integrated_projects_top_contributors(scm_dbcon, people_out, affs_out)
+
+    # Efficiency per general project
+    projects_efficiency(opts, people_out, affs_out)    
+    
 
 def releases_info(startdate, enddate, project, opts, people_out, affs_out):
     # Releases information.
