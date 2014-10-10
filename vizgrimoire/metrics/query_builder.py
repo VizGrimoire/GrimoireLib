@@ -1458,17 +1458,23 @@ class SCRQuery(DSQuery):
             filter_bots = filter_bots + " people.name<>'"+bot+"' and "
 
         # Subquery to get the time to review for all reviews
-        fields = "TIMESTAMPDIFF(SECOND, submitted_on, changed_on)/(24*3600) AS revtime, changed_on "
-        tables = "issues i, changes, people "
+        # Initially we can not trust the i.submitted_on date. 
+        # Thus, we're retrieving the first Upload patch date that should
+        # be close to the actual changeset submission
+        fields = "TIMESTAMPDIFF(SECOND, ch_ext.changed_on, ch.changed_on)/(24*3600) AS revtime, ch.changed_on "
+        tables = "issues i, changes ch, changes ch_ext, people "
         tables = tables + self.GetSQLReportFrom(type_analysis)
-        filters = filter_bots + " i.id = changes.issue_id "
-        filters += " AND people.id = changes.changed_by "
+        filters = filter_bots + " i.id = ch.issue_id "
+        filters += " AND people.id = ch.changed_by "
+        filters += " AND i.id = ch_ext.issue_id "
+        filters += " AND ch_ext.field = 'Upload' "
+        filters += " AND ch_ext.old_value = 1 "
         filters += self.GetSQLReportWhere(type_analysis)
-        filters += " AND field='status' AND new_value='MERGED' "
+        filters += " AND ch.field='status' AND ch.new_value='MERGED' "
         # remove autoreviews
-        filters += " AND i.submitted_by<>changes.changed_by "
-        filters += " ORDER BY changed_on "
-        q = self.GetSQLGlobal('changed_on', fields, tables, filters,
+        filters += " AND i.submitted_by<>ch.changed_by "
+        filters += " ORDER BY ch_ext.changed_on "
+        q = self.GetSQLGlobal('ch.changed_on', fields, tables, filters,
                         startdate, enddate)
         # min_days_for_review = 0.042 # one hour
         # q = "SELECT revtime, changed_on FROM ("+q+") qrevs WHERE revtime>"+str(min_days_for_review)
