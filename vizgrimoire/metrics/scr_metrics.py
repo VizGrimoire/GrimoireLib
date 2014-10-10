@@ -170,7 +170,11 @@ class BMISCR(Metrics):
         submitted = submitted_reviews.get_agg()
         submitted_data = submitted["submitted"]
         
-        bmi_data = float(merged_data + abandoned_data) / float(submitted_data)
+        if submitted_data == 0:
+            # We should probably add a NaN value.
+            bmi_data= 0
+        else:
+            bmi_data = float(merged_data + abandoned_data) / float(submitted_data)
         bmi = {"bmiscr":bmi_data}
 
         return bmi
@@ -806,8 +810,8 @@ class ActiveCoreReviewers(Metrics):
 
     def _get_sql(self, evolutionary):
         fields = " count(distinct(changed_by)) as core_reviewers "
-        tables = " changes ch, issues i " + self.db.GetSQLReportFrom(self.filters.type_analysis)
-        filters  = "ch.issue_id = i.id "
+        tables = " changes ch, issues_ext_gerrit ieg, issues i " + self.db.GetSQLReportFrom(self.filters.type_analysis)
+        filters  = "ch.issue_id = i.id and ieg.branch like '%master%' and ieg.issue_id = i.id "
         filters += self.db.GetSQLReportWhere(self.filters.type_analysis)
 
         if (self.filters.type_analysis is None or len (self.filters.type_analysis) != 2) :
