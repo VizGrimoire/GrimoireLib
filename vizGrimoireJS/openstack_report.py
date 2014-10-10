@@ -900,7 +900,7 @@ def order_data(agg_data, releases):
         agg_data["opened"].append(releases_data[release]["its"]["opened"])
         agg_data["closed"].append(releases_data[release]["its"]["closed"])
         if releases_data[release]["its"]["opened"] > 0:
-           agg_data["bmi"].append(float(releases_data[release]["its"]["closed"])/float(releases_data[release]["its"]["opened"]))
+           agg_data["bmi"].append(round(float(releases_data[release]["its"]["closed"])/float(releases_data[release]["its"]["opened"]), 2))
         else:
            agg_data["bmi"].append(0)
    
