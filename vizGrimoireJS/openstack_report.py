@@ -389,11 +389,29 @@ def parse_urls(urls):
     # Funtion needed to remove "odd" characters
     qs_aux = []
     for url in urls:
-        url = url.replace("https://ask.openstack.org/en/question/", "")
+        #url = url.replace("https://ask.openstack.org/en/question/", "")
         url = url.replace("_", "\_")
         qs_aux.append(url)
     return qs_aux
 
+def get_qa_subjects(sites):
+    subjects = []
+    for site in sites:
+        url_parts = site.split("/")
+        parts = url_parts[6].split("-")
+        count = 0
+        # some random number to take just the first four
+        # words of the url in order to build some sentence
+        # for the link
+        sentence = ""
+        while count < 6:
+            if len(parts) > count:
+                sentence = sentence + " " + parts[count]
+            count = count + 1
+
+        subjects.append(sentence)
+
+    return subjects
 
 def qaforums_report(dbcon, filters):
     # Aggregated information per release 
@@ -421,12 +439,14 @@ def qaforums_report(dbcon, filters):
     commented["qid"] = commented.pop("question_identifier")
     # Taking the last part of the URL
     commented["site"] = parse_urls(commented.pop("url"))
+    commented["subject"] = get_qa_subjects(commented["site"])
     createJSON(commented, "./release/qa_top_questions_commented.json")
     createCSV(commented, "./release/qa_top_questions_commented.csv")
 
     visited = tops.top_visited()
     visited["qid"] = visited.pop("question_identifier")
     visited["site"] = parse_urls(visited.pop("url"))
+    visited["subject"] = get_qa_subjects(visited["site"])
     #commented["site"] = commented.pop("url").split("/")[-2:][1:]
     
     createJSON(visited, "./release/qa_top_questions_visited.json")
@@ -435,6 +455,7 @@ def qaforums_report(dbcon, filters):
     crowded = tops.top_crowded()
     crowded["qid"] = crowded.pop("question_identifier")
     crowded["site"] = parse_urls(crowded.pop("url"))
+    crowded["subject"] = get_qa_subjects(crowded["site"])
     createJSON(crowded, "./release/qa_top_questions_crowded.json")
     createCSV(crowded, "./release/qa_top_questions_crowded.csv")
 
@@ -717,13 +738,13 @@ def timezone_analysis(opts):
     labels = dataset["tz"]
     commits = dataset["commits"]
     authors = dataset["authors"]
-    bar_chart("Timezone git activity", labels, commits, "commits_tz", authors, ["commits, authors"])
+    bar_chart("Timezone git activity", labels, commits, "commits_tz", authors, ["commits", "authors"])
 
     tz = Timezone(mls_dbcon, filters)
     dataset = tz.result(MLS)
     messages = dataset["messages"]
     authors = dataset["authors"]
-    bar_chart("Timezone mailing list activity", labels, messages, "messages_tz", authors, ["messages, authors"])
+    bar_chart("Timezone mailing list activity", labels, messages, "messages_tz", authors, ["messages", "authors"])
 
 
 def general_info(opts, releases, people_out, affs_out):
@@ -833,7 +854,7 @@ def general_info(opts, releases, people_out, affs_out):
     projects_efficiency(opts, people_out, affs_out)    
    
     # TZ analysis
-    timezone_analysis(opts, people_out, affs_out)
+    timezone_analysis(opts)
 
 def releases_info(startdate, enddate, project, opts, people_out, affs_out):
     # Releases information.
@@ -908,12 +929,12 @@ def print_n_draw(agg_data, project):
 
     waiting4reviewer_mean = agg_data["waiting4reviewer_mean"]
     waiting4reviewer_median = agg_data["waiting4reviewer_median"]
-    bar_chart("Time waiting for the reviewer " + project, labels, waiting4reviewer_mean, "waiting4reviewer_avg" + project_name, waiting4reviewer_median, ["avg, median"])
+    bar_chart("Time waiting for the reviewer " + project, labels, waiting4reviewer_mean, "waiting4reviewer_avg" + project_name, waiting4reviewer_median, ["avg", "median"])
     createCSV({"labels":labels, "mediantime":waiting4reviewer_median, "meantime":waiting4reviewer_mean}, "./release/timewaiting4reviewer_median"+project_name+".csv")
 
     waiting4submitter_mean = agg_data["waiting4submitter_mean"]
     waiting4submitter_median = agg_data["waiting4submitter_median"]
-    bar_chart("Time waiting for the submitter " + project, labels, waiting4submitter_mean, "waiting4submitter_avg" + project_name, waiting4submitter_median, ["avg, median"])
+    bar_chart("Time waiting for the submitter " + project, labels, waiting4submitter_mean, "waiting4submitter_avg" + project_name, waiting4submitter_median, ["avg", "median"])
     createCSV({"labels":labels, "mediantime":waiting4submitter_median, "meantime":waiting4submitter_mean}, "./release/timewaiting4submitter_median"+project_name+".csv")
 
 
