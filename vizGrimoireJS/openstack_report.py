@@ -698,6 +698,34 @@ def projects_efficiency(opts, people_out, affs_out):
 
     createCSV({"projects":projects_list, "bmi":bmi_list, "timereview":time2review_list}, "./release/integrated_projects_efficiency.csv")    
 
+def timezone_analysis(opts):
+    from timezone import Timezone
+    from SCM import SCM
+    from MLS import MLS
+
+    scm_dbcon = SCMQuery(opts.dbuser, opts.dbpassword, opts.dbcvsanaly, opts.dbidentities)
+    mls_dbcon = MLSQuery(opts.dbuser, opts.dbpassword, opts.dbmlstats, opts.dbidentities)
+
+    period = "month"
+    releases = opts.releases.split(",")[-2:]
+    startdate = "'"+releases[0]+"'"
+    enddate = "'"+releases[1]+"'"
+    filters = MetricFilters(period, startdate, enddate, [], 10, "", "")
+
+    tz = Timezone(scm_dbcon, filters)
+    dataset = tz.result(SCM)
+    labels = dataset["tz"]
+    commits = dataset["commits"]
+    authors = dataset["authors"]
+    bar_chart("Timezone git activity", labels, commits, "commits_tz", authors, ["commits, authors"])
+
+    tz = Timezone(mls_dbcon, filters)
+    dataset = tz.result(MLS)
+    messages = dataset["messages"]
+    authors = dataset["authors"]
+    bar_chart("Timezone mailing list activity", labels, messages, "messages_tz", authors, ["messages, authors"])
+
+
 def general_info(opts, releases, people_out, affs_out):
     # General info from MLS, IRC and QAForums.
     scm_dbcon = SCMQuery(opts.dbuser, opts.dbpassword, opts.dbcvsanaly, opts.dbidentities)
@@ -803,7 +831,9 @@ def general_info(opts, releases, people_out, affs_out):
 
     # Efficiency per general project
     projects_efficiency(opts, people_out, affs_out)    
-    
+   
+    # TZ analysis
+    timezone_analysis(opts, people_out, affs_out)
 
 def releases_info(startdate, enddate, project, opts, people_out, affs_out):
     # Releases information.
