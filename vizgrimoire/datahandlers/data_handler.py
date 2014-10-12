@@ -82,14 +82,22 @@ class DHESA(DataHandler):
 
         if not isinstance(dataset, list):
             raise Exception("__init__ dataset should be a list")
-
-        self.data["median"] = np.median(dataset)
-        self.data["mean"] = np.mean(dataset)
-        self.data["mode"] = stats.mode(dataset)
-        self.data["min"] = np.min(dataset)
-        self.data["max"] = np.max(dataset)
-        self.data["percentile25"] = np.percentile(dataset, 25)
-        self.data["percentile75"] = np.percentile(dataset, 75)
+        if len(dataset) == 0:
+            self.data["median"] = 0
+            self.data["mean"] = 0
+            self.data["mode"] = 0
+            self.data["min"] = 0
+            self.data["max"] = 0
+            self.data["percentile25"] = 0
+            self.data["percentile75"] = 0
+        else:
+            self.data["median"] = np.median(dataset)
+            self.data["mean"] = np.mean(dataset)
+            self.data["mode"] = stats.mode(dataset)
+            self.data["min"] = np.min(dataset)
+            self.data["max"] = np.max(dataset)
+            self.data["percentile25"] = np.percentile(dataset, 25)
+            self.data["percentile75"] = np.percentile(dataset, 75)
 
 
 if __name__ == '__main__':
