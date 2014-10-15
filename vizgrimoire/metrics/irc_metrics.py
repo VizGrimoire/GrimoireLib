@@ -43,14 +43,20 @@ class Sent(Metrics):
     data_source = IRC
 
     def _get_sql(self, evolutionary):
-        fields = " COUNT(message) AS sent "
-        tables = " irclog i " + self.db.GetSQLReportFrom(self.filters.type_analysis)
-        filters = self.db.GetSQLReportWhere(self.filters.type_analysis)
-        filters += " and type='COMMENT' "
-        q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
-                               self.filters.enddate, " date ", fields,
+        fields = Set([])
+        tables = Set([])
+        filters = Set([])
+
+        fields.add("COUNT(i.message) AS sent")
+        tables.add("irclog i")
+        tables.union_update(self.db.GetSQLReportFrom(self.filters.type_analysis))
+        filters.add("i.type = 'COMMENT'")
+        filters.union_update(self.db.GetSQLReportWhere(self.filters.type_analysis))
+
+        query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
+                               self.filters.enddate, " i.date ", fields,
                                tables, filters, evolutionary)
-        return q
+        return query
 
 
 class Senders(Metrics):
@@ -91,14 +97,20 @@ class Senders(Metrics):
         return(self.db.ExecuteQuery(q))
 
     def _get_sql(self, evolutionary):
-        fields = " COUNT(DISTINCT(nick)) AS senders "
-        tables = " irclog i " + self.db.GetSQLReportFrom(self.filters.type_analysis)
-        filters = self.db.GetSQLReportWhere(self.filters.type_analysis)
-        filters += " and type='COMMENT' "
-        q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
-                               self.filters.enddate, " date ", fields,
+        fields = Set([])
+        tables = Set([])
+        filters = Set([])
+
+        fields.add("COUNT(DISTINCT(i.nick)) AS senders")
+        tables.add("irclog i")
+        tables.union_update(self.db.GetSQLReportFrom(self.filters.type_analysis))
+        filters.add("type = 'COMMENT'")
+        filters.union_update(self.db.GetSQLReportWhere(self.filters.type_analysis))
+        
+        query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
+                               self.filters.enddate, " i.date ", fields,
                                tables, filters, evolutionary)
-        return q
+        return query
 
 
 class Repositories(Metrics):
@@ -109,13 +121,19 @@ class Repositories(Metrics):
     data_source = IRC
 
     def _get_sql(self, evolutionary):
-        fields = " COUNT(DISTINCT(channel_id)) AS repositories "
-        tables = " irclog i " + self.db.GetSQLReportFrom(self.filters.type_analysis)
-        filters = self.db.GetSQLReportWhere(self.filters.type_analysis)
-        q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
-                               self.filters.enddate, " date ", fields,
+        fields = Set([])
+        tables = Set([])
+        filters = Set([])
+
+        fields.add("COUNT(DISTINCT(i.channel_id)) AS repositories")
+        tables.add("irclog i")
+        tables.union_update(self.db.GetSQLReportFrom(self.filters.type_analysis))
+        filters.union_update(self.db.GetSQLReportWhere(self.filters.type_analysis))
+
+        query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
+                               self.filters.enddate, " i.date ", fields,
                                tables, filters, evolutionary)
-        return q
+        return query
 
     def get_list (self):
         q = "SELECT name, count(i.id) AS total "+\
