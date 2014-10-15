@@ -34,6 +34,7 @@ from metrics_filter import MetricFilters
 from query_builder import IRCQuery
 from IRC import IRC
 
+from sets import Set
 
 class Sent(Metrics):
     """Messages sent metric class for IRC channels"""
