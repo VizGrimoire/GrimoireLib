@@ -17,29 +17,16 @@
 ## along with this program; if not, write to the Free Software
 ## Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 ##
-## Package to deal with ITS Conditions
+## Package to deal with ITS data from *Grimoire (Bicho databases)
 ##
 ## Authors:
 ##   Jesus M. Gonzalez-Barahona <jgb@bitergia.com>
 ##
 
+from common import DBFamily, DBCondition
+from grimoirelib_alch.query.its import DB, Query
 
-class Condition ():
-    """Root of all conditions
-
-    Provides a filter method which will be called when applying the condition.
-    """
-
-    def filter (query):
-        """Filter to apply for this condition
-
-        - query: query to which the filter will be applied
-        """
-
-        return query
-
-
-class PeriodCondition (Condition):
+class PeriodCondition (DBCondition):
     """Period Condition for qualifying a variable
 
     Specifies the period when the variable has to be considered"""
@@ -70,31 +57,4 @@ class PeriodCondition (Condition):
 
 if __name__ == "__main__":
 
-    from datetime import datetime
-
-    data = SCM (database = 'mysql://jgb:XXX@localhost/vizgrimoire_cvsanaly',
-                var = "ncommits")
-    print data.timeseries()
-    print data.total()
-
-    period = PeriodCondition (start = datetime(2013,1,1), end = None)
-
-    data = SCM (database = 'mysql://jgb:XXX@localhost/vizgrimoire_cvsanaly',
-                var = "ncommits", conditions = (period,))
-    print data.timeseries()
-    print data.total()
-
-    data = SCM (database = 'mysql://jgb:XXX@localhost/vizgrimoire_cvsanaly',
-                var = "listcommits")
-    print data.list()
-
-    data = SCM (database = 'mysql://jgb:XXX@localhost/vizgrimoire_cvsanaly',
-                var = "nauthors", conditions = (period,))
-    print data.timeseries()
-    print data.total()
-
-    branches = BranchesCondition (branches = ("master",))
-    data = SCM (database = 'mysql://jgb:XXX@localhost/vizgrimoire_cvsanaly',
-                var = "nauthors", conditions = (period, branches))
-    print data.timeseries()
-    print data.total()
+    print "Nothing to do (yet)"

@@ -24,147 +24,125 @@
 ##   Jesus M. Gonzalez-Barahona <jgb@bitergia.com>
 ##
 
-from sqlalchemy import create_engine, func, Column, Integer, ForeignKey, or_
-from sqlalchemy.ext.declarative import declarative_base, DeferredReflection
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.orm.query import Query
-from sqlalchemy.schema import ForeignKeyConstraint
+from grimoirelib_alch.type.timeseries import TimeSeries
+from grimoirelib_alch.type.activity import ActivityList
+from common import GrimoireDatabase, GrimoireQuery
+
+from sqlalchemy import func, Column, Integer, ForeignKey, or_
 from sqlalchemy.sql import label
 from datetime import datetime
-from timeseries import TimeSeries
-from activity import ActivityList
 
-Base = declarative_base(cls=DeferredReflection)
 
-def buildSession(database, id_database = None, echo = False):
-    """Create a session with the database
-        
-    - database: string, url of the database, in the format
-       mysql://user:passwd@host:port/database
-    - echo: boolean, output SQL to stdout or not
-        
-    Instantiatates an engine and a session to work with it
+class DB (GrimoireDatabase):
+    """Class for dealing with SCM (CVSAnalY) databases.
+
     """
+ 
+    def _query_cls(self):
+        """Return que defauld Query class for this database
 
-    # To set Unicode interaction with MySQL
-    # http://docs.sqlalchemy.org/en/rel_0_9/dialects/mysql.html#unicode
-    trailer = "?charset=utf8&use_unicode=0"
-    if id_database is None:
-        id_database = database
-    database = database + trailer
-    id_database = id_database + trailer
-    engine = create_engine(database,
-                           convert_unicode=True, encoding='utf8',
-                           echo=echo)
-    id_engine = create_engine(id_database,
-                              convert_unicode=True, encoding='utf8',
-                              echo=echo)
-    Base.prepare(engine)
-    Base.prepare(id_engine)
-    bindings = {Actions: engine,
-                Branches: engine,
-                Files: engine,
-                FileLinks: engine,
-                People: engine,
-                PeopleUPeople: id_engine,
-                Repositories: engine,
-                SCMLog: engine,
-                UPeople: id_engine}
-    # Create a session linked to the SCMQuery class
-    #Session = sessionmaker(bind=engine, query_cls=SCMQuery)
-    Session = sessionmaker(binds=bindings, query_cls=SCMQuery)
-    session = Session()
-    return (session)
+        Returns
+        -------
 
-
-class Actions(Base):
-    """actions table"""
-
-    __tablename__ = 'actions'
-    commit_id = Column(Integer, ForeignKey('scmlog.id'))
-    branch_id = Column(Integer, ForeignKey('branches.id'))
-    file_id =  Column(Integer, ForeignKey('files.id'))
-
-class Branches(Base):
-    """branches table"""
-
-    __tablename__ = 'branches'
-
-class Files(Base):
-    """files table"""
-
-    __tablename__ = 'files'
-    repository_id =  Column(Integer, ForeignKey('repositories.id'))
-
-class FileLinks(Base):
-    """file_links table"""
-
-    __tablename__ = 'file_links'
-    file_id =  Column(Integer, ForeignKey('files.id'))
-
-class People(Base):
-    """upeople table"""
-
-    __tablename__ = 'people'
-
-class PeopleUPeople(Base):
-    """people_upeople table"""
-
-    __tablename__ = 'people_upeople'
-    upeople_id = Column(Integer, ForeignKey('upeople.id'))
-
-class Repositories(Base):
-    """repositories table"""
-
-    __tablename__ = 'repositories'
-
-class SCMLog(Base):
-    """scmlog table"""
-    __tablename__ = 'scmlog'
-    author_id = Column(Integer, ForeignKey('people_upeople.people_id'))
-    author_id = Column(Integer, ForeignKey('people.id'))
-    committer_id = Column(Integer, ForeignKey('people_upeople.people_id'))
-    committer_id = Column(Integer, ForeignKey('people.id'))
-    repository_id = Column(Integer, ForeignKey('repositories.id'))
-
-class UPeople(Base):
-    """upeople"""
-
-    __tablename__ = 'upeople'
-
-
-class SCMQuery (Query):
-    """Class for dealing with SCM queries"""
-
-    def __init__ (self, entities, session):
-        """Create an SCMQuery.
-
-        Parameters
-        ----------
-
-        entities: list of SQLAlchemy entities
-           Entities (tables) to include in the query
-        session: SQLAlchemy session
-           SQLAlchemy session to use to connect to the database
-
-        Attributes
-        ----------
-
-        self.start: datetime.datetime
-           Start of the period to consider for commits. Default: None
-           (start from the first commit)
-        self.end: datetime.datetime
-           End of the period to consider for commits. Default: None
-           (end in the last commit)
+        GrimoireQuery: default Query class.
 
         """
 
-        self.start = None
-        self.end = None
-        # Keep an accounting of which tables have been joined, to avoid
-        # undesired repeated joins
-        self.joined = []
-        Query.__init__(self, entities, session)
+        return Query
+
+    def _create_tables(self):
+        """Create all SQLAlchemy tables.
+
+        Builds a SQLAlchemy class per SQL table, by using _table().
+        It assumes self.Base, self.schema and self.schema_id are already
+        set (see super.__init__() code).
+
+        """
+
+        DB.Actions = GrimoireDatabase._table (
+            bases = (self.Base,), name = 'Actions',
+            tablename = 'actions',
+            schemaname = self.schema,
+            columns = dict (
+                commit_id = Column(Integer,
+                                   ForeignKey(self.schema + '.' + 'scmlog.id')
+                                   ),
+                branch_id = Column(Integer,
+                                   ForeignKey(self.schema + '.' + 'branches.id')
+                                   ),
+                file_id = Column(Integer,
+                                 ForeignKey(self.schema + '.' + 'files.id')
+                                 )
+                ))
+        DB.Branches = GrimoireDatabase._table (
+            bases = (self.Base,), name = 'Branches',
+            tablename = 'branches',
+            schemaname = self.schema
+            )
+        DB.Files = GrimoireDatabase._table (
+            bases = (self.Base,), name = 'Files',
+            tablename = 'files',
+            schemaname = self.schema,
+            columns = dict (
+                repository_id = Column(Integer,
+                                       ForeignKey(self.schema + '.' + 
+                                                  'repositories.id')
+                                       )
+                ))
+        DB.FileLinks = GrimoireDatabase._table (
+            bases = (self.Base,), name = 'FileLinks',
+            tablename = 'file_links',
+            schemaname = self.schema,
+            columns = dict (
+                file_id = Column(Integer,
+                                 ForeignKey(self.schema + '.' + 'files.id')
+                                 )
+                ))
+        DB.People = GrimoireDatabase._table (
+            bases = (self.Base,), name = 'People',
+            tablename = 'people',
+            schemaname = self.schema
+            )
+        DB.PeopleUPeople = GrimoireDatabase._table (
+            bases = (self.Base,),
+            name = 'PeopleUPeople',
+            tablename = 'people_upeople',
+            schemaname = self.schema,
+            columns = dict (
+                upeople_id = Column(Integer,
+                                    ForeignKey(self.schema_id + '.' + 'upeople.id')
+                                    )
+                ))
+        DB.Repositories = GrimoireDatabase._table (
+            bases = (self.Base,),
+            name = 'Repositories',
+            tablename = 'repositories',
+            schemaname = self.schema,
+            )
+        DB.SCMLog = GrimoireDatabase._table (
+            bases = (self.Base,), name = 'SCMLog',
+            tablename = 'scmlog',
+            schemaname = self.schema,
+            columns = dict (
+                author_id = Column(Integer,
+                                   ForeignKey(self.schema_id + '.' + 'people.id')
+                                   ),
+                committer_id = Column(Integer,
+                                      ForeignKey(self.schema_id + '.' + 'people.id')
+                                      ),
+                repository_id = Column(Integer,
+                                       ForeignKey(self.schema_id + '.' + 
+                                                  'repositories.id')
+                                       ),
+                ))
+        DB.UPeople = GrimoireDatabase._table (
+            bases = (self.Base,), name = 'UPeople',
+            tablename = 'upeople',
+            schemaname = self.schema_id)
+
+
+class Query (GrimoireQuery):
+    """Class for dealing with SCM queries"""
 
 
     def select_nscmlog(self, variables):
@@ -179,18 +157,18 @@ class SCMQuery (Query):
         elif len (variables) == 0:
             raise Exception ("select_nscmlog: No variables")
         fields = []
-        if SCMLog not in self.joined:
-            self.joined.append(SCMLog)
+        if DB.SCMLog not in self.joined:
+            self.joined.append(DB.SCMLog)
         for variable in variables:
             if variable == "commits":
                 name = "nocommits"
-                field = SCMLog.id
+                field = DB.SCMLog.id
             elif variable == "authors":
                 name = "nauthors"
-                field = SCMLog.author_id
+                field = DB.SCMLog.author_id
             elif variable == "committers":
                 name = "ncommitters"
-                field = SCMLog.committer_id
+                field = DB.SCMLog.committer_id
             else:
                 raise Exception ("select_nscmlog: Unknown variable %s." \
                                      % variable)
@@ -201,11 +179,11 @@ class SCMQuery (Query):
     def select_listcommits(self):
         """Select a list of commits"""
         
-        if SCMLog not in self.joined:
-            self.joined.append(SCMLog)
+        if DB.SCMLog not in self.joined:
+            self.joined.append(DB.SCMLog)
         return self \
-            .add_columns (label("id", func.distinct(SCMLog.id)),
-                          label("date", SCMLog.date))
+            .add_columns (label("id", func.distinct(DB.SCMLog.id)),
+                          label("date", DB.SCMLog.date))
 
     def select_listpersons_uid(self, kind = "all"):
         """Select a list of persons (authors, committers), using uids
@@ -214,22 +192,26 @@ class SCMQuery (Query):
            authors: authors of commits
            committers: committers of commits
            all: authors and committers
-        Returns a SCMQuery object, with (id, name, email) selected.
+        Returns a Query object, with (id, name, email) selected.
         """
         
-        query = self.add_columns (label("id", func.distinct(UPeople.id)),
-                                  label("name", UPeople.identifier)) \
-                .join (PeopleUPeople, UPeople.id == PeopleUPeople.upeople_id)
+        query = self.add_columns (label("id", func.distinct(DB.UPeople.id)),
+                                  label("name", DB.UPeople.identifier)) \
+                .join (DB.PeopleUPeople,
+                       DB.UPeople.id == DB.PeopleUPeople.upeople_id)
         if kind == "authors":
-            return query.join (SCMLog,
-                                   PeopleUPeople.people_id == SCMLog.author_id)
+            return query \
+                .join (DB.SCMLog,
+                       DB.PeopleUPeople.people_id == DB.SCMLog.author_id)
         elif kind == "committers":
-            return query.join (SCMLog,
-                               PeopleUPeople.people_id == SCMLog.committer_id)
+            return query \
+                .join (DB.SCMLog,
+                       DB.PeopleUPeople.people_id == DB.SCMLog.committer_id)
         elif kind == "all":
-            return query.join (SCMLog,
-                               PeopleUPeople.people_id == SCMLog.author_id or
-                               PeopleUPeople.people_id == SCMLog.committer_id)
+            return query \
+                .join (DB.SCMLog,
+                       DB.PeopleUPeople.people_id == DB.SCMLog.author_id or
+                       DB.PeopleUPeople.people_id == DB.SCMLog.committer_id)
         else:
             raise Exception ("select_listpersons_uid: Unknown kind %s." \
                              % kind)
@@ -242,19 +224,22 @@ class SCMQuery (Query):
            committers: committers of commits
            all: authors and committers
 
-        Returns a SCMQuery object, with (id, name, email) selected.
+        Returns a Query object, with (id, name, email) selected.
         """
 
-        query = self.add_columns (label("id", func.distinct(People.id)),
-                                  label("name", People.name),
-                                  label('email', People.email))
+        query = self.add_columns (label("id", func.distinct(DB.People.id)),
+                                  label("name", DB.People.name),
+                                  label('email', DB.People.email))
         if kind == "authors":
-            return query.join (SCMLog, People.id == SCMLog.author_id)    
+            return query \
+                .join (DB.SCMLog, DB.People.id == DB.SCMLog.author_id)    
         elif kind == "committers":
-            return query.join (SCMLog, People.id == SCMLog.committer_id)    
+            return query \
+                .join (DB.SCMLog, DB.People.id == DB.SCMLog.committer_id)    
         elif kind == "all":
-            return query.join (SCMLog, People.id == SCMLog.author_id or
-                                 People.id == SCMLog.committer_id)
+            return query \
+                .join (DB.SCMLog, DB.People.id == DB.SCMLog.author_id or
+                       DB.People.id == DB.SCMLog.committer_id)
         else:
             raise Exception ("select_listpersons: Unknown kind %s." \
                              % kind)
@@ -278,21 +263,21 @@ class SCMQuery (Query):
 
         """
 
-        query = self.add_columns (label("person_id", People.id),
-                                  label("name", People.name),
-                                  label('email', People.email))
+        query = self.add_columns (label("person_id", DB.People.id),
+                                  label("name", DB.People.name),
+                                  label('email', DB.People.email))
         if kind == "authors":
-            person = SCMLog.author_id
+            person = DB.SCMLog.author_id
         elif kind == "committers":
-            person = SCMLog.committer_id
+            person = DB.SCMLog.committer_id
         else:
             raise Exception ("select_personsdata: Unknown kind %s." \
                              % kind)
-        if SCMLog in self.joined:
-            query = query.filter (People.id == person)
+        if DB.SCMLog in self.joined:
+            query = query.filter (DB.People.id == person)
         else:
-            self.joined.append (SCMLog)
-            query = query.join (SCMLog, People.id == person)
+            self.joined.append (DB.SCMLog)
+            query = query.join (DB.SCMLog, DB.People.id == person)
         return query
 
 
@@ -320,44 +305,46 @@ class SCMQuery (Query):
         """
 
         if kind == "authors":
-            person = SCMLog.author_id
+            person = DB.SCMLog.author_id
         elif kind == "committers":
-            person = SCMLog.committer_id
+            person = DB.SCMLog.committer_id
         else:
             raise Exception ("select_personsdata_uid: Unknown kind %s." \
                              % kind)
-        query = self.add_columns (label("person_id", UPeople.id),
-                                  label("name", UPeople.identifier))
+        query = self.add_columns (label("person_id", DB.UPeople.id),
+                                  label("name", DB.UPeople.identifier))
         if not self.joined:
             # First table, UPeople is in FROM
-            self.joined.append (UPeople)
-        if not self.joined or UPeople in self.joined:
+            self.joined.append (DB.UPeople)
+        if not self.joined or DB.UPeople in self.joined:
             # First table, UPeople is in FROM, or we have UPeople
-            if PeopleUPeople not in self.joined:
-                self.joined.append (PeopleUPeople)
-                query = query.join (PeopleUPeople,
-                                    UPeople.id == PeopleUPeople.upeople_id)
-            if SCMLog not in self.joined:
-                self.joined.append (SCMLog)
-                query = query.join (SCMLog,
-                                    PeopleUPeople.people_id == person)
-        elif PeopleUPeople in self.joined:
+            if DB.PeopleUPeople not in self.joined:
+                self.joined.append (DB.PeopleUPeople)
+                query = query.join (
+                    DB.PeopleUPeople,
+                    DB.UPeople.id == DB.PeopleUPeople.upeople_id
+                    )
+            if DB.SCMLog not in self.joined:
+                self.joined.append (DB.SCMLog)
+                query = query.join (DB.SCMLog,
+                                    DB.PeopleUPeople.people_id == person)
+        elif DB.PeopleUPeople in self.joined:
             # We have PeopleUPeople (SCMLog should be joined), no UPeople
-            if SCMLog not in self.joined:
+            if DB.SCMLog not in self.joined:
                 raise Exception ("select_personsdata_uid: " + \
                                      "If PeopleUPeople is joined, " + \
                                      "SCMLog should be joined too")
-            self.joined.append (UPeople)
-            query = query.join (UPeople,
-                                UPeople.id == PeopleUPeople.upeople_id)
-        elif SCMLog in self.joined:
+            self.joined.append (DB.UPeople)
+            query = query.join (DB.UPeople,
+                                DB.UPeople.id == DB.PeopleUPeople.upeople_id)
+        elif DB.SCMLog in self.joined:
             # We have SCMLog, and no PeopleUPeople, no UPeople
-            self.joined.append (PeopleUPeople)
-            query = query.join (PeopleUPeople,
-                                PeopleUPeople.people_id == person)
-            self.joined.append (UPeople)
-            query = query.join (UPeople,
-                                UPeople.id == PeopleUPeople.upeople_id)
+            self.joined.append (DB.PeopleUPeople)
+            query = query.join (DB.PeopleUPeople,
+                                DB.PeopleUPeople.people_id == person)
+            self.joined.append (DB.UPeople)
+            query = query.join (DB.UPeople,
+                                DB.UPeople.id == DB.PeopleUPeople.upeople_id)
         else:
             # No SCMLog, no PeopleUPeople, no UPeople but some other table
             raise Exception ("select_personsdata_uid: " + \
@@ -378,9 +365,9 @@ class SCMQuery (Query):
         """
 
         query = self.add_columns (label('firstdate',
-                                        func.min(SCMLog.date)),
+                                        func.min(DB.SCMLog.date)),
                                   label('lastdate',
-                                        func.max(SCMLog.date)))
+                                        func.max(DB.SCMLog.date)))
         return query
     
     def select_nbranches(self):
@@ -392,7 +379,7 @@ class SCMQuery (Query):
 
         query = self.add_columns (
             label("nbranches",
-                  func.count(func.distinct(Actions.branch_id)))
+                  func.count(func.distinct(DB.Actions.branch_id)))
             )
         return query
 
@@ -405,10 +392,10 @@ class SCMQuery (Query):
         """
 
         query = self.add_columns (label("id",
-                                        func.distinct(Actions.branch_id)),
+                                        func.distinct(DB.Actions.branch_id)),
                                   label("name",
-                                        Branches.name))
-        query = query.join(Branches)
+                                        DB.Branches.name))
+        query = query.join(DB.Branches)
         return query
 
     def filter_nomerges (self):
@@ -418,9 +405,9 @@ class SCMQuery (Query):
         where merge commits are not represented.
         """
 
-        if Actions not in self.joined:
-            self.joined.append (Actions)
-            return self.join(Actions)
+        if DB.Actions not in self.joined:
+            self.joined.append (DB.Actions)
+            return self.join(DB.Actions)
         else:
             return self
 
@@ -433,13 +420,13 @@ class SCMQuery (Query):
         """
 
         query = self
-        if Actions not in self.joined:
-            self.joined.append (Actions)
-            query = query.join(Actions)
-        if Branches not in self.joined:
-            self.joined.append (Branches)
-            query = query.join(Branches)
-        query = query.filter(Branches.name.in_(branches))
+        if DB.Actions not in self.joined:
+            self.joined.append (DB.Actions)
+            query = query.join(DB.Actions)
+        if DB.Branches not in self.joined:
+            self.joined.append (DB.Branches)
+            query = query.join(DB.Branches)
+        query = query.filter(DB.Branches.name.in_(branches))
         return query
 
 
@@ -457,9 +444,9 @@ class SCMQuery (Query):
 
         query = self
         if date == "author":
-            scmlog_date = SCMLog.author_date
+            scmlog_date = DB.SCMLog.author_date
         elif date == "commit":
-            scmlog_date = SCMLog.date
+            scmlog_date = DB.SCMLog.date
         if start is not None:
             self.start = start
             query = query.filter(scmlog_date >= start.isoformat())
@@ -472,24 +459,64 @@ class SCMQuery (Query):
     def filter_persons (self, list, kind = "all"):
         """Fiter for a certain list of persons (committers, authors)
 
-        - list: list of People.id
-        - kind: kind of person to select
-           authors: authors of commits
-           committers: committers of commits
-           all: authors and committers
-        Returns a SCMQuery object.
+        Parameters
+        ----------
+
+        list: list of People.id
+           List of people to include
+        kind: {'committers', 'authors', 'all'}
+           kind of person to select (all: authors and committers)
+
+        Returns
+        -------
+        
+        Query object.
+
         """
 
         query = self
         if kind == "authors":
-            return query.filter (SCMLog.author_id.in_(list))    
+            return query.filter (DB.SCMLog.author_id.in_(list))    
         elif kind == "committers":
-            return query.filter (SCMLog.committer_id.in_(list))    
+            return query.filter (DB.SCMLog.committer_id.in_(list))    
         elif kind == "all":
-            return query.filter (or_(SCMLog.author_id.in_(list),
-                                     SCMLog.committer_id.in_(list)))
+            return query.filter (or_(DB.SCMLog.author_id.in_(list),
+                                     DB.SCMLog.committer_id.in_(list)))
         else:
             raise Exception ("filter_persons: Unknown kind %s." \
+                             % kind)
+
+    def filterout_persons (self, list, kind = "all"):
+        """Filter out a list of people ids (committers, authors)
+
+        Parameters
+        ----------
+
+        Parameters
+        ----------
+
+        list: list of People.id
+           List of people to exclude
+        kind: {'committers', 'authors', 'all'}
+           kind of person to select (all: authors and committers)
+
+        Returns
+        -------
+        
+        Query object.
+
+        """
+
+        query = self
+        if kind == "authors":
+            return query.filter (~DB.SCMLog.author_id.in_(list))    
+        elif kind == "committers":
+            return query.filter (~DB.SCMLog.committer_id.in_(list))    
+        elif kind == "all":
+            return query.filter (and_(~DB.SCMLog.author_id.in_(list),
+                                     ~DB.SCMLog.committer_id.in_(list)))
+        else:
+            raise Exception ("filterout_persons: Unknown kind %s." \
                              % kind)
 
 
@@ -497,23 +524,24 @@ class SCMQuery (Query):
         """Fiter for a certain list of paths
 
         - list: list of strings (start of paths to filter)
-        Returns a SCMQuery object.
+        Returns a Query object.
         """
 
         conditions = []
         for path in list:
-            condition = FileLinks.file_path.like(path + '%')
+            condition = DB.FileLinks.file_path.like(path + '%')
             conditions.append(condition)
         query = self
-        if Actions not in self.joined:
-            self.joined.append (Actions)
-            query = query.join(Actions,
-                               SCMLog.id == Actions.commit_id)
-        if FileLinks not in self.joined:
-            self.joined.append (FileLinks)
-            query = query.join(FileLinks, Actions.file_id == FileLinks.file_id)
+        if DB.Actions not in self.joined:
+            self.joined.append (DB.Actions)
+            query = query.join(DB.Actions,
+                               DB.SCMLog.id == DB.Actions.commit_id)
+        if DB.FileLinks not in self.joined:
+            self.joined.append (DB.FileLinks)
+            query = query \
+                .join(DB.FileLinks, DB.Actions.file_id == DB.FileLinks.file_id)
         else:
-            query = query.filter(Actions.file_id == FileLinks.file_id)
+            query = query.filter(DB.Actions.file_id == DB.FileLinks.file_id)
         query = query.filter(or_(*conditions))
         return query
 
@@ -521,8 +549,8 @@ class SCMQuery (Query):
         """Group by time period (per month)"""
 
         return self \
-            .add_columns (label("month", func.month(SCMLog.date)),
-                          label("year", func.year(SCMLog.date))) \
+            .add_columns (label("month", func.month(DB.SCMLog.date)),
+                          label("year", func.year(DB.SCMLog.date))) \
             .group_by("month", "year").order_by("year", "month")
 
 
@@ -540,7 +568,7 @@ class SCMQuery (Query):
         Returns
         -------
 
-        SCMQuery object, with a new field (person_id)
+        Query object, with a new field (person_id)
         and a "group by" clause for grouping the results.
 
         """
@@ -553,15 +581,15 @@ class SCMQuery (Query):
 
         - names: include names of repositories as a column
 
-        Returns a SCMQuery with new columns (repository id,
+        Returns a Query with new columns (repository id,
         and repository name, if names is True), grouped by
         repository id."""
 
-        query = self.add_columns (label("repo", SCMLog.repository_id))
+        query = self.add_columns (label("repo", DB.SCMLog.repository_id))
         if names:
-            query = query.add_columns (label("name", Repositories.name)) \
-                .join (Repositories,
-                       SCMLog.repository_id == Repositories.id)
+            query = query.add_columns (label("name", DB.Repositories.name)) \
+                .join (DB.Repositories,
+                       DB.SCMLog.repository_id == DB.Repositories.id)
         query = query.group_by("repo").order_by("repo")
         return query
 
@@ -569,7 +597,8 @@ class SCMQuery (Query):
     def timeseries (self):
         """Return a TimeSeries object.
 
-        The query has to include a group_by_period filter
+        The query has to include a group_by_period filter.
+
         """
 
         data = []
@@ -594,41 +623,18 @@ class SCMQuery (Query):
         list = self.all()
         return ActivityList(list)
 
-    def __repr__ (self):
-
-        if self.start is not None:
-            start = self.start.isoformat()
-        else:
-            start = "ever"
-        if self.end is not None:
-            end = self.end.isoformat()
-        else:
-            end = "ever"
-        repr = "SCMQuery from %s to %s\n" % (start, end)
-        repr = "  Joined: %s\n" % str(self.joined)
-        repr += Query.__str__(self)
-        return repr
-
-    def __str__ (self):
-
-        return self.__repr__()
-
 
 if __name__ == "__main__":
 
-    import sys
-    import codecs
-    from standalone import print_banner
+    from grimoirelib_alch.aux.standalone import stdout_utf8, print_banner
 
-    # Trick to make the script work when using pipes
-    # (pipes confuse the interpreter, which sets codec to None)
-    # http://stackoverflow.com/questions/492483/setting-the-correct-encoding-when-piping-stdout-in-python
-    sys.stdout = codecs.getwriter('utf8')(sys.stdout)
+    stdout_utf8()
 
-    session = buildSession(
-        database='mysql://jgb:XXX@localhost/vizgrimoire_cvsanaly',
-        echo=False)
-
+    database = DB (url = 'mysql://jgb:XXX@localhost/',
+                   schema = 'vizgrimoire_cvsanaly',
+                   schema_id = 'vizgrimoire_cvsanaly')
+    session = database.build_session(Query, echo = False)
+    
     #---------------------------------
     print_banner ("Number of commits")
     res = session.query().select_nscmlog(["commits",]) \
@@ -786,13 +792,13 @@ if __name__ == "__main__":
     res = session.query().select_listbranches()
     print res.all()
     res = session.query().select_listbranches() \
-        .join(SCMLog) \
+        .join(DB.SCMLog) \
         .filter_period(start=datetime(2013,12,1),
                        end=datetime(2014,2,1))
     print res.all()
 
     #---------------------------------
-    print_banner("Filter some paths")
+    print_banner("List of authors, filter some paths")
     res = resAuth.filter_paths(("examples",))
     print res.all()
 

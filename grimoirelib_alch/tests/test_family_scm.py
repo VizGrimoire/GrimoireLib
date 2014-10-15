@@ -16,27 +16,32 @@
 ## along with this program; if not, write to the Free Software
 ## Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 ##
-## Unit tests for scm.py
+## Unit tests for family.scm.py
 ## 
 ## Authors:
 ##   Jesus M. Gonzalez-Barahona <jgb@bitergia.com>
 ##
 
+from grimoirelib_alch.query.scm import DB
+from grimoirelib_alch.family.scm import (
+    SCM,
+    NomergesCondition, BranchesCondition, PeriodCondition
+    )
 from datetime import datetime
-from scm import SCM, NomergesCondition, BranchesCondition, PeriodCondition
 import unittest
 
-database = 'mysql://jgb:XXX@localhost/vizgrimoire_cvsanaly'
-# Set UTF-8, and avoid the DBAPI Unicode support, to use SQLAlchemy's,
-# which is said to be more efficient
-database += '?charset=utf8&use_unicode=0'
-
+url = 'mysql://jgb:XXX@localhost/'
+schema = 'vizgrimoire_cvsanaly'
+schema_id = 'vizgrimoire_cvsanaly'
 
 class TestSCM (unittest.TestCase):
 
     def setUp (self):
 
-        self.database = database
+        self.database = DB (url = url,
+                            schema = schema,
+                            schema_id = schema_id)
+        self.session = self.database.build_session()
         self.start = datetime(2013,11,13)
         self.end = datetime(2014,2,1)
 
@@ -44,7 +49,7 @@ class TestSCM (unittest.TestCase):
     def test_no_condition (self):
         """Test SCM object with no conditions"""
 
-        data = SCM (database = database, var = "ncommits")
+        data = SCM (datasource = self.database, name = "ncommits")
         self.assertEqual (data.total(), 4465)
 
 
@@ -52,7 +57,7 @@ class TestSCM (unittest.TestCase):
         """Test SCM object with a no merges condition"""
 
         nomerges = NomergesCondition ()
-        data = SCM (database = database, var = "ncommits",
+        data = SCM (datasource = self.database, name = "ncommits",
                     conditions = (nomerges,))
         self.assertEqual (data.total(), 4206)
 
@@ -62,7 +67,7 @@ class TestSCM (unittest.TestCase):
 
         # Master branch
         branches = BranchesCondition (branches = ("master",))
-        data = SCM (database = database, var = "ncommits",
+        data = SCM (datasource = self.database, name = "ncommits",
                     conditions = (branches,))
         self.assertEqual (data.total(), 3685)
 
@@ -71,18 +76,18 @@ class TestSCM (unittest.TestCase):
 
         # Only start for period
         period = PeriodCondition (start = self.start, end = None)
-        data = SCM (database = database, var = "ncommits",
+        data = SCM (datasource = self.database, name = "ncommits",
                     conditions = (period,))
         self.assertEqual (data.total(), 839)
         # Start and end
         period = PeriodCondition (start = self.start, end = self.end)
-        data = SCM (database = database, var = "ncommits",
+        data = SCM (datasource = self.database, name = "ncommits",
                     conditions = (period,))
         self.assertEqual (data.total(), 730)
         # Start and end, authoring date
         period = PeriodCondition (start = self.start, end = self.end,
                                   date = "author")
-        data = SCM (database = database, var = "ncommits",
+        data = SCM (datasource = self.database, name = "ncommits",
                     conditions = (period,))
         self.assertEqual (data.total(), 728)
 
@@ -94,18 +99,18 @@ class TestSCM (unittest.TestCase):
         branches = BranchesCondition (branches = ("master",))
         period = PeriodCondition (start = self.start, end = self.end,
                                   date = "author")
-        data = SCM (database = database, var = "ncommits",
+        data = SCM (datasource = self.session, name = "ncommits",
                     conditions = (branches,period))
         self.assertEqual (data.total(), 647)
-        data = SCM (database = database, var = "ncommits",
+        data = SCM (datasource = self.session, name = "ncommits",
                     conditions = (period, branches))
         self.assertEqual (data.total(), 647)
         # Branches, period and merges (in several orders)
         nomerges = NomergesCondition ()
-        data = SCM (database = database, var = "ncommits",
+        data = SCM (datasource = self.session, name = "ncommits",
                     conditions = (nomerges, period, branches))
         self.assertEqual (data.total(), 647)
-        data = SCM (database = database, var = "ncommits",
+        data = SCM (datasource = self.session, name = "ncommits",
                     conditions = (branches, nomerges, period))
         self.assertEqual (data.total(), 647)
 
