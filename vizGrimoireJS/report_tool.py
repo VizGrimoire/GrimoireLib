@@ -190,6 +190,7 @@ def set_metric(metric_name, ds_name):
         if metric.id == metric_name:
             metric_ok = True
             DS.set_metrics_set(DS, [metric])
+            logging.info("[metric] " + metric.name + " configured")
     if not metric_ok:
         logging.error(metric_name + " metric not available in " + DS.get_name())
         sys.exit(1)
@@ -272,18 +273,17 @@ if __name__ == '__main__':
         evol = create_evol_report(startdate, enddate, opts.destdir, identities_db)
         logging.info("Creating global aggregated metrics...")
         agg = create_agg_report(startdate, enddate, opts.destdir, identities_db)
-        logging.info("Creating global top metrics...")
-        top = create_top_report(startdate, enddate, opts.destdir, opts.npeople, identities_db)
-        if (automator['r']['reports'].find('people')>-1):
-            create_report_people(startdate, enddate, opts.destdir, opts.npeople, identities_db)
-        create_reports_r(end_date, opts.destdir)
-        create_people_identifiers(startdate, enddate, opts.destdir)
+        if not opts.metric:
+            logging.info("Creating global top metrics...")
+            top = create_top_report(startdate, enddate, opts.destdir, opts.npeople, identities_db)
+            if (automator['r']['reports'].find('people')>-1):
+                create_report_people(startdate, enddate, opts.destdir, opts.npeople, identities_db)
+            create_reports_r(end_date, opts.destdir)
+            create_people_identifiers(startdate, enddate, opts.destdir)
 
-    if not opts.study and not opts.no_filters:
+    if not opts.study and not opts.no_filters and not opts.metric:
         create_reports_filters(period, startdate, enddate, opts.destdir, opts.npeople, identities_db)
-    if not opts.filter:
+    if not opts.filter and not opts.metric:
         create_reports_studies(period, startdate, enddate, opts.destdir)
-    # create_people_identifiers(startdate, enddate, opts.destdir)
-
 
     logging.info("Report data source analysis OK")

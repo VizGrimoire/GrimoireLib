@@ -132,6 +132,7 @@ class ITS(DataSource):
         top = None
         mopeners = DataSource.get_metrics("openers", ITS)
         mclosers = DataSource.get_metrics("closers", ITS)
+        if mopeners is None or mclosers is None: return None
         period = None
         type_analysis = None
         if filter_ is not None:
@@ -287,6 +288,7 @@ class ITS(DataSource):
     @staticmethod
     def get_top_people(startdate, enddate, identities_db, npeople):
         top_data = ITS.get_top_data (startdate, enddate, identities_db, None, npeople)
+        if top_data is None: return None
 
         top = top_data['closers.']["id"]
         top += top_data['closers.last year']["id"]
