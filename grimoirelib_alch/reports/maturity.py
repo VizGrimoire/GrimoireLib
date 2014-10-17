@@ -25,14 +25,17 @@
 
 from datetime import datetime, timedelta
 
-analysis_date = datetime(2014,2,1)
+analysis_date = datetime(2014,9,14)
 
 scm_database = {
     "url": "mysql://jgb:XXX@localhost/",
     "schema": "cp_cvsanaly_Eclipse_3328",
     "schema_id": "cp_cvsanaly_Eclipse_3328"
     }
-scm_repos_name = ['org.eclipse.ptp.git',] 
+scm_repos_name = ['org.eclipse.cdt.git', 'org.eclipse.cdt.edc.git',
+                  'org.eclipse.cdt.master.git',
+                  'org.eclipse.tcf.agent.git',
+                  'org.eclipse.tcf.git'] 
 scm_branches_name = ['master']
 
 mls_database = {
@@ -40,8 +43,8 @@ mls_database = {
     "schema": "cp_mlstats_Eclipse_3623",
     "schema_id": "cp_cvsanaly_Eclipse_3328"
     }
-mls_devels_name = ['ptp-dev.mbox',] 
-mls_users_name = ['ptp-dev.mbox',]
+mls_devels_name = ['cdt-dev.mbox', 'tcf-dev.mox'] 
+mls_users_name = ['cdt-dev.mbox', 'tcf-dev.mox']
 
 # Dictionary to store values for maturity metrics 
 values = {}
@@ -82,6 +85,7 @@ if __name__ == "__main__":
         ) \
         .filter (SCMDatabase.Repositories.name.in_ (scm_repos_name))
     scm_repos = [row.id for row in query.all()]
+    print scm_repos
     # Get SCM branche ids
     query = session.query(
         label("id", SCMDatabase.Branches.id)
@@ -160,6 +164,24 @@ if __name__ == "__main__":
                 )
     values ["scm_committers_1m"] = query.one().authors
 
+    query = session.query(
+        label(
+            "authors",
+            func.distinct(SCMDatabase.PeopleUPeople.upeople_id)
+            )
+        ) \
+        .join (
+            SCMDatabase.SCMLog,
+            SCMDatabase.PeopleUPeople.people_id == SCMDatabase.SCMLog.author_id
+            ) \
+        .join (SCMDatabase.Actions) \
+        .filter(SCMDatabase.Actions.branch_id.in_ (scm_branches),
+                SCMDatabase.SCMLog.repository_id.in_ (scm_repos),
+                SCMDatabase.SCMLog.author_date > month_start,
+                SCMDatabase.SCMLog.author_date <= month_end
+                )
+    for row in query.all():
+        print row
 
     #
     # MLS
