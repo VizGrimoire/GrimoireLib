@@ -30,7 +30,7 @@ from grimoirelib_alch.query.its import (
 
 from grimoirelib_alch.query.common import GrimoireDatabase
 
-from sqlalchemy import func, Column, Integer, ForeignKey
+from sqlalchemy import func, Column, Integer, ForeignKey, or_
 from sqlalchemy.sql import label
 
 
@@ -98,7 +98,7 @@ class Query (ITSQuery):
            Produce count of changes instead of list
         distinct: bool
            Select distinct change ids.
-        names: bool
+        changers: bool
            Include id of changer as a column (or not).
 
         Returns
@@ -118,13 +118,62 @@ class Query (ITSQuery):
             label("id", id_field),
             label("issue_id", DB.Changes.issue_id),
             label("field", DB.Changes.field),
-            label("old_value", DB.Changes.old_value),
-            label("new_value", DB.Changes.new_value),
+            label("patchset", DB.Changes.old_value),
+            label("value", DB.Changes.new_value),
             label("date", DB.Changes.changed_on)
         )
         if changers:
             query = query.add_columns (
                 label("changed_by", DB.Changes.changed_by))
+        return query
+
+    def select_issues (self, count = False, distinct = False,
+                       summary = False, submitter = False):
+        """Select fields from issues
+
+        Include fields in Issues table as columns in SELECT. If summary
+        and/or submitter is True, include the summary and/or the
+        submitter id.
+        If distinct is True, select distinct change ids.
+        If count is True, select the number of change ids.
+
+        Parameters
+        ----------
+
+        count: bool
+           Produce count of changes instead of list
+        distinct: bool
+           Select distinct change ids.
+        summary: bool
+           Include summary as a column (or not).
+        submitter: bool
+           Include submitter id as a column (or not).
+
+        Returns
+        -------
+
+        Query
+            Including new columns in SELECT
+        
+        """
+
+        id_field = DB.Issues.id
+        if distinct:
+            id_field = func.distinct(id_field)
+        if count:
+            id_field = func.count(id_field)
+        query = self.add_columns (
+            label("id", id_field),
+            label("issue", DB.Issues.issue),
+            label("status", DB.Issues.status),
+            label("date", DB.Issues.submitted_on)
+        )
+        if summary:
+            query = query.add_columns (
+                label("summary", DB.Changes.summary))
+        if submitter:
+            query = query.add_columns (
+                label("submitter", DB.Changes.submitted_by))
         return query
 
 
@@ -152,4 +201,19 @@ if __name__ == "__main__":
         .select_changes()
     print res
     for row in res.limit(10).all():
-        print row.id, row.issue_id, row.field, row.old_value, row.new_value, row.date
+        print row.id, row.issue_id, row.patchset, row.field, row.value, row.date
+
+    res = session.query() \
+        .select_issues()
+    print res
+    for row in res.limit(10).all():
+        print row.id, row.issue, row.status, row.date
+
+    res = session.query() \
+        .select_changes() \
+        .filter (DB.Changes.field == "Status") \
+        .filter (or_ (DB.Changes.new_value == "MERGED",
+                      DB.Changes.new_value == "ABANDONED"))
+    print res
+    for row in res.limit(10).all():
+        print row.id, row.issue_id, row.patchset, row.field, row.value, row.date
