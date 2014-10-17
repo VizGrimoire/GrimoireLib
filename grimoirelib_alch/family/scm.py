@@ -158,6 +158,19 @@ class ListAuthors (Entity):
 
         return q.query.select_listauthors()
 
+class NFiles (Entity):
+    """Number of files
+
+    """
+
+    name = "nfiles"
+    desc = "Number of files"
+    longdesc = "Number of files"
+
+    @staticmethod
+    def query (q):
+
+        return q.select_nfiles()
 
 class SCM (DBFamily):
     """Constructor of entities in the SCM family.
@@ -206,6 +219,7 @@ class SCM (DBFamily):
     def total (self):
         """Return the total count for the entity"""
 
+        print self.query
         return self.query.scalar()
 
     def list (self, limit = 10):
@@ -344,4 +358,12 @@ if __name__ == "__main__":
     data = SCM (datasource = session,
                 name = "nauthors", conditions = (period, branches))
     print data.timeseries()
+    print data.total()
+
+    #---------------------------------
+    print_banner ("Number of files (timeseries, total) for a period and branch")
+    data = SCM (datasource = session,
+                name = "nfiles", conditions = (period, branches),
+                echo = True)
+#    print data.timeseries()
     print data.total()
