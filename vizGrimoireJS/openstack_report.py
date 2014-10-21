@@ -23,7 +23,7 @@
 ##   Luis Cañas-Díaz <lcanas@bitergia.com>
 ##
 ## python openstack_report.py -a dic_cvsanaly_openstack_4114 -d dic_bicho_gerrit_openstack_3359_bis3 -i dic_cvsanaly_openstack_4114 -r 2013-07-01,2013-10-01,2014-01-01,2014-04-01,2014-07-01 -c lcanas_bicho_openstack_1376 -b lcanas_mlstats_openstack_1376 -f dic_sibyl_openstack_3194_new
-## python openstack_report.py -a dic_cvsanaly_openstack_4114 -d dic_bicho_gerrit_openstack_3359_bis3 -i dic_cvsanaly_openstack_4114 -r 2012-10-01,2013-01-01,2013-04-01,2013-07-01,2013-10-01,2014-01-01,2014-04-01,2014-07-01,2014-10-01 -c lcanas_bicho_openstack_1376 -b lcanas_mlstats_openstack_1376 -f dic_sibyl_openstack_3194_new -e dic_irc_openstack_3277 -f dic_sibyl_openstack_3194_new
+## python openstack_report.py -a dic_cvsanaly_openstack_4114 -d dic_bicho_gerrit_openstack_3359_bis4 -i dic_cvsanaly_openstack_4114 -r 2012-10-01,2013-01-01,2013-04-01,2013-07-01,2013-10-01,2014-01-01,2014-04-01,2014-07-01,2014-10-01 -c lcanas_bicho_openstack_1376 -b lcanas_mlstats_openstack_1376 -f dic_sibyl_openstack_3194_new -e dic_irc_openstack_3277 -f dic_sibyl_openstack_3194_new
 
 import imp, inspect
 from optparse import OptionParser
@@ -58,7 +58,7 @@ def bar_chart(title, labels, data1, file_name, data2 = None, legend=["", ""]):
         ppl.bar(xpos+width, data1, color="orange", width=0.35, annotate=True)
         ppl.bar(xpos, data2, grid='y', width = 0.35, annotate=True)
         plt.xticks(xpos+width, labels)
-        plt.legend(legend)
+        plt.legend(legend, loc=2)
 
     else:
         ppl.bar(xpos, data1, grid='y', annotate=True)
@@ -299,10 +299,23 @@ def scr_report(dbcon, filters):
 
     time2reviewpatch = scr.TimeToReviewPatch(dbcon, filters)
     time2 = time2reviewpatch.get_agg()
-    data = DHESA(time2["waitingtime4reviewer"])
+
+    time_list = time2["waitingtime4reviewer"]
+    waiting4reviewer_times = []
+    for time in time_list:
+        if time >= 0:
+            waiting4reviewer_times.append(time)
+    data = DHESA(waiting4reviewer_times)
     waiting4reviewer_mean = float(data.data["mean"]) / 86400.0 # seconds in a day
     waiting4reviewer_median = float(data.data["median"]) / 86400.0
-    data = DHESA(time2["waitingtime4submitter"])
+
+    
+    time_list = time2["waitingtime4submitter"]
+    waiting4submitter_times = []
+    for time in time_list:
+        if time >=0:
+            waiting4submitter_times.append(time)
+    data = DHESA(waiting4submitter_times)
     waiting4submitter_mean = float(data.data["mean"]) / 86400.0
     waiting4submitter_median = float(data.data["median"]) / 86400.0
 
@@ -735,6 +748,7 @@ def timezone_analysis(opts):
 
     tz = Timezone(scm_dbcon, filters)
     dataset = tz.result(SCM)
+    print dataset
     labels = dataset["tz"]
     commits = dataset["commits"]
     authors = dataset["authors"]
@@ -750,6 +764,7 @@ def timezone_analysis(opts):
 def general_info(opts, releases, people_out, affs_out):
     # General info from MLS, IRC and QAForums.
     scm_dbcon = SCMQuery(opts.dbuser, opts.dbpassword, opts.dbcvsanaly, opts.dbidentities)
+    timezone_analysis(opts)
 
     core = []
     regular = []
