@@ -170,13 +170,14 @@ def set_data_source(ds_name):
         sys.exit(1)
     return DS
 
-def set_filter(filter_name):
+def set_filter(filter_name, item = None):
     filter_ok = False
     filters_active = Report.get_filters()
     for filter_ in filters_active:
         if filter_.get_name() == opts.filter:
             filter_ok = True
             Report.set_filters([filter_])
+            if item is not None: Report.set_items([item])
     if not filter_ok:
         logging.error(opts.filter + " filter not available")
         sys.exit(1)
@@ -262,7 +263,7 @@ if __name__ == '__main__':
     if (opts.data_source):
         set_data_source(opts.data_source)
     if (opts.filter):
-        set_filter(opts.filter)
+        set_filter(opts.filter, opts.item)
     if (opts.metric):
         set_metric(opts.metric, opts.data_source)
     if (opts.study):
@@ -283,7 +284,7 @@ if __name__ == '__main__':
 
     if not opts.study and not opts.no_filters and not opts.metric:
         create_reports_filters(period, startdate, enddate, opts.destdir, opts.npeople, identities_db)
-    if not opts.filter and not opts.metric:
+    if not opts.filter and not opts.metric and not opts.item:
         create_reports_studies(period, startdate, enddate, opts.destdir)
 
     logging.info("Report data source analysis OK")

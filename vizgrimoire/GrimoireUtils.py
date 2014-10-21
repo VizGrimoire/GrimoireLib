@@ -496,6 +496,8 @@ def get_subprojects(project, identities_db, dsquery = None):
     project_with_children = subprojects['subproject_id'] + [project_id]
     project_with_children_str = ','.join(str(x) for x in project_with_children)
 
+    if (project_with_children_str == "[]"): project_with_children_str = "NULL"
+
     return  project_with_children_str
 
 def completeTops(tops, details, backend_name='bugzilla'):

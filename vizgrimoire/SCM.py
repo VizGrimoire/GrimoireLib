@@ -218,9 +218,12 @@ class SCM(DataSource):
 
     @staticmethod
     def create_filter_report(filter_, period, startdate, enddate, destdir, npeople, identities_db):
-        items = SCM.get_filter_items(filter_, startdate, enddate, identities_db)
-        if (items == None): return
-        items = items['name']
+        from report import Report
+        items = Report.get_items()
+        if items is None:
+            items = SCM.get_filter_items(filter_, startdate, enddate, identities_db)
+            if (items == None): return
+            items = items['name']
 
         filter_name = filter_.get_name()
 

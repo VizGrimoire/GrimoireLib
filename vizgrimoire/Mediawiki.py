@@ -127,7 +127,10 @@ class Mediawiki(DataSource):
 
     @staticmethod
     def create_filter_report(filter_, period, startdate, enddate, destdir, npeople, identities_db):
-        items = Mediawiki.get_filter_items(filter_, startdate, enddate, identities_db)
+        from report import Report
+        items = Report.get_items()
+        if items is None:
+            items = Mediawiki.get_filter_items(filter_, startdate, enddate, identities_db)
         if (items == None): return
 
     @staticmethod

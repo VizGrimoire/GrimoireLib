@@ -159,8 +159,11 @@ class DownloadsDS(DataSource):
 
     @staticmethod
     def create_filter_report(filter_, period, startdate, enddate, destdir, npeople, identities_db):
-        items = DownloadsDS.get_filter_items(filter_, startdate, enddate, identities_db)
-        if (items == None): return
+        from report import Report
+        items = Report.get_items()
+        if items is None:
+            items = DownloadsDS.get_filter_items(filter_, startdate, enddate, identities_db)
+            if (items == None): return
 
     @staticmethod
     def get_top_people(startdate, enddate, identities_db, npeople):

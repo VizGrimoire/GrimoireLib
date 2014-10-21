@@ -118,8 +118,11 @@ class IRC(DataSource):
 
     @staticmethod
     def create_filter_report(filter_, period, startdate, enddate, destdir, npeople, identities_db):
-        items = IRC.get_filter_items(filter_, startdate, enddate, identities_db)
-        if (items == None): return
+        from report import Report
+        items = Report.get_items()
+        if items is None:
+            items = IRC.get_filter_items(filter_, startdate, enddate, identities_db)
+            if (items == None): return
 
         if not isinstance(items, (list)):
             items = [items]
