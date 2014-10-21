@@ -256,6 +256,8 @@ class DSQuery(object):
         project_with_children = subprojects['subproject_id'] + [project_id]
         project_with_children_str = ','.join(str(x) for x in project_with_children)
 
+        if (project_with_children_str == "[]"): project_with_children_str = "NULL"
+
         return  project_with_children_str
 
     @staticmethod
@@ -1731,97 +1733,129 @@ class IRCQuery(DSQuery):
 
     def GetSQLRepositoriesFrom (self):
         # tables necessary for repositories
-        return (", channels c")
+        fields = Set([])
+        # TODO: channels c should be changed to channels ch
+        #       c is typically used for companies table
+        fields.add("channels c")
+
+        return fields
 
     def GetSQLRepositoriesWhere(self, repository):
         # filters necessaries for repositories
-        return (" i.channel_id = c.id and c.name=" + repository)
+        filters = Set([])
+        filters.add("i.channel_id = c.id")
+        filters.add("c.name = " + repository)
+
+        return filters
 
     def GetSQLCompaniesFrom(self):
         # tables necessary to companies analysis
-        return(" , people_upeople pup, " +\
-               self.identities_db + "companies c, " +\
-               self.identities_db + ".upeople_companies upc")
+        tables = Set([])
+        tables.add("people_upeople pup")
+        tables.add(self.identities_db + ".companies c")
+        tables.add(self.identities_db + ".upeople_companies upc")
+
+        return tables
 
     def GetSQLCompaniesWhere(self, name):
         # filters necessary to companies analysis
-        return(" i.nick = pup.people_id and "+\
-               "pup.upeople_id = upc.upeople_id and "+\
-               "upc.company_id = c.id and "+\
-               "i.submitted_on >= upc.init and "+\
-               "i.submitted_on < upc.end and "+\
-               "c.name = " + name)
+        filters = Set([])
+        filters.add("i.nick = pup.people_id")
+        filters.add("pup.upeople_id = upc.upeople_id")
+        filters.add("upc.company_id = c.id")
+        filters.add("i.date >= upc.init")
+        filters.add("i.date < upc.end")
+        filters.add("c.name = " + name)
+
+        return filters
 
     def GetSQLCountriesFrom(self):
         # tables necessary to countries analysis
-        return(" , people_upeople pup, " +\
-               self.identities_db + ".countries c, " +\
-               self.identities_db + ".upeople_countries upc")
+        tables = Set([])
+        tables.add("people_upeople pup")
+        tables.add(self.identities_db + ".countries c")
+        tables.add(self.identities_db + ".upeople_countries upc")
+
+        return tables
 
     def GetSQLCountriesWhere(self, name):
         # filters necessary to countries analysis
-        return(" i.nick = pup.people_id and "+\
-               "pup.upeople_id = upc.upeople_id and "+\
-               "upc.country_id = c.id and "+\
-               "c.name = " + name)
+        filters = Set([])
+        filters.add("i.nick = pup.people_id")
+        filters.add("pup.upeople_id = upc.upeople_id")
+        filters.add("upc.country_id = c.id")
+        filters.add("c.name = " + name)
+
+        return filters
 
     def GetSQLDomainsFrom(self):
         # tables necessary to domains analysis
-        return(" , people_upeople pup, " +\
-               self.identities_db + ".domains d, " +\
-               self.identities_db + ".upeople_domains upd")
+        tables = Set([])
+        tables.add("people_upeople pup")
+        tables.add(self.identities_db + ".domains d")
+        tables.add(self.identities_db + ".upeople_domains upd")
+
+        return tables
 
     def GetSQLDomainsWhere(self, name):
         # filters necessary to domains analysis
-        return(" i.nick = pup.people_id and "+\
-               "pup.upeople_id = upd.upeople_id and "+\
-               "upd.domain_id = d.id and "+\
-               "d.name = " + name)
+        filters = Set([])
+        filters.add("i.nick = pup.people_id")
+        filters.add("pup.upeople_id = upd.upeople_id")
+        filters.add("upd.domain_id = d.id")
+        filters.add("d.name = " + name)
 
-    def GetTablesOwnUniqueIds (self) :
-        tables = 'irclog, people_upeople pup'
-        return (tables)
+        return filters
+
+    def GetTablesOwnUniqueIds (self):
+        tables = Set([])
+        tables.add("irclog i")
+        tables.add("people_upeople pup")
+
+        return tables
 
     def GetFiltersOwnUniqueIds (self) :
-        filters = 'pup.people_id = irclog.nick'
-        return (filters) 
+        filters = Set([])
+        filters.add("pup.people_id = i.nick")
+
+        return filters
 
     def GetSQLReportFrom(self, type_analysis):
         #generic function to generate 'from' clauses
         #"type" is a list of two values: type of analysis and value of 
         #such analysis
 
-        From = ""
+        From = Set([])
 
         if (type_analysis is None or len(type_analysis) != 2): return From
 
         analysis = type_analysis[0]
 
-        if analysis == 'repository': From = self.GetSQLRepositoriesFrom()
-        elif analysis == 'company': From = self.GetSQLCompaniesFrom()
-        elif analysis == 'country': From = self.GetSQLCountriesFrom()
-        elif analysis == 'domain': From = self.GetSQLDomainsFrom()
+        if analysis == 'repository': From.union_update(self.GetSQLRepositoriesFrom())
+        elif analysis == 'company': From.union_update(self.GetSQLCompaniesFrom())
+        elif analysis == 'country': From.union_update(self.GetSQLCountriesFrom())
+        elif analysis == 'domain': From.union_update(self.GetSQLDomainsFrom())
 
-        return (From)
+        return From
 
     def GetSQLReportWhere (self, type_analysis):
         #generic function to generate 'where' clauses
         #"type" is a list of two values: type of analysis and value of 
         #such analysis
 
-        where = ""
+        where = Set([])
 
         if (type_analysis is None or len(type_analysis) != 2): return where
 
         analysis = type_analysis[0]
         value = type_analysis[1]
 
-        if analysis == 'repository': where = self.GetSQLRepositoriesWhere(value)
-        elif analysis == 'company': where = self.GetSQLCompaniesWhere(value)
-        elif analysis == 'country': where = self.GetSQLCountriesWhere(value)
-        elif analysis == 'domain': where = self.GetSQLDomainsWhere(value)
+        if analysis == 'repository': where.union_update(self.GetSQLRepositoriesWhere(value))
+        elif analysis == 'company': where.union_update(self.GetSQLCompaniesWhere(value))
+        elif analysis == 'country': where.union_update(self.GetSQLCountriesWhere(value))
+        elif analysis == 'domain': where.union_update(self.GetSQLDomainsWhere(value))
 
-        return (where)
+        return where
 
 class MediawikiQuery(DSQuery):
 
@@ -1833,12 +1867,16 @@ class MediawikiQuery(DSQuery):
         filters = 'pup.people_id = wiki_pages_revs.user'
         return (filters) 
 
-    def GetSQLReportFrom (self, type_analysis):
-        return ""
+    def GetSQLReportFrom (self, filters):
+        bots_from = " ,people_upeople pup, " + self.identities_db + ".upeople u"
+        return bots_from
 
-    def GetSQLReportWhere (self, type_analysis):
-        return ""
-
+    def GetSQLReportWhere (self, filters):
+        from Mediawiki import Mediawiki
+        filter_bots = self.get_bots_filter_sql(Mediawiki, filters)
+        filter_bots += " AND pup.people_id = wiki_pages_revs.user"
+        filter_bots += " AND pup.upeople_id = u.id"
+        return filter_bots
 
 class QAForumsQuery(DSQuery):
     """ Specific query builders for question and answer platforms """

@@ -221,8 +221,11 @@ class MLS(DataSource):
 
     @staticmethod
     def create_filter_report(filter_, period, startdate, enddate, destdir, npeople, identities_db):
-        items = MLS.get_filter_items(filter_, startdate, enddate, identities_db)
-        if (items == None): return
+        from report import Report
+        items = Report.get_items()
+        if items is None:
+            items = MLS.get_filter_items(filter_, startdate, enddate, identities_db)
+            if (items == None): return
 
         filter_name = filter_.get_name()
 

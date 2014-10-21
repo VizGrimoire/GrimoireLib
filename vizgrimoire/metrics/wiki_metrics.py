@@ -48,8 +48,8 @@ class Reviews(Metrics):
 
     def _get_sql(self, evolutionary):
         fields = " count(distinct(rev_id)) as reviews "
-        tables = " wiki_pages_revs " + self.db.GetSQLReportFrom(self.filters.type_analysis)
-        filters = self.db.GetSQLReportWhere(self.filters.type_analysis)
+        tables = " wiki_pages_revs " + self.db.GetSQLReportFrom(self.filters)
+        filters = self.db.GetSQLReportWhere(self.filters)
 
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                    self.filters.enddate, "date", fields,
@@ -120,8 +120,8 @@ class Authors(Metrics):
 
     def _get_sql (self, evolutionary):
         fields = " count(distinct(user)) as authors "
-        tables = " wiki_pages_revs " + self.db.GetSQLReportFrom(self.filters.type_analysis)
-        filters = self.db.GetSQLReportWhere(self.filters.type_analysis)
+        tables = " wiki_pages_revs " + self.db.GetSQLReportFrom(self.filters)
+        filters = self.db.GetSQLReportWhere(self.filters)
 
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                    self.filters.enddate, "date", fields,

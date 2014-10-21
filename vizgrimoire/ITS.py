@@ -132,6 +132,7 @@ class ITS(DataSource):
         top = None
         mopeners = DataSource.get_metrics("openers", ITS)
         mclosers = DataSource.get_metrics("closers", ITS)
+        if mopeners is None or mclosers is None: return None
         period = None
         type_analysis = None
         if filter_ is not None:
@@ -208,9 +209,12 @@ class ITS(DataSource):
 
     @staticmethod
     def create_filter_report(filter_, period, startdate, enddate, destdir, npeople, identities_db):
-        items = ITS.get_filter_items(filter_, startdate, enddate, identities_db)
-        if (items == None): return
-        items = items['name']
+        from report import Report
+        items = Report.get_items()
+        if items is None:
+            items = ITS.get_filter_items(filter_, startdate, enddate, identities_db)
+            if (items == None): return
+            items = items['name']
 
         filter_name = filter_.get_name()
 
@@ -287,6 +291,7 @@ class ITS(DataSource):
     @staticmethod
     def get_top_people(startdate, enddate, identities_db, npeople):
         top_data = ITS.get_top_data (startdate, enddate, identities_db, None, npeople)
+        if top_data is None: return None
 
         top = top_data['closers.']["id"]
         top += top_data['closers.last year']["id"]
@@ -570,6 +575,7 @@ def GetDate (startdate, enddate, identities_db, type_analysis, type):
     filters = GetITSSQLReportWhere(type_analysis, identities_db)
 
     q = BuildQuery(None, startdate, enddate, " i.submitted_on ", fields, tables, filters, False)
+
     data = ExecuteQuery(q)
     return(data)
 
