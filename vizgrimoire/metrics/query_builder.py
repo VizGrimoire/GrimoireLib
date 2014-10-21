@@ -1867,12 +1867,16 @@ class MediawikiQuery(DSQuery):
         filters = 'pup.people_id = wiki_pages_revs.user'
         return (filters) 
 
-    def GetSQLReportFrom (self, type_analysis):
-        return ""
+    def GetSQLReportFrom (self, filters):
+        bots_from = " ,people_upeople pup, " + self.identities_db + ".upeople u"
+        return bots_from
 
-    def GetSQLReportWhere (self, type_analysis):
-        return ""
-
+    def GetSQLReportWhere (self, filters):
+        from Mediawiki import Mediawiki
+        filter_bots = self.get_bots_filter_sql(Mediawiki, filters)
+        filter_bots += " AND pup.people_id = wiki_pages_revs.user"
+        filter_bots += " AND pup.upeople_id = u.id"
+        return filter_bots
 
 class QAForumsQuery(DSQuery):
     """ Specific query builders for question and answer platforms """
