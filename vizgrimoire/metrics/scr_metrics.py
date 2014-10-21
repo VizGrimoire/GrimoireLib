@@ -1025,14 +1025,17 @@ class TimeToReview(Metrics):
 class TimeToReviewPatch(Metrics):
     """ This class returns the time that a submitter or a reviewer has been waiting
 
-    This class considers that a review process is a two states machine:
+    This class considers that a review process is a three states machine:
     - Waiting for a submitter action
     - Waiting for a reviewer action
+    - End of review process
 
     A patch is considered as waiting for a submitter action in the
     following conditions:
     - A Code-Review action is detected, being this a -1 or -2
     - A Verified action is detected, being this a -1 or -2
+    - A Workflow -1 is detected, after the started. An initial patchset with 
+      Workflow -1 would not be considered in the machine states.
 
     A patch is considered as waiting for a reviewer action in the
     following conditions:
@@ -1044,8 +1047,9 @@ class TimeToReviewPatch(Metrics):
     patch submitter. Given this, those negative time-waiting-for-a-submitter-action
     are simply ignored from the final dataset. This takes place when using +2 or
     when using -2.
-    - This analysis is based on the Changes table. There may appear issues whose life
-    is out of the timeframe limits provided in the self.filters variable.
+    - This analysis is based on the Changes table. There may appear issues whose part of their life
+    is out of the timeframe limits provided in the self.filters variable. In this case,
+    those changesets, would be included and added to the analysis.
 
     """
 
@@ -1069,13 +1073,19 @@ class TimeToReviewPatch(Metrics):
 
         tables.add("changes ch")
         tables.add("issues i")
+        subquery = "(select distinct(i.id) from changes ch, issues i "
+        subquery = subquery + " where ch.changed_on >= " + self.filters.startdate + " and "
+        subquery = subquery + " ch.changed_on < " + self.filters.enddate + " and "
+        subquery = subquery + " ch.issue_id = i.id) ch2"
+        tables.add(subquery)
 
         filters.add("""(field='Upload' or
                    (field='Verified' and (new_value=-1 or new_value=-2)) or
-                   (field='Code-Review' and (new_value=-1 or new_value=-2 or new_value=2)))""")
-        filters.add("ch.changed_on >= " + self.filters.startdate)
-        filters.add("ch.changed_on < " + self.filters.enddate)
+                   (field='Code-Review' and (new_value=-1 or new_value=-2 or new_value=2)) or
+                   (field='Workflow' and new_value=-1))""")
         filters.add("ch.issue_id = i.id")
+        filters.add("i.id = ch2.id")
+        filters.add("ch.changed_on < " + self.filters.enddate)
 
         # Migrating those sets to strings
         fields_str = self.db._get_fields_query(fields)
@@ -1133,134 +1143,83 @@ class TimeToReviewPatch(Metrics):
             if issue_id <> old_issue_id and old_issue_id > 0:
                 is_new_review = True
 
+            # The process always starts with a new upload. This finite
+            # states machine assume that all of the reviews calculated
+            # are full ones. Only in some cases, when a new changeset arrives
+            # we should deal with those reviews
+            #print "    \n\n    field: " + str(field)
+            #print "    patchset: " + str(patchset)
+            #print "    new_value: " + str(new_value)
+            #print "    issue_id: " + str(issue_id)
+            #print "    changed_on: " + str(changed_on)
+            #print "    current_status: " + str(current_state)
+
             if current_state == 1:
-                # First state: Waiting for a reviewer response
-                if field == "Upload" and not is_new_review:
-                    current_state = 1
-                    # Time waiting for a reviewer action. Upload -> Upload
-                    waiting4reviewer.append(changed_on - old_changed_on)
-                    old_changed_on = changed_on
-                if field == "Upload" and is_new_review:
+                # Waiting for a reviewer action
+                if is_new_review:
                     current_state = 1
                     is_new_review = False
-                    # Time waiting for a reviewer action. Given that there is a ne
-                    # review, the time goes from the old_changed_on till the end
-                    # of the timeframe analysis (max_date)
-                    waiting4reviewer.append(max_date - old_changed_on)
-                    if old_changed_on == -1:
+                    if old_changed_on <> -1:
                         # first case
-                        waiting4reviewer = []
+                        # we need to count the last time waiting for a reviewer action
+                        waiting4reviewer.append(max_date - old_changed_on)
                     old_changed_on = changed_on
-                if (field == "Code-Review" or "Verified") and (new_value == -1 or new_value == -2) and not is_new_review:
+
+                elif (field == "Verified" and (new_value == -1 or new_value == -2)):
                     current_state = 2
-                    # In any of these cases the reviewer gives up reviewing.
-                    # The submitter needs to upload a new version
+                    # Automatic validation of the code, no time waiting for a reviewer
+                    # action
+                    old_changed_on = changed_on
+
+                elif (field == "Code-Review" and (new_value == -1 or new_value == -2)):
+                    current_state = 2
+                    # we have to count time waiting for a reviewer action
                     waiting4reviewer.append(changed_on - old_changed_on)
                     old_changed_on = changed_on
-                if (field == "Code-Review" or "Verified") and (new_value == -1 or new_value == -2) and is_new_review:
+
+                elif field == "Workflow" and new_value == -1:
                     current_state = 2
-                    is_new_review = False
-                    # There are 2 actions taking place here:
-                    # - There's a reviewer that needed to review (Case 1)
-                    # - And there's a new review that at some point (before the time of this analysis) (Case 2)
-                    #   was uploaded.
-                    waiting4reviewer.append(max_date - old_changed_on) # Case 1
-                    waiting4reviewer.append(changed_on - min_date) # Case 2
+                    # we shouldn't count time waiting for a reviewer action
+                    # Typically, developers upload a new patchset and after a while they 
+                    # update the flag Workflow to -1. Thus, we may consider 
+                    # TODO: an improvement to this state would be to take into account
+                    # if the modification to Workflow=-1 was made by a reviewer
+                    # or the developer
                     old_changed_on = changed_on
-                if field == "Code-Review" and new_value == 2 and not is_new_review:
+
+                elif field == "Code-Review" and new_value == 2:
                     current_state = 3
-                    # The review finishes at this point.
+                    # we have to count time waiting for a reviewer action
                     waiting4reviewer.append(changed_on - old_changed_on)
-                if field == "Code-Review" and new_value == 2 and is_new_review:
-                    current_state = 3
-                    is_new_review = False
-                    # There are 2 actions taking place here:
-                    # - There's a reviewer that needed to review (Case 1)
-                    # - And there's a new review that at some point (before the time of this analysis) (Case 2)
-                    #   was uploaded
-                    waiting4reviewer.append(max_date - old_changed_on) # Case 1
-                    waiting4reviewer.append(changed_on - min_date) # Case 2
                     old_changed_on = changed_on
+
             elif current_state == 2:
-                # Second state: Waiting for a submitter response
-                if field == "Upload" and not is_new_review:
-                    current_state = 1
-                    # A new upload was updated, the time waiting for the submitter ends here
-                    waiting4submitter.append(changed_on - old_changed_on)
-                    old_changed_on = changed_on
-                if field == "Upload" and is_new_review:
+                # Waiting for a submitter action
+                if is_new_review:
                     current_state = 1
                     is_new_review = False
-                    # Two actions take place here:
-                    # - A submitter is still required to act
-                    # - A new review is submitted
+                    # we need to count the last time waiting for a submitter action
                     waiting4submitter.append(max_date - old_changed_on)
                     old_changed_on = changed_on
-                if (field == "Code-Review" or "Verified") and (new_value == -1 or new_value == -2) and not is_new_review:
-                    current_state = 2
-                    # This implies extra actions on the same changeset and patchset
-                    # Thus, this is still time waiting for a submitter action
-                    # The value of old_changed_on keeps the same.
-                    pass
-                if (field == "Code-Review" or "Verified") and (new_value == -1 or new_value == -2) and is_new_review:
-                    current_state = 2
-                    is_new_review = False
-                    # Two actions take place in this case:
-                    # - An action by the submitter is still required.
-                    # - And a new review started before the period of this analysis.
-                    #   Thus, there should be a previous Upload action
-                    waiting4submitter.append(max_date - old_changed_on)
-                    waiting4reviewer.append(changed_on - min_date)
-                    old_changed_on = changed_on
-                if field == "Code-Review" and new_value == 2 and not is_new_review:
-                    current_state = 3
-                    # In some cases, during the time waiting for a submitter action
-                    # a +2 review may appear. Thus, the time waiting for a submitter ends
+
+                elif field == "Upload":
+                    current_state = 1
+                    # we have to count time waiting for a submitter action
                     waiting4submitter.append(changed_on - old_changed_on)
                     old_changed_on = changed_on
-                if field == "Code-Review" and new_value == 2 and is_new_review:
+
+                elif field == "Code-Review" and new_value == 2:
                     current_state = 3
-                    is_new_review = False
-                    # Two actions take place in this case:
-                    # - A previous action by a submitter is required
-                    # - A new review took place by another reviewer.
-                    waiting4submitter.append(max_date - old_changed_on)
-                    waiting4reviewer.append(changed_on - min_date)
+                    # we shouldn't count time waiting for a submitter action
                     old_changed_on = changed_on
+
             elif current_state == 3:
-                # Third state: end of review. It is assumed that any action after the
-                # Code-Review +2 does not matter.
-                if field == "Upload" and not is_new_review:
-                    # If this is not a new review, the review is closed as assumption
-                    pass
-                if field == "Upload" and is_new_review:
+                # Final state
+                if is_new_review:
+                    is_new_review = False
                     current_state = 1
-                    is_new_review = False
                     old_changed_on = changed_on
-                if (field == "Code-Review" or "Verified") and (new_value == -1 or new_value == -2) and not is_new_review:
-                    # If this is not a new review, the review is closed as assumption
-                    pass
-                if (field == "Code-Review" or "Verified") and (new_value == -1 or new_value == -2) and is_new_review:
-                    current_state = 2
-                    is_new_review = False
-                    # Two actions takes place:
-                    # - the current review process finishes (case 1 nothing done)
-                    # - a new one appears whose upload patch took place before the
-                    #   period of this analysis (case 2)
-                    waiting4reviewer.append(changed_on - min_date) # case 2
-                    old_changed_on = changed_on
-                if field == "Code-Review" and new_value == 2 and not is_new_review:
-                    # If this is not a new review, the review is already closed
-                    pass
-                if field == "Code-Review" and new_value == 2 and is_new_review:
-                    current_state = 3
-                    is_new_review = False
-                    # Two actions take place in this case:
-                    # - The current review finishes (case 1, no action required)
-                    # - A new review appears, and the upload took place
-                    #   before the timeframe analysis (case 2)
-                    waiting4reviewer.append(changed_on - min_date) # case 2
-                    old_changed_on = changed_on
+
             else:
                 print "ERROR, not existing state"
 
@@ -1269,6 +1228,7 @@ class TimeToReviewPatch(Metrics):
             old_issue_id = issue_id
             count = count + 1
 
+
         dataset = {}
         dataset["waitingtime4reviewer"] = waiting4reviewer
         dataset["waitingtime4submitter"] = waiting4submitter
@@ -1276,12 +1236,18 @@ class TimeToReviewPatch(Metrics):
 
 if __name__ == '__main__':
 
-    filters = MetricFilters("month", "'2014-07-01'", "'2014-09-01'", None)
-    dbcon = SCRQuery("root", "", "dic_bicho_gerrit_openstack_3359_bis3", "dic_cvsanaly_openstack_4114")
+    filters = MetricFilters("month", "'2014-09-01'", "'2014-10-01'", ["repository", "review.openstack.org_openstack/nova"])
+    dbcon = SCRQuery("root", "", "dic_bicho_gerrit_openstack_3359_bis4", "dic_cvsanaly_openstack_4114")
 
     timewaiting = TimeToReviewPatch(dbcon, filters)
-    print timewaiting.get_agg()
+    from data_handler import DHESA
+    values = timewaiting.get_agg()
+    dhesa = DHESA(values["waitingtime4submitter"])
+    print values["waitingtime4submitter"]
+    print dhesa.data["median"]
+    print dhesa.data["mean"]
 
+    exit()
     print "Submitted info:"
     submitted = Submitted(dbcon, filters)
     print submitted.get_ts()
