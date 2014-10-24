@@ -216,8 +216,10 @@ class MLSActivityPersons (ActivityPersons):
         conditions: list of Condition objects
            Conditions to be applied to provide context to the entity.
            (default: empty list).
-        date_kind: { "arrivall" | "first" }
+        date_kind: { "arrival" | "first" | "check"}
             Kind of date to consider. Default: "arrival".
+            "check" means: if arrival available, use "arrival". Else,
+            use "first"
         echo: Boolean
            Write debugging information to output stream or not.
 
@@ -225,6 +227,7 @@ class MLSActivityPersons (ActivityPersons):
 
         self.date_kind = date_kind
         ActivityPersons.__init__(self, datasource, name, conditions, echo)
+
 
     def _produce_query (self, name):
         """Produce the base query to obtain activity per person.
@@ -248,13 +251,13 @@ class MLSActivityPersons (ActivityPersons):
             raise Exception ("MLSActivityPersons: " + \
                                  "Invalid entity name for this family, " + \
                                  name)
-        
+        if self.date_kind == "check":
+            if self._arrival_available():
+                self.date_kind = "arrival"
+            else:
+                self.date_kind = "first"
         self.query = self.session.query()
-        try:
-            date_kind = self.date_kind
-        except AttributeError:
-            self.set_date_kind ()            
-            date_kind = self.date_kind
+        date_kind = self.date_kind
         if name in ("list_senderss"):
             self.query = self.query.select_personsdata(persons)
         elif name in ("list_usenders"):
@@ -262,7 +265,24 @@ class MLSActivityPersons (ActivityPersons):
         self.query = self.query \
             .select_activeperiod(date_kind) \
             .group_by_person()
+        
+    def _arrival_available (self):
+        """Are arrival dates for messages available?
 
+        Check if all messages have arrival dates. Return True if yes,
+        False otherwise.
+
+        Returns
+        -------
+
+        bool: Arrival dates are available.
+
+        """
+
+        if self.query.null_arrival().count() == 0:
+            return True
+        else:
+            return False
 
 if __name__ == "__main__":
 

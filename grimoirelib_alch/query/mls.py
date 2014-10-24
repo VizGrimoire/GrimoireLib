@@ -317,7 +317,7 @@ class Query (GrimoireQuery):
         """
 
         query = self.add_columns (label('arrival', DB.Messages.arrival_date)) \
-            .filter (DB.Messages.arrival_date is None)
+            .filter (DB.Messages.arrival_date == None)
         return query
         
     def activity (self):

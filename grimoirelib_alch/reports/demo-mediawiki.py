@@ -112,7 +112,7 @@ if __name__ == "__main__":
     activity = MLSActivityPersons (
         datasource = database,
         name = "list_usenders",
-        date_kind = "first")
+        date_kind = "check")
     report = report_demographics (activity_persons = activity,
                                   snapshot_date = snapshot_date,
                                   activity_period = activity_period,
