@@ -140,7 +140,7 @@ class MLS(DataSource):
 
 
     @staticmethod
-    def get_top_data (startdate, enddate, identities_db, filter_, npeople):
+    def get_top_data (startdate, enddate, identities_db, filter_, npeople, threads_top = True):
         msenders = DataSource.get_metrics("senders", MLS)
         period = None
         type_analysis = None
@@ -155,13 +155,14 @@ class MLS(DataSource):
             top['senders.last month'] = msenders.get_list(mfilter, 31)
             top['senders.last year'] = msenders.get_list(mfilter, 365)
 
-            top['threads.'] = MLS.getLongestThreads(startdate, enddate, identities_db, npeople)
-            startdate = datetime.date.today() - datetime.timedelta(days=365)
-            startdate =  "'" + str(startdate) + "'"
-            top['threads.last year'] = MLS.getLongestThreads(startdate, enddate, identities_db, npeople)
-            startdate = datetime.date.today() - datetime.timedelta(days=30)
-            startdate =  "'" + str(startdate) + "'"
-            top['threads.last month'] = MLS.getLongestThreads(startdate, enddate, identities_db, npeople) 
+            if threads_top:
+	    	top['threads.'] = MLS.getLongestThreads(startdate, enddate, identities_db, npeople)
+            	startdate = datetime.date.today() - datetime.timedelta(days=365)
+            	startdate =  "'" + str(startdate) + "'"
+            	top['threads.last year'] = MLS.getLongestThreads(startdate, enddate, identities_db, npeople)
+            	startdate = datetime.date.today() - datetime.timedelta(days=30)
+            	startdate =  "'" + str(startdate) + "'"
+            	top['threads.last month'] = MLS.getLongestThreads(startdate, enddate, identities_db, npeople) 
 
         else:
             filter_name = filter_.get_name()
@@ -262,7 +263,7 @@ class MLS(DataSource):
                 items_list['sent_365'].append(agg['sent_365'])
                 items_list['senders_365'].append(agg['senders_365'])
 
-            top_senders = MLS.get_top_data(startdate, enddate, identities_db, filter_item, npeople)
+            top_senders = MLS.get_top_data(startdate, enddate, identities_db, filter_item, npeople, False)
             createJSON(top_senders, destdir+"/"+filter_item.get_top_filename(MLS()))
 
         fn = os.path.join(destdir, filter_.get_filename(MLS()))
@@ -303,7 +304,7 @@ class MLS(DataSource):
 
     @staticmethod
     def get_top_people(startdate, enddate, identities_db, npeople):
-        top_data = MLS.get_top_data (startdate, enddate, identities_db, None, npeople)
+        top_data = MLS.get_top_data (startdate, enddate, identities_db, None, npeople, False)
 
         top = top_data['senders.']["id"]
         top += top_data['senders.last year']["id"]
