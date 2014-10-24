@@ -903,7 +903,7 @@ def print_n_draw(agg_data, project):
 
     commits = agg_data["commits"]
     submitted = agg_data["submitted"]
-    bar_chart("Commits and reviews" + project, labels, commits, "commits"  + project_name, submitted, ["commits", "reviews"])
+    bar_chart("Commits and reviews: " + project, labels, submitted, "reviews"  + project_name, commits, ["reviews", "commits"])
     createCSV({"labels":labels, "commits":commits, "submitted":submitted}, "./release/commits"+project_name+".csv")
 
     authors = agg_data["authors"]
@@ -912,17 +912,17 @@ def print_n_draw(agg_data, project):
 
     opened = agg_data["opened"]
     closed = agg_data["closed"]
-    bar_chart("Opened and closed tickets " + project, labels, opened, "closed" + project_name, closed, ["opened", "closed"])
+    bar_chart("Opened and closed tickets: " + project, labels, opened, "closed" + project_name, closed, ["opened", "closed"])
     createCSV({"labels":labels, "closed":closed, "opened":opened}, "./release/closed"+project_name+".csv")
 
     bmi = agg_data["bmi"]
-    bar_chart("Efficiency closing tickets " + project, labels, bmi, "bmi" + project_name)
+    bar_chart("Efficiency closing tickets: " + project, labels, bmi, "bmi" + project_name)
     createCSV({"labels":labels, "bmi":bmi}, "./release/bmi"+project_name+".csv")
 
     merged = agg_data["merged"]
     abandoned = agg_data["abandoned"]
     bmiscr = agg_data["bmiscr"]
-    bar_chart("Merged and abandoned reviews " + project, labels, merged, "submitted_reviews" + project_name, abandoned, ["merged", "abandoned"])
+    bar_chart("Merged and abandoned reviews: " + project, labels, merged, "submitted_reviews" + project_name, abandoned, ["merged", "abandoned"])
     createCSV({"labels":labels, "merged":merged, "abandoned":abandoned, "bmi":bmiscr}, "./release/submitted_reviews"+project_name+".csv")
 
     bmiscr = agg_data["bmiscr"]
@@ -930,26 +930,26 @@ def print_n_draw(agg_data, project):
 
     iters_reviews_avg = agg_data["iters_reviews_avg"]
     iters_reviews_median = agg_data["iters_reviews_median"]
-    bar_chart("Patchsets per Changeset " + project, labels, iters_reviews_avg, "patchsets_avg" + project_name, iters_reviews_median, ["mean", "median"])
+    bar_chart("Patchsets per Changeset: " + project, labels, iters_reviews_avg, "patchsets_avg" + project_name, iters_reviews_median, ["mean", "median"])
     createCSV({"labels":labels, "meanpatchsets":iters_reviews_avg, "medianpatchsets":iters_reviews_median}, "./release/scr_patchsets_iterations" + project_name+".csv")
 
     active_core_reviewers = agg_data["active_core_reviewers"]
-    bar_chart("Active Core Reviewers " + project, labels, active_core_reviewers, "active_core_scr"+project_name)
+    bar_chart("Active Core Reviewers: " + project, labels, active_core_reviewers, "active_core_scr"+project_name)
     createCSV({"labels":labels, "activecorereviewers":active_core_reviewers}, "./release/active_core_scr"+project_name+".csv")
 
     review_avg = agg_data["review_avg"]
     review_median = agg_data["review_median"]
-    bar_chart("Time to review (days)  " + project, labels, review_avg, "timetoreview_median" + project_name, review_median, ["mean", "median"])
+    bar_chart("Time to review (days): " + project, labels, review_avg, "timetoreview_median" + project_name, review_median, ["mean", "median"])
     createCSV({"labels":labels, "mediantime":review_median, "meantime":review_avg}, "./release/timetoreview_median"+project_name+".csv")
 
     waiting4reviewer_mean = agg_data["waiting4reviewer_mean"]
     waiting4reviewer_median = agg_data["waiting4reviewer_median"]
-    bar_chart("Time waiting for the reviewer " + project, labels, waiting4reviewer_mean, "waiting4reviewer_avg" + project_name, waiting4reviewer_median, ["avg", "median"])
+    bar_chart("Time waiting for the reviewer: " + project, labels, waiting4reviewer_mean, "waiting4reviewer_avg" + project_name, waiting4reviewer_median, ["avg", "median"])
     createCSV({"labels":labels, "mediantime":waiting4reviewer_median, "meantime":waiting4reviewer_mean}, "./release/timewaiting4reviewer_median"+project_name+".csv")
 
     waiting4submitter_mean = agg_data["waiting4submitter_mean"]
     waiting4submitter_median = agg_data["waiting4submitter_median"]
-    bar_chart("Time waiting for the submitter " + project, labels, waiting4submitter_mean, "waiting4submitter_avg" + project_name, waiting4submitter_median, ["avg", "median"])
+    bar_chart("Time waiting for the submitter: " + project, labels, waiting4submitter_mean, "waiting4submitter_avg" + project_name, waiting4submitter_median, ["avg", "median"])
     createCSV({"labels":labels, "mediantime":waiting4submitter_median, "meantime":waiting4submitter_mean}, "./release/timewaiting4submitter_median"+project_name+".csv")
 
 
