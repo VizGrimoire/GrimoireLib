@@ -117,7 +117,6 @@ class DB (GrimoireDatabase):
             tablename = 'upeople',
             schemaname = self.schema_id)
 
-
 class Query (GrimoireQuery):
     """Class for dealing with MLS queries"""
 
@@ -312,7 +311,15 @@ class Query (GrimoireQuery):
 
         return self.group_by("person_id")
 
+    def null_arrival (self):
+        """Get all records in table Message with arrival_date being Null.
 
+        """
+
+        query = self.add_columns (label('arrival', DB.Messages.arrival_date)) \
+            .filter (DB.Messages.arrival_date is None)
+        return query
+        
     def activity (self):
         """Return an ActivityList object.
 
@@ -336,10 +343,14 @@ if __name__ == "__main__":
     session = database.build_session(Query, echo = False)
 
     #---------------------------------
+    print_banner ("Number of messages which don't have arrival_date")
+    res = session.query().null_arrival().count()
+    print res
+
+    #---------------------------------
     print_banner ("List of senders")
     res = session.query() \
         .select_personsdata("senders")
-    print res
     for row in res.limit(10).all():
         print row.name, row.email
 
@@ -349,7 +360,6 @@ if __name__ == "__main__":
         .select_personsdata("senders") \
         .filter_period(start=datetime(2013,9,1),
                        end=datetime(2014,1,1))
-    print res
     for row in res.limit(10).all():
         print row.name, row.email
 
@@ -359,7 +369,6 @@ if __name__ == "__main__":
         .select_personsdata_uid("senders") \
         .filter_period(start=datetime(2013,9,1),
                        end=datetime(2014,1,1))
-    print res
     for row in res.limit(10).all():
         print row.name
 
@@ -370,7 +379,6 @@ if __name__ == "__main__":
         .filter_period(start=datetime(2013,12,15),
                        end=datetime(2014,1,1)) \
         .group_by_person()
-    print res
     for row in res.limit(10).all():
         print row.name, row.email
     print res.count()
@@ -382,7 +390,6 @@ if __name__ == "__main__":
         .filter_period(start=datetime(2013,12,15),
                        end=datetime(2014,1,1)) \
         .group_by_person()
-    print res
     for row in res.limit(10).all():
         print row.name
     print res.count()
@@ -393,7 +400,6 @@ if __name__ == "__main__":
         .select_personsdata("senders") \
         .select_activeperiod() \
         .group_by_person()
-    print res
     for row in res.limit(10).all():
         print row.person_id, row.name, row.email, row.firstdate, row.lastdate
 
@@ -403,6 +409,5 @@ if __name__ == "__main__":
         .select_personsdata_uid("senders") \
         .select_activeperiod() \
         .group_by_person()
-    print res
     for row in res.limit(10).all():
         print row.person_id, row.name, row.firstdate, row.lastdate
