@@ -170,11 +170,13 @@ class SCM(DataSource):
 
     @staticmethod
     def get_top_data (startdate, enddate, i_db, filter_, npeople):
+        from report import Report
         top = {}
         data = SCM.get_top_data_authors (startdate, enddate, i_db, filter_, npeople)
         top = dict(top.items() + data.items())
-        data = SCM.get_top_data_companies (startdate, enddate, i_db, filter_, npeople)
-        top = dict(top.items() + data.items())
+        if "companies" in Report.get_filters():
+            data = SCM.get_top_data_companies (startdate, enddate, i_db, filter_, npeople)
+            top = dict(top.items() + data.items())
         return top
 
     @staticmethod
