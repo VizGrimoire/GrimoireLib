@@ -174,7 +174,10 @@ class SCM(DataSource):
         top = {}
         data = SCM.get_top_data_authors (startdate, enddate, i_db, filter_, npeople)
         top = dict(top.items() + data.items())
-        if "companies" in Report.get_filters():
+        companies_on = False
+        for filter_aux in Report.get_filters():
+            if filter_aux.get_name() == "company": companies_on = True
+        if companies_on:
             data = SCM.get_top_data_companies (startdate, enddate, i_db, filter_, npeople)
             top = dict(top.items() + data.items())
         return top
