@@ -50,7 +50,7 @@ class TestSCM (unittest.TestCase):
         """Test SCM object with no conditions"""
 
         data = SCM (datasource = self.database, name = "ncommits")
-        self.assertEqual (data.total(), 4465)
+        self.assertEqual (data.total(), 3646)
 
 
     def test_nomerges_condition (self):
@@ -59,7 +59,7 @@ class TestSCM (unittest.TestCase):
         nomerges = NomergesCondition ()
         data = SCM (datasource = self.database, name = "ncommits",
                     conditions = (nomerges,))
-        self.assertEqual (data.total(), 4206)
+        self.assertEqual (data.total(), 3405)
 
 
     def test_branches_condition (self):
@@ -69,7 +69,7 @@ class TestSCM (unittest.TestCase):
         branches = BranchesCondition (branches = ("master",))
         data = SCM (datasource = self.database, name = "ncommits",
                     conditions = (branches,))
-        self.assertEqual (data.total(), 3685)
+        self.assertEqual (data.total(), 2884)
 
     def test_period_condition (self):
         """Test SCM object with a period condition"""

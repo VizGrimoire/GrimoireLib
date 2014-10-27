@@ -91,12 +91,24 @@ class DurationPersons (Family):
         for condition in conditions:
             condition.modify(self)
 
+    def __str__ (self):
+
+        string = "Name: " + self.name + "\n"
+        string = string + "Snapshot: " + str(self.snapshot) + "\n"
+        string = string + "Activity: \n"
+        string = string + str(self.activity)
+        return string
+
+    def __repr__ (self):
+
+        return self.__str__()
+
     def set_snapshot (self, time):
         """Define a snapshot time for durations.
 
         Durations (age, idle) are to be calculated back from the time
         specified. This can be used, for example, by conditions
-        defininf a certain snapshot.
+        defining a certain snapshot.
 
         Parameters
         ----------
@@ -212,6 +224,12 @@ class SnapshotCondition (Condition):
         Specifies the time for the snapshot, and filters actors not active
         before snapshot date.
 
+        Parameters
+        ----------
+
+        object: DurationPersons
+           Entity to be modified.
+        
         """
 
         Condition._check_class (object)

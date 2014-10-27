@@ -44,9 +44,14 @@ class PeriodCondition (DBCondition):
     def __init__ (self, start = None, end = None, date = "arrival"):
         """Instatiation of the object.
 
-        - start (datetime): start of the period
-        - end (datetime): end of the period
-        - date: "arrival"
+        start: datetime.datetime
+            Start of the period.
+        end: datetime.datetime
+            End of the period.
+        date: { "first", "arrival" }
+            Select "first_date" or "arrival_date" from messages.
+            Default: "arrival".
+
         """
 
         self.start = start
