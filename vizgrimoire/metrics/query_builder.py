@@ -1224,80 +1224,131 @@ class SCRQuery(DSQuery):
 
     def GetSQLRepositoriesFrom (self):
         #tables necessaries for repositories
+        tables = Set([])
+        tables.add("trackers t")
+
         return (" , trackers t")
 
     def GetSQLRepositoriesWhere (self, repository):
         #fields necessaries to match info among tables
-        return (" and t.url ='"+ repository+ "' and t.id = i.tracker_id")
+        filters = Set([])
+        filters.add("t.url = '"+ repository)
+        filters.add("t.id = i.tracker_id")
+
+        return filters
 
     def GetTablesOwnUniqueIds (self, table=''):
-        tables = 'changes c, people_upeople pup'
-        if (table == "issues"): tables = 'issues i, people_upeople pup'
-        return (tables)
+        tables = Set([])
+        tables.add("people_upeople pup")
+        if tables == "issues":
+            tables.add("issues i")
+        else:
+            #TODO: warning -> changes c is using the same acronym as companies
+            tables.add("changes c")
+
+        return tables
 
 
     def GetFiltersOwnUniqueIds  (self, table=''):
+        filters = Set([])
+
+        if tables == "issues":
+            filters.add("pup.people_id = i.submitted_by")
+        else:
+            filters.add("pup.people_id = c.changed_by")
         filters = 'pup.people_id = c.changed_by'
-        if (table == "issues"): filters = 'pup.people_id = i.submitted_by'
-        return (filters)
+
+        return filters
 
     def GetSQLProjectFrom (self):
         # projects are mapped to repositories
-        return (" , trackers t")
+        tables = Set([])
+        tables.add("trackers t")
+
+        return tables
 
     def GetSQLProjectWhere (self, project):
         # include all repositories for a project and its subprojects
+        filters = Set([])
 
-        repos = """and t.url IN (
+        repos = """t.url IN (
                SELECT repository_name
                FROM   %s.projects p, %s.project_repositories pr
                WHERE  p.project_id = pr.project_id AND p.project_id IN (%s)
                    AND pr.data_source='scr'
         )""" % (self.identities_db, self.identities_db, self.get_subprojects(project))
+        filters.add(repos)
+        filters.add("t.id = i.tracker_id")
 
-        return (repos   + " and t.id = i.tracker_id")
+        return filters
 
     def GetSQLCompaniesFrom (self):
         #tables necessaries for companies
-        return (" , people_upeople pup,"+\
-                self.identities_db+".upeople_companies upc,"+\
-                self.identities_db+".companies c")
+        tables = Set([])
+        tables.add("people_upeople pup")
+        tables.add(self.identities_db+".upeople_companies upc")
+        tables.add(self.identities_db+".companies c")
+
+        return tables
 
     def GetSQLCompaniesWhere (self, company):
         #fields necessaries to match info among tables
-        return ("and i.submitted_by = pup.people_id "+\
-                  "and pup.upeople_id = upc.upeople_id "+\
-                  "and i.submitted_on >= upc.init "+\
-                  "and i.submitted_on < upc.end "+\
-                  "and upc.company_id = c.id "+\
-                  "and c.name ='"+ company+"'")
+        filters = Set([])
+
+        filters.add("i.submitted_by = pup.people_id")
+        filters.add("pup.upeople_id = upc.upeople_id")
+        filters.add("i.submitted_on >= upc.init")
+        filters.add("i.submitted_on < upc.end")
+        filters.add("upc.company_id = c.id")
+        filters.add("c.name = '"+ company+"'")
+
+        return filters
 
     def GetSQLCountriesFrom (self):
         #tables necessaries for companies
-        return (" , people_upeople pup, "+\
-                  self.identities_db + ".upeople_countries upc, "+\
-                  self.identities_db + ".countries c ")
+        tables = Set([])
+
+        tables.add("people_upeople pup")
+        tables.add(self.identities_db + ".upeople_countries upc")
+        #TODO: warning -> countries is using the same acronym as companies
+        tables.add(self.identities_db + ".countries c")
+
+        return tables
 
     def GetSQLCountriesWhere (self, country):
         #fields necessaries to match info among tables
-        return ("and i.submitted_by = pup.people_id "+\
-                  "and pup.upeople_id = upc.upeople_id "+\
-                  "and upc.country_id = c.id "+\
-                  "and c.name ='"+country+"'")
+        filters = Set([])
+        
+        filters.add("i.submitted_by = pup.people_id")
+        filters.add("pup.upeople_id = upc.upeople_id")
+        filters.add("upc.country_id = c.id")
+        filters.add("c.name = '"+country+"'")
+
+        return filters
 
     def GetSQLPeopleFrom (self):
-        return (" , people_upeople pup, " + self.identities_db + ".upeople up ")
+        tables = Set([])
+        tables.add("people_upeople pup")
+        tables.add(self.identities_db + ".upeople up")
+
+        return tables
 
     def GetSQLPeopleWhere (self, name, table = "changes"):
 
-        field = "ch.changed_by"
+        filters = Set([])
 
-        if table == "issues": field = "i.submitted_by"
+        if table == "issues":
+            filters.add("i.submitted_by")
+        else:
+            filters.add("ch.changed_by")
 
-        fields = "and " + field + " = pup.people_id " + \
-                 " AND up.id = pup.upeople_id "
-        if name is not None: fields += " AND up.identifier = "+name
-        return fields
+        filters.add(field + " = pup.people_id")
+        filters.add("up.id = pup.upeople_id")
+
+        if name is not None: 
+            filters.add("up.identifier = " + name)
+
+        return filters
 
     ##########
     #Generic functions to obtain FROM and WHERE clauses per type of report
@@ -1307,20 +1358,20 @@ class SCRQuery(DSQuery):
         #"type" is a list of two values: type of analysis and value of
         #such analysis
 
-        From = ""
+        From = Set([])
 
         if (type_analysis is None or len(type_analysis) != 2): return From
 
         analysis = type_analysis[0]
 
         if (analysis):
-            if analysis == 'repository': From = self.GetSQLRepositoriesFrom()
-            elif analysis == 'company': From = self.GetSQLCompaniesFrom()
-            elif analysis == 'country': From = self.GetSQLCountriesFrom()
-            elif analysis == 'project': From = self.GetSQLProjectFrom()
-            elif analysis == 'people2': From = self.GetSQLPeopleFrom()
+            if analysis == 'repository': From.union_update(self.GetSQLRepositoriesFrom())
+            elif analysis == 'company': From.union_update(self.GetSQLCompaniesFrom())
+            elif analysis == 'country': From.union_update(self.GetSQLCountriesFrom())
+            elif analysis == 'project': From.union_update(self.GetSQLProjectFrom())
+            elif analysis == 'people2': From.union_update(self.GetSQLPeopleFrom())
 
-        return (From)
+        return From
 
     def GetSQLReportWhere (self, type_analysis):
         #generic function to generate 'where' clauses
@@ -1328,44 +1379,53 @@ class SCRQuery(DSQuery):
         #"type" is a list of two values: type of analysis and value of
         #such analysis
 
-        where = ""
+        where = Set([])
         if (type_analysis is None or len(type_analysis) != 2): return where
 
         analysis = type_analysis[0]
         value = type_analysis[1]
 
         if (analysis):
-            if analysis == 'repository': where = self.GetSQLRepositoriesWhere(value)
-            elif analysis == 'company': where = self.GetSQLCompaniesWhere(value)
-            elif analysis == 'country': where = self.GetSQLCountriesWhere(value)
-            elif analysis == 'people2': where = self.GetSQLPeopleWhere(value, "issues")
+            if analysis == 'repository': where.union_update(self.GetSQLRepositoriesWhere(value))
+            elif analysis == 'company': where.union_update(self.GetSQLCompaniesWhere(value))
+            elif analysis == 'country': where.union_update(self.GetSQLCountriesWhere(value))
+            elif analysis == 'people2': where.union_update(self.GetSQLPeopleWhere(value, "issues"))
             elif analysis == 'project':
                 if (self.identities_db is None):
                     logging.error("project filter not supported without identities_db")
                     sys.exit(0)
                 else:
-                    where = self.GetSQLProjectWhere(value)
-        return (where)
+                    where.union_update(self.GetSQLProjectWhere(value))
+        return where
 
     def GetReviewsSQL (self, period, startdate, enddate, type_, type_analysis, evolutionary):
         #Building the query
-        fields = " count(distinct(i.issue)) as " + type_
-        tables = "issues i, issues_ext_gerrit ie" +  self.GetSQLReportFrom(type_analysis)
-        if type_ == "submitted": filters = ""
-        elif type_ == "opened": filters = " (i.status = 'NEW' or i.status = 'WORKINPROGRESS') "
-        elif type_ == "new": filters = " i.status = 'NEW' "
-        elif type_ == "inprogress": filters = " i.status = 'WORKINGPROGRESS' "
-        elif type_ == "closed": filters = " (i.status = 'MERGED' or i.status = 'ABANDONED') "
-        elif type_ == "merged": filters = " i.status = 'MERGED' "
-        elif type_ == "abandoned": filters = " i.status = 'ABANDONED' "
-        filters += self.GetSQLReportWhere(type_analysis) + " AND i.id = ie.issue_id "
+        fields = Set([])
+        tables = Set([])
+        filters = Set([])
 
-        if (self.GetIssuesFiltered() != ""): filters += " AND " + self.GetIssuesFiltered()
+        fields.add("count(distinct(i.issue)) as " + type_)
+
+        tables.add("issues i")
+        tables.add("issues_ext_gerrit ie")
+        tables.union_update(self.GetSQLReportFrom(type_analysis))
+
+        if type_ == "submitted": filters = Set([])
+        elif type_ == "opened": filters.add("(i.status = 'NEW' or i.status = 'WORKINPROGRESS')")
+        elif type_ == "new": filters.add("i.status = 'NEW'")
+        elif type_ == "inprogress": filters.add("i.status = 'WORKINGPROGRESS'")
+        elif type_ == "closed": filters.add("(i.status = 'MERGED' or i.status = 'ABANDONED')")
+        elif type_ == "merged": filters.add("i.status = 'MERGED'")
+        elif type_ == "abandoned": filters.add("i.status = 'ABANDONED'")
+        filters.union_update(self.GetSQLReportWhere(type_analysis))
+        filters.add("i.id = ie.issue_id")
+
+        if (self.GetIssuesFiltered() != ""): filters.union_update(self.GetIssuesFiltered())
 
         date_field = "i.submitted_on"
         if type_ in ["closed", "merged", "abandoned"]: date_field = "ie.mod_date"
         # Not include reviews before startdate no matter mod_date is after startdate
-        filters += " AND i.submitted_on >= " + startdate
+        filters.add("i.submitted_on >= " + startdate)
 
         q = self.BuildQuery (period, startdate, enddate, date_field, fields, tables,
                              filters, evolutionary, type_analysis)
@@ -1375,15 +1435,22 @@ class SCRQuery(DSQuery):
     # Reviews status using changes table
     def GetReviewsChangesSQL (self, period, startdate, enddate, type_, type_analysis, 
                               evolutionary):
-        fields = "count(issue_id) as "+ type_+ "_changes"
-        tables = "changes c, issues i"
-        tables += self.GetSQLReportFrom(type_analysis)
-        filters = "c.issue_id = i.id AND new_value='"+type_+"'"
-        filters += self.GetSQLReportWhere(type_analysis)
+        fields = Set([])
+        tables = Set([])
+        filters = Set([])
+
+        fields.add("count(issue_id) as "+ type_+ "_changes")
+        # TODO: warning -> using the same acronym "c" as in companies or countries
+        tables.add("changes c")
+        tables.add("issues i")
+        tables.union_update(self.GetSQLReportFrom(type_analysis))
+        filters.add("c.issue_id = i.id")
+        filters.add("new_value = '"+type_+"'")
+        filters.union_update(self.GetSQLReportWhere(type_analysis))
 
         q = self.BuildQuery (period, startdate, enddate, "changed_on", fields, tables, filters, evolutionary)
 
-        if (self.GetChangesFiltered() != ""): filters += " AND " + self.GetChangesFiltered()
+        if (self.GetChangesFiltered() != ""): filters.union_update(self.GetChangesFiltered())
 
         return q
 
@@ -1394,60 +1461,75 @@ class SCRQuery(DSQuery):
         # submitted - SUBM
 
         #Building the query
-        fields = " count(distinct(c.id)) as " + type_
-        tables = " changes c, issues i " + self.GetSQLReportFrom(type_analysis)
-        if type_ == "verified": filters =  " (c.field = 'VRIF' OR c.field = 'Verified') "
-        elif type_ == "approved": filters =  " c.field = 'APRV'  "
-        elif type_ == "codereview": filters =  "   (c.field = 'CRVW' OR c.field = 'Code-Review') "
-        elif type_ == "sent": filters =  " c.field = 'SUBM'  "
-        filters = filters + " and i.id = c.issue_id "
-        filters = filters + self.GetSQLReportWhere(type_analysis)
+        fields = Set([])
+        tables = Set([])
+        filters = Set([])
+
+        fields.add("count(distinct(c.id)) as " + type_)
+        tables.add("changes c")
+        tables.add("issues i")
+        tables.union_update(self.GetSQLReportFrom(type_analysis))
+        if type_ == "verified": filters.add("(c.field = 'VRIF' OR c.field = 'Verified')")
+        elif type_ == "approved": filters.add("c.field = 'APRV'")
+        elif type_ == "codereview": filters.add("(c.field = 'CRVW' OR c.field = 'Code-Review')")
+        elif type_ == "sent": filters.add("c.field = 'SUBM'")
+        filters.add("i.id = c.issue_id")
+        filters.union_update(self.GetSQLReportWhere(type_analysis))
 
         q = self.BuildQuery (period, startdate, enddate, "c.changed_on",
                              fields, tables, filters, evolutionary)
         return q
 
     def GetWaiting4ReviewerSQL (self, period, startdate, enddate, type_analysis, evolutionary):
-        fields = " count(distinct(c.id)) as WaitingForReviewer "
-        tables = " changes c, "+\
-                 "  issues i, "+\
-                 "        (select c.issue_id as issue_id, "+\
-                 "                c.old_value as old_value, "+\
-                 "                max(c.id) as id "+\
-                 "         from changes c, "+\
-                 "              issues i "+\
-                 "         where c.issue_id = i.id and "+\
-                 "               i.status='NEW' "+\
-                 "         group by c.issue_id, c.old_value) t1 "
-        tables = tables + self.GetSQLReportFrom(type_analysis)
-        filters =  " i.id = c.issue_id  "+\
-                   "  and t1.id = c.id "+\
-                   "  and (c.field='CRVW' or c.field='Code-Review' or c.field='Verified' or c.field='VRIF') "+\
-                   "  and (c.new_value=1 or c.new_value=2) "
-        filters = filters + self.GetSQLReportWhere(type_analysis)
+        fields = Set([])
+        tables = Set([])
+        filters = Set([])
+
+        fields.add("count(distinct(c.id)) as WaitingForReviewer")
+        tables.add("changes c")
+        tables.add("issues i")
+        tables.add("""(select c.issue_id as issue_id,
+                              c.old_value as old_value,
+                              max(c.id) as id
+                       from changes c,
+                            issues i
+                       where c.issue_id = i.id and
+                             i.status='NEW'
+                       group by c.issue_id, c.old_value) t1"""
+        tables.union_update(self.GetSQLReportFrom(type_analysis))
+
+        filters.add("i.id = c.issue_id")
+        filters.add("t1.id = c.id")
+        filters.add("(c.field='CRVW' or c.field='Code-Review' or c.field='Verified' or c.field='VRIF')")
+        filters.add("(c.new_value=1 or c.new_value=2)")
+        filters.union_update(self.GetSQLReportWhere(type_analysis))
 
         q = self.BuildQuery (period, startdate, enddate, "c.changed_on",
                              fields, tables, filters, evolutionary)
         return q
 
     def GetWaiting4SubmitterSQL (self, period, startdate, enddate, type_analysis, evolutionary):
-        fields = "count(distinct(c.id)) as WaitingForSubmitter "
-        tables = "  changes c, "+\
-                 "   issues i, "+\
-                 "        (select c.issue_id as issue_id, "+\
-                 "                c.old_value as old_value, "+\
-                 "                max(c.id) as id "+\
-                 "         from changes c, "+\
-                 "              issues i "+\
-                 "         where c.issue_id = i.id and "+\
-                 "               i.status='NEW' "+\
-                 "         group by c.issue_id, c.old_value) t1 "
-        tables = tables + self.GetSQLReportFrom(type_analysis)
-        filters = " i.id = c.issue_id "+\
-                  "  and t1.id = c.id "+\
-                  "  and (c.field='CRVW' or c.field='Code-Review' or c.field='Verified' or c.field='VRIF') "+\
-                  "  and (c.new_value=-1 or c.new_value=-2) "
-        filters = filters + self.GetSQLReportWhere(type_analysis)
+        fields = Set([])
+        tables = Set([])
+        filters = Set([])
+
+        fields.add("count(distinct(c.id)) as WaitingForSubmitter")
+        tables.add("changes c")
+        tables.add("issues i")
+        tables.add("""(select c.issue_id as issue_id,
+                              c.old_value as old_value,
+                              max(c.id) as id
+                       from changes c,
+                            issues i
+                       where c.issue_id = i.id and
+                             i.status='NEW'
+                       group by c.issue_id, c.old_value) t1""")
+        tables.union_update(self.GetSQLReportFrom(type_analysis))
+        filters.add("i.id = c.issue_id")
+        filters.add("t1.id = c.id")
+        filters.add("(c.field='CRVW' or c.field='Code-Review' or c.field='Verified' or c.field='VRIF')")
+        filters.add("(c.new_value=-1 or c.new_value=-2)")
+        filters.union_update(self.GetSQLReportWhere(type_analysis))
 
         q = self.BuildQuery (period, startdate, enddate, "c.changed_on",
                              fields, tables, filters, evolutionary)
@@ -1455,32 +1537,42 @@ class SCRQuery(DSQuery):
 
     # Real reviews spend >1h, are not autoreviews, and bots are filtered out.
     def GetTimeToReviewQuerySQL (self, startdate, enddate, type_analysis = [], bots = []):
+        fields = Set([])
+        tables = Set([])
+        filters = Set([])
+
         filter_bots = ''
         for bot in bots:
-            filter_bots = filter_bots + " people.name<>'"+bot+"' and "
+            filters.add("people.name <> '"+bot+"'")
 
         # Subquery to get the time to review for all reviews
         # Initially we can not trust the i.submitted_on date. 
         # Thus, we're retrieving the first Upload patch date that should
         # be close to the actual changeset submission
-        fields = "TIMESTAMPDIFF(SECOND, ch_ext.changed_on, ch.changed_on)/(24*3600) AS revtime, ch.changed_on "
-        tables = "issues i, changes ch, changes ch_ext, people "
-        tables = tables + self.GetSQLReportFrom(type_analysis)
-        filters = filter_bots + " i.id = ch.issue_id "
-        filters += " AND people.id = ch.changed_by "
-        filters += " AND i.id = ch_ext.issue_id "
-        filters += " AND ch_ext.field = 'Upload' "
-        filters += " AND ch_ext.old_value = 1 "
-        filters += self.GetSQLReportWhere(type_analysis)
-        filters += " AND ch.field='status' AND ch.new_value='MERGED' "
+        fields.add("TIMESTAMPDIFF(SECOND, ch_ext.changed_on, ch.changed_on)/(24*3600) AS revtime")
+        fields.add("ch.changed_on")
+        
+        tables.add("issues i")
+        tables.add("changes ch")
+        tables.add("changes ch_ext, people")
+        tables.union_update(self.GetSQLReportFrom(type_analysis))
+
+        filters.add("i.id = ch.issue_id")
+        filters.add("people.id = ch.changed_by")
+        filters.add("i.id = ch_ext.issue_id")
+        filters.add("ch_ext.field = 'Upload'")
+        filters.add("ch_ext.old_value = 1")
+        filters.union_update(self.GetSQLReportWhere(type_analysis))
+        filters.add("ch.field = 'status'")
+        filters.add("ch.new_value='MERGED'")
         # remove autoreviews
-        filters += " AND i.submitted_by<>ch.changed_by "
-        filters += " ORDER BY ch_ext.changed_on "
+        filters.add("i.submitted_by<>ch.changed_by")
+        filters.add("ORDER BY ch_ext.changed_on")
         q = self.GetSQLGlobal('ch.changed_on', fields, tables, filters,
                         startdate, enddate)
         # min_days_for_review = 0.042 # one hour
         # q = "SELECT revtime, changed_on FROM ("+q+") qrevs WHERE revtime>"+str(min_days_for_review)
-        return (q)
+        return q
 
     # Time to review accumulated for pending submissions using submit date or update date
     def GetTimeToReviewPendingQuerySQL (self, startdate, enddate, identities_db = None,
@@ -1499,9 +1591,9 @@ class SCRQuery(DSQuery):
             fields = "TIMESTAMPDIFF(SECOND, ch.changed_on, NOW())/(24*3600) AS revtime, i.submitted_on as submitted_on "
         tables = "issues i, people, issues_ext_gerrit ie "
         if (uploaded): tables += " , changes ch, ("+sql_max_patchset+") last_patch "
-        tables += self.GetSQLReportFrom(type_analysis)
+        tables += self._get_tables_query(self.GetSQLReportFrom(type_analysis))
         filters = filter_bots + " people.id = i.submitted_by "
-        filters += self.GetSQLReportWhere(type_analysis)
+        filters += self._get_filters_query(self.GetSQLReportWhere(type_analysis))
         filters += " AND status<>'MERGED' AND status<>'ABANDONED' "
         filters += " AND ie.issue_id  = i.id "
         if (uploaded):
@@ -1680,9 +1772,9 @@ class SCRQuery(DSQuery):
             filter_bots += " name<>'"+bot+"' and "
 
         fields = "DISTINCT(pup.upeople_id) as id, count(i.id) as total, name"
-        tables = self.GetTablesOwnUniqueIds('issues') + ", people"
+        tables = self._get_tables_query(self.GetTablesOwnUniqueIds('issues')) + ", people"
         filters = filter_bots
-        filters += self.GetFiltersOwnUniqueIds('issues')+ " and people.id = pup.people_id"
+        filters += self._get_filters_query(self.GetFiltersOwnUniqueIds('issues')) + " and people.id = pup.people_id"
         filters += " GROUP BY id ORDER BY total desc, name"
         q = self.GetSQLGlobal('submitted_on', fields, tables, filters, startdate, enddate)
         return(self.ExecuteQuery(q))

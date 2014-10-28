@@ -368,30 +368,30 @@ class PatchesPerReview(Metrics):
     data_source = SCR
 
     def get_agg(self):
-        fields = "count(distinct(ch.old_value)) as patches"
-        tables_from = self.db.GetSQLReportFrom(self.filters.type_analysis)
-        filters_where = self.db.GetSQLReportWhere(self.filters.type_analysis)
+        fields = Set([])
+        tables = Set([])
+        filters = Set([])
+
+        fields.add("count(distinct(ch.old_value)) as patches")
+        tables.union_update(self.db.GetSQLReportFrom(self.filters.type_analysis))
+        filters.union_update(self.db.GetSQLReportWhere(self.filters.type_analysis))
 
   
-        tables = " changes ch, issues i, " +\
-                 " (select distinct(issue_id) as issue_id " +\
-                 "  from changes " + \
-                 "  where changed_on >= "+self.filters.startdate+" and " +\
-                 "        changed_on < "+self.filters.enddate+" ) t "
-        if len(tables_from) > 0:
-            tables = tables +  tables_from
+        tables.add("changes ch")
+        tables.add("issues i")
+        tables.add("(select distinct(issue_id) as issue_id " +\
+                   "  from changes " + \
+                   "  where changed_on >= "+self.filters.startdate+" and " +\
+                    "        changed_on < "+self.filters.enddate+" ) t")
 
+        filters.add("ch.issue_id = t.issue_id")
+        filters.add("ch.issue_id = i.id")
+        filters.add("ch.old_value <> ''")
 
-        filters = " ch.issue_id = t.issue_id and "
-        filters = filters + " ch.issue_id = i.id and "
-        filters = filters + " ch.old_value <> '' "
-
-        if len(filters_where) > 0:
-            filters = filters + filters_where
-
-        filters = filters + " group by i.id "
-
-        query = "select " + fields + " from " + tables + " where " + filters
+        query = "select " + self.db._get_fields_query(fields) 
+        query = query + " from " + self.db._get_tables_query(tables)
+        query = query + " where " + self.db._get_filters_query(filters)
+        query = query + " group by i.id "
 
         patches_per_review = self.db.ExecuteQuery(query)
 
@@ -461,11 +461,11 @@ class ReviewsWaitingForReviewerTS(Metrics):
             fields = "COUNT(DISTINCT(i.id)) as pending"
 
             tables = " issues i "
-            tables = tables + self.db.GetSQLReportFrom(type_analysis)
+            tables = tables + self.db._get_tables_query(self.db.GetSQLReportFrom(type_analysis))
 
             # Pending (NEW = submitted-merged-abandoned) REVIEWS
-            filters = " i.submitted_on <= '"+current+"'"
-            filters += self.db.GetSQLReportWhere(type_analysis)
+            filters = " i.submitted_on <= '"+current+"' "
+            filters += self.db._get_filters_query(self.db.GetSQLReportWhere(type_analysis))
             # remove closed reviews
             filters += " AND i.id NOT IN ("+ sql_reviews_closed +")"
 
@@ -524,10 +524,10 @@ class ReviewsWaitingForReviewer(Metrics):
 
         fields = "COUNT(DISTINCT(i.id)) as ReviewsWaitingForReviewer"
         tables = "issues i "
-        tables += self.db.GetSQLReportFrom(self.filters.type_analysis)
+        tables += self.db._get_tables_query(self.db.GetSQLReportFrom(self.filters.type_analysis))
         filters = " i.status = 'NEW' AND i.id NOT IN (%s) " % (sql_reviews_reviewed)
 
-        filters = filters + self.db.GetSQLReportWhere(self.filters.type_analysis)
+        filters = filters + self.db._get_filters_query(self.db.GetSQLReportWhere(self.filters.type_analysis))
 
         q = self.db.BuildQuery (self.filters.period, self.filters.startdate,
                                 self.filters.enddate, "i.submitted_on",
@@ -546,14 +546,14 @@ class ReviewsWaitingForSubmitter(Metrics):
         q_last_change = self.db.get_sql_last_change_for_reviews()
 
         fields = "COUNT(DISTINCT(i.id)) as ReviewsWaitingForSubmitter"
-        tables = "changes c, issues i, (%s) t1" % q_last_change
-        tables += self.db.GetSQLReportFrom(self.filters.type_analysis)
+        tables = "changes c, issues i, (%s) t1 " % q_last_change
+        tables += self.db._get_tables_query(self.db.GetSQLReportFrom(self.filters.type_analysis))
         filters = """
             i.id = c.issue_id  AND t1.id = c.id
             AND (c.field='CRVW' or c.field='Code-Review' or c.field='Verified' or c.field='VRIF')
             AND (c.new_value=-1 or c.new_value=-2)
         """
-        filters = filters + self.db.GetSQLReportWhere(self.filters.type_analysis)
+        filters = filters + self.db._get_filters_query(self.db.GetSQLReportWhere(self.filters.type_analysis))
 
         q = self.db.BuildQuery (self.filters.period, self.filters.startdate,
                                 self.filters.enddate, " c.changed_on",
