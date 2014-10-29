@@ -1278,12 +1278,15 @@ class SCRQuery(DSQuery):
 
     def GetSQLCompaniesWhere (self, company):
         #fields necessaries to match info among tables
-        return ("and i.submitted_by = pup.people_id "+\
+        filters = "and i.submitted_by = pup.people_id "+\
                   "and pup.upeople_id = upc.upeople_id "+\
                   "and i.submitted_on >= upc.init "+\
                   "and i.submitted_on < upc.end "+\
-                  "and upc.company_id = c.id "+\
-                  "and c.name ='"+ company+"'")
+                  "and upc.company_id = c.id "
+        if company is not None:
+            filters += "and c.name ='"+company+"'"
+
+        return filters
 
     def GetSQLCountriesFrom (self):
         #tables necessaries for companies
@@ -1293,10 +1296,13 @@ class SCRQuery(DSQuery):
 
     def GetSQLCountriesWhere (self, country):
         #fields necessaries to match info among tables
-        return ("and i.submitted_by = pup.people_id "+\
+        filters = "and i.submitted_by = pup.people_id "+\
                   "and pup.upeople_id = upc.upeople_id "+\
-                  "and upc.country_id = c.id "+\
-                  "and c.name ='"+country+"'")
+                  "and upc.country_id = c.id "
+        if country is not None:
+            filters += "and c.name ='"+country+"'"
+
+        return filters
 
     def GetSQLPeopleFrom (self):
         return (" , people_upeople pup, " + self.identities_db + ".upeople up ")
@@ -1362,7 +1368,7 @@ class SCRQuery(DSQuery):
 
     def GetReviewsSQL (self, period, startdate, enddate, type_, type_analysis, evolutionary):
         #Building the query
-        fields = " count(distinct(i.issue)) as " + type_
+        fields = "count(distinct(i.issue)) as " + type_
         tables = "issues i, issues_ext_gerrit ie" +  self.GetSQLReportFrom(type_analysis)
         if type_ == "submitted": filters = ""
         elif type_ == "opened": filters = " (i.status = 'NEW' or i.status = 'WORKINPROGRESS') "

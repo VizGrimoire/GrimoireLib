@@ -149,9 +149,9 @@ class BMISCR(Metrics):
         submitted = completePeriodIds(submitted, self.filters.period, self.filters.startdate,
                                       self.filters.enddate)
         submitted_array = numpy.array(submitted["submitted"])
-        
+
         bmi_array = (abandoned_array.astype(float) + merged_array.astype(float)) / submitted_array.astype(float)
-  
+
         bmi = abandoned
         bmi.pop("abandoned")
         bmi["bmiscr"] = list(bmi_array)
@@ -679,7 +679,7 @@ class Repositories(Metrics):
     data_source = SCR
 
     def _get_sql(self, evolutionary):
-        fields = " count(distinct(t.id)) as repositories"
+        fields = "count(distinct(t.id)) as repositories"
         tables = "issues i, trackers t"
         tables += self.db.GetSQLReportFrom(self.filters.type_analysis)
         filters = "i.tracker_id = t.id "
@@ -770,7 +770,7 @@ class Reviewers(Metrics):
 
 
     def _get_sql(self, evolutionary):
-        fields = " count(distinct(changed_by)) as reviewers "
+        fields = "count(distinct(changed_by)) as reviewers "
         tables = " changes ch, issues i " + self.db.GetSQLReportFrom(self.filters.type_analysis)
         filters  = "ch.issue_id = i.id "
         filters += self.db.GetSQLReportWhere(self.filters.type_analysis)
@@ -809,7 +809,7 @@ class ActiveCoreReviewers(Metrics):
     data_source = SCR
 
     def _get_sql(self, evolutionary):
-        fields = " count(distinct(changed_by)) as core_reviewers "
+        fields = "count(distinct(changed_by)) as core_reviewers "
         tables = " changes ch, issues_ext_gerrit ieg, issues i " + self.db.GetSQLReportFrom(self.filters.type_analysis)
         filters  = "ch.issue_id = i.id and ieg.branch like '%master%' and ieg.issue_id = i.id "
         filters += self.db.GetSQLReportWhere(self.filters.type_analysis)
@@ -898,7 +898,7 @@ class Submitters(Metrics):
             tpeople_sql += " WHERE " + filters_ext
 
 
-        fields = " count(distinct(upeople_id)) as submitters "
+        fields = "count(distinct(upeople_id)) as submitters "
         tables = " people_upeople pup, (%s) tpeople " % (tpeople_sql)
         filters = " tpeople.submitted_by = pup.people_id "
 
@@ -910,7 +910,7 @@ class Submitters(Metrics):
 
     def __get_sql_default__(self, evolutionary):
         """ This function returns the evolution or agg number of people opening issues """
-        fields = " count(distinct(pup.upeople_id)) as submitters "
+        fields = "count(distinct(pup.upeople_id)) as submitters "
         tables = " issues i " + self.db.GetSQLReportFrom(self.filters.type_analysis)
         filters = self.db.GetSQLReportWhere(self.filters.type_analysis)
 
