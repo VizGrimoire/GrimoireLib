@@ -63,8 +63,8 @@ class DSQuery(object):
         count_field = None
         if all_items:
             group_field = self.get_group_field(all_items)
-            # Expected format: " count(distinct(pup.upeople_id)) AS authors"
-            count_field = fields.split(" ")[3]
+            # Expected format: "count(distinct(pup.upeople_id)) AS authors"
+            count_field = fields.split(" ")[2]
             fields = group_field + ", " + fields
 
         sql = 'SELECT '+ fields
@@ -561,11 +561,17 @@ class SCMQuery(DSQuery):
             value = type_analysis[1]
 
             # To be improved... not a very smart way of doing this...
-            list_values = type_analysis[1].split(",")
+            if type_analysis[1] is not None:
+                list_values = type_analysis[1].split(",")
+            else:
+                list_values = None
             list_analysis = type_analysis[0].split(",")
 
             for analysis in list_analysis:
-                value = list_values[list_analysis.index(analysis)]
+                if list_values is not None:
+                    value = list_values[list_analysis.index(analysis)]
+                else:
+                    value = None
                 if analysis == 'repository': where.union_update(self.GetSQLRepositoriesWhere(value))
                 elif analysis == 'company': where.union_update(self.GetSQLCompaniesWhere(value, role))
                 elif analysis == 'country': where.union_update(self.GetSQLCountriesWhere(value, role))
@@ -706,7 +712,8 @@ class ITSQuery(DSQuery):
         filters.add("upc.company_id = c.id")
         filters.add("i.submitted_on >= upc.init")
         filters.add("i.submitted_on < upc.end")
-        filters.add("c.name = "+name)
+        if name is not None:
+            filters.add("c.name = "+name)
 
         return filters
 
@@ -932,7 +939,7 @@ class MLSQuery(DSQuery):
         filters.add("upc.company_id = c.id")
         filters.add("m.first_date >= upc.init")
         filters.add("m.first_date < upc.end")
-        if name <> "":
+        if name <> "" and name is not None:
             filters.add("c.name = "+name)
 
         return filters
@@ -1086,7 +1093,7 @@ class MLSQuery(DSQuery):
 
         if filters.people_out is not None:
             From.union_update(self.GetSQLBotFrom())
-        
+
         return (From)
 
     def GetSQLBotWhere(self, bots):
@@ -1118,11 +1125,17 @@ class MLSQuery(DSQuery):
             value = type_analysis[1]
 
             # To be improved... not a very smart way of doing this...
-            list_values = type_analysis[1].split(",")
+            if type_analysis[1] is not None:
+                list_values = type_analysis[1].split(",")
+            else:
+                list_values = None
             list_analysis = type_analysis[0].split(",")
 
             for analysis in list_analysis:
-                value = list_values[list_analysis.index(analysis)]    
+                if list_values is not None:
+                    value = list_values[list_analysis.index(analysis)]
+                else:
+                    value = None
                 if analysis == 'repository': where.union_update(self.GetSQLRepositoriesWhere(value))
                 elif analysis == 'company': where.union_update(self.GetSQLCompaniesWhere(value))
                 elif analysis == 'country': where.union_update(self.GetSQLCountriesWhere(value))

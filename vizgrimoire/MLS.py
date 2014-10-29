@@ -209,7 +209,7 @@ class MLS(DataSource):
 
         items = metric.get_list()
 
-        return items
+        return {"name":items}
 
     @staticmethod
     def get_filter_summary(filter_, period, startdate, enddate, identities_db, limit):
@@ -227,6 +227,7 @@ class MLS(DataSource):
         if items is None:
             items = MLS.get_filter_items(filter_, startdate, enddate, identities_db)
             if (items == None): return
+            items = items['name']
 
         filter_name = filter_.get_name()
 
@@ -282,7 +283,7 @@ class MLS(DataSource):
     def create_filter_report_all(filter_, period, startdate, enddate, destdir, npeople, identities_db):
         check = False # activate to debug issues
         filter_name = filter_.get_name()
-        if filter_name == "people2" or filter_name == "company_off":
+        if filter_name == "people2" or filter_name == "company":
             filter_all = Filter(filter_name, None)
             agg_all = MLS.get_agg_data(period, startdate, enddate,
                                        identities_db, filter_all)
