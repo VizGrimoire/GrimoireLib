@@ -589,7 +589,7 @@ class Companies(Metrics):
                    "  i.submitted_on >="+  self.filters.startdate+ " AND "+\
                    "  i.submitted_on < "+ self.filters.enddate+ " "+\
                    "GROUP BY c.name "+\
-                   "ORDER BY total DESC "
+                   "ORDER BY total DESC, c.name "
         return(self.db.ExecuteQuery(q))
 
 class Countries(Metrics):
