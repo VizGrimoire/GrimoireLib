@@ -444,30 +444,30 @@ class PatchesPerReview(Metrics):
     data_source = SCR
 
     def get_agg(self):
-        fields = "count(distinct(ch.old_value)) as patches"
-        tables_from = self.db.GetSQLReportFrom(self.filters.type_analysis)
-        filters_where = self.db.GetSQLReportWhere(self.filters.type_analysis)
+        fields = Set([])
+        tables = Set([])
+        filters = Set([])
+
+        fields.add("count(distinct(ch.old_value)) as patches")
+        tables.union_update(self.db.GetSQLReportFrom(self.filters.type_analysis))
+        filters.union_update(self.db.GetSQLReportWhere(self.filters.type_analysis))
 
   
-        tables = " changes ch, issues i, " +\
-                 " (select distinct(issue_id) as issue_id " +\
-                 "  from changes " + \
-                 "  where changed_on >= "+self.filters.startdate+" and " +\
-                 "        changed_on < "+self.filters.enddate+" ) t "
-        if len(tables_from) > 0:
-            tables = tables +  tables_from
+        tables.add("changes ch")
+        tables.add("issues i")
+        tables.add("(select distinct(issue_id) as issue_id " +\
+                   "  from changes " + \
+                   "  where changed_on >= "+self.filters.startdate+" and " +\
+                    "        changed_on < "+self.filters.enddate+" ) t")
 
+        filters.add("ch.issue_id = t.issue_id")
+        filters.add("ch.issue_id = i.id")
+        filters.add("ch.old_value <> ''")
 
-        filters = " ch.issue_id = t.issue_id and "
-        filters = filters + " ch.issue_id = i.id and "
-        filters = filters + " ch.old_value <> '' "
-
-        if len(filters_where) > 0:
-            filters = filters + filters_where
-
-        filters = filters + " group by i.id "
-
-        query = "select " + fields + " from " + tables + " where " + filters
+        query = "select " + self.db._get_fields_query(fields) 
+        query = query + " from " + self.db._get_tables_query(tables)
+        query = query + " where " + self.db._get_filters_query(filters)
+        query = query + " group by i.id "
 
         patches_per_review = self.db.ExecuteQuery(query)
 
@@ -537,11 +537,11 @@ class ReviewsWaitingForReviewerTS(Metrics):
             fields = "COUNT(DISTINCT(i.id)) as pending"
 
             tables = " issues i "
-            tables = tables + self.db.GetSQLReportFrom(type_analysis)
+            tables = tables + self.db._get_tables_query(self.db.GetSQLReportFrom(type_analysis))
 
             # Pending (NEW = submitted-merged-abandoned) REVIEWS
-            filters = " i.submitted_on <= '"+current+"'"
-            filters += self.db.GetSQLReportWhere(type_analysis)
+            filters = " i.submitted_on <= '"+current+"' "
+            filters += self.db._get_filters_query(self.db.GetSQLReportWhere(type_analysis))
             # remove closed reviews
             filters += " AND i.id NOT IN ("+ sql_reviews_closed +")"
 
@@ -600,10 +600,10 @@ class ReviewsWaitingForReviewer(Metrics):
 
         fields = "COUNT(DISTINCT(i.id)) as ReviewsWaitingForReviewer"
         tables = "issues i "
-        tables += self.db.GetSQLReportFrom(self.filters.type_analysis)
+        tables += self.db._get_tables_query(self.db.GetSQLReportFrom(self.filters.type_analysis))
         filters = " i.status = 'NEW' AND i.id NOT IN (%s) " % (sql_reviews_reviewed)
 
-        filters = filters + self.db.GetSQLReportWhere(self.filters.type_analysis)
+        filters = filters + self.db._get_filters_query(self.db.GetSQLReportWhere(self.filters.type_analysis))
 
         q = self.db.BuildQuery (self.filters.period, self.filters.startdate,
                                 self.filters.enddate, "i.submitted_on",
@@ -622,14 +622,14 @@ class ReviewsWaitingForSubmitter(Metrics):
         q_last_change = self.db.get_sql_last_change_for_reviews()
 
         fields = "COUNT(DISTINCT(i.id)) as ReviewsWaitingForSubmitter"
-        tables = "changes c, issues i, (%s) t1" % q_last_change
-        tables += self.db.GetSQLReportFrom(self.filters.type_analysis)
+        tables = "changes c, issues i, (%s) t1 " % q_last_change
+        tables += self.db._get_tables_query(self.db.GetSQLReportFrom(self.filters.type_analysis))
         filters = """
             i.id = c.issue_id  AND t1.id = c.id
             AND (c.field='CRVW' or c.field='Code-Review' or c.field='Verified' or c.field='VRIF')
             AND (c.new_value=-1 or c.new_value=-2)
         """
-        filters = filters + self.db.GetSQLReportWhere(self.filters.type_analysis)
+        filters = filters + self.db._get_filters_query(self.db.GetSQLReportWhere(self.filters.type_analysis))
 
         q = self.db.BuildQuery (self.filters.period, self.filters.startdate,
                                 self.filters.enddate, " c.changed_on",
@@ -643,9 +643,17 @@ class Companies(Metrics):
     data_source = SCR
 
     def _get_sql(self, evolutionary):
-        fields = "count(distinct(upc.company_id)) as companies"
-        tables = "issues i, people_upeople pup, %s.upeople_companies upc" % (self.db.identities_db)
-        filters = "i.submitted_by = pup.people_id and pup.upeople_id = upc.upeople_id"
+        fields = Set([])
+        tables = Set([])
+        filters = Set([])
+
+        #TODO: warning -> not using GetSQLReportFrom/Where to build queries
+        fields.add("count(distinct(upc.company_id)) as companies")
+        tables.add("issues i")
+        tables.add("people_upeople pup")
+        tables.add(self.db.identities_db + ".upeople_companies upc")
+        filters.add("i.submitted_by = pup.people_id")
+        filters.add("pup.upeople_id = upc.upeople_id")
 
         q = self.db.BuildQuery (self.filters.period, self.filters.startdate,
                                 self.filters.enddate, " i.submitted_on",
@@ -675,9 +683,17 @@ class Countries(Metrics):
     data_source = SCR
 
     def _get_sql(self, evolutionary):
-        fields = "count(distinct(upc.country_id)) as countries"
-        tables = "issues i, people_upeople pup, %s.upeople_countries upc" % (self.db.identities_db)
-        filters = "i.submitted_by = pup.people_id and pup.upeople_id = upc.upeople_id"
+        fields = Set([])
+        tables = Set([])
+        filters = Set([])
+
+        #TODO: warning -> not using GetSQLReportFrom/Where to build queries
+        fields.add("count(distinct(upc.country_id)) as countries")
+        tables.add("issues i")
+        tables.add("people_upeople pup")
+        tables.add(self.db.identities_db + ".upeople_countries upc")
+        filters.add("i.submitted_by = pup.people_id")
+        filters.add("pup.upeople_id = upc.upeople_id")
 
         q = self.db.BuildQuery (self.filters.period, self.filters.startdate,
                                 self.filters.enddate, " i.submitted_on",
@@ -755,17 +771,23 @@ class Repositories(Metrics):
     data_source = SCR
 
     def _get_sql(self, evolutionary):
-        fields = "count(distinct(t.id)) as repositories"
-        tables = "issues i, trackers t"
-        tables += self.db.GetSQLReportFrom(self.filters.type_analysis)
-        filters = "i.tracker_id = t.id "
-        filters += self.db.GetSQLReportWhere(self.filters.type_analysis)
+        fields = Set([])
+        tables = Set([])
+        filters = Set([])
+
+        fields.add("count(distinct(t.id)) as repositories")
+        tables.add("issues i")
+        tables.add("trackers t")
+        tables.union_update(self.db.GetSQLReportFrom(self.filters.type_analysis))
+        filters.add("i.tracker_id = t.id")
+        filters.union_update(self.db.GetSQLReportWhere(self.filters.type_analysis))
         q = self.db.BuildQuery (self.filters.period, self.filters.startdate,
                                 self.filters.enddate, " i.submitted_on",
                                 fields, tables, filters, evolutionary, self.filters.type_analysis)
         return q
 
     def get_list  (self):
+        #TODO: warning -> not using GetSQLReportFrom/Where
         q = "SELECT t.url as name, COUNT(DISTINCT(i.id)) AS issues "+\
                " FROM  issues i, trackers t "+\
                " WHERE i.tracker_id = t.id AND "+\
@@ -792,6 +814,7 @@ class People(Metrics):
         top = None
         submitters = SCR.get_metrics("submitters", SCR)
         if submitters is None:
+            #TODO: absolutely wrong: EmailsSenders???
             submitters = EmailsSenders(self.db, self.filters)
             top = submitters._get_top_global(days, metric_filters)
         else:
@@ -822,7 +845,7 @@ class Reviewers(Metrics):
         if filter_bots != "": filter_bots += " AND "
         date_limit = ""
 
-
+        #TODO: warning -> not using GetSQLReportFrom/Where
         if (days != 0 ):
             q = "SELECT @maxdate:=max(changed_on) from changes limit 1"
             self.db.ExecuteQuery(q)
@@ -846,21 +869,21 @@ class Reviewers(Metrics):
 
 
     def _get_sql(self, evolutionary):
-        fields = "count(distinct(changed_by)) as reviewers "
-        tables = " changes ch, issues i " + self.db.GetSQLReportFrom(self.filters.type_analysis)
-        filters  = "ch.issue_id = i.id "
-        filters += self.db.GetSQLReportWhere(self.filters.type_analysis)
+        fields = Set([])
+        tables = Set([])
+        filters = Set([])
 
-        if (self.filters.type_analysis is None or len (self.filters.type_analysis) != 2) :
-            #Specific case for the basic option where people_upeople table is needed
-            #and not taken into account in the initial part of the query
-            tables += ", people_upeople pup"
-            filters += " and ch.changed_by  = pup.people_id"
-        elif (self.filters.type_analysis[0] == "repository" or self.filters.type_analysis[0] == "project"):
-            #Adding people_upeople table
-            tables += ", people_upeople pup"
-            filters += " and ch.changed_by = pup.people_id "
+        fields.add("count(distinct(changed_by)) as reviewers")
+        tables.add("changes ch")
+        tables.add("issues i")
+        tables.union_update(self.db.GetSQLReportFrom(self.filters.type_analysis))
+        filters.add("ch.issue_id = i.id")
+        filters.union_update(self.db.GetSQLReportWhere(self.filters.type_analysis))
 
+        #Specific case for the basic option where people_upeople table is needed
+        #and not taken into account in the initial part of the query
+        tables.add("people_upeople pup")
+        filters.add("ch.changed_by  = pup.people_id")
 
         q = self.db.BuildQuery (self.filters.period, self.filters.startdate,
                                 self.filters.enddate, " ch.changed_on",
@@ -885,23 +908,30 @@ class ActiveCoreReviewers(Metrics):
     data_source = SCR
 
     def _get_sql(self, evolutionary):
-        fields = "count(distinct(changed_by)) as core_reviewers "
-        tables = " changes ch, issues_ext_gerrit ieg, issues i " + self.db.GetSQLReportFrom(self.filters.type_analysis)
-        filters  = "ch.issue_id = i.id and ieg.branch like '%master%' and ieg.issue_id = i.id "
-        filters += self.db.GetSQLReportWhere(self.filters.type_analysis)
 
-        if (self.filters.type_analysis is None or len (self.filters.type_analysis) != 2) :
-            #Specific case for the basic option where people_upeople table is needed
-            #and not taken into account in the initial part of the query
-            tables += ", people_upeople pup"
-            filters += " and ch.changed_by  = pup.people_id"
-        elif (self.filters.type_analysis[0] == "repository" or self.filters.type_analysis[0] == "project"):
-            #Adding people_upeople table
-            tables += ", people_upeople pup"
-            filters += " and ch.changed_by = pup.people_id "
+        fields = Set([])
+        tables = Set([])
+        filters = Set([])
 
-        filters += " and (ch.new_value = -2 or ch.new_value = 2) "
-        filters += " and field = 'Code-Review' "
+        fields.add("count(distinct(changed_by)) as core_reviewers")
+        tables.add("changes ch")
+        tables.add("issues_ext_gerrit ieg")
+        tables.add("issues i")
+        tables.union_update(self.db.GetSQLReportFrom(self.filters.type_analysis))
+        filters.add("ch.issue_id = i.id")
+        #TODO: warning -> at some point the filter for branches should be at
+        #                 the GetSQLReportFrom/Where method.
+        filters.add("ieg.branch like '%master%'")
+        filters.add("ieg.issue_id = i.id")
+        filters.union_update(self.db.GetSQLReportWhere(self.filters.type_analysis))
+
+        #Specific case for the basic option where people_upeople table is needed
+        #and not taken into account in the initial part of the query
+        tables.add("people_upeople pup")
+        filters.add("ch.changed_by  = pup.people_id")
+        filters.add("(ch.new_value = -2 or ch.new_value = 2)")
+        filters.add("field = 'Code-Review'")
+
         q = self.db.BuildQuery (self.filters.period, self.filters.startdate,
                                 self.filters.enddate, " ch.changed_on",
                                 fields, tables, filters, evolutionary, self.filters.type_analysis)
@@ -932,7 +962,7 @@ class Closers(Metrics):
             self.db.ExecuteQuery(q)
             date_limit = " AND DATEDIFF(@maxdate, submitted_on)<"+str(days)
 
-
+        # TODO: warning-> not using GetSQLReportFrom/Where
         merged_sql = " AND status='MERGED' "
         rol = "mergers"
         action = "merged"
@@ -965,18 +995,21 @@ class Submitters(Metrics):
 
     def __get_sql_trk_prj__(self, evolutionary):
         """ First we get the submitters then join with unique identities """
+
         tpeople_sql  = "SELECT  distinct(submitted_by) as submitted_by, submitted_on  "
-        tpeople_sql += " FROM issues i " + self.db.GetSQLReportFrom(self.filters.type_analysis)
-        filters_ext = self.db.GetSQLReportWhere(self.filters.type_analysis) 
+        tpeople_sql += " FROM issues i, " + self.db._get_tables_query(self.db.GetSQLReportFrom(self.filters.type_analysis))
+        filters_ext = self.db._get_filters_query(self.db.GetSQLReportWhere(self.filters.type_analysis))
         if (filters_ext != ""):
-            # Hack: remove "and "
-            filters_ext = filters_ext[4:]
             tpeople_sql += " WHERE " + filters_ext
 
+        fields = Set([])
+        tables = Set([])
+        filters = Set([])
 
-        fields = "count(distinct(upeople_id)) as submitters "
-        tables = " people_upeople pup, (%s) tpeople " % (tpeople_sql)
-        filters = " tpeople.submitted_by = pup.people_id "
+        fields.add("count(distinct(upeople_id)) as submitters")
+        tables.add("people_upeople pup")
+        tables.add("(%s) tpeople" % (tpeople_sql))
+        filters.add("tpeople.submitted_by = pup.people_id")
 
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                self.filters.enddate, " tpeople.submitted_on ",
@@ -986,19 +1019,19 @@ class Submitters(Metrics):
 
     def __get_sql_default__(self, evolutionary):
         """ This function returns the evolution or agg number of people opening issues """
-        fields = "count(distinct(pup.upeople_id)) as submitters "
-        tables = " issues i " + self.db.GetSQLReportFrom(self.filters.type_analysis)
-        filters = self.db.GetSQLReportWhere(self.filters.type_analysis)
+        fields = Set([])
+        tables = Set([])
+        filters = Set([])
 
-        if (self.filters.type_analysis is None or len (self.filters.type_analysis) != 2) :
-            #Specific case for the basic option where people_upeople table is needed
-            #and not taken into account in the initial part of the query
-            tables += ", people_upeople pup"
-            filters += " and i.submitted_by = pup.people_id"
-        elif (self.filters.type_analysis[0] == "repository" or self.filters.type_analysis[0] == "project"):
-            #Adding people_upeople table
-            tables += ", people_upeople pup"
-            filters += " and i.submitted_by = pup.people_id "
+        fields.add("count(distinct(pup.upeople_id)) as submitters")
+        tables.add("issues i")
+        tables.union_update(self.db.GetSQLReportFrom(self.filters.type_analysis))
+        filters.union_update(self.db.GetSQLReportWhere(self.filters.type_analysis))
+
+        #Specific case for the basic option where people_upeople table is needed
+        #and not taken into account in the initial part of the query
+        tables.add("people_upeople pup")
+        filters.add("i.submitted_by = pup.people_id")
 
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                self.filters.enddate, " submitted_on ",
@@ -1024,6 +1057,7 @@ class Submitters(Metrics):
         rol = "openers"
         action = "opened"
 
+        #TODO: warning -> not using GetSQLReportFrom/Where
         if (days != 0 ):
             q = "SELECT @maxdate:=max(submitted_on) from issues limit 1"
             self.db.ExecuteQuery(q)
