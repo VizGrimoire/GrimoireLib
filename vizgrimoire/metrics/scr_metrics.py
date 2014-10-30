@@ -28,7 +28,8 @@ import logging
 import MySQLdb
 import numpy
 
-from GrimoireUtils import completePeriodIds, checkListArray, medianAndAvgByPeriod
+from GrimoireUtils import completePeriodIds, checkListArray, medianAndAvgByPeriod, check_array_values
+from query_builder import DSQuery
 
 from metrics import Metrics
 
@@ -187,7 +188,6 @@ class Pending(Metrics):
     desc = "Number of pending review processes"
     data_source = SCR
 
-
     def _get_metrics_for_pending(self):
         # We need to fix the same filter for all metrics
         metrics_for_pendig = {}
@@ -206,6 +206,75 @@ class Pending(Metrics):
 
         return metrics_for_pendig
 
+    def _get_metrics_for_pending_all(self, evol):
+        """ Return the metric for all items normalized """
+        metrics = self._get_metrics_for_pending()
+        if evol is True:
+            submitted = metrics['submitted'].get_ts()
+            merged = metrics['merged'].get_ts()
+            abandoned = metrics['abandoned'].get_ts()
+        else:
+            submitted = metrics['submitted'].get_agg()
+            merged = metrics['merged'].get_agg()
+            abandoned = metrics['abandoned'].get_agg()
+
+        from report import Report
+        filter = Report.get_filter(self.filters.type_analysis[0])
+        items = SCR.get_filter_items(filter, self.filters.startdate,
+                                     self.filters.enddate, self.db.identities_db)
+        items = items.pop('name')
+
+        from GrimoireUtils import fill_and_order_items
+        id_field = DSQuery.get_group_field(self.filters.type_analysis[0])
+        id_field = id_field.split('.')[1] # remove table name
+        submitted = check_array_values(submitted)
+        merged = check_array_values(merged)
+        abandoned = check_array_values(abandoned)
+
+        submitted = fill_and_order_items(items, submitted, id_field,
+                                         evol, self.filters.period,
+                                         self.filters.startdate, self.filters.enddate)
+        merged = fill_and_order_items(items, merged, id_field,
+                                         evol, self.filters.period,
+                                         self.filters.startdate, self.filters.enddate)
+        abandoned = fill_and_order_items(items, abandoned, id_field,
+                                         evol, self.filters.period,
+                                         self.filters.startdate, self.filters.enddate)
+        metrics_for_pendig_all = {
+          id_field: submitted[id_field],
+          "submitted": submitted["submitted"],
+          "merged": merged["merged"],
+          "abandoned": abandoned["abandoned"]
+        }
+        if evol:
+            metrics_for_pendig_all[self.filters.period] = submitted[self.filters.period]
+
+        return metrics_for_pendig_all
+
+    def get_agg_all(self):
+        evol = False
+        metrics = self._get_metrics_for_pending_all(evol)
+        id_field = DSQuery.get_group_field(self.filters.type_analysis[0])
+        id_field = id_field.split('.')[1] # remove table name
+        data= \
+            [metrics['submitted'][i]-metrics['merged'][i]-metrics['abandoned'][i] \
+             for i in range(0, len(metrics['submitted']))]
+        return {id_field:metrics[id_field], "pending":data}
+
+    def get_ts_all(self):
+        evol = True
+        metrics = self._get_metrics_for_pending_all(evol)
+        id_field = DSQuery.get_group_field(self.filters.type_analysis[0])
+        id_field = id_field.split('.')[1] # remove table name
+        pending = {"pending":[]}
+        for i in range(0, len(metrics['submitted'])):
+            pending["pending"].append([])
+            for j in range(0, len(metrics['submitted'][i])):
+                pending_val = metrics["submitted"][i][j] - metrics["merged"][i][j] - metrics["abandoned"][i][j]
+                pending["pending"][i].append(pending_val)
+        pending[self.filters.period] = metrics[self.filters.period]
+        pending[id_field] = metrics[id_field]
+        return pending
 
     def get_agg(self):
         metrics = self._get_metrics_for_pending()
@@ -213,10 +282,13 @@ class Pending(Metrics):
         merged = metrics['merged'].get_agg()
         abandoned = metrics['abandoned'].get_agg()
 
-        # GROUP BY queries not supported yet
-        if isinstance(submitted['submitted'], list):  pending = None
-        else: pending = submitted['submitted']-merged['merged']-abandoned['abandoned']
-        return ({"pending":pending})
+        # GROUP BY queries
+        if self.filters.type_analysis[1] is None:
+            pending = self.get_agg_all()
+        else:
+            pending = submitted['submitted']-merged['merged']-abandoned['abandoned']
+            pending = {"pending":pending}
+        return pending
 
     def get_ts(self):
         metrics = self._get_metrics_for_pending()
@@ -225,10 +297,14 @@ class Pending(Metrics):
         abandoned = metrics["abandoned"].get_ts()
         evol = dict(submitted.items() + merged.items() + abandoned.items())
         pending = {"pending":[]}
-        for i in range(0, len(evol['submitted'])):
-            pending_val = evol["submitted"][i] - evol["merged"][i] - evol["abandoned"][i]
-            pending["pending"].append(pending_val)
-        pending[self.filters.period] = evol[self.filters.period]
+            # GROUP BY queries
+        if self.filters.type_analysis[1] is None:
+            pending = self.get_ts_all()
+        else:
+            for i in range(0, len(evol['submitted'])):
+                pending_val = evol["submitted"][i] - evol["merged"][i] - evol["abandoned"][i]
+                pending["pending"].append(pending_val)
+            pending[self.filters.period] = evol[self.filters.period]
         return pending
 
 class Opened(Metrics):
