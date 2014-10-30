@@ -268,7 +268,7 @@ class ITS(DataSource):
     def create_filter_report_all(filter_, period, startdate, enddate, destdir, npeople, identities_db):
         check = False # activate to debug issues
         filter_name = filter_.get_name()
-        if filter_name == "people2" or filter_name == "company_off":
+        if filter_name == "people2" or filter_name == "company":
             filter_all = Filter(filter_name, None)
             agg_all = ITS.get_agg_data(period, startdate, enddate,
                                        identities_db, filter_all)
@@ -482,12 +482,14 @@ def GetITSSQLCompaniesFrom (i_db):
 
 def GetITSSQLCompaniesWhere (name):
     # filters for the companies analysis
-    return(" i.submitted_by = pup.people_id and "+\
+    filters = " i.submitted_by = pup.people_id and "+\
            "pup.upeople_id = upc.upeople_id and "+\
            "upc.company_id = c.id and "+\
            "i.submitted_on >= upc.init and "+\
-           "i.submitted_on < upc.end and "+\
-           "c.name = "+name)
+           "i.submitted_on < upc.end"
+    if name is not None:
+           filters += " and c.name = "+name
+    return filters
 
 def GetITSSQLCountriesFrom (i_db):
     # fields necessary for the countries analysis

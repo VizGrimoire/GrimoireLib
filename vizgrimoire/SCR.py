@@ -34,7 +34,7 @@ from GrimoireSQL import GetSQLGlobal, GetSQLPeriod
 from GrimoireSQL import ExecuteQuery
 from GrimoireUtils import GetPercentageDiff, GetDates, completePeriodIds
 from GrimoireUtils import checkListArray, removeDecimals, get_subprojects
-from GrimoireUtils import getPeriod, createJSON, checkFloatArray, medianAndAvgByPeriod
+from GrimoireUtils import getPeriod, createJSON, checkFloatArray, medianAndAvgByPeriod, check_array_values
 from metrics_filter import MetricFilters
 from query_builder import DSQuery
 
@@ -147,6 +147,7 @@ class SCR(DataSource):
                 logging.info(item.id)
                 id_field = DSQuery.get_group_field(type_analysis[0])
                 id_field = id_field.split('.')[1] # remove table name
+                mvalue = check_array_values(mvalue)
                 mvalue = DataSource._fill_and_order_items(items, mvalue, id_field,
                                                           evol, period, startdate, enddate)
             data = dict(data.items() + mvalue.items())
@@ -331,7 +332,7 @@ class SCR(DataSource):
         check = False # activate to debug issues
         filter_name = filter_.get_name()
 
-        if filter_name == "people2" or filter_name == "company_off":
+        if filter_name == "people2" or filter_name == "company":
             filter_all = Filter(filter_name, None)
             agg_all = SCR.get_agg_data(period, startdate, enddate,
                                        identities_db, filter_all)
@@ -458,13 +459,13 @@ def GetSQLCompaniesFromSCR (identities_db):
 
 def GetSQLCompaniesWhereSCR (company):
     #fields necessaries to match info among tables
-    return ("and i.submitted_by = pup.people_id "+\
+    filters = "and i.submitted_by = pup.people_id "+\
               "and pup.upeople_id = upc.upeople_id "+\
               "and i.submitted_on >= upc.init "+\
               "and i.submitted_on < upc.end "+\
-              "and upc.company_id = c.id "+\
-              "and c.name ='"+ company+"'")
-
+              "and upc.company_id = c.id "
+    if company is not None:
+        filters += "and c.name ='"+ company+"'"
 
 def GetSQLCountriesFromSCR (identities_db):
     #tables necessaries for companies

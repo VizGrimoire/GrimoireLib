@@ -315,7 +315,7 @@ class SCM(DataSource):
         # New API for getting all metrics with one query
         check = False # activate to debug issues
         filter_name = filter_.get_name()
-        if filter_name == "people2" or filter_name == "company_off":
+        if filter_name == "people2" or filter_name == "company":
             filter_all = Filter(filter_name, None)
             agg_all = SCM.get_agg_data(period, startdate, enddate,
                                        identities_db, filter_all)
