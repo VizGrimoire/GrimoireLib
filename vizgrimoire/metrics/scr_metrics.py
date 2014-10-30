@@ -828,16 +828,16 @@ class Reviewers(Metrics):
             self.db.ExecuteQuery(q)
             date_limit = " AND DATEDIFF(@maxdate, changed_on)<" + str(days)
 
-        q = "SELECT u.id as id, u.identifier as reviewers, "+\
+        q = "SELECT up.id as id, up.identifier as reviewers, "+\
             "               count(distinct(c.id)) as reviewed "+\
-            "        FROM people_upeople pup, changes c, "+ self.db.identities_db+".upeople u "+\
+            "        FROM people_upeople pup, changes c, "+ self.db.identities_db+".upeople up "+\
             "        WHERE "+ filter_bots+ " "+\
             "            c.changed_by = pup.people_id and "+\
-            "            pup.upeople_id = u.id and "+\
+            "            pup.upeople_id = up.id and "+\
             "            c.changed_on >= "+ startdate + " and "+\
             "            c.changed_on < "+ enddate + " "+\
             "            "+ date_limit + " "+\
-            "        GROUP BY u.identifier "+\
+            "        GROUP BY up.identifier "+\
             "        ORDER BY reviewed desc, reviewers "+\
             "        LIMIT " + str(limit)
 
@@ -937,16 +937,16 @@ class Closers(Metrics):
         rol = "mergers"
         action = "merged"
 
-        q = "SELECT u.id as id, u.identifier as "+rol+", "+\
+        q = "SELECT up.id as id, up.identifier as "+rol+", "+\
             "            count(distinct(i.id)) as "+action+" "+\
-            "        FROM people_upeople pup, issues i, "+self.db.identities_db+".upeople u "+\
+            "        FROM people_upeople pup, issues i, "+self.db.identities_db+".upeople up "+\
             "        WHERE "+ filter_bots+ " "+\
             "            i.submitted_by = pup.people_id and "+\
-            "            pup.upeople_id = u.id and "+\
+            "            pup.upeople_id = up.id and "+\
             "            i.submitted_on >= "+ startdate+ " and "+\
             "            i.submitted_on < "+ enddate+ " "+\
             "            "+date_limit+ merged_sql+ " "+\
-            "        GROUP BY u.identifier "+\
+            "        GROUP BY up.identifier "+\
             "        ORDER BY "+action+" desc, id "+\
             "        LIMIT "+ str(limit)
         return(self.db.ExecuteQuery(q))
@@ -1029,16 +1029,16 @@ class Submitters(Metrics):
             self.db.ExecuteQuery(q)
             date_limit = " AND DATEDIFF(@maxdate, submitted_on)<"+str(days)
 
-        q = "SELECT u.id as id, u.identifier as "+rol+", "+\
+        q = "SELECT up.id as id, up.identifier as "+rol+", "+\
             "            count(distinct(i.id)) as "+action+" "+\
-            "        FROM people_upeople pup, issues i, "+self.db.identities_db+".upeople u "+\
+            "        FROM people_upeople pup, issues i, "+self.db.identities_db+".upeople up "+\
             "        WHERE "+ filter_bots+ " "+\
             "            i.submitted_by = pup.people_id and "+\
-            "            pup.upeople_id = u.id and "+\
+            "            pup.upeople_id = up.id and "+\
             "            i.submitted_on >= "+ startdate+ " and "+\
             "            i.submitted_on < "+ enddate+ " "+\
             "            "+date_limit +  " "+\
-            "        GROUP BY u.identifier "+\
+            "        GROUP BY up.identifier "+\
             "        ORDER BY "+action+" desc, id "+\
             "        LIMIT "+ str(limit)
         return(self.db.ExecuteQuery(q))

@@ -83,13 +83,13 @@ class Senders(Metrics):
             sql = "SELECT @maxdate:=max(date) from irclog limit 1"
             res = self.db.ExecuteQuery(sql)
             date_limit = " AND DATEDIFF(@maxdate, date)<"+str(days)
-        q = "SELECT u.id as id, u.identifier as senders,"+\
+        q = "SELECT up.id as id, up.identifier as senders,"+\
             "       COUNT(irclog.id) as sent "+\
-            " FROM irclog, people_upeople pup, "+self.db.identities_db+".upeople u "+\
+            " FROM irclog, people_upeople pup, "+self.db.identities_db+".upeople up "+\
             " WHERE "+ filter_bots +\
             "            irclog.type = 'COMMENT' and "+\
             "            irclog.nick = pup.people_id and "+\
-            "            pup.upeople_id = u.id and "+\
+            "            pup.upeople_id = up.id and "+\
             "            date >= "+ startdate+ " and "+\
             "            date  < "+ enddate+ " "+ date_limit +\
             "            GROUP BY senders "+\

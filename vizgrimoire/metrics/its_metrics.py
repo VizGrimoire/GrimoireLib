@@ -146,15 +146,15 @@ class Openers(Metrics):
             dtables = ", (SELECT MAX(submitted_on) as last_date from issues) t "
             dfilters = " AND DATEDIFF (last_date, submitted_on) < %s " % (days)
 
-        q = "SELECT u.id as id, u.identifier as openers, "+\
+        q = "SELECT up.id as id, up.identifier as openers, "+\
             "    count(distinct(i.id)) as opened "+\
             "FROM " +tables +\
-            " ,   "+self.db.identities_db+".upeople u "+ dtables + \
+            " ,   "+self.db.identities_db+".upeople up "+ dtables + \
             "WHERE "+filter_bots + filters +" and "+\
-            "    pup.upeople_id = u.id and "+\
+            "    pup.upeople_id = up.id and "+\
             "    i.submitted_on >= "+ startdate+ " and "+\
             "    i.submitted_on < "+ enddate + dfilters +\
-            "    GROUP BY u.identifier "+\
+            "    GROUP BY up.identifier "+\
             "    ORDER BY opened desc, openers "+\
             "    LIMIT " + str(limit)
         data = self.db.ExecuteQuery(q)
@@ -251,17 +251,17 @@ class Closers(Metrics):
         tables = Set([])
         filters = Set([])
 
-        fields.add("u.id as id")
-        fields.add("u.identifier as closers")
+        fields.add("up.id as id")
+        fields.add("up.identifier as closers")
         fields.add("COUNT(DISTINCT(c.id)) as closed")
 
         tables.union_update(self.db.GetTablesCompanies(self.db.identities_db))
         tables.add(self.db.identities_db+".companies com")
-        tables.add(self.db.identities_db+".upeople u")
+        tables.add(self.db.identities_db+".upeople up")
 
         filters.union_update(self.db.GetFiltersCompanies())
         filters.add(closed_condition)
-        filters.add("pup.upeople_id = u.id")
+        filters.add("pup.upeople_id = up.id")
         filters.add("upc.company_id = com.id")
         filters.add("com.name = " + company_name)
         filters.add("changed_on >= " + startdate)
@@ -272,7 +272,7 @@ class Closers(Metrics):
         query = "select " + self.db._get_fields_query(fields)
         query = query + " from " + self.db._get_tables_query(tables)
         query = query + " where " + self.db._get_filters_query(filters)
-        query = query + " GROUP BY u.identifier ORDER BY closed DESC, closers LIMIT " + str(limit)
+        query = query + " GROUP BY up.identifier ORDER BY closed DESC, closers LIMIT " + str(limit)
         return self.db.ExecuteQuery(query)
 
     def _get_top_domain (self, metric_filters, days = None):
@@ -287,17 +287,17 @@ class Closers(Metrics):
         tables = Set([])
         filters = Set([])
 
-        fields.add("u.id as id")
-        fields.add("u.identifier as closers")
+        fields.add("up.id as id")
+        fields.add("up.identifier as closers")
         fields.add("COUNT(DISTINCT(c.id)) as closed")
 
         tables.union_update(self.db.GetTablesDomains(self.db.identities_db))
         tables.add(self.db.identities_db+".domains dom")
-        tables.add(self.db.identities_db+".upeople u")
+        tables.add(self.db.identities_db+".upeople up")
 
         filters.union_update(self.db.GetFiltersDomains())
         filters.add(closed_condition)
-        filters.add("pup.upeople_id = u.id")
+        filters.add("pup.upeople_id = up.id")
         filters.add("upd.domain_id = dom.id")
         filters.add("dom.name = " + domain_name)
         filters.add("dom.name = " + domain_name)
@@ -309,7 +309,7 @@ class Closers(Metrics):
         query = "select " + self.db._get_fields_query(fields)
         query = query + " from " + self.db._get_tables_query(tables)
         query = query + " where " + self.db._get_filters_query(filters)
-        query = query + " GROUP BY u.identifier ORDER BY closed DESC, closers LIMIT " + str(limit)
+        query = query + " GROUP BY up.identifier ORDER BY closed DESC, closers LIMIT " + str(limit)
 
         return self.db.ExecuteQuery(query)
 
@@ -327,19 +327,19 @@ class Closers(Metrics):
             dtables = ", (SELECT MAX(changed_on) as last_date from changes) t "
             dfilters = " AND DATEDIFF (last_date, changed_on) < %s " % (days)
 
-        q = "SELECT u.id as id, u.identifier as closers, "+\
+        q = "SELECT up.id as id, up.identifier as closers, "+\
             "COUNT(DISTINCT(i.id)) as closed "+\
             "FROM issues i, changes c, trackers t, people_upeople pup, " +\
-            "     "+self.db.identities_db+".upeople u "+ dtables + \
+            "     "+self.db.identities_db+".upeople up "+ dtables + \
             "WHERE "+closed_condition+" "+\
-            "      AND pup.upeople_id = u.id "+\
+            "      AND pup.upeople_id = up.id "+\
             "      AND c.changed_by = pup.people_id "+\
             "      AND c.issue_id = i.id "+\
             "      AND i.tracker_id = t.id "+\
             "      AND t.url = "+repo_name+" "+\
             "      AND changed_on >= "+startdate+" AND changed_on < " +enddate +\
             "      " + filter_bots + " " + dfilters + \
-            " GROUP BY u.identifier ORDER BY closed DESC, closers LIMIT " + str(limit)
+            " GROUP BY up.identifier ORDER BY closed DESC, closers LIMIT " + str(limit)
         data = self.db.ExecuteQuery(q)
         return (data)
 
@@ -365,17 +365,17 @@ class Closers(Metrics):
             dtables = ", (SELECT MAX(changed_on) as last_date from changes) t "
             dfilters = " AND DATEDIFF (last_date, changed_on) < %s " % (days)
 
-        q = "SELECT u.id as id, u.identifier as closers, "+\
+        q = "SELECT up.id as id, up.identifier as closers, "+\
             "       count(distinct(c.id)) as closed "+\
             "FROM  "+tables+\
-            ",     "+self.db.identities_db+".upeople u "+ dtables +\
+            ",     "+self.db.identities_db+".upeople up "+ dtables +\
             "WHERE "+filter_bots + filters + " and "+\
             "      c.changed_by = pup.people_id and "+\
-            "      pup.upeople_id = u.id and "+\
+            "      pup.upeople_id = up.id and "+\
             "      c.changed_on >= "+ startdate+ " and "+\
             "      c.changed_on < "+ enddate+ " and " +\
             "      " + closed_condition + " " + dfilters+ " "+\
-            "GROUP BY u.identifier "+\
+            "GROUP BY up.identifier "+\
             "ORDER BY closed desc, closers "+\
             "LIMIT "+ str(limit)
 

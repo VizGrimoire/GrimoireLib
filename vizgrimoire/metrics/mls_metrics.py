@@ -198,16 +198,16 @@ class EmailsSenders(Metrics):
             dtables = ", (SELECT MAX(first_date) as last_date from messages) t"
             dfilters = " AND DATEDIFF (last_date, first_date) < %s " % (days)
 
-        q = "SELECT u.id as id, u.identifier as senders, "+\
+        q = "SELECT up.id as id, up.identifier as senders, "+\
                 "COUNT(distinct(m.message_id)) as sent "+\
                 "FROM "+ tables + dtables +\
-                " ,"+self.db.identities_db+".upeople u "+\
+                " ,"+self.db.identities_db+".upeople up "+\
                 "WHERE "+ filter_bots + filters + " AND "+\
-                "  pup.upeople_id = u.id AND "+\
+                "  pup.upeople_id = up.id AND "+\
                 "  m.first_date >= "+startdate+" AND "+\
                 "  m.first_date < "+enddate +\
                 dfilters+ " "+\
-                "GROUP BY u.identifier "+\
+                "GROUP BY up.identifier "+\
                 "ORDER BY sent desc, senders "+\
                 "LIMIT " + str(limit)
         data = self.db.ExecuteQuery(q)
