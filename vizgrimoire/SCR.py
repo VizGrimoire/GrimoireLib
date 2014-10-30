@@ -87,6 +87,7 @@ class SCR(DataSource):
     def __get_data__ (period, startdate, enddate, identities_db, filter_ = None, evol = False):
         data = {}
         DS = SCR
+        from GrimoireUtils import fill_and_order_items
 
         type_analysis = None
         if filter_ is not None:
@@ -148,8 +149,8 @@ class SCR(DataSource):
                 id_field = DSQuery.get_group_field(type_analysis[0])
                 id_field = id_field.split('.')[1] # remove table name
                 mvalue = check_array_values(mvalue)
-                mvalue = DataSource._fill_and_order_items(items, mvalue, id_field,
-                                                          evol, period, startdate, enddate)
+                mvalue = fill_and_order_items(items, mvalue, id_field,
+                                              evol, period, startdate, enddate)
             data = dict(data.items() + mvalue.items())
             item.filters = mfilter_orig
 
@@ -193,7 +194,7 @@ class SCR(DataSource):
                     if type_analysis and type_analysis[1] is None:
                         id_field = DSQuery.get_group_field(type_analysis[0])
                         id_field = id_field.split('.')[1] # remove table name
-                        period_data = DataSource._fill_and_order_items(items, period_data, id_field)
+                        period_data = fill_and_order_items(items, period_data, id_field)
 
                     data = dict(data.items() +  period_data.items())
 
