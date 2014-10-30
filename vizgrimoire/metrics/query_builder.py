@@ -1878,24 +1878,62 @@ class IRCQuery(DSQuery):
 
 class MediawikiQuery(DSQuery):
 
-    def GetTablesOwnUniqueIds () :
-        tables = 'wiki_pages_revs, people_upeople pup'
-        return (tables)
+    def GetSQLPeople2Where(self, name = None):
+        # filters necessary to companies analysis
+        filters = Set([])
 
-    def GetFiltersOwnUniqueIds () :
-        filters = 'pup.people_id = wiki_pages_revs.user'
-        return (filters) 
+        filters.add("wr.user = pup.people_id")
+        filters.add("pup.upeople_id = up.id")
+        if name is not None:
+            filters.add("wr.user = " + name)
+
+        return filters
+
+    def GetSQLPeople2From(self, name):
+        # tables necessary to domains analysis
+        tables = Set([])
+        tables.add("wiki_pages_revs wr")
+        tables.add("people_upeople pup")
+        tables.add(self.identities_db + ".upeople up")
+
+        return tables
 
     def GetSQLReportFrom (self, filters):
-        bots_from = " ,people_upeople pup, " + self.identities_db + ".upeople u"
-        return bots_from
+        tables = Set([])
+        tables.add("people_upeople pup")
+        tables.add(self.identities_db + ".upeople u")
+
+        type_analysis = filters.type_analysis
+
+        if (type_analysis is None or len(type_analysis) != 2):
+            return tables
+
+        analysis = type_analysis[0]
+        value = type_analysis[1]
+
+        if analysis == 'people2': tables.union_update(self.GetSQLPeople2From())
+
+        return tables
 
     def GetSQLReportWhere (self, filters):
         from Mediawiki import Mediawiki
-        filter_bots = self.get_bots_filter_sql(Mediawiki, filters)
-        filter_bots += " AND pup.people_id = wiki_pages_revs.user"
-        filter_bots += " AND pup.upeople_id = u.id"
-        return filter_bots
+
+        where = Set([])
+        where.add(self.get_bots_filter_sql(Mediawiki, filters))
+        where.add("pup.people_id = wiki_pages_revs.user")
+        where.add("pup.upeople_id = u.id")
+
+        type_analysis = filters.type_analysis
+
+        if (type_analysis is None or len(type_analysis) != 2):
+            return where
+
+        analysis = type_analysis[0]
+        value = type_analysis[1]
+
+        if analysis == 'people2': where.union_update(self.GetSQLPeople2Where(value))
+
+        return where
 
 class QAForumsQuery(DSQuery):
     """ Specific query builders for question and answer platforms """

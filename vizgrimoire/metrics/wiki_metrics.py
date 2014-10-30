@@ -38,6 +38,9 @@ from query_builder import MLSQuery
 
 from Mediawiki import Mediawiki
 
+from sets import Set
+
+
 class Reviews(Metrics):
     """ Reviews done in the Wiki """
 
@@ -47,13 +50,18 @@ class Reviews(Metrics):
     data_source = Mediawiki
 
     def _get_sql(self, evolutionary):
-        fields = " count(distinct(rev_id)) as reviews "
-        tables = " wiki_pages_revs " + self.db.GetSQLReportFrom(self.filters)
-        filters = self.db.GetSQLReportWhere(self.filters)
+        fields = Set([])
+        tables = Set([])
+        filters = Set([])
+
+        fields.add("count(distinct(rev_id)) as reviews ")
+        tables.add("wiki_pages_revs")
+        tables.union_update(self.db.GetSQLReportFrom(self.filters))
+        filters.union_update(self.db.GetSQLReportWhere(self.filters))
 
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
-                                   self.filters.enddate, "date", fields,
-                                   tables, filters, evolutionary)
+                               self.filters.enddate, "date", fields,
+                               tables, filters, evolutionary, self.filters.type_analysis)
         return q
 
 class Pages(Metrics):
@@ -65,16 +73,19 @@ class Pages(Metrics):
     data_source = Mediawiki
 
     def _get_sql (self, evolutionary):
-        fields = "COUNT(page_id) as pages"
-        tables = " ( "+\
+        fields = Set([])
+        tables = Set([])
+        filters = Set([])
+
+        fields.add("COUNT(page_id) as pages")
+        tables.add("( "+\
                 "SELECT wiki_pages.page_id, MIN(date) as date FROM wiki_pages, wiki_pages_revs "+\
                 "WHERE wiki_pages.page_id=wiki_pages_revs.page_id  "+\
-                "GROUP BY wiki_pages.page_id) t "
-        filters = ''
+                "GROUP BY wiki_pages.page_id) t ")
 
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
-                                   self.filters.enddate, "date", fields,
-                                   tables, filters, evolutionary)
+                               self.filters.enddate, "date", fields,
+                               tables, filters, evolutionary, self.filters.type_analysis)
         return q
 
 
@@ -119,11 +130,16 @@ class Authors(Metrics):
         return (data)
 
     def _get_sql (self, evolutionary):
-        fields = " count(distinct(user)) as authors "
-        tables = " wiki_pages_revs " + self.db.GetSQLReportFrom(self.filters)
-        filters = self.db.GetSQLReportWhere(self.filters)
+        fields = Set([])
+        tables = Set([])
+        filters = Set([])
+
+        fields.add("count(distinct(user)) as authors")
+        tables.add("wiki_pages_revs")
+        tables.union_update(self.db.GetSQLReportFrom(self.filters))
+        filters.union_update(self.db.GetSQLReportWhere(self.filters))
 
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
-                                   self.filters.enddate, "date", fields,
-                                   tables, filters, evolutionary)
+                               self.filters.enddate, "date", fields,
+                               tables, filters, evolutionary, self.filters.type_analysis)
         return(q)
