@@ -1227,12 +1227,12 @@ class SCRQuery(DSQuery):
         tables = Set([])
         tables.add("trackers t")
 
-        return (" , trackers t")
+        return tables
 
     def GetSQLRepositoriesWhere (self, repository):
         #fields necessaries to match info among tables
         filters = Set([])
-        filters.add("t.url = '"+ repository)
+        filters.add("t.url = '"+ repository + "'")
         filters.add("t.id = i.tracker_id")
 
         return filters
@@ -1240,7 +1240,7 @@ class SCRQuery(DSQuery):
     def GetTablesOwnUniqueIds (self, table=''):
         tables = Set([])
         tables.add("people_upeople pup")
-        if tables == "issues":
+        if table == "issues":
             tables.add("issues i")
         else:
             #TODO: warning -> changes c is using the same acronym as companies
@@ -1252,11 +1252,10 @@ class SCRQuery(DSQuery):
     def GetFiltersOwnUniqueIds  (self, table=''):
         filters = Set([])
 
-        if tables == "issues":
+        if table == "issues":
             filters.add("pup.people_id = i.submitted_by")
         else:
             filters.add("pup.people_id = c.changed_by")
-        filters = 'pup.people_id = c.changed_by'
 
         return filters
 
@@ -1429,7 +1428,6 @@ class SCRQuery(DSQuery):
 
         q = self.BuildQuery (period, startdate, enddate, date_field, fields, tables,
                              filters, evolutionary, type_analysis)
-
         return q
 
     # Reviews status using changes table
@@ -1495,7 +1493,7 @@ class SCRQuery(DSQuery):
                             issues i
                        where c.issue_id = i.id and
                              i.status='NEW'
-                       group by c.issue_id, c.old_value) t1"""
+                       group by c.issue_id, c.old_value) t1""")
         tables.union_update(self.GetSQLReportFrom(type_analysis))
 
         filters.add("i.id = c.issue_id")
@@ -1567,8 +1565,13 @@ class SCRQuery(DSQuery):
         filters.add("ch.new_value='MERGED'")
         # remove autoreviews
         filters.add("i.submitted_by<>ch.changed_by")
-        filters.add("ORDER BY ch_ext.changed_on")
-        q = self.GetSQLGlobal('ch.changed_on', fields, tables, filters,
+        #filters.add("ORDER BY ch_ext.changed_on")
+
+        fields_str = self._get_fields_query(fields)
+        tables_str = self._get_tables_query(tables)
+        filters_str = self._get_filters_query(filters)
+        filters_str = filters_str + " ORDER BY ch_ext.changed_on"
+        q = self.GetSQLGlobal('ch.changed_on', fields_str, tables_str, filters_str,
                         startdate, enddate)
         # min_days_for_review = 0.042 # one hour
         # q = "SELECT revtime, changed_on FROM ("+q+") qrevs WHERE revtime>"+str(min_days_for_review)
