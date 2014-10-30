@@ -283,7 +283,7 @@ class DSQuery(object):
                 bots = metric_filters.people_out
         filter_bots = ''
         for bot in bots:
-            filter_bots = filter_bots + " u.identifier<>'"+bot+"' AND "
+            filter_bots = filter_bots + " up.identifier<>'"+bot+"' AND "
         if filter_bots != '': filter_bots = filter_bots[:-4]
         return filter_bots
 
@@ -1882,17 +1882,15 @@ class MediawikiQuery(DSQuery):
         # filters necessary to companies analysis
         filters = Set([])
 
-        filters.add("wr.user = pup.people_id")
         filters.add("pup.upeople_id = up.id")
         if name is not None:
-            filters.add("wr.user = " + name)
+            filters.add("pup.people_id = " + name)
 
         return filters
 
-    def GetSQLPeople2From(self, name):
+    def GetSQLPeople2From(self):
         # tables necessary to domains analysis
         tables = Set([])
-        tables.add("wiki_pages_revs wr")
         tables.add("people_upeople pup")
         tables.add(self.identities_db + ".upeople up")
 
@@ -1900,8 +1898,9 @@ class MediawikiQuery(DSQuery):
 
     def GetSQLReportFrom (self, filters):
         tables = Set([])
+        tables.add("wiki_pages_revs")
         tables.add("people_upeople pup")
-        tables.add(self.identities_db + ".upeople u")
+        tables.add(self.identities_db + ".upeople up")
 
         type_analysis = filters.type_analysis
 
@@ -1921,7 +1920,7 @@ class MediawikiQuery(DSQuery):
         where = Set([])
         where.add(self.get_bots_filter_sql(Mediawiki, filters))
         where.add("pup.people_id = wiki_pages_revs.user")
-        where.add("pup.upeople_id = u.id")
+        where.add("pup.upeople_id = up.id")
 
         type_analysis = filters.type_analysis
 

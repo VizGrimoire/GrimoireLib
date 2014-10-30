@@ -205,7 +205,7 @@ class SCM(DataSource):
         elif (filter_name == "people2"):
             metric = DataSource.get_metrics("people2", SCM)
         else:
-            logging.error(filter_name + " not supported")
+            logging.error("SCM " + filter_name + " not supported")
             return items
 
         if metric is not None: items = metric.get_list()

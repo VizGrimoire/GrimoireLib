@@ -157,6 +157,11 @@ class DataSource(object):
         raise NotImplementedError
 
     @staticmethod
+    def create_filter_report_all(filter_, period, startdate, enddate, destdir, npeople, identities_db):
+        """Create all files related to all filters in all data sources using GROUP BY queries"""
+        raise NotImplementedError
+
+    @staticmethod
     def get_top_people_file(ds):
         """Get the filename used to store top people data"""
         return ds+"-people.json"
@@ -325,6 +330,7 @@ class DataSource(object):
 
         if type_analysis and type_analysis[1] is None:
             items = DS.get_filter_items(filter_, startdate, enddate, identities_db)
+            if items is None: return data
             items = items.pop('name')
 
         if DS.get_name()+"_startdate" in Report.get_config()['r']:
@@ -356,7 +362,7 @@ class DataSource(object):
                 id_field = DSQuery.get_group_field(type_analysis[0])
                 id_field = id_field.split('.')[1] # remove table name
                 mvalue = fill_and_order_items(items, mvalue, id_field,
-                                                          evol, period, startdate, enddate)
+                                              evol, period, startdate, enddate)
             data = dict(data.items() + mvalue.items())
 
             item.filters = mfilter_orig
