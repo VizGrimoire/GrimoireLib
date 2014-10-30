@@ -283,7 +283,7 @@ class Pending(Metrics):
         abandoned = metrics['abandoned'].get_agg()
 
         # GROUP BY queries
-        if self.filters.type_analysis[1] is None:
+        if self.filters.type_analysis is not None and self.filters.type_analysis[1] is None:
             pending = self.get_agg_all()
         else:
             pending = submitted['submitted']-merged['merged']-abandoned['abandoned']
@@ -298,7 +298,7 @@ class Pending(Metrics):
         evol = dict(submitted.items() + merged.items() + abandoned.items())
         pending = {"pending":[]}
             # GROUP BY queries
-        if self.filters.type_analysis[1] is None:
+        if self.filters.type_analysis is not None and self.filters.type_analysis[1] is None:
             pending = self.get_ts_all()
         else:
             for i in range(0, len(evol['submitted'])):
