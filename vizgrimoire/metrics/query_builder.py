@@ -1917,6 +1917,22 @@ class IRCQuery(DSQuery):
 
         return filters
 
+    def GetSQLPeople2From(self):
+        # tables necessary to countries analysis
+        tables = Set([])
+        tables.add("people_upeople pup")
+        tables.add(self.identities_db + ".upeople up")
+
+        return tables
+
+    def GetSQLPeople2Where(self, name):
+        # filters necessary to countries analysis
+        filters = Set([])
+        filters.add("i.nick = pup.people_id")
+        filters.add("pup.upeople_id = up.id")
+
+        return filters
+
     def GetTablesOwnUniqueIds (self):
         tables = Set([])
         tables.add("irclog i")
@@ -1945,6 +1961,7 @@ class IRCQuery(DSQuery):
         elif analysis == 'company': From.union_update(self.GetSQLCompaniesFrom())
         elif analysis == 'country': From.union_update(self.GetSQLCountriesFrom())
         elif analysis == 'domain': From.union_update(self.GetSQLDomainsFrom())
+        elif analysis == 'people2': From.union_update(self.GetSQLPeople2From())
 
         return From
 
@@ -1964,6 +1981,7 @@ class IRCQuery(DSQuery):
         elif analysis == 'company': where.union_update(self.GetSQLCompaniesWhere(value))
         elif analysis == 'country': where.union_update(self.GetSQLCountriesWhere(value))
         elif analysis == 'domain': where.union_update(self.GetSQLDomainsWhere(value))
+        elif analysis == 'people2': where.union_update(self.GetSQLPeople2Where(value))
 
         return where
 

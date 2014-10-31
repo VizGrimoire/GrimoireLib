@@ -56,7 +56,7 @@ class Sent(Metrics):
 
         query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                self.filters.enddate, " i.date ", fields,
-                               tables, filters, evolutionary)
+                               tables, filters, evolutionary, self.filters.type_analysis)
         return query
 
 
@@ -107,10 +107,10 @@ class Senders(Metrics):
         tables.union_update(self.db.GetSQLReportFrom(self.filters.type_analysis))
         filters.add("type = 'COMMENT'")
         filters.union_update(self.db.GetSQLReportWhere(self.filters.type_analysis))
-        
+
         query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                self.filters.enddate, " i.date ", fields,
-                               tables, filters, evolutionary)
+                               tables, filters, evolutionary, self.filters.type_analysis)
         return query
 
 
@@ -133,7 +133,7 @@ class Repositories(Metrics):
 
         query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                self.filters.enddate, " i.date ", fields,
-                               tables, filters, evolutionary)
+                               tables, filters, evolutionary, self.filters.type_analysis)
         return query
 
     def get_list (self):
