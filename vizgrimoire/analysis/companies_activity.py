@@ -119,7 +119,6 @@ class CompaniesActivity(Analyses):
         # An active committers has done a commit in last 90 days
         active_max_days = "90"
         where = ""
-        active_sql = ""
         field = "committers"
         if active: field = "committers_active"
         from_ =  self.get_scm_from_companies(True)
@@ -128,15 +127,17 @@ class CompaniesActivity(Analyses):
             where = " WHERE YEAR(s.date) = " + str(year)
             field = field + "_" + str(year)
         if active:
-            active_sql += " HAVING DATEDIFF(NOW(), MAX(s.date)) < " + active_max_days
+	    if where == "": where = " WHERE "
+  	    else: where += " AND "
+            where += " DATEDIFF(NOW(), s.date) < " + active_max_days
         sql = """
             select c.name, count(distinct(s.committer_id)) as %s
             %s %s
             group by c.id
-            %s
             order by %s desc, c.name
-        """ % (field, from_, where, active_sql, field)
+        """ % (field, from_, where, field)
 
+	if (active): print sql
         return (sql)
 
     def get_sql_actions(self, year = None):
