@@ -66,13 +66,15 @@ class CompaniesActivity(Analyses):
         """ % (identities_db, identities_db)
         return from_
 
-    def get_scm_from_companies(self):
+    def get_scm_from_companies(self, committers = False):
+        if (committers): field = "s.committer_id"
+        else:  field = "s.author_id"
         from_ = """
             FROM scmlog s 
-              JOIN people_upeople pup ON s.author_id = pup.people_id 
+              JOIN people_upeople pup ON %s = pup.people_id
               JOIN upeople_companies upc ON upc.upeople_id = pup.upeople_id 
               JOIN companies c ON c.id = upc.company_id 
-        """
+        """ % (field)
         return from_
 
     def get_sql_commits(self, year = None):
@@ -102,6 +104,23 @@ class CompaniesActivity(Analyses):
             field = field + "_" + str(year)
         sql = """
             select c.name, count(distinct(s.author_id)) as %s
+            %s %s
+            group by c.id
+            order by %s desc, c.name
+        """ % (field, from_, where, field)
+
+        return (sql)
+
+    def get_sql_committers(self, year = None):
+        where = ""
+        field = "committers"
+        from_ =  self.get_scm_from_companies(True)
+
+        if year is not None:
+            where = " WHERE YEAR(s.date) = " + str(year)
+            field = field + "_" + str(year)
+        sql = """
+            select c.name, count(distinct(s.committer_id)) as %s
             %s %s
             group by c.id
             order by %s desc, c.name
@@ -308,7 +327,7 @@ class CompaniesActivity(Analyses):
             if not isinstance(data[item], list): data[item] = [data[item]]
 
     def add_metric_years(self, metric, activity, start, end):
-        metrics = ['commits','authors','actions','sloc','lines-added','lines-removed','opened','closed','sent']
+        metrics = ['commits','authors','committers','actions','sloc','lines-added','lines-removed','opened','closed','sent']
         if metric not in metrics:
             logging.error(metric + " not supported in companies activity.")
             return
@@ -317,6 +336,8 @@ class CompaniesActivity(Analyses):
                 data = self.db.ExecuteQuery(self.get_sql_commits(i))
             elif metric == "authors":
                 data = self.db.ExecuteQuery(self.get_sql_authors(i))
+            elif metric == "committers":
+                data = self.db.ExecuteQuery(self.get_sql_committers(i))
             elif metric == "actions":
                 data = self.db.ExecuteQuery(self.get_sql_actions(i))
             elif metric == "sloc":
@@ -373,6 +394,10 @@ class CompaniesActivity(Analyses):
         data = self.db.ExecuteQuery(self.get_sql_authors())
         activity = self.add_companies_data (activity, data)
         self.add_metric_years("authors",activity,start_year,end_year)
+        # Committers
+        data = self.db.ExecuteQuery(self.get_sql_committers())
+        activity = self.add_companies_data (activity, data)
+        self.add_metric_years("committers",activity,start_year,end_year)
         # Actions
         data = self.db.ExecuteQuery(self.get_sql_actions())
         activity = self.add_companies_data (activity, data)
