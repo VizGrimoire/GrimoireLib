@@ -112,20 +112,30 @@ class CompaniesActivity(Analyses):
 
         return (sql)
 
-    def get_sql_committers(self, year = None):
+    def get_sql_committers(self, year = None, active = False):
+        if year is not None and active:
+            logging.error("Active committers is not valid for past years.")
+            return None
+        # An active committers has done a commit in last 90 days
+        active_max_days = "90"
         where = ""
+        active_sql = ""
         field = "committers"
+        if active: field = "committers_active"
         from_ =  self.get_scm_from_companies(True)
 
         if year is not None:
             where = " WHERE YEAR(s.date) = " + str(year)
             field = field + "_" + str(year)
+        if active:
+            active_sql += " HAVING DATEDIFF(NOW(), MAX(s.date)) < " + active_max_days
         sql = """
             select c.name, count(distinct(s.committer_id)) as %s
             %s %s
             group by c.id
+            %s
             order by %s desc, c.name
-        """ % (field, from_, where, field)
+        """ % (field, from_, where, active_sql, field)
 
         return (sql)
 
@@ -328,7 +338,8 @@ class CompaniesActivity(Analyses):
             if not isinstance(data[item], list): data[item] = [data[item]]
 
     def add_metric_years(self, metric, activity, start, end):
-        metrics = ['commits','authors','committers','actions','sloc','lines-added','lines-removed','opened','closed','sent']
+        metrics = ['commits','authors','committers','actions','sloc',
+                   'lines-added','lines-removed','opened','closed','sent']
         if metric not in metrics:
             logging.error(metric + " not supported in companies activity.")
             return
@@ -390,29 +401,40 @@ class CompaniesActivity(Analyses):
         # Commits
         data = self.db.ExecuteQuery(self.get_sql_commits())
         activity = self.add_companies_data (activity, data)
-        self.add_metric_years("commits",activity,start_year,end_year)
+        self.add_metric_years("commits", activity, start_year, end_year)
         # Authors
         data = self.db.ExecuteQuery(self.get_sql_authors())
         activity = self.add_companies_data (activity, data)
-        self.add_metric_years("authors",activity,start_year,end_year)
+        self.add_metric_years("authors", activity, start_year, end_year)
         # Committers
         data = self.db.ExecuteQuery(self.get_sql_committers())
         activity = self.add_companies_data (activity, data)
-        self.add_metric_years("committers",activity,start_year,end_year)
+        self.add_metric_years("committers", activity, start_year, end_year)
+        # Committers active: only valid for today
+        data = self.db.ExecuteQuery(self.get_sql_committers(None, True))
+        data = self._convert_dict_field(data, "committers_active","committers-active")
+        activity = self.add_companies_data (activity, data)
+        # Committers inactive: only valid for today
+        activity['committers-inactive'] = \
+            [ activity['committers'][i] - activity['committers-active'][i] \
+             for i in range(0, len(activity['committers']))]
+        activity['committers-percent-active'] = \
+            [(activity['committers-active'][i]*100)/ activity['committers'][i] \
+             for i in range(0, len(activity['committers']))]
         # Actions
         data = self.db.ExecuteQuery(self.get_sql_actions())
         activity = self.add_companies_data (activity, data)
-        self.add_metric_years("actions",activity,start_year,end_year)
+        self.add_metric_years("actions", activity, start_year, end_year)
         # Source lines of code added
         data = self.db.ExecuteQuery(self.get_sql_lines_added())
         data = self._convert_dict_field(data, "lines_added", "lines-added")
         activity = self.add_companies_data (activity, data)
-        self.add_metric_years("lines-added",activity,start_year,end_year)
+        self.add_metric_years("lines-added", activity, start_year, end_year)
         # Source lines of code removed
         data = self.db.ExecuteQuery(self.get_sql_lines_removed())
         data = self._convert_dict_field(data, "lines_removed","lines-removed")
         activity = self.add_companies_data (activity, data)
-        self.add_metric_years("lines-removed",activity,start_year,end_year)
+        self.add_metric_years("lines-removed", activity, start_year, end_year)
 
         # We need to change the db to tickets
         dbname = automator["generic"]["db_bicho"]
@@ -422,11 +444,11 @@ class CompaniesActivity(Analyses):
         # Tickets opened
         data = self.db.ExecuteQuery(self.get_sql_opened())
         activity = self.add_companies_data (activity, data)
-        self.add_metric_years("opened",activity,start_year,end_year)
+        self.add_metric_years("opened", activity, start_year, end_year)
         # Tickets closed
         data = self.db.ExecuteQuery(self.get_sql_closed())
         activity = self.add_companies_data (activity, data)
-        self.add_metric_years("closed",activity,start_year,end_year)
+        self.add_metric_years("closed", activity, start_year, end_year)
 
         # Messages sent 
         dbname = automator["generic"]["db_mlstats"]
@@ -436,7 +458,7 @@ class CompaniesActivity(Analyses):
 
         data = self.db.ExecuteQuery(self.get_sql_sent())
         activity = self.add_companies_data (activity, data)
-        self.add_metric_years("sent",activity,start_year,end_year)
+        self.add_metric_years("sent", activity, start_year, end_year)
 
         createJSON(activity, destdir+"/companies-activity.json")
         logging.info(destdir+"/companies-activity.json created")
