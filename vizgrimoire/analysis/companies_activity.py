@@ -34,6 +34,7 @@ from SCM import SCM
 from ITS import ITS
 from MLS import MLS
 from report import Report
+import logging
 
 class CompaniesActivity(Analyses):
     id = "companies_activity"
@@ -438,6 +439,7 @@ class CompaniesActivity(Analyses):
         self.add_metric_years("sent",activity,start_year,end_year)
 
         createJSON(activity, destdir+"/companies-activity.json")
+        logging.info(destdir+"/companies-activity.json created")
 
     def get_report_files(self, data_source = None):
         return ["companies-activity.json"]
