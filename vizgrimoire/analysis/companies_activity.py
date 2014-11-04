@@ -418,12 +418,13 @@ class CompaniesActivity(Analyses):
         activity['committers-inactive'] = \
             [ activity['committers'][i] - activity['committers-active'][i] \
              for i in range(0, len(activity['committers']))]
+        activity['committers-percent-active'] = []
         for i in range(0, len(activity['committers'])):
             if activity['committers'][i] == 0:
-                activity['committers-percent-active'][i] = 100
+                activity['committers-percent-active'].append(100)
             else:
-                activity['committers-percent-active'][i] = \
-                (activity['committers-active'][i]*100) / activity['committers'][i]
+                activity['committers-percent-active'].append(\
+                (activity['committers-active'][i]*100) / activity['committers'][i])
         # Actions
         data = self.db.ExecuteQuery(self.get_sql_actions())
         activity = self.add_companies_data (activity, data)
