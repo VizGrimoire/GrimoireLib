@@ -137,7 +137,6 @@ class CompaniesActivity(Analyses):
             order by %s desc, c.name
         """ % (field, from_, where, field)
 
-	if (active): print sql
         return (sql)
 
     def get_sql_actions(self, year = None):
@@ -264,7 +263,6 @@ class CompaniesActivity(Analyses):
             order by %s desc, name
         """ % (field, from_, where, field)
 
-        print(sql)
         return (sql)
 
     def get_sql_tickets(self, field = None, year = None):
