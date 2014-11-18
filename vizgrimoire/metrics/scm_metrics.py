@@ -387,6 +387,9 @@ class Lines(Metrics):
         tables.add("commits_lines cl")
         filters.add("cl.commit_id = s.id")
 
+        # Eclipse specific
+        filters.add("s.message not like '%cvs2svn%'")
+
         tables.union_update(self.db.GetSQLReportFrom(self.filters))
         #TODO: left "author" as generic option coming from parameters (this should be specified by command line)
         filters.union_update(self.db.GetSQLReportWhere(self.filters, "author"))
