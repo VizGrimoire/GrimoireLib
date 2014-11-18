@@ -29,7 +29,7 @@ import MySQLdb
 
 import re, sys
 
-from GrimoireUtils import completePeriodIds, GetDates, GetPercentageDiff
+from GrimoireUtils import completePeriodIds, GetDates, GetPercentageDiff, check_array_values
 
 from metrics import Metrics
 
@@ -142,6 +142,7 @@ class Authors(Metrics):
         q += " GROUP by up.id ORDER BY commits DESC, authors"
         q += " limit " + str(self.filters.npeople)
         res = self.db.ExecuteQuery(q)
+	res = check_array_values (res)
 
         return res
 
