@@ -131,7 +131,6 @@ class DownloadsDS(DataSource):
             new_ips['downloads'] = ips['downloads']
             new_ips['ips'] = []
             for ip in ips['ips']:
-                ip = "64.90.32.62"
                 new_ip_aux = ip.split(".")
                 if len(new_ip_aux) != 4: new_ip = ip
                 else: new_ip = "x.x."+new_ip_aux[2]+"."+new_ip_aux[3]
