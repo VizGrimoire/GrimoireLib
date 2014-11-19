@@ -129,11 +129,13 @@ class DownloadsDS(DataSource):
         def filter_ips(ips):
             new_ips = {}
             new_ips['downloads'] = ips['downloads']
+            new_ips['ips'] = []
             for ip in ips['ips']:
+                ip = "64.90.32.62"
                 new_ip_aux = ip.split(".")
                 if len(new_ip_aux) != 4: new_ip = ip
                 else: new_ip = "x.x."+new_ip_aux[2]+"."+new_ip_aux[3]
-                new_ips['downloads'].append(new_ip)
+                new_ips['ips'].append(new_ip)
             return new_ips
 
         top = {}
