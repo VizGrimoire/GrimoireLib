@@ -22,8 +22,7 @@
 ##   Daniel Izquierdo-Cortazar <dizquierdo@bitergia.com>
 ##   Luis Cañas-Díaz <lcanas@bitergia.com>
 ##
-## python openstack_report.py -a dic_cvsanaly_openstack_4114 -d dic_bicho_gerrit_openstack_3359_bis3 -i dic_cvsanaly_openstack_4114 -r 2013-07-01,2013-10-01,2014-01-01,2014-04-01,2014-07-01 -c lcanas_bicho_openstack_1376 -b lcanas_mlstats_openstack_1376 -f dic_sibyl_openstack_3194_new
-## python openstack_report.py -a dic_cvsanaly_openstack_4114 -d dic_bicho_gerrit_openstack_3359_bis4 -i dic_cvsanaly_openstack_4114 -r 2012-10-01,2013-01-01,2013-04-01,2013-07-01,2013-10-01,2014-01-01,2014-04-01,2014-07-01,2014-10-01 -c lcanas_bicho_openstack_1376 -b lcanas_mlstats_openstack_1376 -f dic_sibyl_openstack_3194_new -e dic_irc_openstack_3277 -f dic_sibyl_openstack_3194_new
+## python openstack_report.py -a dic_cvsanaly_openstack_4114 -d dic_bicho_gerrit_openstack_3359_bis4 -i dic_cvsanaly_openstack_4114 -r 2013-01-01,2013-04-01,2013-07-01,2013-10-01,2014-01-01,2014-04-01,2014-07-01,2014-10-01,2015-01-01 -c lcanas_bicho_openstack_1376_bis -b lcanas_mlstats_openstack_1376 -f dic_sibyl_openstack_3194_new -e dic_irc_openstack_3277
 
 import imp, inspect
 from optparse import OptionParser
@@ -293,11 +292,11 @@ def scr_report(dbcon, filters):
     iterations = scr.PatchesPerReview(dbcon, filters)
     createJSON(iterations.get_agg()["median"], "./release/scr_iterations_"+project_name+".json")
 
-    waiting4reviewer = scr.ReviewsWaitingForReviewer(dbcon, filters)
-    createJSON(waiting4reviewer.get_agg(), "./release/scr_waiting4reviewer_"+project_name+".json")
+    #waiting4reviewer = scr.ReviewsWaitingForReviewer(dbcon, filters)
+    #createJSON(waiting4reviewer.get_agg(), "./release/scr_waiting4reviewer_"+project_name+".json")
 
-    waiting4submitter = scr.ReviewsWaitingForSubmitter(dbcon, filters)
-    createJSON(waiting4submitter.get_agg(), "./release/scr_waiting4submitter_"+project_name+".json")
+    #waiting4submitter = scr.ReviewsWaitingForSubmitter(dbcon, filters)
+    #createJSON(waiting4submitter.get_agg(), "./release/scr_waiting4submitter_"+project_name+".json")
 
     filters.period = "month"
     time2review = scr.TimeToReview(dbcon, filters)
@@ -330,8 +329,8 @@ def scr_report(dbcon, filters):
     dataset["abandoned"] = abandoned.get_agg()["abandoned"]
     dataset["bmiscr"] = round(bmi.get_agg()["bmiscr"], 2)
     dataset["active_core"] = active_core.get_agg()["core_reviewers"]
-    dataset["waiting4reviewer"] = round(waiting4reviewer.get_agg()["ReviewsWaitingForReviewer"], 2)
-    dataset["waiting4submitter"] = round(waiting4submitter.get_agg()["ReviewsWaitingForSubmitter"], 2)
+    #dataset["waiting4reviewer"] = round(waiting4reviewer.get_agg()["ReviewsWaitingForReviewer"], 2)
+    #dataset["waiting4submitter"] = round(waiting4submitter.get_agg()["ReviewsWaitingForSubmitter"], 2)
     dataset["review_time_days_median"] = round(time2review.get_agg()["review_time_days_median"], 2)
     dataset["review_time_days_avg"] = round(time2review.get_agg()["review_time_days_avg"], 2)
     dataset["iterations_mean"] = round(iterations.get_agg()["mean"], 2)
@@ -827,7 +826,7 @@ def general_info(opts, releases, people_out, affs_out):
         irc_senders.append(dataset["senders"])
 
 
-    labels = ["12-Q4", "13-Q1", "13-Q2", "13-Q3", "13-Q4", "14-Q1", "14-Q2","14-Q3"]
+    labels = ["13-Q1", "13-Q2", "13-Q3", "13-Q4", "14-Q1", "14-Q2","14-Q3", "14-Q4"]
     #labels = ["2013-Q3", "2013-Q4", "2014-Q1", "2014-Q2"]
     barh_chart("Emails sent", labels, emails, "emails")
     createCSV({"labels":labels, "emails":emails}, "./release/emails.csv")
