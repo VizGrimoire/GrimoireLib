@@ -1203,8 +1203,8 @@ class TimeToReviewPatch(Metrics):
         filters_str = self.db._get_filters_query(filters)
 
         # Adding extra filters
-        tables_str = tables_str + " " + self.db.GetSQLReportFrom(self.filters.type_analysis)
-        filters_str = filters_str + " " + self.db.GetSQLReportWhere(self.filters.type_analysis)
+        tables_str = tables_str + ", " + self.db._get_tables_query(self.db.GetSQLReportFrom(self.filters.type_analysis))
+        filters_str = filters_str + " and " + self.db._get_filters_query(self.db.GetSQLReportWhere(self.filters.type_analysis))
         filters_str = filters_str + " order by issue_id, cast(old_value as DECIMAL) asc"
 
         query = "select " + fields_str + " from " + tables_str + " where " + filters_str
@@ -1347,7 +1347,10 @@ class TimeToReviewPatch(Metrics):
 if __name__ == '__main__':
 
     filters = MetricFilters("month", "'2014-09-01'", "'2014-10-01'", ["repository", "review.openstack.org_openstack/nova"])
-    dbcon = SCRQuery("root", "", "dic_bicho_gerrit_openstack_3359_bis4", "dic_cvsanaly_openstack_4114")
+    dbcon = SCRQuery("root", "", "dic_bicho_gerrit_openstack_3359_bis3", "dic_cvsanaly_openstack_4114")
+
+    pending = Pending(dbcon, filters)
+    print pending.get_agg()
 
     timewaiting = TimeToReviewPatch(dbcon, filters)
     from data_handler import DHESA
@@ -1357,7 +1360,6 @@ if __name__ == '__main__':
     print dhesa.data["median"]
     print dhesa.data["mean"]
 
-    exit()
     print "Submitted info:"
     submitted = Submitted(dbcon, filters)
     print submitted.get_ts()
