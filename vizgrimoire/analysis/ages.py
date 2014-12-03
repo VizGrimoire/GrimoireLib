@@ -149,7 +149,8 @@ class Ages(Analyses):
             # all the actors, considering only activty during
             # the startdate..enddate period
             period = MLSPeriodCondition (start = startdate,
-                                          end = enddate)
+                                         end = enddate,
+                                         date = "check")
             database = MLSDatabase (url = url,
                                     schema = schema,
                                     schema_id = schema_id)

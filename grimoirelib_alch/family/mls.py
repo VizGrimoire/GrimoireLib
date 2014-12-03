@@ -37,6 +37,12 @@ class PeriodCondition (DBCondition):
         - query: query to which the filter will be applied
         """
 
+        if self.date == "check":
+            # Check if arrival_date is available
+            if query.null_arrival().count() == 0:
+                self.date = "arrival"
+            else:
+                self.date = "first"
         return query.filter_period(start = self.start,
                                    end = self.end,
                                    date = self.date)
