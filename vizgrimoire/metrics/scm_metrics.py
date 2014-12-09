@@ -71,6 +71,45 @@ class Commits(Metrics):
         return query
 
 
+class NewAuthors(Metrics):
+    """ A new author comes to the community when her first commit is detected
+
+        By definition a new author joins the Git community when her first patchset
+        has landed into the code. This is calculated as the minimum date found in 
+        the database for her actions.
+    """
+
+    id = "newauthors"
+    name = "New Authors"
+    desc = "New authors joining the community"
+
+    def _get_sql(self, evolutionary):
+
+        fields = Set([])
+        tables = Set([])
+        filters = Set([])
+
+        fields.add("count(distinct(t.upeople_id)) as newauthors")
+        tables.add("scmlog s")
+        tables.add("people_upeople pup")
+        tables.add("""(select pup.upeople_id as upeople_id,
+                              min(s.date) as date
+                       from people_upeople pup,
+                            scmlog s
+                       where s.author_id=pup.people_id
+                       group by pup.upeople_id) t
+                   """)
+        tables.union_update(self.db.GetSQLReportFrom(self.filters))
+        filters.add("s.author_id = pup.people_id")
+        filters.add("pup.upeople_id=t.upeople_id")
+        filters.union_update(self.db.GetSQLReportWhere(self.filters, "author"))
+
+        q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
+                               self.filters.enddate, " t.date ", fields,
+                               tables, filters, evolutionary, self.filters.type_analysis)
+        return q
+
+
 class Authors(Metrics):
     """ Authors metric class for source code management systems """
 
