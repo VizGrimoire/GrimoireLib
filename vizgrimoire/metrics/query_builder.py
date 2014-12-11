@@ -1441,6 +1441,18 @@ class SCRQuery(DSQuery):
         # Not include reviews before startdate no matter mod_date is after startdate
         filters.add("i.submitted_on >= " + startdate)
 
+        #Hack to use the Upload date of the first patchset and not the
+        #submission date. This is needed given that in some cases the creation
+        #date of the changeset is incorrect in Gerrit servers.
+        if type_ == "submitted":
+            tables.add("changes ch")
+            filters.add("ch.issue_id = i.id")
+            filters.add("field = 'Upload'") # upload event of a patchset
+            filters.add("old_value = 1")  # first patchset
+            date_field = "ch.changed_on" # date filter
+            filters.remove("i.submitted_on >= " + startdate) # removing noise
+            filters.add("ch.changed_on >= " + startdate) # adding correct date filter
+
         q = self.BuildQuery (period, startdate, enddate, date_field, fields, tables,
                              filters, evolutionary, type_analysis)
         return q
