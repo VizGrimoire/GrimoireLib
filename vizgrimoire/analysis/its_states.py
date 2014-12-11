@@ -63,6 +63,15 @@ class TicketsStates(Analyses):
                                fields, tables, filters, evolutionary)
         return q
 
+    def __get_sql_state_types__(self, backend_type):
+        """This function returns the list of states available on the database"""
+
+        if backend_type == "lp": backend_type = "launchpad" # openstack
+
+        q = """SELECT DISTINCT(status) status
+               FROM issues_log_%s""" % backend_type
+        return q
+
     def get_backlog(self, states, backend_type):
         import datetime
         import time
@@ -152,6 +161,11 @@ class TicketsStates(Analyses):
 
         return current_states
 
+    def get_state_types(self, backend_type):
+        query = self.__get_sql_state_types__(backend_type)
+        result = self.db.ExecuteQuery(query)
+
+        return [state  for state in result['status']]
 
     def get_ts (self, data_source = None):
         from ITS import ITS
@@ -171,6 +185,8 @@ class TicketsStates(Analyses):
         else:
             backend_type = backend.its_type
 
-        backlog = self.get_backlog(backend.statuses, backend_type)
-        current_states = self.get_current_states(backend.statuses)
+        states = self.get_state_types(backend_type)
+
+        backlog = self.get_backlog(states, backend_type)
+        current_states = self.get_current_states(states)
         return dict(backlog.items() + current_states.items())
