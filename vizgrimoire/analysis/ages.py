@@ -149,13 +149,16 @@ class Ages(Analyses):
             # all the actors, considering only activty during
             # the startdate..enddate period
             period = MLSPeriodCondition (start = startdate,
-                                          end = enddate)
+                                         end = enddate,
+                                         date = "check")
             database = MLSDatabase (url = url,
                                     schema = schema,
                                     schema_id = schema_id)
+            
             data = MLSActivityPersons (
                 datasource = database,
                 name = "list_usenders",
+                date_kind = "check",
                 conditions = (period,))
         else:
             logging.info("Error: No aging analysys for this data source!")
@@ -227,8 +230,8 @@ if __name__ == '__main__':
     # Get 
     filters = MetricFilters("months", "'2013-06-01'", "'2014-01-01'", [])
     dbcon = DSQuery(user = "jgb", password = "XXX", 
-                    database = "openstack_cvsanaly_2014-06-06",
-                    identities_db = "openstack_cvsanaly_2014-06-06")
+                    database = "oscon_openstack_scm",
+                    identities_db = "oscon_openstack_scm")
     ages = Ages(dbcon, filters)
 
     # Produce pretty JSON output

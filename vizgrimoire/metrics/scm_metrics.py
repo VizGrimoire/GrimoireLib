@@ -29,7 +29,7 @@ import MySQLdb
 
 import re, sys
 
-from GrimoireUtils import completePeriodIds, GetDates, GetPercentageDiff
+from GrimoireUtils import completePeriodIds, GetDates, GetPercentageDiff, check_array_values
 
 from metrics import Metrics
 
@@ -69,6 +69,45 @@ class Commits(Metrics):
                                    self.filters.enddate, " s.date ", fields,
                                    tables, filters, evolutionary, self.filters.type_analysis)
         return query
+
+
+class NewAuthors(Metrics):
+    """ A new author comes to the community when her first commit is detected
+
+        By definition a new author joins the Git community when her first patchset
+        has landed into the code. This is calculated as the minimum date found in 
+        the database for her actions.
+    """
+
+    id = "newauthors"
+    name = "New Authors"
+    desc = "New authors joining the community"
+
+    def _get_sql(self, evolutionary):
+
+        fields = Set([])
+        tables = Set([])
+        filters = Set([])
+
+        fields.add("count(distinct(t.upeople_id)) as newauthors")
+        tables.add("scmlog s")
+        tables.add("people_upeople pup")
+        tables.add("""(select pup.upeople_id as upeople_id,
+                              min(s.date) as date
+                       from people_upeople pup,
+                            scmlog s
+                       where s.author_id=pup.people_id
+                       group by pup.upeople_id) t
+                   """)
+        tables.union_update(self.db.GetSQLReportFrom(self.filters))
+        filters.add("s.author_id = pup.people_id")
+        filters.add("pup.upeople_id=t.upeople_id")
+        filters.union_update(self.db.GetSQLReportWhere(self.filters, "author"))
+
+        q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
+                               self.filters.enddate, " t.date ", fields,
+                               tables, filters, evolutionary, self.filters.type_analysis)
+        return q
 
 
 class Authors(Metrics):
@@ -130,18 +169,19 @@ class Authors(Metrics):
             dtables = ", (SELECT MAX(date) as last_date from scmlog) dt"
             dfilters = " AND DATEDIFF (last_date, date) < %s " % (days)
 
-        fields =  "SELECT COUNT(DISTINCT(s.id)) as commits, u.id, u.identifier as authors "
-        fields += "FROM actions a, scmlog s, people_upeople pup, upeople u " + dtables
+        fields =  "SELECT COUNT(DISTINCT(s.id)) as commits, up.id, up.identifier as authors "
+        fields += "FROM actions a, scmlog s, people_upeople pup, upeople up " + dtables
         repos_from = " , " + repos_from
         q = fields + repos_from + repos_where
         q += dfilters
         if filter_bots != "": q += " AND "+ filter_bots
-        q += " AND pup.people_id = s.author_id AND u.id = pup.upeople_id "
+        q += " AND pup.people_id = s.author_id AND up.id = pup.upeople_id "
         q += " and s.id = a.commit_id "
         q += " AND s.date >= " + startdate + " and s.date < " + enddate
-        q += " GROUP by u.id ORDER BY commits DESC, authors"
+        q += " GROUP by up.id ORDER BY commits DESC, authors"
         q += " limit " + str(self.filters.npeople)
         res = self.db.ExecuteQuery(q)
+	res = check_array_values (res)
 
         return res
 
@@ -157,11 +197,11 @@ class Authors(Metrics):
 
         q = """
         SELECT id, authors, count(logid) AS commits FROM (
-        SELECT DISTINCT u.id AS id, u.identifier AS authors, s.id as logid
-        FROM people p,  scmlog s,  actions a, people_upeople pup, upeople u,
+        SELECT DISTINCT up.id AS id, up.identifier AS authors, s.id as logid
+        FROM people p,  scmlog s,  actions a, people_upeople pup, upeople up,
              upeople_companies upc,  companies c
         WHERE  %s s.id = a.commit_id AND p.id = s.author_id AND s.author_id = pup.people_id  AND
-          pup.upeople_id = upc.upeople_id AND pup.upeople_id = u.id AND  s.date >= upc.init AND
+          pup.upeople_id = upc.upeople_id AND pup.upeople_id = up.id AND  s.date >= upc.init AND
           s.date < upc.end AND upc.company_id = c.id AND
           s.date >=%s AND s.date < %s AND c.name =%s) t
         GROUP BY id
@@ -188,24 +228,24 @@ class Authors(Metrics):
 
         filters = self.db.GetSQLReportWhere(self.filters)
 
-        fields =  "SELECT COUNT(DISTINCT(s.id)) as commits, u.id, u.identifier as authors "
+        fields =  "SELECT COUNT(DISTINCT(s.id)) as commits, up.id, up.identifier as authors "
 
         tables.add("actions a")
         tables.add("scmlog s")
         tables.add("people_upeople pup")
-        tables.add(self.db.identities_db + ".upeople u")
+        tables.add(self.db.identities_db + ".upeople up")
         tables.union_update(self.db.GetSQLReportFrom(self.filters))
         tables_str = self.db._get_tables_query(tables)
 
         filters.add("pup.people_id = s.author_id")
-        filters.add("u.id = pup.upeople_id")
+        filters.add("up.id = pup.upeople_id")
         filters.add("a.commit_id = s.id")
         filters.add("s.date >= " + startdate)
         filters.add("s.date < " + enddate)
         if filter_bots<>'': filters.add(filter_bots)
         filters_str = self.db._get_filters_query(filters)
 
-        filters_str += " GROUP by u.id ORDER BY commits DESC, authors"
+        filters_str += " GROUP by up.id ORDER BY commits DESC, authors"
         filters_str += " limit " + str(self.filters.npeople)
 
         query = fields + " from " + tables_str + " where " + filters_str
@@ -233,7 +273,7 @@ class Authors(Metrics):
             dfilters = " DATEDIFF (last_date, date) < %s AND " % (days)
 
         q = """
-        SELECT u.id, u.identifier as %ss, SUM(total) AS commits FROM
+        SELECT up.id, up.identifier as %ss, SUM(total) AS commits FROM
         (
          SELECT s.%s_id, COUNT(DISTINCT(s.id)) as total
          FROM scmlog s, actions a %s
@@ -242,9 +282,9 @@ class Authors(Metrics):
          GROUP BY  s.%s_id ORDER by total DESC, s.%s_id
         ) t
         JOIN people_upeople pup ON pup.people_id = %s_id
-        JOIN upeople u ON pup.upeople_id = u.id
+        JOIN upeople up ON pup.upeople_id = up.id
         %s
-        GROUP BY u.identifier ORDER BY commits desc, %ss  limit %s
+        GROUP BY up.identifier ORDER BY commits desc, %ss  limit %s
         """ % (role, role, dtables, dfilters, startdate, enddate, role, role, role, filter_bots, role, limit)
 
         data = self.db.ExecuteQuery(q)
@@ -385,6 +425,9 @@ class Lines(Metrics):
         tables.add("scmlog s")
         tables.add("commits_lines cl")
         filters.add("cl.commit_id = s.id")
+
+        # Eclipse specific
+        filters.add("s.message not like '%cvs2svn%'")
 
         tables.union_update(self.db.GetSQLReportFrom(self.filters))
         #TODO: left "author" as generic option coming from parameters (this should be specified by command line)

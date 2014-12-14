@@ -22,7 +22,7 @@
 ##   Daniel Izquierdo-Cortazar <dizquierdo@bitergia.com>
 
 
-from GrimoireUtils import completePeriodIds, GetDates, GetPercentageDiff
+from GrimoireUtils import completePeriodIds, GetDates, GetPercentageDiff, check_array_values
 from query_builder import DSQuery
 from metrics_filter import MetricFilters
 
@@ -109,6 +109,7 @@ class Metrics(object):
     @staticmethod
     def _convert_group_to_ts(data, id_field):
         """ Convert a dict with mixed ts to individual ts """
+        data = check_array_values(data)
         ts = {}
         if id_field not in data:
             raise Exception(id_field + " not in " + str(data))
@@ -180,7 +181,7 @@ class Metrics(object):
             id_field = id_field.split('.')[1] # remove table name
             ts = Metrics._convert_group_to_ts(ts, id_field)
             ts = Metrics._complete_period_ids_items(ts, id_field, self.filters.period,
-                                                   self.filters.startdate, self.filters.enddate)
+                                                    self.filters.startdate, self.filters.enddate)
         else:
             ts = completePeriodIds(ts, self.filters.period, 
                                    self.filters.startdate, self.filters.enddate)

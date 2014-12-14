@@ -153,7 +153,7 @@ class Timezone(Analyses):
         logging.info("Producing report for study: Timezone")
         if data_source == SCM:
             prefix = "scm"
-        if data_source == MLS:
+        elif data_source == MLS:
             prefix = "mls"
         else:
             logging.info("Error: data_source not supported for Timezone")

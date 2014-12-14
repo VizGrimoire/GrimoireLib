@@ -21,6 +21,7 @@
 
 import logging, os
 
+from filter import Filter
 from GrimoireSQL import GetSQLGlobal, GetSQLPeriod, GetSQLReportFrom 
 from GrimoireSQL import GetSQLReportWhere, ExecuteQuery, BuildQuery
 from GrimoireUtils import GetPercentageDiff, GetDates, completePeriodIds, createJSON
@@ -59,8 +60,9 @@ class Mediawiki(DataSource):
     @staticmethod
     def get_evolutionary_data (period, startdate, enddate, i_db, filter_ = None):
         if filter_ is not None:
-            logging.warn("Mediawiki does not support filters yet.")
-            return {}
+            if filter_.get_name() != "people2":
+                logging.warn("Mediawiki only supports people2 filter.")
+                return {}
 
         metrics =  DataSource.get_metrics_data(Mediawiki, period, startdate, enddate, i_db, filter_, True)
         if filter_ is not None: studies = {}
@@ -77,8 +79,9 @@ class Mediawiki(DataSource):
     @staticmethod
     def get_agg_data (period, startdate, enddate, identities_db, filter_ = None):
         if filter_ is not None:
-            logging.warn("Mediawiki does not support filters yet.")
-            return {}
+            if filter_.get_name() != "people2":
+                logging.warn("Mediawiki only supports people2 filter.")
+                return {}
 
         metrics =  DataSource.get_metrics_data(Mediawiki, period, startdate, enddate, identities_db, filter_, False)
         if filter_ is not None: studies = {}
@@ -122,13 +125,43 @@ class Mediawiki(DataSource):
         items = None
         filter_name = filter_.get_name()
 
-        logging.error("Mediawiki " + filter_name + " not supported")
+        items = None
+        filter_name = filter_.get_name()
+
+        if (filter_name == "people2"):
+            metric = DataSource.get_metrics("authors", Mediawiki)
+            items = metric.get_list()
+            items['name'] = items.pop('authors')
+        else:
+            logging.error("Mediawiki " + filter_name + " not supported")
+            return items
+
         return items
 
     @staticmethod
     def create_filter_report(filter_, period, startdate, enddate, destdir, npeople, identities_db):
-        items = Mediawiki.get_filter_items(filter_, startdate, enddate, identities_db)
+        from report import Report
+        items = Report.get_items()
+        if items is None:
+            items = Mediawiki.get_filter_items(filter_, startdate, enddate, identities_db)
         if (items == None): return
+
+    @staticmethod
+    def create_filter_report_all(filter_, period, startdate, enddate, destdir, npeople, identities_db):
+        filter_name = filter_.get_name()
+        if filter_name == "people2" or filter_name == "company":
+            filter_all = Filter(filter_name, None)
+            agg_all = Mediawiki.get_agg_data(period, startdate, enddate,
+                                             identities_db, filter_all)
+            fn = os.path.join(destdir, filter_.get_static_filename_all(Mediawiki()))
+            createJSON(agg_all, fn)
+
+            evol_all = Mediawiki.get_evolutionary_data(period, startdate, enddate,
+                                                       identities_db, filter_all)
+            fn = os.path.join(destdir, filter_.get_evolutionary_filename_all(Mediawiki()))
+            createJSON(evol_all, fn)
+        else:
+            raise Exception(Mediawiki.get_name()+ " " + filter_name +" does not support yet group by items sql queries")
 
     @staticmethod
     def get_top_people(startdate, enddate, identities_db, npeople):

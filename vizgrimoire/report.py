@@ -33,6 +33,7 @@ class Report(object):
     """Basic class for a Grimoire automator based dashboard"""
 
     _filters = []
+    _items = None
     _all_data_sources = []
     _all_studies = []
     _on_studies = []
@@ -219,6 +220,14 @@ class Report(object):
                 found = filter_
                 break
         return found
+
+    @staticmethod
+    def get_items():
+        return Report._items
+
+    @staticmethod
+    def set_items(items):
+        Report._items = items
 
     @staticmethod
     def get_studies():

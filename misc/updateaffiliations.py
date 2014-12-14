@@ -76,10 +76,8 @@ def get_new_people(connector, domain):
    # no affiliation = no entry for such developer in upeople_companies table
 
    query = " select i.upeople_id " +\
-           " from identities i, " +\
-           "      people_upeople pup " +\
+           " from identities i " +\
            " where identity like '%@"+domain+"%' " +\
-           "       and pup.upeople_id = i.upeople_id " +\
            "       and i.upeople_id not in (select upeople_id " +\
                                             "from upeople_companies);"
    upeople_id = execute_query(connector, query)
@@ -106,9 +104,11 @@ def get_info_developer(connector, upeople_id):
            " where pup.upeople_id = " + str(upeople_id) +\
            " and pup.people_id = p.id"
    dev_info = execute_query(connector, query)
-   print "PEOPLE TABLE: "
-   print "    name: " + str(dev_info[0][0])
-   print "    email: " + str(dev_info[0][1])
+
+   if dev_info:
+       print "PEOPLE TABLE: "
+       print "    name: " + str(dev_info[0][0])
+       print "    email: " + str(dev_info[0][1])
 
    # identities table information
    query = " select identity " +\
@@ -134,14 +134,13 @@ def insert_in_company(connector, developer, company):
            " where pup.upeople_id = " + str(developer)  +\
            " and pup.people_id = p.id " +\
            " and p.id = s.author_id "
-   min_date = ""
    min_date = execute_query(connector, query)
    min_date = min_date[0][0]
    # insert data into database
    query = " insert into upeople_companies " + \
            " (upeople_id, company_id, init, end) " +\
            " values("+str(developer)+", "+str(company_id)+", "
-   if min_date <> "":
+   if min_date:
       query = query + "'" + str(min_date) + "', '2100-01-01')"
    else:
       query = query + "'1900-01-01', '2100-01-01')"

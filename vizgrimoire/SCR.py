@@ -34,7 +34,7 @@ from GrimoireSQL import GetSQLGlobal, GetSQLPeriod
 from GrimoireSQL import ExecuteQuery
 from GrimoireUtils import GetPercentageDiff, GetDates, completePeriodIds
 from GrimoireUtils import checkListArray, removeDecimals, get_subprojects
-from GrimoireUtils import getPeriod, createJSON, checkFloatArray, medianAndAvgByPeriod
+from GrimoireUtils import getPeriod, createJSON, checkFloatArray, medianAndAvgByPeriod, check_array_values
 from metrics_filter import MetricFilters
 from query_builder import DSQuery
 
@@ -87,6 +87,7 @@ class SCR(DataSource):
     def __get_data__ (period, startdate, enddate, identities_db, filter_ = None, evol = False):
         data = {}
         DS = SCR
+        from GrimoireUtils import fill_and_order_items
 
         type_analysis = None
         if filter_ is not None:
@@ -147,8 +148,9 @@ class SCR(DataSource):
                 logging.info(item.id)
                 id_field = DSQuery.get_group_field(type_analysis[0])
                 id_field = id_field.split('.')[1] # remove table name
-                mvalue = DataSource._fill_and_order_items(items, mvalue, id_field,
-                                                          evol, period, startdate, enddate)
+                mvalue = check_array_values(mvalue)
+                mvalue = fill_and_order_items(items, mvalue, id_field,
+                                              evol, period, startdate, enddate)
             data = dict(data.items() + mvalue.items())
             item.filters = mfilter_orig
 
@@ -192,7 +194,7 @@ class SCR(DataSource):
                     if type_analysis and type_analysis[1] is None:
                         id_field = DSQuery.get_group_field(type_analysis[0])
                         id_field = id_field.split('.')[1] # remove table name
-                        period_data = DataSource._fill_and_order_items(items, period_data, id_field)
+                        period_data = fill_and_order_items(items, period_data, id_field)
 
                     data = dict(data.items() +  period_data.items())
 
@@ -275,9 +277,12 @@ class SCR(DataSource):
 
     @staticmethod
     def create_filter_report(filter_, period, startdate, enddate, destdir, npeople, identities_db):
-        items = SCR.get_filter_items(filter_, startdate, enddate, identities_db)
-        if (items == None): return
-        items = items['name']
+        from report import Report
+        items = Report.get_items()
+        if items is None:
+            items = SCR.get_filter_items(filter_, startdate, enddate, identities_db)
+            if (items == None): return
+            items = items['name']
 
         filter_name = filter_.get_name()
 
@@ -328,7 +333,7 @@ class SCR(DataSource):
         check = False # activate to debug issues
         filter_name = filter_.get_name()
 
-        if filter_name == "people2" or filter_name == "company_off":
+        if filter_name == "people2" or filter_name == "company":
             filter_all = Filter(filter_name, None)
             agg_all = SCR.get_agg_data(period, startdate, enddate,
                                        identities_db, filter_all)
@@ -455,13 +460,13 @@ def GetSQLCompaniesFromSCR (identities_db):
 
 def GetSQLCompaniesWhereSCR (company):
     #fields necessaries to match info among tables
-    return ("and i.submitted_by = pup.people_id "+\
+    filters = "and i.submitted_by = pup.people_id "+\
               "and pup.upeople_id = upc.upeople_id "+\
               "and i.submitted_on >= upc.init "+\
               "and i.submitted_on < upc.end "+\
-              "and upc.company_id = c.id "+\
-              "and c.name ='"+ company+"'")
-
+              "and upc.company_id = c.id "
+    if company is not None:
+        filters += "and c.name ='"+ company+"'"
 
 def GetSQLCountriesFromSCR (identities_db):
     #tables necessaries for companies

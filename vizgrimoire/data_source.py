@@ -157,6 +157,11 @@ class DataSource(object):
         raise NotImplementedError
 
     @staticmethod
+    def create_filter_report_all(filter_, period, startdate, enddate, destdir, npeople, identities_db):
+        """Create all files related to all filters in all data sources using GROUP BY queries"""
+        raise NotImplementedError
+
+    @staticmethod
     def get_top_people_file(ds):
         """Get the filename used to store top people data"""
         return ds+"-people.json"
@@ -295,71 +300,10 @@ class DataSource(object):
         return data
 
     @staticmethod
-    def _fill_items(items, data, id_field, evol = False,
-                    period = None, startdate = None, enddate = None):
-        """ Complete data dict items filling with 0 not existing items """
-        from GrimoireUtils import completePeriodIds
-
-        if evol:
-            zero_ts = completePeriodIds({id_field:[],period:[]},
-                                        period, startdate, enddate)[id_field]
-        fields = data.keys()
-        if id_field not in fields: return data
-        fields.remove(id_field)
-        for id in items:
-            if id not in data[id_field]:
-                data[id_field].append(id)
-                for field in fields:
-                    if not evol:
-                        data[field].append(0)
-                    if evol:
-                        data[field].append(zero_ts)
-        return data
-
-    @staticmethod
-    def _order_items(items, data, id_field, evol = False, period = None):
-        """ Reorder data identities using items ordering """
-        fields = data.keys()
-        if id_field not in fields: return data
-        data_ordered = {}
-        for field in fields:
-            data_ordered[field] = []
-
-        fields.remove(id_field)
-
-        if evol:
-            evol_fields = [period, 'id', 'unixtime','date']
-            for evol_field in evol_fields:
-                fields.remove(evol_field)
-                data_ordered[evol_field] = data[evol_field]
-
-        for id in items:
-            data_ordered[id_field].append(id)
-            try:
-                pos = data[id_field].index(id)
-            except:
-                print items
-                print data[id_field]
-                raise
-            for field in fields:
-                data_ordered[field].append(data[field][pos])
-
-        return data_ordered
-
-    @staticmethod
-    def _fill_and_order_items(items, data, id_field, evol = False,
-                              period = None, startdate = None, enddate = None):
-        # Only items will appear for a filter
-        if not evol: # evol is already filled (complete data) for a company, but not all companies
-            data = DataSource._fill_items(items, data, id_field)
-        if evol: data = DataSource._fill_items(items, data, id_field,
-                                               evol, period, startdate, enddate)
-        return DataSource._order_items(items, data, id_field, evol, period)
-
-    @staticmethod
     def get_metrics_data(DS, period, startdate, enddate, identities_db, 
                          filter_ = None, evol = False):
         """ Get basic data from all core metrics """
+        from GrimoireUtils import fill_and_order_items
         data = {}
 
         from report import Report
@@ -386,6 +330,7 @@ class DataSource(object):
 
         if type_analysis and type_analysis[1] is None:
             items = DS.get_filter_items(filter_, startdate, enddate, identities_db)
+            if items is None: return data
             items = items.pop('name')
 
         if DS.get_name()+"_startdate" in Report.get_config()['r']:
@@ -416,8 +361,8 @@ class DataSource(object):
                 logging.info(item.id)
                 id_field = DSQuery.get_group_field(type_analysis[0])
                 id_field = id_field.split('.')[1] # remove table name
-                mvalue = DataSource._fill_and_order_items(items, mvalue, id_field,
-                                                          evol, period, startdate, enddate)
+                mvalue = fill_and_order_items(items, mvalue, id_field,
+                                              evol, period, startdate, enddate)
             data = dict(data.items() + mvalue.items())
 
             item.filters = mfilter_orig
@@ -447,7 +392,7 @@ class DataSource(object):
                     if type_analysis and type_analysis[1] is None:
                         id_field = DSQuery.get_group_field(type_analysis[0])
                         id_field = id_field.split('.')[1] # remove table name
-                        period_data = DataSource._fill_and_order_items(items, period_data, id_field)
+                        period_data = fill_and_order_items(items, period_data, id_field)
 
                     data = dict(data.items() + period_data.items())
 

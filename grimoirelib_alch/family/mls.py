@@ -37,6 +37,12 @@ class PeriodCondition (DBCondition):
         - query: query to which the filter will be applied
         """
 
+        if self.date == "check":
+            # Check if arrival_date is available
+            if query.null_arrival().count() == 0:
+                self.date = "arrival"
+            else:
+                self.date = "first"
         return query.filter_period(start = self.start,
                                    end = self.end,
                                    date = self.date)
@@ -44,9 +50,14 @@ class PeriodCondition (DBCondition):
     def __init__ (self, start = None, end = None, date = "arrival"):
         """Instatiation of the object.
 
-        - start (datetime): start of the period
-        - end (datetime): end of the period
-        - date: "arrival"
+        start: datetime.datetime
+            Start of the period.
+        end: datetime.datetime
+            End of the period.
+        date: { "first", "arrival" }
+            Select "first_date" or "arrival_date" from messages.
+            Default: "arrival".
+
         """
 
         self.start = start

@@ -130,6 +130,7 @@ class SCM(DataSource):
     def get_top_data_companies (startdate, enddate, i_db, filter_, npeople):
         top = {}
         mcompanies = DataSource.get_metrics("companies", SCM)
+        if mcompanies is None: return top
         period = None
         if filter_ is not None:
             if filter_.get_name() == "project":
@@ -145,6 +146,7 @@ class SCM(DataSource):
     def get_top_data_authors (startdate, enddate, i_db, filter_, npeople):
         top = {}
         mauthors = DataSource.get_metrics("authors", SCM)
+        if mauthors is None: return top
         period = None
         type_analysis = None
         if filter_ is not None:
@@ -168,11 +170,16 @@ class SCM(DataSource):
 
     @staticmethod
     def get_top_data (startdate, enddate, i_db, filter_, npeople):
+        from report import Report
         top = {}
         data = SCM.get_top_data_authors (startdate, enddate, i_db, filter_, npeople)
         top = dict(top.items() + data.items())
-        data = SCM.get_top_data_companies (startdate, enddate, i_db, filter_, npeople)
-        top = dict(top.items() + data.items())
+        companies_on = False
+        for filter_aux in Report.get_filters():
+            if filter_aux.get_name() == "company": companies_on = True
+        if companies_on:
+            data = SCM.get_top_data_companies (startdate, enddate, i_db, filter_, npeople)
+            top = dict(top.items() + data.items())
         return top
 
     @staticmethod
@@ -198,10 +205,11 @@ class SCM(DataSource):
         elif (filter_name == "people2"):
             metric = DataSource.get_metrics("people2", SCM)
         else:
-            logging.error(filter_name + " not supported")
+            logging.error("SCM " + filter_name + " not supported")
             return items
 
-        items = metric.get_list()
+        if metric is not None: items = metric.get_list()
+
         return items
 
     @staticmethod
@@ -215,9 +223,12 @@ class SCM(DataSource):
 
     @staticmethod
     def create_filter_report(filter_, period, startdate, enddate, destdir, npeople, identities_db):
-        items = SCM.get_filter_items(filter_, startdate, enddate, identities_db)
-        if (items == None): return
-        items = items['name']
+        from report import Report
+        items = Report.get_items()
+        if items is None:
+            items = SCM.get_filter_items(filter_, startdate, enddate, identities_db)
+            if (items == None): return
+            items = items['name']
 
         filter_name = filter_.get_name()
 
@@ -304,7 +315,7 @@ class SCM(DataSource):
         # New API for getting all metrics with one query
         check = False # activate to debug issues
         filter_name = filter_.get_name()
-        if filter_name == "people2" or filter_name == "company_off":
+        if filter_name == "people2" or filter_name == "company":
             filter_all = Filter(filter_name, None)
             agg_all = SCM.get_agg_data(period, startdate, enddate,
                                        identities_db, filter_all)
@@ -327,6 +338,7 @@ class SCM(DataSource):
     @staticmethod
     def get_top_people(startdate, enddate, identities_db, npeople):
         top_authors_data = SCM.get_top_data (startdate, enddate, identities_db, None, npeople)
+        if "authors." not in top_authors_data.keys(): return None
         top = top_authors_data['authors.']["id"]
         top += top_authors_data['authors.last year']["id"]
         top += top_authors_data['authors.last month']["id"]

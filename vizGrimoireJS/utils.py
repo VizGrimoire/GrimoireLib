@@ -100,6 +100,10 @@ def read_options():
                       action="store_true",
                       dest="no_filters",
                       help="don't generate filters metrics")
+    parser.add_option("--item",
+                      action="store",
+                      dest="item",
+                      help="Select an item filter from data source to be generated.")
     parser.add_option("-m", "--metrics",
                       action="store",
                       dest="metrics_path",
@@ -127,4 +131,6 @@ def read_options():
         parser.error("--metrics path is needed.")
     if opts.metric and opts.data_source is None:
         parser.error("--metric need also --data-source.")
+    if opts.item and opts.filter is None:
+        parser.error("--item need also --filter.")
     return opts

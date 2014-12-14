@@ -21,7 +21,7 @@
 ## Authors:
 ##   Daniel Izquierdo-Cortazar <dizquierdo@bitergia.com>
 ##
-## python eclipse_mm.py -a cp_cvsanaly_Eclipse_3328 -d cp_gerrit_Eclipse_3328 -i cp_cvsanaly_Eclipse_3328 -r 2014-04-01,2014-07-01 -c cp_bicho_Eclipse_3328 -b cp_mlstats_Eclipse_4134
+## python eclipse_mm.py -a eclipse_source_code -d eclipse_reviews -i eclipse_source_code -r 2014-20-09,2014-10-20 -c eclipse_tickets -b eclipse_mailing_list
 
 
 import imp, inspect
@@ -34,8 +34,8 @@ import locale
 import numpy as np
 from datetime import datetime
 
-PROJECT = "tools.cdt"
-NLOC = 914354
+#NLOC = 914354
+sloc = {"tools.cdt": 914354, "modeling.mdt.papyrus": 3105991, "modeling.sirius": 568338}
 
 def read_options():
 
@@ -172,6 +172,9 @@ def its_report(dbcon, filters):
     #vizr.ReportTimeToCloseITS("bugzilla", "./")
     timeto = its.TimeToClose(dbcon, filters)
     timeto_list = timeto.get_agg()
+    print timeto_list
+    if not isinstance(timeto_list["timeto"], list):
+        timeto_list["timeto"] = [int(timeto_list["timeto"])]
     dhesa = DHESA(timeto_list["timeto"])
     its_fix_med_1m = dhesa.data["median"]
     its_fix_med_1m = its_fix_med_1m / 3600.0
@@ -183,8 +186,9 @@ def its_report(dbcon, filters):
     # Description: Overall total number of bugs on product divided by 1000's 
     # of lines (KLOC).
     # TBD
+    project_name = filters.type_analysis[1].replace("'", "")
     opened = its.Opened(dbcon, filters)
-    kloc = float(NLOC) / 1000.0
+    kloc = float(sloc[project_name]) / 1000.0
     its_bugs_density = float(opened.get_agg()["opened"]) / kloc
 
     dataset = {}
@@ -310,27 +314,42 @@ if __name__ == '__main__':
 
     data = {}
 
-    filters = MetricFilters("month", startdate, enddate, ["project", "'"+PROJECT+"'"], opts.npeople,
-                             people_out, affs_out)
-    filters_scm = MetricFilters("month", startdate, enddate, ["project,branch", "'"+PROJECT+"','master'"], opts.npeople, people_out, affs_out)
+    projects = ["tools.cdt", "modeling.mdt.papyrus", "modeling.sirius"]
+    sloc = {"tools.cdt": 914354, "modeling.mdt.papyrus": 3105991, "modeling.sirius": 568338, "https://bugs.eclipse.org/bugs/buglist.cgi?product=Ease": 36484, "https://polarsys.org/bugs/buglist.cgi?product=Kitalpha": 380356, "https://bugs.eclipse.org/bugs/buglist.cgi?product=Gendoc": 2}
+    #kitalpha_sloc = 380356
+    #sirius_sloc = 568338
+    #ease_sloc = 36484
+    #papyrus_sloc = 3105991
+    #cdt_sloc = 914354
+    #gendoc_sloc = 2
 
-    #SCM report
-    scm_dbcon = SCMQuery(opts.dbuser, opts.dbpassword, opts.dbcvsanaly, opts.dbidentities)
-    data.update(scm_report(scm_dbcon, filters_scm))
+    for project in projects:
 
-    #ITS report
-    ITS.set_backend("bg")
-    its_dbcon = ITSQuery(opts.dbuser, opts.dbpassword, opts.dbbicho, opts.dbidentities)
-    data.update(its_report(its_dbcon, filters))
+        #filters = MetricFilters("month", startdate, enddate, ["project", "'"+project+"'"], opts.npeople,
+        #                     people_out, affs_out)
+        filters_scm = MetricFilters("month", startdate, enddate, ["project,branch", "'"+project+"','master'"], opts.npeople, people_out, affs_out)
 
-    #SCR Report
-    #scr_dbcon = SCRQuery(opts.dbuser, opts.dbpassword, opts.dbreview, opts.dbidentities)
-    #data["scr"] = scr_report(scr_dbcon, filters)
+        filters = MetricFilters("month", startdate, enddate, ["project", "'"+project+"'"], opts.npeople,  people_out, affs_out)
+        #SCM report
+        scm_dbcon = SCMQuery(opts.dbuser, opts.dbpassword, opts.dbcvsanaly, opts.dbidentities)
+        data.update(scm_report(scm_dbcon, filters_scm))
 
-    #MLS Report
-    mls_dbcon = MLSQuery(opts.dbuser, opts.dbpassword, opts.dbmlstats, opts.dbidentities)
-    data.update(mls_report(mls_dbcon, filters))
+        #ITS report
+        ITS.set_backend("bg")
+        its_dbcon = ITSQuery(opts.dbuser, opts.dbpassword, opts.dbbicho, opts.dbidentities)
+        data.update(its_report(its_dbcon, filters))
 
-    print data
+        #SCR Report
+        #scr_dbcon = SCRQuery(opts.dbuser, opts.dbpassword, opts.dbreview, opts.dbidentities)
+        #data["scr"] = scr_report(scr_dbcon, filters)
+
+        #MLS Report
+        mls_dbcon = MLSQuery(opts.dbuser, opts.dbpassword, opts.dbmlstats, opts.dbidentities)
+        data.update(mls_report(mls_dbcon, filters))
+
+        createJSON(data, project + ".json")
+        print project
+        print data
+        print "\n\n"
 
 

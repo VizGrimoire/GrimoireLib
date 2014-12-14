@@ -62,10 +62,14 @@ class TimeSeries:
         return min
 
     def _max_date (self, data):
-        """Calculate mxn date for all items in data
+        """Calculate maximum date for all items in data
 
-        - data list of tuples, each tuple of the form
-            (date, values).
+        Parameters
+        ----------
+
+        data: list of tuples
+           Each tuple is of the form (date, values).
+
         """
 
         max = data[0][0]

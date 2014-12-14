@@ -112,14 +112,21 @@ class IRC(DataSource):
             metric = DataSource.get_metrics("repositories", IRC)
             items = metric.get_list()
             # items = GetReposNameIRC()
+        if (filter_name == "people2"):
+            metric = DataSource.get_metrics("senders", IRC)
+            items = metric.get_list()
+            items['name'] = items.pop('senders')
         else:
             logging.error("IRC " + filter_name + " not supported")
         return items
 
     @staticmethod
     def create_filter_report(filter_, period, startdate, enddate, destdir, npeople, identities_db):
-        items = IRC.get_filter_items(filter_, startdate, enddate, identities_db)
-        if (items == None): return
+        from report import Report
+        items = Report.get_items()
+        if items is None:
+            items = IRC.get_filter_items(filter_, startdate, enddate, identities_db)
+            if (items == None): return
 
         if not isinstance(items, (list)):
             items = [items]
@@ -140,6 +147,23 @@ class IRC(DataSource):
             agg = IRC.get_agg_data(period, startdate, enddate, identities_db, filter_item)
             fn = os.path.join(destdir, filter_item.get_static_filename(IRC()))
             createJSON(agg, fn)
+
+    @staticmethod
+    def create_filter_report_all(filter_, period, startdate, enddate, destdir, npeople, identities_db):
+        filter_name = filter_.get_name()
+        if filter_name == "people2" or filter_name == "company_off":
+            filter_all = Filter(filter_name, None)
+            agg_all = IRC.get_agg_data(period, startdate, enddate,
+                                       identities_db, filter_all)
+            fn = os.path.join(destdir, filter_.get_static_filename_all(IRC()))
+            createJSON(agg_all, fn)
+
+            evol_all = IRC.get_evolutionary_data(period, startdate, enddate,
+                                                 identities_db, filter_all)
+            fn = os.path.join(destdir, filter_.get_evolutionary_filename_all(IRC()))
+            createJSON(evol_all, fn)
+        else:
+            raise Exception(IRC.get_name()+ " " + filter_name +" does not support yet group by items sql queries")
 
     @staticmethod
     def get_top_people(startdate, enddate, identities_db, npeople):

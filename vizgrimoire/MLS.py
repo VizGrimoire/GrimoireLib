@@ -140,7 +140,7 @@ class MLS(DataSource):
 
 
     @staticmethod
-    def get_top_data (startdate, enddate, identities_db, filter_, npeople):
+    def get_top_data (startdate, enddate, identities_db, filter_, npeople, threads_top = True):
         msenders = DataSource.get_metrics("senders", MLS)
         period = None
         type_analysis = None
@@ -155,13 +155,14 @@ class MLS(DataSource):
             top['senders.last month'] = msenders.get_list(mfilter, 31)
             top['senders.last year'] = msenders.get_list(mfilter, 365)
 
-            top['threads.'] = MLS.getLongestThreads(startdate, enddate, identities_db, npeople)
-            startdate = datetime.date.today() - datetime.timedelta(days=365)
-            startdate =  "'" + str(startdate) + "'"
-            top['threads.last year'] = MLS.getLongestThreads(startdate, enddate, identities_db, npeople)
-            startdate = datetime.date.today() - datetime.timedelta(days=30)
-            startdate =  "'" + str(startdate) + "'"
-            top['threads.last month'] = MLS.getLongestThreads(startdate, enddate, identities_db, npeople) 
+            if threads_top:
+	    	top['threads.'] = MLS.getLongestThreads(startdate, enddate, identities_db, npeople)
+            	startdate = datetime.date.today() - datetime.timedelta(days=365)
+            	startdate =  "'" + str(startdate) + "'"
+            	top['threads.last year'] = MLS.getLongestThreads(startdate, enddate, identities_db, npeople)
+            	startdate = datetime.date.today() - datetime.timedelta(days=30)
+            	startdate =  "'" + str(startdate) + "'"
+            	top['threads.last month'] = MLS.getLongestThreads(startdate, enddate, identities_db, npeople) 
 
         else:
             filter_name = filter_.get_name()
@@ -208,7 +209,7 @@ class MLS(DataSource):
 
         items = metric.get_list()
 
-        return items
+        return {"name":items}
 
     @staticmethod
     def get_filter_summary(filter_, period, startdate, enddate, identities_db, limit):
@@ -221,8 +222,12 @@ class MLS(DataSource):
 
     @staticmethod
     def create_filter_report(filter_, period, startdate, enddate, destdir, npeople, identities_db):
-        items = MLS.get_filter_items(filter_, startdate, enddate, identities_db)
-        if (items == None): return
+        from report import Report
+        items = Report.get_items()
+        if items is None:
+            items = MLS.get_filter_items(filter_, startdate, enddate, identities_db)
+            if (items == None): return
+            items = items['name']
 
         filter_name = filter_.get_name()
 
@@ -259,7 +264,7 @@ class MLS(DataSource):
                 items_list['sent_365'].append(agg['sent_365'])
                 items_list['senders_365'].append(agg['senders_365'])
 
-            top_senders = MLS.get_top_data(startdate, enddate, identities_db, filter_item, npeople)
+            top_senders = MLS.get_top_data(startdate, enddate, identities_db, filter_item, npeople, False)
             createJSON(top_senders, destdir+"/"+filter_item.get_top_filename(MLS()))
 
         fn = os.path.join(destdir, filter_.get_filename(MLS()))
@@ -278,7 +283,7 @@ class MLS(DataSource):
     def create_filter_report_all(filter_, period, startdate, enddate, destdir, npeople, identities_db):
         check = False # activate to debug issues
         filter_name = filter_.get_name()
-        if filter_name == "people2" or filter_name == "company_off":
+        if filter_name == "people2" or filter_name == "company":
             filter_all = Filter(filter_name, None)
             agg_all = MLS.get_agg_data(period, startdate, enddate,
                                        identities_db, filter_all)
@@ -300,7 +305,7 @@ class MLS(DataSource):
 
     @staticmethod
     def get_top_people(startdate, enddate, identities_db, npeople):
-        top_data = MLS.get_top_data (startdate, enddate, identities_db, None, npeople)
+        top_data = MLS.get_top_data (startdate, enddate, identities_db, None, npeople, False)
 
         top = top_data['senders.']["id"]
         top += top_data['senders.last year']["id"]

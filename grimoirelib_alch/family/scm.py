@@ -26,6 +26,152 @@
 from common import DBFamily, DBCondition
 from grimoirelib_alch.query.scm import DB, Query
 
+class Entities(type):
+    """Watcher for a metaclass, maintaining a dictionary with its subclasses
+
+    This watcher class maintains a dictionary with all the subclasses of
+    the metaclass that uses it.
+
+    Attributes
+    ----------
+
+    subclasses : dictionary
+        Subclasses of metaclass, keyed by name attribute of each subclass
+        (values are the subclasses themselves)
+
+    """
+
+    subclasses = {}
+
+    def __init__(cls, name, bases, clsdict):
+        """Add subclass cls to subclasses, keyed by its name attribute.
+
+        """
+
+        if clsdict['name'] is not None:
+            Entities.subclasses[clsdict['name']] = cls
+    
+class Entity ():
+    """Metaclass, root of all entities.
+
+    This is the root of the hierarchy of entities.
+    It uses a watcher for keeping a dictionary with all its subclasses.
+    Defines attributes and methods to be used in all the hierarchy.
+
+    Attributes
+    ----------
+
+    name: str
+        Entity name used for the entity represented by the class
+    desc: str
+        Description of the entity (one line)
+    longdesc: str
+        Description of the entity (long)
+
+    Methods
+    -------
+
+    query (q)
+        Returns the query to produce the entity
+
+    """
+
+    __metaclass__ = Entities
+
+    name = None
+    desc = None
+    longdesc = None
+
+    @staticmethod
+    def query (q):
+        """Return the query to produce this entity.
+
+        Parameters
+        ----------
+
+        q: query.scm.Query
+            Base query
+
+        Returns
+        -------
+
+        query.scm.Query
+            Query with the needed filters to produce the entity.
+
+        """
+
+        raise Exception ("query(): real entities should provide real code")
+
+class NCommits (Entity):
+    """Number of commits
+
+    """
+
+    name = "ncommits"
+    desc = "Number of commits"
+    longdesc = "Number of commits"
+
+    @staticmethod
+    def query (q):
+
+        return q.select_nscmlog(["commits",])
+
+class ListCommits (Entity):
+    """List of commits
+
+    """
+
+    name = "listcommits"
+    desc = "List of commits"
+    longdesc = "List of commits"
+
+    @staticmethod
+    def query (q):
+
+        return q.select_listcommits()
+
+class NAuthors (Entity):
+    """Number of authors
+
+    """
+
+    name = "nauthors"
+    desc = "Number of authors"
+    longdesc = "Number of authors"
+
+    @staticmethod
+    def query (q):
+
+        return q.select_nscmlog(["authors",])
+
+class ListAuthors (Entity):
+    """List of authors
+
+    """
+
+    name = "listauthors"
+    desc = "List of authors"
+    longdesc = "List of authors"
+
+    @staticmethod
+    def query (q):
+
+        return q.query.select_listauthors()
+
+class NFiles (Entity):
+    """Number of files
+
+    """
+
+    name = "nfiles"
+    desc = "Number of files"
+    longdesc = "Number of files"
+
+    @staticmethod
+    def query (q):
+
+        return q.select_nfiles()
+
 class SCM (DBFamily):
     """Constructor of entities in the SCM family.
 
@@ -59,14 +205,8 @@ class SCM (DBFamily):
 
         """
 
-        if name == "ncommits":
-            self.query = self.query.select_nscmlog(["commits",])
-        elif name == "listcommits":
-            self.query = self.query.select_listcommits()
-        elif name == "nauthors":
-            self.query = self.query.select_nscmlog(["authors",])
-        elif name == "listauthors":
-            self.query = self.query.select_listauthors()
+        if name in Entities.subclasses:
+            self.query = Entities.subclasses[name].query(self.query)
         else:
             raise Exception ("SCM: Invalid entity name for this family, " + \
                                  name)
@@ -79,6 +219,7 @@ class SCM (DBFamily):
     def total (self):
         """Return the total count for the entity"""
 
+        print self.query
         return self.query.scalar()
 
     def list (self, limit = 10):
@@ -138,7 +279,12 @@ class PeriodCondition (DBCondition):
     def filter (self, query):
         """Filter to apply for this condition
 
-        - query: query to which the filter will be applied
+        Parameters
+        ----------
+
+        query: Query
+           Query to which the filter will be applied
+
         """
 
         return query.filter_period(start = self.start,
@@ -148,10 +294,16 @@ class PeriodCondition (DBCondition):
     def __init__ (self, start = None, end = None, date = "commit"):
         """Instatiation of the object.
 
-        - start (datetime): start of the period
-        - end (datetime): end of the period
-        - date: "commit" or "author"
-            Git maintains "commit" and "author" date
+        Parameters
+        ----------
+
+        start: datetime.datetime
+           Start of the period
+        end: datetime.datetime)
+           End of the period
+        date: { "commit", "author" }
+           Consider "commit" or "author" date for the period
+
         """
 
         self.start = start
@@ -206,4 +358,12 @@ if __name__ == "__main__":
     data = SCM (datasource = session,
                 name = "nauthors", conditions = (period, branches))
     print data.timeseries()
+    print data.total()
+
+    #---------------------------------
+    print_banner ("Number of files (timeseries, total) for a period and branch")
+    data = SCM (datasource = session,
+                name = "nfiles", conditions = (period, branches),
+                echo = True)
+#    print data.timeseries()
     print data.total()

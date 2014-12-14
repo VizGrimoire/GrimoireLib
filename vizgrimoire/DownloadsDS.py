@@ -125,6 +125,18 @@ class DownloadsDS(DataSource):
 
     @staticmethod
     def get_top_data (startdate, enddate, identities_db, filter_ = None, npeople = None):
+
+        def filter_ips(ips):
+            new_ips = {}
+            new_ips['downloads'] = ips['downloads']
+            new_ips['ips'] = []
+            for ip in ips['ips']:
+                new_ip_aux = ip.split(".")
+                if len(new_ip_aux) != 4: new_ip = ip
+                else: new_ip = "x.x."+new_ip_aux[2]+"."+new_ip_aux[3]
+                new_ips['ips'].append(new_ip)
+            return new_ips
+
         top = {}
         mips = DataSource.get_metrics("ips", DownloadsDS)
         mpackages = DataSource.get_metrics("packages", DownloadsDS)
@@ -135,7 +147,7 @@ class DownloadsDS(DataSource):
         mfilter = MetricFilters(period, startdate, enddate, type_analysis, npeople)
 
         if filter_ is None:
-            top['ips.'] = mips.get_list(mfilter, 0)
+            top['ips.'] = filter_ips(mips.get_list(mfilter, 0))
             top['packages.'] = mpackages.get_list(mfilter, 0)
         else:
             logging.info("DownloadsDS does not support yet top for filters.")
@@ -159,8 +171,11 @@ class DownloadsDS(DataSource):
 
     @staticmethod
     def create_filter_report(filter_, period, startdate, enddate, destdir, npeople, identities_db):
-        items = DownloadsDS.get_filter_items(filter_, startdate, enddate, identities_db)
-        if (items == None): return
+        from report import Report
+        items = Report.get_items()
+        if items is None:
+            items = DownloadsDS.get_filter_items(filter_, startdate, enddate, identities_db)
+            if (items == None): return
 
     @staticmethod
     def get_top_people(startdate, enddate, identities_db, npeople):

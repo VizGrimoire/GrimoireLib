@@ -132,6 +132,7 @@ class ITS(DataSource):
         top = None
         mopeners = DataSource.get_metrics("openers", ITS)
         mclosers = DataSource.get_metrics("closers", ITS)
+        if mopeners is None or mclosers is None: return None
         period = None
         type_analysis = None
         if filter_ is not None:
@@ -208,9 +209,12 @@ class ITS(DataSource):
 
     @staticmethod
     def create_filter_report(filter_, period, startdate, enddate, destdir, npeople, identities_db):
-        items = ITS.get_filter_items(filter_, startdate, enddate, identities_db)
-        if (items == None): return
-        items = items['name']
+        from report import Report
+        items = Report.get_items()
+        if items is None:
+            items = ITS.get_filter_items(filter_, startdate, enddate, identities_db)
+            if (items == None): return
+            items = items['name']
 
         filter_name = filter_.get_name()
 
@@ -264,7 +268,7 @@ class ITS(DataSource):
     def create_filter_report_all(filter_, period, startdate, enddate, destdir, npeople, identities_db):
         check = False # activate to debug issues
         filter_name = filter_.get_name()
-        if filter_name == "people2" or filter_name == "company_off":
+        if filter_name == "people2" or filter_name == "company":
             filter_all = Filter(filter_name, None)
             agg_all = ITS.get_agg_data(period, startdate, enddate,
                                        identities_db, filter_all)
@@ -287,6 +291,7 @@ class ITS(DataSource):
     @staticmethod
     def get_top_people(startdate, enddate, identities_db, npeople):
         top_data = ITS.get_top_data (startdate, enddate, identities_db, None, npeople)
+        if top_data is None: return None
 
         top = top_data['closers.']["id"]
         top += top_data['closers.last year']["id"]
@@ -478,12 +483,14 @@ def GetITSSQLCompaniesFrom (i_db):
 
 def GetITSSQLCompaniesWhere (name):
     # filters for the companies analysis
-    return(" i.submitted_by = pup.people_id and "+\
+    filters = " i.submitted_by = pup.people_id and "+\
            "pup.upeople_id = upc.upeople_id and "+\
            "upc.company_id = c.id and "+\
            "i.submitted_on >= upc.init and "+\
-           "i.submitted_on < upc.end and "+\
-           "c.name = "+name)
+           "i.submitted_on < upc.end"
+    if name is not None:
+           filters += " and c.name = "+name
+    return filters
 
 def GetITSSQLCountriesFrom (i_db):
     # fields necessary for the countries analysis
@@ -571,6 +578,7 @@ def GetDate (startdate, enddate, identities_db, type_analysis, type):
     filters = GetITSSQLReportWhere(type_analysis, identities_db)
 
     q = BuildQuery(None, startdate, enddate, " i.submitted_on ", fields, tables, filters, False)
+
     data = ExecuteQuery(q)
     return(data)
 

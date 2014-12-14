@@ -56,6 +56,19 @@ class ActivityPersons (DBFamily):
 
     """
 
+    def __str__ (self):
+
+        try:
+            string = "Activity list: \n" + str(self.activity_list)
+        except AttributeError:
+            string = "Activity list not yet defined."
+        print "Query: " + str(self.query)
+        return string
+
+    def __repr__ (self):
+
+        return self.__str__()
+
     def _produce_query (self, name):
         """Produce the base query to obtain activity per person.
 
@@ -183,6 +196,39 @@ class MLSActivityPersons (ActivityPersons):
     
     """
 
+    def __init__ (self, datasource, name, conditions = (),
+                  date_kind = "arrival", echo = False):
+        """Initialization, which will include calling parent init.
+
+        This initialization is defined for this class so that
+        the kind of date to be used can be specified. Message data
+        can include two dates: first date and arrival date.
+        This parameter sets which one will be used to compute activity.
+
+        Parameters
+        ----------
+        
+        datasource: database, object, etc.
+           Definition of the data source used to compute values for
+           the entity.
+        name: string
+           Entity name.
+        conditions: list of Condition objects
+           Conditions to be applied to provide context to the entity.
+           (default: empty list).
+        date_kind: { "arrival" | "first" | "check"}
+            Kind of date to consider. Default: "arrival".
+            "check" means: if arrival available, use "arrival". Else,
+            use "first"
+        echo: Boolean
+           Write debugging information to output stream or not.
+
+        """
+
+        self.date_kind = date_kind
+        ActivityPersons.__init__(self, datasource, name, conditions, echo)
+
+
     def _produce_query (self, name):
         """Produce the base query to obtain activity per person.
 
@@ -205,24 +251,43 @@ class MLSActivityPersons (ActivityPersons):
             raise Exception ("MLSActivityPersons: " + \
                                  "Invalid entity name for this family, " + \
                                  name)
-        
+        if self.date_kind == "check":
+            if self._arrival_available():
+                self.date_kind = "arrival"
+            else:
+                self.date_kind = "first"
         self.query = self.session.query()
+        date_kind = self.date_kind
         if name in ("list_senderss"):
             self.query = self.query.select_personsdata(persons)
         elif name in ("list_usenders"):
             self.query = self.query.select_personsdata_uid(persons)
         self.query = self.query \
-            .select_activeperiod() \
+            .select_activeperiod(date_kind) \
             .group_by_person()
+        
+    def _arrival_available (self):
+        """Are arrival dates for messages available?
 
+        Check if all messages have arrival dates. Return True if yes,
+        False otherwise.
+
+        Returns
+        -------
+
+        bool: Arrival dates are available.
+
+        """
+
+        if self.query.null_arrival().count() == 0:
+            return True
+        else:
+            return False
 
 if __name__ == "__main__":
 
     from grimoirelib_alch.aux.standalone import stdout_utf8, print_banner
     from datetime import datetime, timedelta
-    # from scm import SCMDatabaseDefinition
-    # from its import ITSDatabaseDefinition
-    # from mls import MLSDatabaseDefinition
     from scm import PeriodCondition as SCMPeriodCondition
     from scm import NomergesCondition as SCMNomergesCondition
     from its import PeriodCondition as ITSPeriodCondition
@@ -230,9 +295,6 @@ if __name__ == "__main__":
     stdout_utf8()
 
     # SCM database
-    # database = SCMDatabaseDefinition (url = "mysql://jgb:XXX@localhost/",
-    #                                   schema = "vizgrimoire_cvsanaly",
-    #                                   schema_id = "vizgrimoire_cvsanaly")
     database = SCMDatabase (url = "mysql://jgb:XXX@localhost/",
                    schema = "vizgrimoire_cvsanaly",
                    schema_id = "vizgrimoire_cvsanaly")
@@ -288,9 +350,6 @@ if __name__ == "__main__":
         .age(datetime(2014,1,1)).json()
     
     # ITS database
-    # database = ITSDatabaseDefinition (url = "mysql://jgb:XXX@localhost/",
-    #                                   schema = "vizgrimoire_bicho",
-    #                                   schema_id = "vizgrimoire_cvsanaly")
     database = ITSDatabase (url = "mysql://jgb:XXX@localhost/",
                             schema = "vizgrimoire_bicho",
                             schema_id = "vizgrimoire_cvsanaly")
