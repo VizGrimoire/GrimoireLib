@@ -2184,7 +2184,8 @@ class QAForumsQuery(DSQuery):
             tables = " comments c " + self.GetSQLReportFrom(type_analysis)
             filters = self.GetSQLReportWhere(type_analysis, "comments")
 
-        q = self.BuildQuery(period, startdate, enddate, date_field, fields, tables, filters, evolutionary)
+        q = self.BuildQuery(period, startdate, enddate, date_field, fields,
+                            tables, filters, evolutionary, type_analysis)
 
         return q
 
@@ -2209,7 +2210,8 @@ class QAForumsQuery(DSQuery):
             filters = self.GetSQLReportWhere(type_analysis, "comments")
 
 
-        q = self.BuildQuery(period, startdate, enddate, date_field, fields, tables, filters, evolutionary)
+        q = self.BuildQuery(period, startdate, enddate, date_field, fields,
+                            tables, filters, evolutionary, type_analysis)
 
         return q
 
