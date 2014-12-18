@@ -93,6 +93,7 @@ def create_reports_r(enddate, destdir):
     vizr = importr("vizgrimoire")
 
     for ds in Report.get_data_sources():
+	if ds.get_name() != "its": continue
         automator = Report.get_config()
         db = automator['generic'][ds.get_db_name()]
         dbuser = Report._automator['generic']['db_user']
@@ -279,7 +280,7 @@ if __name__ == '__main__':
             top = create_top_report(startdate, enddate, opts.destdir, opts.npeople, identities_db)
             if (automator['r']['reports'].find('people')>-1):
                 create_report_people(startdate, enddate, opts.destdir, opts.npeople, identities_db)
-            # create_reports_r(end_date, opts.destdir)
+            create_reports_r(end_date, opts.destdir)
             create_people_identifiers(startdate, enddate, opts.destdir)
 
     if not opts.study and not opts.no_filters and not opts.metric:
