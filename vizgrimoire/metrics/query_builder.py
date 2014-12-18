@@ -783,18 +783,19 @@ class ITSQuery(DSQuery):
 
         From = Set([])
 
-        if (type_analysis is None or len(type_analysis) != 2): return From
+        if type_analysis is not None:
+            # To be improved... not a very smart way of doing this
+            list_analysis = type_analysis[0].split(",")
 
-        analysis = type_analysis[0]
-        value = type_analysis[1]
-
-        if analysis == 'repository': From.union_update(self.GetSQLRepositoriesFrom())
-        elif analysis == 'company': From.union_update(self.GetSQLCompaniesFrom())
-        elif analysis == 'country': From.union_update(self.GetSQLCountriesFrom())
-        elif analysis == 'domain': From.union_update(self.GetSQLDomainsFrom())
-        elif analysis == 'project': From.union_update(self.GetSQLProjectsFrom())
-        elif analysis == 'people2': From.union_update(self.GetSQLPeopleFrom())
-        else: raise Exception( analysis + " not supported")
+            # Retrieving tables based on the required type of analysis.
+            for analysis in list_analysis:
+                if analysis == 'repository': From.union_update(self.GetSQLRepositoriesFrom())
+                elif analysis == 'company': From.union_update(self.GetSQLCompaniesFrom())
+                elif analysis == 'country': From.union_update(self.GetSQLCountriesFrom())
+                elif analysis == 'domain': From.union_update(self.GetSQLDomainsFrom())
+                elif analysis == 'project': From.union_update(self.GetSQLProjectsFrom())
+                elif analysis == 'people2': From.union_update(self.GetSQLPeopleFrom())
+                else: raise Exception( analysis + " not supported")
 
         return From
 
@@ -805,18 +806,31 @@ class ITSQuery(DSQuery):
         #such analysis
         where = Set([])
 
-        if (type_analysis is None or len(type_analysis) != 2): return where
+        if type_analysis is not None:
+            analysis = type_analysis[0]
+            value = type_analysis[1]
 
-        analysis = type_analysis[0]
-        value = type_analysis[1]
+            # To be improved... not a very smart way of doing this...
+            if type_analysis[1] is not None:
+                list_values = type_analysis[1].split(",")
+            else:
+                list_values = None
 
-        if analysis == 'repository': where.union_update(self.GetSQLRepositoriesWhere(value))
-        elif analysis == 'company': where.union_update(self.GetSQLCompaniesWhere(value))
-        elif analysis == 'country': where.union_update(self.GetSQLCountriesWhere(value))
-        elif analysis == 'domain': where.union_update(self.GetSQLDomainsWhere(value))
-        elif analysis == 'project': where.union_update(self.GetSQLProjectsWhere(value))
-        elif analysis == 'people2': where.union_update(self.GetSQLPeopleWhere(value, table))
-        else: raise Exception( analysis + " not supported")
+            list_analysis = type_analysis[0].split(",")
+
+            for analysis in list_analysis:
+                if list_values is not None:
+                    value = list_values[list_analysis.index(analysis)]
+                else:
+                    value = None
+
+                if analysis == 'repository': where.union_update(self.GetSQLRepositoriesWhere(value))
+                elif analysis == 'company': where.union_update(self.GetSQLCompaniesWhere(value))
+                elif analysis == 'country': where.union_update(self.GetSQLCountriesWhere(value))
+                elif analysis == 'domain': where.union_update(self.GetSQLDomainsWhere(value))
+                elif analysis == 'project': where.union_update(self.GetSQLProjectsWhere(value))
+                elif analysis == 'people2': where.union_update(self.GetSQLPeopleWhere(value, table))
+                else: raise Exception( analysis + " not supported")
 
         return where
 
