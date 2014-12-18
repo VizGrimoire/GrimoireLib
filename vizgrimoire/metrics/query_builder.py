@@ -862,12 +862,9 @@ class ITSQuery(DSQuery):
 
         where = get_where_from_type_analysis(type_analysis)
 
-#        print filters.global_filter
-#        if filters.global_filter is not None:
-#            print filters.global_filter
-#            where.union_update(get_where_from_type_analysis(filters.global_filter))
-#
-#        print(where)
+        if filters.global_filter is not None:
+            where.union_update(get_where_from_type_analysis(filters.global_filter))
+
         return where
 
     def GetSQLIssuesStudies (self, mfilters, type_analysis, evolutionary, study):

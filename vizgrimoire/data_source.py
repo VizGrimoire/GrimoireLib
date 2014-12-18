@@ -32,7 +32,7 @@ from metrics_filter import MetricFilters
 class DataSource(object):
     _bots = []
     _metrics_set = []
-    _global_filter = []
+    _global_filter = None
 
     @staticmethod
     def get_name():
