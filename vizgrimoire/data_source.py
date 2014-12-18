@@ -32,6 +32,7 @@ from metrics_filter import MetricFilters
 class DataSource(object):
     _bots = []
     _metrics_set = []
+    _global_filter = []
 
     @staticmethod
     def get_name():
@@ -47,6 +48,22 @@ class DataSource(object):
     def set_bots(ds_bots):
         """Set the bots to be filtered"""
         DataSource._bots = ds_bots
+
+
+    @staticmethod
+    def get_global_filter(ds):
+        """Get the global filter to be applied to all metrics"""
+        return ds._global_filter
+
+    @staticmethod
+    def set_global_filter(ds, global_filter):
+        """Set the global filter to be applied to all metrics"""
+        # We need to parse it to convert to type_analysis
+        global_filter = global_filter.replace("[","").replace("]","")
+        type_analysis = global_filter.split("','")
+        type_analysis[0] = type_analysis[0][1:]
+        type_analysis[2] = type_analysis[2][0:-1]
+        ds._global_filter = type_analysis
 
     @staticmethod
     def get_db_name():
@@ -353,6 +370,8 @@ class DataSource(object):
         for item in all_metrics:
             if item.id not in metrics_on: continue
             mfilter_orig = item.filters
+            if (mfilter_orig.global_filter is not None):
+                mfilter.global_filter = mfilter_orig.global_filter
             item.filters = mfilter
             if evol: mvalue = item.get_ts()
             else:    mvalue = item.get_agg()

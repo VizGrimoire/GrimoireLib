@@ -39,6 +39,7 @@ import report
 class ITS(DataSource):
     _metrics_set = []
     _backend = None
+    _global_filter = []
     debug = False
 
 

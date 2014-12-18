@@ -793,12 +793,13 @@ class ITSQuery(DSQuery):
 
         return filters
 
-    def GetSQLReportFrom (self, type_analysis):
+    def GetSQLReportFrom (self, filters):
         #generic function to generate 'from' clauses
         #"type" is a list of two values: type of analysis and value of 
         #such analysis
 
         From = Set([])
+        type_analysis = filters.type_analysis
 
         if type_analysis is not None:
             # To be improved... not a very smart way of doing this
@@ -817,45 +818,65 @@ class ITSQuery(DSQuery):
 
         return From
 
-    def GetSQLReportWhere (self, type_analysis, table = "changes"):
+    def GetSQLReportWhere (self, filters, table = "changes"):
         #generic function to generate 'where' clauses
 
-        #"type" is a list of two values: type of analysis and value of 
-        #such analysis
         where = Set([])
+        type_analysis = filters.type_analysis
 
-        if type_analysis is not None:
-            analysis = type_analysis[0]
-            value = type_analysis[1]
 
-            # To be improved... not a very smart way of doing this...
-            if type_analysis[1] is not None:
-                list_values = type_analysis[1].split(",")
-            else:
-                list_values = None
+        def get_where_from_type_analysis(type_analysis):
+            #"type" is a list of two values: type of analysis and value of
+            #such analysis
+            where = Set([])
 
-            list_analysis = type_analysis[0].split(",")
+            if type_analysis is not None:
+                analysis = type_analysis[0]
+                value = type_analysis[1]
 
-            pos = 0
-            for analysis in list_analysis:
-                if list_values is not None:
-                    value = list_values[pos]
+                # To be improved... not a very smart way of doing this...
+                if type_analysis[1] is not None:
+                    list_values = type_analysis[1].split(",")
                 else:
-                    value = None
+                    list_values = None
 
-                if analysis == 'repository': where.union_update(self.GetSQLRepositoriesWhere(value))
-                elif analysis == 'company': where.union_update(self.GetSQLCompaniesWhere(value))
-                elif analysis == 'country': where.union_update(self.GetSQLCountriesWhere(value))
-                elif analysis == 'domain': where.union_update(self.GetSQLDomainsWhere(value))
-                elif analysis == 'project': where.union_update(self.GetSQLProjectsWhere(value))
-                elif analysis == 'people2': where.union_update(self.GetSQLPeopleWhere(value, table))
-                elif analysis == 'ticket_type': where.union_update(self.GetSQLTicketTypeWhere(value))
-                else: raise Exception( analysis + " not supported")
-                pos += 1
+                list_analysis = type_analysis[0].split(",")
 
+                pos = 0
+                for analysis in list_analysis:
+                    if list_values is not None:
+                        value = list_values[pos]
+                    else:
+                        value = None
+
+                    if analysis == 'repository': where.union_update(self.GetSQLRepositoriesWhere(value))
+                    elif analysis == 'company': where.union_update(self.GetSQLCompaniesWhere(value))
+                    elif analysis == 'country': where.union_update(self.GetSQLCountriesWhere(value))
+                    elif analysis == 'domain': where.union_update(self.GetSQLDomainsWhere(value))
+                    elif analysis == 'project': where.union_update(self.GetSQLProjectsWhere(value))
+                    elif analysis == 'people2': where.union_update(self.GetSQLPeopleWhere(value, table))
+                    elif analysis == 'ticket_type': where.union_update(self.GetSQLTicketTypeWhere(value))
+                    else: raise Exception( analysis + " not supported")
+                    pos += 1
+            return where
+
+        where = get_where_from_type_analysis(type_analysis)
+
+#        print filters.global_filter
+#        if filters.global_filter is not None:
+#            print filters.global_filter
+#            where.union_update(get_where_from_type_analysis(filters.global_filter))
+#
+#        print(where)
         return where
 
-    def GetSQLIssuesStudies (self, period, startdate, enddate, identities_db, type_analysis, evolutionary, study):
+    def GetSQLIssuesStudies (self, mfilters, type_analysis, evolutionary, study):
+
+        period = mfilters.period
+        startdate = mfilters.startdate
+        enddate = mfilters.enddate
+        identities_db = self.identities_db
+
         # Generic function that counts evolution/agg number of specific studies with similar
         # database schema such as domains, companies and countries
         fields = Set([])
@@ -864,8 +885,11 @@ class ITSQuery(DSQuery):
 
         fields.add("count(distinct(name)) as " + study)
         tables.add("issues i")
-        tables.union_update(self.GetSQLReportFrom(type_analysis))
-        filters.union_update(self.GetSQLReportWhere(type_analysis))
+        mtype_analysis = mfilters.type_analysis
+        mfilters.type_analysis = type_analysis
+        tables.union_update(self.GetSQLReportFrom(mfilters))
+        filters.union_update(self.GetSQLReportWhere(mfilters))
+        mfilters.type_analysis = mtype_analysis
 
         #Filtering last part of the query, not used in this case
         #filters = gsub("and\n( )+(d|c|cou|com).name =.*$", "", filters)
