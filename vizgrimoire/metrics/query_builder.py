@@ -830,7 +830,7 @@ class ITSQuery(DSQuery):
             #such analysis
             where = Set([])
 
-            if type_analysis is not None:
+            if type_analysis is not None and len(type_analysis)>1:
                 analysis = type_analysis[0]
                 value = type_analysis[1]
 
