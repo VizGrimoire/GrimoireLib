@@ -161,15 +161,18 @@ class DSQuery(object):
 
         return tables_str
 
-    def _get_filters_query(self, filters):
+    def _get_filters_query(self, filters, join = None):
         # Returns a string with filters separated by "and"
         filters_str = ""
 
         if len(filters) > 0:
             filters_str = str(filters.pop())
             for i in range(len(filters)):
-                filters_str += " and " + str(filters.pop())
-
+                if join == None:
+                    filters_str += " and " + str(filters.pop())
+                else:
+                    filters_str += " " + join.split(",")[i] + " " + str(filters.pop())
+        if (join != None): filters_str = "(" + filters_str + ")" # Mix AND and OR in general query
         return filters_str
 
 
@@ -185,7 +188,10 @@ class DSQuery(object):
             # all of the queries will use this.
             fields = self._get_fields_query(fields)
             tables = self._get_tables_query(tables)
-            filters = self._get_filters_query(filters)
+            if type_analysis != None and len(type_analysis) == 3: # includes howto join the filters
+                filters = self._get_filters_query(filters, type_analysis[2])
+            else:
+                filters = self._get_filters_query(filters)
 
         # if all_items build a query for getting all items in one query
         all_items = None
@@ -776,6 +782,17 @@ class ITSQuery(DSQuery):
 
         return filters
 
+    def GetSQLTicketTypeFrom (self):
+        tables = Set([])
+
+        return tables
+
+    def GetSQLTicketTypeWhere (self, ticket_type):
+        filters = Set([])
+        filters.add("i.type = " + ticket_type)
+
+        return filters
+
     def GetSQLReportFrom (self, type_analysis):
         #generic function to generate 'from' clauses
         #"type" is a list of two values: type of analysis and value of 
@@ -795,6 +812,7 @@ class ITSQuery(DSQuery):
                 elif analysis == 'domain': From.union_update(self.GetSQLDomainsFrom())
                 elif analysis == 'project': From.union_update(self.GetSQLProjectsFrom())
                 elif analysis == 'people2': From.union_update(self.GetSQLPeopleFrom())
+                elif analysis == 'ticket_type': From.union_update(self.GetSQLTicketTypeFrom())
                 else: raise Exception( analysis + " not supported")
 
         return From
@@ -818,9 +836,10 @@ class ITSQuery(DSQuery):
 
             list_analysis = type_analysis[0].split(",")
 
+            pos = 0
             for analysis in list_analysis:
                 if list_values is not None:
-                    value = list_values[list_analysis.index(analysis)]
+                    value = list_values[pos]
                 else:
                     value = None
 
@@ -830,7 +849,9 @@ class ITSQuery(DSQuery):
                 elif analysis == 'domain': where.union_update(self.GetSQLDomainsWhere(value))
                 elif analysis == 'project': where.union_update(self.GetSQLProjectsWhere(value))
                 elif analysis == 'people2': where.union_update(self.GetSQLPeopleWhere(value, table))
+                elif analysis == 'ticket_type': where.union_update(self.GetSQLTicketTypeWhere(value))
                 else: raise Exception( analysis + " not supported")
+                pos += 1
 
         return where
 
