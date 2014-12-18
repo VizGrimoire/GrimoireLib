@@ -370,8 +370,7 @@ class DataSource(object):
         for item in all_metrics:
             if item.id not in metrics_on: continue
             mfilter_orig = item.filters
-            if (mfilter_orig.global_filter is not None):
-                mfilter.global_filter = mfilter_orig.global_filter
+            mfilter.global_filter = mfilter_orig.global_filter
             item.filters = mfilter
             if evol: mvalue = item.get_ts()
             else:    mvalue = item.get_agg()

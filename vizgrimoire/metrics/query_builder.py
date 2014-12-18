@@ -175,12 +175,26 @@ class DSQuery(object):
         if (join != None): filters_str = "(" + filters_str + ")" # Mix AND and OR in general query
         return filters_str
 
+    def _get_global_filters(self, global_filter):
+        global_filters = ""
+
+        if global_filter is not None:
+            global_where = self._get_where_from_type_analysis(global_filter)
+            if len(global_filter) == 3:
+                global_filters = self._get_filters_query(global_where, global_filter[2])
+            else:
+                global_filters = self._get_filters_query(global_where)
+
+        return global_filters
+
 
     def BuildQuery (self, period, startdate, enddate, date_field, fields,
-                    tables, filters, evolutionary, type_analysis = None):
+                    tables, filters, evolutionary, type_analysis = None,
+                    global_filter = None):
         # Select the way to evolutionary or aggregated dataset
         # filter_all: get data for all items in a filter
         q = ""
+        global_filters = ""
 
         if isinstance(fields, Set):
             # Special case where query fields are sets.
@@ -192,6 +206,12 @@ class DSQuery(object):
                 filters = self._get_filters_query(filters, type_analysis[2])
             else:
                 filters = self._get_filters_query(filters)
+
+            global_filters = self._get_global_filters(global_filter)
+
+        if global_filters != "":
+            if filters == "": filters =  global_filters
+            else: filters = global_filters + " AND " + filters
 
         # if all_items build a query for getting all items in one query
         all_items = None
@@ -207,7 +227,6 @@ class DSQuery(object):
         else:
             q = self.GetSQLGlobal(date_field, fields, tables, filters,
                                   startdate, enddate, all_items)
-
         return(q)
 
     def __SetDBChannel__ (self, user=None, password=None, database=None,
@@ -818,52 +837,49 @@ class ITSQuery(DSQuery):
 
         return From
 
+
+    def _get_where_from_type_analysis(self, type_analysis):
+        #"type" is a list of two values: type of analysis and value of
+        #such analysis
+        where = Set([])
+
+        if type_analysis is not None and len(type_analysis)>1:
+            analysis = type_analysis[0]
+            value = type_analysis[1]
+
+            # To be improved... not a very smart way of doing this...
+            if type_analysis[1] is not None:
+                list_values = type_analysis[1].split(",")
+            else:
+                list_values = None
+
+            list_analysis = type_analysis[0].split(",")
+
+            pos = 0
+            for analysis in list_analysis:
+                if list_values is not None:
+                    value = list_values[pos]
+                else:
+                    value = None
+
+                if analysis == 'repository': where.union_update(self.GetSQLRepositoriesWhere(value))
+                elif analysis == 'company': where.union_update(self.GetSQLCompaniesWhere(value))
+                elif analysis == 'country': where.union_update(self.GetSQLCountriesWhere(value))
+                elif analysis == 'domain': where.union_update(self.GetSQLDomainsWhere(value))
+                elif analysis == 'project': where.union_update(self.GetSQLProjectsWhere(value))
+                elif analysis == 'people2': where.union_update(self.GetSQLPeopleWhere(value, table))
+                elif analysis == 'ticket_type': where.union_update(self.GetSQLTicketTypeWhere(value))
+                else: raise Exception( analysis + " not supported")
+                pos += 1
+        return where
+
     def GetSQLReportWhere (self, filters, table = "changes"):
         #generic function to generate 'where' clauses
 
         where = Set([])
         type_analysis = filters.type_analysis
 
-
-        def get_where_from_type_analysis(type_analysis):
-            #"type" is a list of two values: type of analysis and value of
-            #such analysis
-            where = Set([])
-
-            if type_analysis is not None and len(type_analysis)>1:
-                analysis = type_analysis[0]
-                value = type_analysis[1]
-
-                # To be improved... not a very smart way of doing this...
-                if type_analysis[1] is not None:
-                    list_values = type_analysis[1].split(",")
-                else:
-                    list_values = None
-
-                list_analysis = type_analysis[0].split(",")
-
-                pos = 0
-                for analysis in list_analysis:
-                    if list_values is not None:
-                        value = list_values[pos]
-                    else:
-                        value = None
-
-                    if analysis == 'repository': where.union_update(self.GetSQLRepositoriesWhere(value))
-                    elif analysis == 'company': where.union_update(self.GetSQLCompaniesWhere(value))
-                    elif analysis == 'country': where.union_update(self.GetSQLCountriesWhere(value))
-                    elif analysis == 'domain': where.union_update(self.GetSQLDomainsWhere(value))
-                    elif analysis == 'project': where.union_update(self.GetSQLProjectsWhere(value))
-                    elif analysis == 'people2': where.union_update(self.GetSQLPeopleWhere(value, table))
-                    elif analysis == 'ticket_type': where.union_update(self.GetSQLTicketTypeWhere(value))
-                    else: raise Exception( analysis + " not supported")
-                    pos += 1
-            return where
-
-        where = get_where_from_type_analysis(type_analysis)
-
-        if filters.global_filter is not None:
-            where.union_update(get_where_from_type_analysis(filters.global_filter))
+        where = self._get_where_from_type_analysis(type_analysis)
 
         return where
 

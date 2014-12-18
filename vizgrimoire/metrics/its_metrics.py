@@ -59,7 +59,8 @@ class Opened(Metrics):
 
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                self.filters.enddate, " submitted_on ", fields,
-                               tables, filters, evolutionary, self.filters.type_analysis)
+                               tables, filters, evolutionary,
+                               self.filters.type_analysis, self.filters.global_filter)
         return q
 
 class Openers(Metrics):
@@ -91,6 +92,9 @@ class Openers(Metrics):
         tpeople_sql = tpeople_sql + " from " + self.db._get_tables_query(tables)
         tpeople_sql = tpeople_sql + " where " + self.db._get_filters_query(filters)
 
+        global_filters_sql = self.db._get_global_filters(self.filters.global_filter)
+        if global_filters_sql != "":  tpeople_sql += " AND " + global_filters_sql
+
         # joining those wieh unique ids
         fields = Set([])
         tables = Set([])
@@ -103,7 +107,8 @@ class Openers(Metrics):
 
         query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                self.filters.enddate, " tpeople.submitted_on ",
-                               fields, tables, filters, evolutionary, self.filters.type_analysis)
+                               fields, tables, filters, evolutionary,
+                               self.filters.type_analysis)
         return query
 
 
@@ -122,7 +127,8 @@ class Openers(Metrics):
 
         query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                self.filters.enddate, " submitted_on ",
-                               fields, tables, filters, evolutionary, self.filters.type_analysis)
+                               fields, tables, filters, evolutionary,
+                               self.filters.type_analysis, self.filters.global_filter)
         return query
 
     def _get_top_global(self, days = 0, metric_filters = None):
@@ -162,9 +168,10 @@ class Openers(Metrics):
 
     def _get_sql(self, evolutionary):
         if (self.filters.type_analysis is not None and (self.filters.type_analysis[0] in  ["repository","project"])):
-            return self.__get_sql_trk_prj__(evolutionary)
+            q= self.__get_sql_trk_prj__(evolutionary)
         else:
-            return self.__get_sql_default__(evolutionary)
+            q = self.__get_sql_default__(evolutionary)
+        return q
 
 #closed
 class Closed(Metrics):
@@ -444,6 +451,9 @@ class Changed(Metrics):
         issues_sql = issues_sql + " from " + self.db._get_tables_query(tables)
         issues_sql = issues_sql + " where " + self.db._get_filters_query(filters)
 
+        global_filters_sql = self.db._get_global_filters(self.filters.global_filter)
+        if global_filters_sql != "":  issues_sql += " AND " + global_filters_sql
+
         #Action needed to replace issues filters by changes one
         issues_sql = issues_sql.replace("i.submitted", "ch.changed")
 
@@ -465,7 +475,8 @@ class Changed(Metrics):
 
         query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                self.filters.enddate, " ch.changed_on ",
-                               fields, tables, filters, evolutionary, self.filters.type_analysis)
+                               fields, tables, filters, evolutionary,
+                               self.filters.type_analysis)
         return query
 
 
@@ -491,7 +502,8 @@ class Changed(Metrics):
 
         query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                self.filters.enddate, " ch.changed_on ",
-                               fields, tables, filters, evolutionary, self.filters.type_analysis)
+                               fields, tables, filters, evolutionary,
+                               self.filters.type_analysis, self.filters.global_filter)
 
         #Action needed to replace issues filters by changes one
         query = query.replace("i.submitted", "ch.changed")
@@ -538,6 +550,9 @@ class Changers(Metrics):
         tpeople_sql = tpeople_sql + " from " + self.db._get_tables_query(tables)
         tpeople_sql = tpeople_sql + " where " + self.db._get_filters_query(filters)
 
+        global_filters_sql = self.db._get_global_filters(self.filters.global_filter)
+        if global_filters_sql != "":  tpeople_sql += " AND " + global_filters_sql
+
         fields = Set([])
         tables = Set([])
         filters = Set([])
@@ -554,7 +569,8 @@ class Changers(Metrics):
 
         query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                self.filters.enddate, " tpeople.changed_on ",
-                               fields, tables, filters, evolutionary, self.filters.type_analysis)
+                               fields, tables, filters, evolutionary,
+                               self.filters.type_analysis)
         return query
 
 
@@ -582,7 +598,8 @@ class Changers(Metrics):
 
         query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                self.filters.enddate, " ch.changed_on ",
-                               fields, tables, filters, evolutionary, self.filters.type_analysis)
+                               fields, tables, filters, evolutionary,
+                               self.filters.type_analysis, self.filters.global_filter)
         #Action needed to replace issues filters by changes one
         query = query.replace("i.submitted", "ch.changed")
         return query
@@ -614,7 +631,8 @@ class Changers(Metrics):
 
         query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                self.filters.enddate, " ch.changed_on ",
-                               fields, tables, filters, evolutionary, self.filters.type_analysis)
+                               fields, tables, filters, evolutionary,
+                               self.filters.type_analysis, self.filters.global_filter)
         #Action needed to replace issues filters by changes one
         query = query.replace("i.submitted", "ch.changed")
         return query
@@ -679,7 +697,8 @@ class Trackers(Metrics):
 
         query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                self.filters.enddate, " i.submitted_on ",
-                               fields, tables, filters, evolutionary, self.filters.type_analysis)
+                               fields, tables, filters, evolutionary,
+                               self.filters.type_analysis, self.filters.global_filter)
         return query
 
 class Companies(Metrics):
