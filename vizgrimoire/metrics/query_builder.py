@@ -153,7 +153,7 @@ class DSQuery(object):
     def _get_tables_query(self, tables):
         # Returns a string with tables separated by ","
         tables_str = ""
-       
+
         if len(tables) > 0:
             tables_str = str(tables.pop())
             for i in range(len(tables)):
@@ -161,9 +161,14 @@ class DSQuery(object):
 
         return tables_str
 
-    def _get_filters_query(self, filters, join = None):
+    def _get_filters_query(self, filters, type_analysis = None):
         # Returns a string with filters separated by "and"
         filters_str = ""
+        join = None
+
+        if type_analysis != None and len(type_analysis) == 3:
+            # includes how to join the filters
+            join = type_analysis[2]
 
         if len(filters) > 0:
             filters_str = str(filters.pop())
@@ -172,21 +177,26 @@ class DSQuery(object):
                     filters_str += " and " + str(filters.pop())
                 else:
                     filters_str += " " + join.split(",")[i] + " " + str(filters.pop())
-        if (join != None): filters_str = "(" + filters_str + ")" # Mix AND and OR in general query
+        if (join != None): filters_str = "(" + filters_str + ")" # Mixed AND and OR in general query
         return filters_str
 
     def _get_global_filters(self, global_filter):
         global_filters = ""
 
         if global_filter is not None:
-            global_where = self._get_where_from_type_analysis(global_filter)
+            global_where = self._get_where_type_analysis_set(global_filter)
             if len(global_filter) == 3:
-                global_filters = self._get_filters_query(global_where, global_filter[2])
+                global_filters = self._get_filters_query(global_where, global_filter)
             else:
                 global_filters = self._get_filters_query(global_where)
 
         return global_filters
 
+    def _add_global_query_sets (self, tables, filters, global_filter):
+        global_from = self._get_from_type_analysis_set(global_filter)
+        global_where = self._get_where_type_analysis_set(global_filter)
+        tables.union_update(global_from)
+        filters.union_update(global_where)
 
     def BuildQuery (self, period, startdate, enddate, date_field, fields,
                     tables, filters, evolutionary, type_analysis = None,
@@ -200,18 +210,21 @@ class DSQuery(object):
             # Special case where query fields are sets.
             # TODO: The "if" should be removed after the migration given that
             # all of the queries will use this.
+            if global_filter is not None:
+                if len(global_filter) == 2:
+                    # Don't support OR global filters based in tables not already in query
+                    self._add_global_query_sets(tables, filters, global_filter)
+                elif len(global_filter) == 3:
+                    # Add the filters not added by sets
+                    global_filters = self._get_global_filters(global_filter)
+
             fields = self._get_fields_query(fields)
             tables = self._get_tables_query(tables)
-            if type_analysis != None and len(type_analysis) == 3: # includes howto join the filters
-                filters = self._get_filters_query(filters, type_analysis[2])
-            else:
-                filters = self._get_filters_query(filters)
+            filters = self._get_filters_query(filters, type_analysis)
 
-            global_filters = self._get_global_filters(global_filter)
-
-        if global_filters != "":
-            if filters == "": filters =  global_filters
-            else: filters = global_filters + " AND " + filters
+            if global_filters != "":
+                if filters == "": filters =  global_filters
+                else: filters = global_filters + " AND " + filters
 
         # if all_items build a query for getting all items in one query
         all_items = None
@@ -746,8 +759,8 @@ class ITSQuery(DSQuery):
         # fields necessary for the countries analysis
         tables = Set([])
         tables.add("people_upeople pup")
-        tables.add(self.identities_db + ".countries c")
-        tables.add(self.identities_db + ".upeople_countries upc")
+        tables.add(self.identities_db + ".countries cou")
+        tables.add(self.identities_db + ".upeople_countries upcou")
 
         return tables
 
@@ -755,9 +768,9 @@ class ITSQuery(DSQuery):
         # filters for the countries analysis
         filters = Set([])
         filters.add("i.submitted_by = pup.people_id")
-        filters.add("pup.upeople_id = upc.upeople_id")
-        filters.add("upc.country_id = c.id")
-        filters.add("c.name = "+name)
+        filters.add("pup.upeople_id = upcou.upeople_id")
+        filters.add("upcou.country_id = cou.id")
+        filters.add("cou.name = "+name)
 
         return filters
 
@@ -812,15 +825,11 @@ class ITSQuery(DSQuery):
 
         return filters
 
-    def GetSQLReportFrom (self, filters):
-        #generic function to generate 'from' clauses
-        #"type" is a list of two values: type of analysis and value of 
-        #such analysis
+    def _get_from_type_analysis_set(self, type_analysis):
 
         From = Set([])
-        type_analysis = filters.type_analysis
 
-        if type_analysis is not None:
+        if type_analysis is not None and len(type_analysis)>1:
             # To be improved... not a very smart way of doing this
             list_analysis = type_analysis[0].split(",")
 
@@ -838,7 +847,17 @@ class ITSQuery(DSQuery):
         return From
 
 
-    def _get_where_from_type_analysis(self, type_analysis):
+    def GetSQLReportFrom (self, filters):
+        #generic function to generate 'from' clauses
+        #"type" is a list of two values: type of analysis and value of
+        #such analysis
+
+        From = self._get_from_type_analysis_set(filters.type_analysis)
+
+        return From
+
+
+    def _get_where_type_analysis_set(self, type_analysis):
         #"type" is a list of two values: type of analysis and value of
         #such analysis
         where = Set([])
@@ -876,10 +895,7 @@ class ITSQuery(DSQuery):
     def GetSQLReportWhere (self, filters, table = "changes"):
         #generic function to generate 'where' clauses
 
-        where = Set([])
-        type_analysis = filters.type_analysis
-
-        where = self._get_where_from_type_analysis(type_analysis)
+        where = self._get_where_type_analysis_set(filters.type_analysis)
 
         return where
 
