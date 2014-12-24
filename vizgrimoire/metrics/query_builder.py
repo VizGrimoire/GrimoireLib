@@ -2311,7 +2311,7 @@ class QAForumsQuery(DSQuery):
             date_limit = " AND DATEDIFF(@maxdate, %s) < %s" % (date_field, str(days))
             #end if
 
-        select = "SELECT %s AS id, p.username AS senders, COUNT(%s.id) AS sent" % \
+        select = "SELECT %s AS id, p.username AS senders, COUNT(DISTINCT(%s.id)) AS sent" % \
           (author_field, table_name)
         fromtable = " FROM %s, people p" % (table_name)
         filters = " WHERE %s %s = p.identifier AND %s >= %s AND %s < %s " % \
