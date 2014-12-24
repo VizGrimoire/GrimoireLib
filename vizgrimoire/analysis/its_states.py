@@ -56,7 +56,7 @@ class TicketsStates(Analyses):
 
         fields = " count(distinct(id)) as `current_" + state + "` "
         tables = " issues i "
-        filters = " status = '" + state + "' "
+        filters = " status = '" + state.replace("'", "''") + "' "
 
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                self.filters.enddate, " i.submitted_on ",
@@ -167,7 +167,7 @@ class TicketsStates(Analyses):
 
         return [state  for state in result['status']]
 
-    def get_ts (self, data_source = None):
+    def get_ts(self, data_source = None):
         from ITS import ITS
         if data_source is not None and data_source != ITS: return {}
         return self.result()
