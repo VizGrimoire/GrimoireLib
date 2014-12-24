@@ -143,6 +143,9 @@ class QAForums(DataSource):
             metric = DataSource.get_metrics("tags", QAForums)
             # items = QAForums.tags_name(startdate, enddate)
             items = metric.get_list()
+        if (filter_name == "people2"):
+            metric = DataSource.get_metrics("participants", QAForums)
+            items = metric.get_list()
         else:
             logging.error("QAForums " + filter_name + " not supported")
 
@@ -184,6 +187,24 @@ class QAForums(DataSource):
             agg = QAForums.get_agg_data(period, startdate, enddate, identities_db, filter_item)
             fn = os.path.join(destdir, filter_item.get_static_filename(QAForums()))
             createJSON(agg, fn)
+
+    @staticmethod
+    def create_filter_report_all(filter_, period, startdate, enddate, destdir, npeople, identities_db):
+        filter_name = filter_.get_name()
+        if filter_name == "people2" or filter_name == "company_off":
+            filter_all = Filter(filter_name, None)
+            agg_all = QAForums.get_agg_data(period, startdate, enddate,
+                                            identities_db, filter_all)
+            fn = os.path.join(destdir, filter_.get_static_filename_all(QAForums()))
+            createJSON(agg_all, fn)
+
+            evol_all = QAForums.get_evolutionary_data(period, startdate, enddate,
+                                                 identities_db, filter_all)
+            fn = os.path.join(destdir, filter_.get_evolutionary_filename_all(QAForums()))
+            createJSON(evol_all, fn)
+        else:
+            raise Exception(IRC.get_name()+ " " + filter_name +" does not support yet group by items sql queries")
+
 
     @staticmethod
     def get_query_builder ():

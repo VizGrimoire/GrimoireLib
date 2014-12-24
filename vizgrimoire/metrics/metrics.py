@@ -205,10 +205,12 @@ class Metrics(object):
         chardates = GetDates(date, days)
         self.filters = MetricFilters(filters.period,
                                      chardates[1], chardates[0], filters.type_analysis)
+        self.filters.global_filter = filters.global_filter
         last = self.get_agg()
         last = int(last[self.id])
         self.filters = MetricFilters(filters.period,
                                      chardates[2], chardates[1], filters.type_analysis)
+        self.filters.global_filter = filters.global_filter
         prev = self.get_agg()
         prev = int(prev[self.id])
 
@@ -231,11 +233,13 @@ class Metrics(object):
         chardates = GetDates(date, days)
         self.filters = MetricFilters(filters.period,
                                      chardates[1], chardates[0], filters.type_analysis)
+        self.filters.global_filter = filters.global_filter
         last = check_array_values(self.get_agg())
 
         # last = int(last[self.id])
         self.filters = MetricFilters(filters.period,
                                      chardates[2], chardates[1], filters.type_analysis)
+        self.filters.global_filter = filters.global_filter
         prev = check_array_values(self.get_agg())
 
         group_field = DSQuery.get_group_field(self.filters.type_analysis[0])

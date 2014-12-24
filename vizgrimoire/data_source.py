@@ -32,6 +32,7 @@ from metrics_filter import MetricFilters
 class DataSource(object):
     _bots = []
     _metrics_set = []
+    _global_filter = None
 
     @staticmethod
     def get_name():
@@ -47,6 +48,27 @@ class DataSource(object):
     def set_bots(ds_bots):
         """Set the bots to be filtered"""
         DataSource._bots = ds_bots
+
+
+    @staticmethod
+    def get_global_filter(ds):
+        """Get the global filter to be applied to all metrics"""
+        return ds._global_filter
+
+    @staticmethod
+    def set_global_filter(ds, global_filter):
+        """
+            Set the global filter to be applied to all metrics
+            Format: its_global_filter = ['ticket_type,ticket_type','"Bug","New Feature"','OR']
+        """
+        # We need to parse filter string to convert to type_analysis
+        global_filter = global_filter.replace("[","").replace("]","")
+        type_analysis = global_filter.split("','")
+        last = len(type_analysis)
+        type_analysis[0] = type_analysis[0][1:]
+        type_analysis[last-1] = type_analysis[last-1][0:-1]
+
+        ds._global_filter = type_analysis
 
     @staticmethod
     def get_db_name():
@@ -353,6 +375,7 @@ class DataSource(object):
         for item in all_metrics:
             if item.id not in metrics_on: continue
             mfilter_orig = item.filters
+            mfilter.global_filter = mfilter_orig.global_filter
             item.filters = mfilter
             if evol: mvalue = item.get_ts()
             else:    mvalue = item.get_agg()

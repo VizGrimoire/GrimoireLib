@@ -175,7 +175,7 @@ class Participants(Metrics):
         filters = ""
         query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                    self.filters.enddate, " t.date ", fields,
-                                   tables, filters, evolutionary)
+                                   tables, filters, evolutionary, self.filters.type_analysis)
         return query
 
     def _get_top_global(self, days = 0, metric_filters = 0):

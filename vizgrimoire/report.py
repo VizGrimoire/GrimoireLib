@@ -74,6 +74,10 @@ class Report(object):
             bots = Report.get_config()['r']['people_out'].split(",")
             for ds in Report._all_data_sources:
                 ds.set_bots(bots)
+        # Global filters per data source
+        for ds in Report._all_data_sources:
+            if ds.get_name()+'_global_filter' in Report.get_config()['r']:
+                ds.set_global_filter(ds, Report.get_config()['r'][ds.get_name()+'_global_filter'])
 
     @staticmethod
     def _init_metrics(metrics_path):
@@ -121,6 +125,8 @@ class Report(object):
                 if ds.get_db_name() not in Report._automator['generic']: continue
                 builder = ds.get_query_builder()
                 db = Report._automator['generic'][ds.get_db_name()]
+                if (ds.get_global_filter(ds) is not None):
+                    metric_filters.global_filter = ds.get_global_filter(ds)
                 metrics = metrics_class(builder(dbuser, dbpass, db, db_identities), metric_filters)
                 ds.add_metrics(metrics, ds)
 
