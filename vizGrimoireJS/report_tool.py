@@ -93,6 +93,7 @@ def create_reports_r(enddate, destdir):
     vizr = importr("vizgrimoire")
 
     for ds in Report.get_data_sources():
+	if ds.get_name() != "its": continue
         automator = Report.get_config()
         db = automator['generic'][ds.get_db_name()]
         dbuser = Report._automator['generic']['db_user']

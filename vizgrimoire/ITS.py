@@ -323,6 +323,7 @@ class ITS(DataSource):
         backend = ITS._get_backend().its_type
         # Change name for R code
         if (backend == "bg"): backend = "bugzilla"
+        if (backend == "lp"): backend = "launchpad"
         vizr.ReportTimeToCloseITS(backend, destdir)
         unique_ids = True
 
