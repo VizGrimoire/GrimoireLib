@@ -26,13 +26,13 @@
 import logging
 import MySQLdb
 
-from metrics import Metrics
+from vizgrimoire.metrics.metrics import Metrics
 
-from metrics_filter import MetricFilters
+from vizgrimoire.metrics.metrics_filter import MetricFilters
 
-from query_builder import ITSQuery
+from vizgrimoire.metrics.query_builder import ITSQuery
 
-from ITS import ITS
+from vizgrimoire.ITS import ITS
 
 from sets import Set
 

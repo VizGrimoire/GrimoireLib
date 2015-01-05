@@ -26,15 +26,15 @@
 
 import logging, os, re
 
-from GrimoireSQL import GetSQLGlobal, GetSQLPeriod
-from GrimoireSQL import ExecuteQuery, BuildQuery
-from GrimoireUtils import GetPercentageDiff, GetDates, completePeriodIds, getPeriod
-from GrimoireUtils import createJSON, get_subprojects
-from metrics_filter import MetricFilters
+from vizgrimoire.GrimoireSQL import GetSQLGlobal, GetSQLPeriod
+from vizgrimoire.GrimoireSQL import ExecuteQuery, BuildQuery
+from vizgrimoire.GrimoireUtils import GetPercentageDiff, GetDates, completePeriodIds, getPeriod
+from vizgrimoire.GrimoireUtils import createJSON, get_subprojects
+from vizgrimoire.metrics.metrics_filter import MetricFilters
 
-from data_source import DataSource
-from filter import Filter
-import report
+from vizgrimoire.data_source import DataSource
+from vizgrimoire.filter import Filter
+import vizgrimoire.report
 
 class ITS(DataSource):
     _metrics_set = []
