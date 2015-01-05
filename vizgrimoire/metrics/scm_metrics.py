@@ -29,15 +29,15 @@ import MySQLdb
 
 import re, sys
 
-from GrimoireUtils import completePeriodIds, GetDates, GetPercentageDiff, check_array_values
+from vizgrimoire.GrimoireUtils import completePeriodIds, GetDates, GetPercentageDiff, check_array_values
 
-from metrics import Metrics
+from vizgrimoire.metrics.metrics import Metrics
 
-from metrics_filter import MetricFilters
+from vizgrimoire.metrics.metrics_filter import MetricFilters
 
-from query_builder import SCMQuery
+from vizgrimoire.metrics.query_builder import SCMQuery
 
-from SCM import SCM
+from vizgrimoire.SCM import SCM
 
 from sets import Set
 

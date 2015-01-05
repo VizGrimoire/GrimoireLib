@@ -22,9 +22,9 @@
 ##   Daniel Izquierdo-Cortazar <dizquierdo@bitergia.com>
 
 
-from GrimoireUtils import completePeriodIds, GetDates, GetPercentageDiff, check_array_values
-from query_builder import DSQuery
-from metrics_filter import MetricFilters
+from vizgrimoire.GrimoireUtils import completePeriodIds, GetDates, GetPercentageDiff, check_array_values
+from vizgrimoire.metrics.query_builder import DSQuery
+from vizgrimoire.metrics.metrics_filter import MetricFilters
 
 class Metrics(object):
     """Root of hierarchy of Entities (Metrics)

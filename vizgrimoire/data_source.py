@@ -25,9 +25,9 @@
     support for Grimoire supported data sources """ 
 
 import logging, os
-from query_builder import DSQuery
-from GrimoireUtils import createJSON
-from metrics_filter import MetricFilters
+from vizgrimoire.metrics.query_builder import DSQuery
+from vizgrimoire.GrimoireUtils import createJSON
+from vizgrimoire.metrics.metrics_filter import MetricFilters
 
 class DataSource(object):
     _bots = []

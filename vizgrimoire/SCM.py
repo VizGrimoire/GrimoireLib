@@ -25,15 +25,15 @@
 
 import os, logging
 
-from GrimoireSQL import GetSQLGlobal, GetSQLPeriod
+from vizgrimoire.GrimoireSQL import GetSQLGlobal, GetSQLPeriod
 # TODO integrate: from GrimoireSQL import  GetSQLReportFrom 
-from GrimoireSQL import ExecuteQuery, BuildQuery
-from GrimoireUtils import GetPercentageDiff, GetDates, completePeriodIds
-from GrimoireUtils import createJSON, getPeriod, get_subprojects
-from data_source import DataSource
-from filter import Filter
-from metrics_filter import MetricFilters
-from query_builder import DSQuery
+from vizgrimoire.GrimoireSQL import ExecuteQuery, BuildQuery
+from vizgrimoire.GrimoireUtils import GetPercentageDiff, GetDates, completePeriodIds
+from vizgrimoire.GrimoireUtils import createJSON, getPeriod, get_subprojects
+from vizgrimoire.data_source import DataSource
+from vizgrimoire.filter import Filter
+from vizgrimoire.metrics.metrics_filter import MetricFilters
+from vizgrimoire.metrics.query_builder import DSQuery
 
 class SCM(DataSource):
     _metrics_set = []
