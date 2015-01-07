@@ -309,10 +309,24 @@ def mls_report(dbcon, filters, sloc):
 
     dataset = {}
     dataset["mls_dev_vol_1m"] = float(mls_dev_vol_1m) / ksloc
+    # Hack while user mailing lists are available
+    dataset["mls_usr_vol_1m"] = dataset["mls_dev_vol_1m"]
+
     dataset["mls_dev_subj_1m"] = float(mls_dev_subj_1m) / ksloc
+    # Hack while user mailing lists are available
+    dataset["mls_usr_subj_1m"] = dataset["mls_dev_subj_1m"]
+
     dataset["mls_dev_auth_1m"] = float(mls_dev_auth_1m) / ksloc
+    # Hack while user mailing lists are available
+    dataset["mls_usr_auth_1m"] = dataset["mls_dev_auth_1m"]
+
     dataset["mls_dev_resp_ratio_1m"] = mls_dev_resp_ratio_1m
+    # Hack while user mailing lists are available
+    dataset["mls_usr_resp_ratio_1m"] = dataset["mls_dev_resp_ratio_1m"]
+
     dataset["mls_usr_resp_time_med_1m"] = mls_usr_resp_time_med_1m
+    # Hack while user mailing lists are available
+    dataset["mls_dev_resp_time_med_1m"] = dataset["mls_usr_resp_time_med_1m"]
 
     return dataset
 
