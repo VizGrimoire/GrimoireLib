@@ -21,7 +21,7 @@
 ## Authors:
 ##   Daniel Izquierdo-Cortazar <dizquierdo@bitergia.com>
 ##
-## python eclipse_mm.py -a eclipse_source_code -d eclipse_reviews -i eclipse_source_code -r 2014-20-09,2014-10-20 -c eclipse_tickets -b eclipse_mailing_list
+## python eclipse_mm.py -a eclipse_source_code_20141127 -d eclipse_reviews_20141127 -i eclipse_source_code_20141127 -r 2014-01-01,2014-10-20 -c eclipse_tickets_20141127 -b eclipse_mailing_lists_20141127
 
 
 import imp, inspect
@@ -33,9 +33,6 @@ import sys
 import locale
 import numpy as np
 from datetime import datetime
-
-#NLOC = 914354
-sloc = {"tools.cdt": 914354, "modeling.mdt.papyrus": 3105991, "modeling.sirius": 568338}
 
 def read_options():
 
@@ -102,7 +99,9 @@ def read_options():
     return opts
 
 
-def scm_report(dbcon, filters):
+def scm_report(dbcon, filters, sloc):
+
+    ksloc = float(sloc) / 1000.0
 
     # Name: SCM Commits
     # Mnemo: SCM_COMMITS_1M
@@ -131,14 +130,43 @@ def scm_report(dbcon, filters):
     # In addition: SCM_COMMITTERS and SCM_AUTHORS point to the same metric
     scm_committers_1m = authors.get_trends(filters.enddate, 30)["authors_30"]
 
+    # Name: File Statibility Index
+    # Mnemo: SCM_Stability_1M
+    # Description: Average number of commits touching each file in source 
+    #              code management repositories dated during the last month.
+    value = filters.type_analysis[1].split(",")[0]
+    query = """ select a.file_id, 
+                       count(distinct(a.id)) as pokes 
+                from actions a, 
+                     scmlog s,
+                     repositories r
+                where a.commit_id = s.id and 
+                      s.date >=%s and
+                      s.repository_id = r.id and
+                      r.name = %s
+                      group by a.file_id """ % (filters.startdate, value)
+
+    file_pokes =  dbcon.ExecuteQuery(query)
+    file_pokes = file_pokes["pokes"]
+    avg_file_pokes = 0
+    if isinstance(file_pokes, list) and len(file_pokes) > 0:
+        avg_file_pokes = DHESA(file_pokes)
+        avg_file_pokes = avg_file_pokes.data["mean"]
+
+    ksloc = float(sloc) / 1000.0
+
+
     dataset = {}
     dataset["scm_commits_1m"] = scm_commits_1m
     dataset["scm_committed_files_1m"] = scm_committed_files_1m
     dataset["scm_committers_1m"] = scm_committers_1m
+    dataset["scm_stability_1m"] = avg_file_pokes
     
     return dataset
     
-def its_report(dbcon, filters):
+def its_report(dbcon, filters, sloc):
+
+    ksloc = float(sloc) / 1000.0
 
     # Name: ITS updates
     # Mnemo: ITS_UPDATES_1M
@@ -151,6 +179,8 @@ def its_report(dbcon, filters):
     its_updates_1m = changes.get_trends(filters.enddate, 30)["changed_30"]
     opened = its.Opened(dbcon, filters)
     its_updates_1m += opened.get_agg()["opened"]
+
+    its_bugs_opened_1m = opened.get_agg()["opened"]
 
     # Name: ITS authors
     # Mnemo: ITS_AUTH_1M
@@ -172,7 +202,6 @@ def its_report(dbcon, filters):
     #vizr.ReportTimeToCloseITS("bugzilla", "./")
     timeto = its.TimeToClose(dbcon, filters)
     timeto_list = timeto.get_agg()
-    print timeto_list
     if not isinstance(timeto_list["timeto"], list):
         timeto_list["timeto"] = [int(timeto_list["timeto"])]
     dhesa = DHESA(timeto_list["timeto"])
@@ -188,21 +217,33 @@ def its_report(dbcon, filters):
     # TBD
     project_name = filters.type_analysis[1].replace("'", "")
     opened = its.Opened(dbcon, filters)
-    kloc = float(sloc[project_name]) / 1000.0
-    its_bugs_density = float(opened.get_agg()["opened"]) / kloc
+    its_bugs_density = float(opened.get_agg()["opened"]) / ksloc
 
     dataset = {}
-    dataset["its_updates_1m"] = its_updates_1m
-    dataset["its_auth_1m"] = its_auth_1m
+    dataset["its_updates_1m"] = float(its_updates_1m) / ksloc
+    dataset["its_auth_1m"] = float(its_auth_1m) / ksloc
     dataset["its_bugs_density"] = its_bugs_density
     dataset["its_fix_med_1m"] = its_fix_med_1m
+    dataset["its_bugs_opened_1m"] = float(its_bugs_opened_1m) / ksloc
    
     return dataset 
 
 def scr_report(dbcon, filters):
     pass
 
-def mls_report(dbcon, filters):
+def get_sloc(dbcon):
+    # Returns a dictionary of git repositories and number of Ksloc
+    # For this purpose, this uses the database schema provided by Cloc as the
+    # tool calculating number of lines of code.
+
+    query = "select Project, sum(nCode) as total_lines from t group by Project;"
+    sloc_git_repo = dbcon.ExecuteQuery(query)
+
+    return sloc_git_repo
+
+def mls_report(dbcon, filters, sloc):
+
+    ksloc = float(sloc) / 1000.0
 
     # MLS project info is not supported yet. Thus, instead of using the 
     # "project" type of analysis, the "repository" type of analysis is used.
@@ -233,6 +274,8 @@ def mls_report(dbcon, filters):
     #vizr.ReportTimeToAttendMLS("./")
     timeto = mls.TimeToFirstReply(dbcon, filters)
     timeto_list = timeto.get_agg()
+    if not isinstance(timeto_list, list):
+        timeto_list = [int(timeto_list)]
     dhesa = DHESA(timeto_list)
     mls_usr_resp_time_med_1m = dhesa.data["median"]
     mls_usr_resp_time_med_1m = mls_usr_resp_time_med_1m / 3600.0
@@ -245,6 +288,13 @@ def mls_report(dbcon, filters):
     threads = mls.Threads(dbcon, filters)
     mls_dev_subj_1m = threads.get_trends(filters.enddate, 30)["threads_30"]
      
+    # Name:
+    # Mnemo: MLS_DEV_AUTH_1M
+    # Description: Number of authors in the developers mailing list during the last month
+    authors = mls.EmailsSenders(dbcon, filters)
+    mls_dev_auth_1m = authors.get_trends(filters.enddate, 30)["senders_30"]
+
+
     # Name: Developer ML response ratio
     # Mnemo: MLS_DEV_RESP_RATIO_1M
     # Description: Average number of responses for a question in the developer 
@@ -258,8 +308,9 @@ def mls_report(dbcon, filters):
         mls_dev_resp_ratio_1m = 0
 
     dataset = {}
-    dataset["mls_dev_vol_1m"] = mls_dev_vol_1m
-    dataset["mls_dev_subj_1m"] = mls_dev_subj_1m
+    dataset["mls_dev_vol_1m"] = float(mls_dev_vol_1m) / ksloc
+    dataset["mls_dev_subj_1m"] = float(mls_dev_subj_1m) / ksloc
+    dataset["mls_dev_auth_1m"] = float(mls_dev_auth_1m) / ksloc
     dataset["mls_dev_resp_ratio_1m"] = mls_dev_resp_ratio_1m
     dataset["mls_usr_resp_time_med_1m"] = mls_usr_resp_time_med_1m
 
@@ -311,33 +362,57 @@ if __name__ == '__main__':
     people_out = []
     affs_out = ["-Bot","-Individual","-Unknown"]
 
+    # Lines of code per repository
+    scm_dbcon = SCMQuery(opts.dbuser, opts.dbpassword, opts.dbcvsanaly, opts.dbidentities)
+    sloc_per_repo = get_sloc(scm_dbcon)
 
     data = {}
 
-    projects = ["tools.cdt", "modeling.mdt.papyrus", "modeling.sirius"]
-    sloc = {"tools.cdt": 914354, "modeling.mdt.papyrus": 3105991, "modeling.sirius": 568338, "https://bugs.eclipse.org/bugs/buglist.cgi?product=Ease": 36484, "https://polarsys.org/bugs/buglist.cgi?product=Kitalpha": 380356, "https://bugs.eclipse.org/bugs/buglist.cgi?product=Gendoc": 2}
-    #kitalpha_sloc = 380356
-    #sirius_sloc = 568338
-    #ease_sloc = 36484
-    #papyrus_sloc = 3105991
-    #cdt_sloc = 914354
-    #gendoc_sloc = 2
+    # List of projects:
+    query = "select project_id, id from projects"
+    projects = scm_dbcon.ExecuteQuery(query)
 
-    for project in projects:
+    # List of sloc per project
+    query = """select p.id, 
+                      pr.project_id, 
+                      sum(m.total_sloc) as total_sloc
+               from metadata m, 
+                    repositories r, 
+                    project_repositories pr, 
+                    projects p 
+               where p.project_id = pr.project_id and 
+                     pr.data_source = 'scm' and 
+                     pr.repository_name = r.uri and 
+                     (r.name = m.Project or r.name = CONCAT(m.Project, ".git")) 
+               group by pr.project_id"""
+    projects_sloc = scm_dbcon.ExecuteQuery(query)
+
+
+    for project in projects["id"]:
+        if project not in projects_sloc["id"]:
+            #ignoring some projects not found in the list of sloc
+            continue
+
+        pr_index = projects_sloc["id"].index(project)
+
+        project_sloc = projects_sloc["total_sloc"][pr_index]
+
+        filters = MetricFilters("month", startdate, enddate, ["project", "'"+project+"'"], opts.npeople,
+                             people_out, affs_out)
 
         #filters = MetricFilters("month", startdate, enddate, ["project", "'"+project+"'"], opts.npeople,
         #                     people_out, affs_out)
-        filters_scm = MetricFilters("month", startdate, enddate, ["project,branch", "'"+project+"','master'"], opts.npeople, people_out, affs_out)
+        #filters_scm = MetricFilters("month", startdate, enddate, ["repository,branch", "'"+project+"','master'"], opts.npeople, people_out, affs_out)
 
-        filters = MetricFilters("month", startdate, enddate, ["project", "'"+project+"'"], opts.npeople,  people_out, affs_out)
+        #filters = MetricFilters("month", startdate, enddate, ["repository", "'"+project+"'"], opts.npeople,  people_out, affs_out)
         #SCM report
         scm_dbcon = SCMQuery(opts.dbuser, opts.dbpassword, opts.dbcvsanaly, opts.dbidentities)
-        data.update(scm_report(scm_dbcon, filters_scm))
+        data.update(scm_report(scm_dbcon, filters, project_sloc))
 
         #ITS report
         ITS.set_backend("bg")
         its_dbcon = ITSQuery(opts.dbuser, opts.dbpassword, opts.dbbicho, opts.dbidentities)
-        data.update(its_report(its_dbcon, filters))
+        data.update(its_report(its_dbcon, filters, project_sloc))
 
         #SCR Report
         #scr_dbcon = SCRQuery(opts.dbuser, opts.dbpassword, opts.dbreview, opts.dbidentities)
@@ -345,11 +420,8 @@ if __name__ == '__main__':
 
         #MLS Report
         mls_dbcon = MLSQuery(opts.dbuser, opts.dbpassword, opts.dbmlstats, opts.dbidentities)
-        data.update(mls_report(mls_dbcon, filters))
+        data.update(mls_report(mls_dbcon, filters, project_sloc))
 
-        createJSON(data, project + ".json")
-        print project
-        print data
-        print "\n\n"
+        createJSON(data, project + "-grimoirelib-prj-static.json")
 
 
