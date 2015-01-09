@@ -193,14 +193,20 @@ class Pending(Metrics):
         metrics_for_pendig = {}
 
         metric = SCR.get_metrics("submitted", SCR)
+        if metric is None:
+            metric = Submitted(self.db, self.filters)
         metric.filters = self.filters
         metrics_for_pendig['submitted'] = metric
 
         metric = SCR.get_metrics("merged", SCR)
+        if metric is None:
+            metric = Merged(self.db, self.filters)
         metric.filters = self.filters
         metrics_for_pendig['merged'] = metric
 
         metric = SCR.get_metrics("abandoned", SCR)
+        if metric is None:
+            metric = Abandoned(self.db, self.filters)
         metric.filters = self.filters
         metrics_for_pendig['abandoned'] = metric
 
