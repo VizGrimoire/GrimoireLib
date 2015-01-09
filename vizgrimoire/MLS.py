@@ -327,8 +327,9 @@ class MLS(DataSource):
     @staticmethod
     def create_r_reports(vizr, enddate, destdir):
         unique_ids = True
-        vizr.ReportDemographicsAgingMLS(enddate, destdir, unique_ids)
-        vizr.ReportDemographicsBirthMLS(enddate, destdir, unique_ids)
+        # Demographics - created now with age study in Python
+        # vizr.ReportDemographicsAgingMLS(enddate, destdir, unique_ids)
+        # vizr.ReportDemographicsBirthMLS(enddate, destdir, unique_ids)
 
         ## Which quantiles we're interested in
         # quantiles_spec = [0.99,0.95,0.5,0.25]
