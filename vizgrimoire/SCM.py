@@ -362,9 +362,10 @@ class SCM(DataSource):
     @staticmethod
     def create_r_reports(vizr, enddate, destdir):
         unique_ids = True
+        # Demographics - created now with age study in Python
         # Demographics
-        vizr.ReportDemographicsAgingSCM(enddate, destdir, unique_ids)
-        vizr.ReportDemographicsBirthSCM(enddate, destdir, unique_ids)
+        # vizr.ReportDemographicsAgingSCM(enddate, destdir, unique_ids)
+        # vizr.ReportDemographicsBirthSCM(enddate, destdir, unique_ids)
 
     @staticmethod
     def _remove_people(people_id):

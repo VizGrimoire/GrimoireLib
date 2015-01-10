@@ -23,6 +23,7 @@
 ##   Luis Cañas-Díaz <lcanas@bitergia.com>
 ##
 ## python openstack_report.py -a dic_cvsanaly_openstack_4114 -d dic_bicho_gerrit_openstack_3359_bis4 -i dic_cvsanaly_openstack_4114 -r 2013-01-01,2013-04-01,2013-07-01,2013-10-01,2014-01-01,2014-04-01,2014-07-01,2014-10-01,2015-01-01 -c lcanas_bicho_openstack_1376_bis -b lcanas_mlstats_openstack_1376 -f dic_sibyl_openstack_3194_new -e dic_irc_openstack_3277
+## python openstack_report.py -a openstack_2014q4_git -d openstack_2014q4_gerrit -i openstack_2014q4_git -r 2013-01-01,2013-04-01,2013-07-01,2013-10-01,2014-01-01,2014-04-01,2014-07-01,2014-10-01,2015-01-01 -c openstack_2014q4_tickets -b openstack_2014q4_mailinglists -f openstack_2014q4_qaforums -e openstack_2014q4_irc
 
 import imp, inspect
 from optparse import OptionParser
@@ -40,6 +41,29 @@ from prettyplotlib import brewer2mpl
 import numpy as np
 from datetime import datetime
 #from data_handler import DHESA
+
+
+def bar3_chart(title, labels, data1, file_name, data2, data3, legend=["", ""]):
+
+    colors = ["orange", "grey"]
+
+    fig, ax = plt.subplots(1)
+    xpos = np.arange(len(data1))
+    width = 0.28
+
+    plt.title(title)
+    y_pos = np.arange(len(data1))
+
+    ppl.bar(xpos+width+width, data3, color="orange", width=0.28, annotate=True)
+    ppl.bar(xpos+width, data1, color='grey', width=0.28, annotate=True)
+    ppl.bar(xpos, data2, grid='y', width = 0.28, annotate=True)
+    plt.xticks(xpos+width, labels)
+    plt.legend(legend, loc=2)
+
+
+    plt.savefig(file_name + ".eps")
+    plt.close()
+
 
 
 def bar_chart(title, labels, data1, file_name, data2 = None, legend=["", ""]):
@@ -80,22 +104,6 @@ def ts_chart(title, unixtime_dates, data, file_name):
     ppl.plot(dates, data)
     fig.autofmt_xdate()
     fig.savefig(file_name + ".eps")
-
-
-def barh_chart(title, yvalues, xvalues, file_name):
-
-    fig, ax = plt.subplots(1)
-    x_pos = np.arange(len(xvalues))
-
-    plt.title(title)
-    y_pos = np.arange(len(yvalues))
-
-    #plt.barh(y_pos, xvalues)
-    ppl.barh(y_pos, xvalues, grid='x')
-    ppl.barh(y_pos, xvalues, grid='x')
-    plt.yticks(y_pos, yvalues)
-    plt.savefig(file_name + ".eps")
-    plt.close()
 
 
 def read_options():
@@ -708,6 +716,7 @@ def projects_efficiency(opts, people_out, affs_out):
     # BMI and time to review in mean per general project
     scr_dbcon = SCRQuery(opts.dbuser, opts.dbpassword, opts.dbreview, opts.dbidentities)
     scm_dbcon = SCMQuery(opts.dbuser, opts.dbpassword, opts.dbcvsanaly, opts.dbidentities)
+    its_dbcon = ITSQuery(opts.dbuser, opts.dbpassword, opts.dbbicho, opts.dbidentities)
 
     projects = integrated_projects(scm_dbcon)
 
@@ -715,6 +724,7 @@ def projects_efficiency(opts, people_out, affs_out):
     projects_list = []
     bmi_list = []
     time2review_list = []
+    bmi_its = []
 
     period = "month"
     releases = opts.releases.split(",")[-2:]
@@ -728,20 +738,41 @@ def projects_efficiency(opts, people_out, affs_out):
                                         people_out, affs_out)
         scr_bmi = scr.BMISCR(scr_dbcon, project_filters)
         time2review = scr.TimeToReview(scr_dbcon, project_filters)
+   
+        # ITS BMI index
+        from ITS import ITS
+        ITS.set_backend("launchpad")
+
+        if project_id == 'Documentation':
+            ITS._get_backend().closed_condition = "(new_value='Fix Committed' or new_value='Fix Released')"
+        else:
+            ITS.closed_condition = "(new_value='Fix Committed')"
+
+        opened = its.Opened(its_dbcon, project_filters)
+        closed = its.Closed(its_dbcon, project_filters)
+
+        tickets_opened = opened.get_agg()["opened"]
+        tickets_closed = closed.get_agg()["closed"]
+
+        its_bmi = 0
+        if tickets_closed > 0:
+           its_bmi = round(float(tickets_closed)/float(tickets_opened), 2)
+
 
         projects_list.append(project_id)
         bmi_list.append(round(scr_bmi.get_agg()["bmiscr"], 2))
         time2review_list.append(round(time2review.get_agg()["review_time_days_median"], 2))
+        bmi_its.append(its_bmi)
 
 
-    createCSV({"projects":projects_list, "bmi":bmi_list, "timereview":time2review_list}, "./release/integrated_projects_efficiency.csv")    
+    createCSV({"projects":projects_list, "bmi":bmi_list, "timereview":time2review_list, "bmiits":bmi_its}, "./release/integrated_projects_efficiency.csv")    
 
 def timezone_analysis(opts):
     from timezone import Timezone
     from SCM import SCM
     from MLS import MLS
 
-    scm_dbcon = SCMQuery(opts.dbuser, opts.dbpassword, opts.dbcvsanaly, opts.dbidentities)
+    scm_dbcon = DSQuery(opts.dbuser, opts.dbpassword, opts.dbcvsanaly, opts.dbidentities)
     mls_dbcon = MLSQuery(opts.dbuser, opts.dbpassword, opts.dbmlstats, opts.dbidentities)
 
     period = "month"
@@ -767,7 +798,9 @@ def timezone_analysis(opts):
 def general_info(opts, releases, people_out, affs_out):
     # General info from MLS, IRC and QAForums.
     scm_dbcon = SCMQuery(opts.dbuser, opts.dbpassword, opts.dbcvsanaly, opts.dbidentities)
-    timezone_analysis(opts)
+    
+    # analysis currently failing
+    #timezone_analysis(opts)
 
     core = []
     regular = []
@@ -826,28 +859,30 @@ def general_info(opts, releases, people_out, affs_out):
         irc_senders.append(dataset["senders"])
 
 
+
     labels = ["13-Q1", "13-Q2", "13-Q3", "13-Q4", "14-Q1", "14-Q2","14-Q3", "14-Q4"]
     #labels = ["2013-Q3", "2013-Q4", "2014-Q1", "2014-Q2"]
-    barh_chart("Emails sent", labels, emails, "emails")
+    bar_chart("Emails sent", labels, emails, "emails")
+
     createCSV({"labels":labels, "emails":emails}, "./release/emails.csv")
-    barh_chart("People sending emails", labels, emails_senders, "emails_senders")
+    bar_chart("People sending emails", labels, emails_senders, "emails_senders")
     createCSV({"labels":labels, "senders":emails_senders}, "./release/emails_senders.csv")
-    barh_chart("People initiating threads", labels, emails_senders_init, "emails_senders_init")
+    bar_chart("People initiating threads", labels, emails_senders_init, "emails_senders_init")
     createCSV({"labels":labels, "senders":emails_senders_init}, "./release/emails_senders_init.csv")
-    barh_chart("Questions", labels, questions, "questions")
+    bar_chart("Questions", labels, questions, "questions")
     createCSV({"labels":labels, "questions":questions}, "./release/questions.csv")
-    barh_chart("Answers", labels, answers, "answers")
+    bar_chart("Answers", labels, answers, "answers")
     createCSV({"labels":labels, "answers":answers}, "./release/answers.csv")
-    barh_chart("Comments", labels, comments, "comments")
+    bar_chart("Comments", labels, comments, "comments")
     createCSV({"labels":labels, "comments":comments}, "./release/comments.csv")
-    barh_chart("People asking Questions", labels, qsenders, "question_senders")
+    bar_chart("People asking Questions", labels, qsenders, "question_senders")
     createCSV({"labels":labels, "senders":qsenders}, "./release/question_senders.csv")
-    barh_chart("Messages in IRC channels", labels, irc_sent, "irc_sent")
+    bar_chart("Messages in IRC channels", labels, irc_sent, "irc_sent")
     createCSV({"labels":labels, "messages":irc_sent}, "./release/irc_sent.csv")
-    barh_chart("People in IRC channels", labels, irc_senders, "irc_senders")
+    bar_chart("People in IRC channels", labels, irc_senders, "irc_senders")
     createCSV({"labels":labels, "senders":irc_senders}, "./release/irc_senders.csv")
     
-    bar_chart("Community structure", labels, regular, "onion", core, ["regular", "core"])
+    bar3_chart("Community structure", labels, regular, "onion", core, occasional, ["casual", "regular", "core"])
     createCSV({"labels":labels, "core":core, "regular":regular, "occasional":occasional}, "./release/onion_model.csv")
     bar_chart("Developers per month", labels, authors_month, "authors_month")
     createCSV({"labels":labels, "authormonth":authors_month}, "./release/authors_month.csv")
@@ -872,7 +907,7 @@ def general_info(opts, releases, people_out, affs_out):
     projects_efficiency(opts, people_out, affs_out)    
    
     # TZ analysis
-    timezone_analysis(opts)
+    #timezone_analysis(opts)
 
 def releases_info(startdate, enddate, project, opts, people_out, affs_out):
     # Releases information.
@@ -900,7 +935,7 @@ def releases_info(startdate, enddate, project, opts, people_out, affs_out):
 def print_n_draw(agg_data, project):
     # The releases information is print in CSV/JSON format and specific charts are built
 
-    labels = ["12-Q4", "13-Q1", "13-Q2", "13-Q3", "13-Q4", "14-Q1", "14-Q2", "14-Q3"]        
+    labels = ["13-Q1", "13-Q2", "13-Q3", "13-Q4", "14-Q1", "14-Q2", "14-Q3", "14-Q4"]
     #labels = ["2013-Q3", "2013-Q4", "2014-Q1", "2014-Q2"]
     project_name = project.replace(" ", "")
 

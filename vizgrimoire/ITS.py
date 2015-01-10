@@ -327,9 +327,9 @@ class ITS(DataSource):
         vizr.ReportTimeToCloseITS(backend, destdir)
         unique_ids = True
 
-        # Demographics
-        vizr.ReportDemographicsAgingITS(enddate, destdir, unique_ids)
-        vizr.ReportDemographicsBirthITS(enddate, destdir, unique_ids)
+        # Demographics - created now with age study in Python
+        # vizr.ReportDemographicsAgingITS(enddate, destdir, unique_ids)
+        # vizr.ReportDemographicsBirthITS(enddate, destdir, unique_ids)
 
         # Markov
         vizr.ReportMarkovChain(destdir)
