@@ -27,7 +27,7 @@ import re
 import sys
 from sets import Set
 
-from metrics_filter import MetricFilters
+from vizgrimoire.metrics.metrics_filter import MetricFilters
 
 class DSQuery(object):
     """ Generic methods to control access to db """
@@ -2124,7 +2124,7 @@ class MediawikiQuery(DSQuery):
         return tables
 
     def GetSQLReportWhere (self, filters):
-        from Mediawiki import Mediawiki
+        from vizgrimoire.Mediawiki import Mediawiki
 
         where = Set([])
         where.add(self.get_bots_filter_sql(Mediawiki, filters))
@@ -2384,7 +2384,7 @@ class QAForumsQuery(DSQuery):
 
     def get_top_senders(self, days, startdate, enddate, limit, type_post):
         # FIXME: neither using unique identities nor filtering bots
-        from QAForums import QAForums
+        from vizgrimoire.QAForums import QAForums
         table_name = type_post
         date_field = self.__get_date_field(table_name)
         author_field = self.__get_author_field(table_name)

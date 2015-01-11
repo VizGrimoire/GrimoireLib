@@ -25,15 +25,15 @@
 
 import logging, time
 
-from analyses import Analyses
-from query_builder import DSQuery
-from metrics_filter import MetricFilters
-from GrimoireUtils import createJSON
-import GrimoireSQL
-from SCM import SCM
-from ITS import ITS
-from MLS import MLS
-from report import Report
+from vizgrimoire.analysis.analyses import Analyses
+from vizgrimoire.metrics.query_builder import DSQuery
+from vizgrimoire.metrics.metrics_filter import MetricFilters
+from vizgrimoire.GrimoireUtils import createJSON
+import vizgrimoire.GrimoireSQL
+from vizgrimoire.SCM import SCM
+from vizgrimoire.ITS import ITS
+from vizgrimoire.MLS import MLS
+from vizgrimoire.report import Report
 import logging
 
 class CompaniesActivity(Analyses):

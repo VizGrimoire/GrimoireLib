@@ -29,10 +29,10 @@
 """ Opened metric for the IRC systems """
 
 
-from metrics import Metrics
-from metrics_filter import MetricFilters
-from query_builder import IRCQuery
-from IRC import IRC
+from vizgrimoire.metrics.metrics import Metrics
+from vizgrimoire.metrics.metrics_filter import MetricFilters
+from vizgrimoire.metrics.query_builder import IRCQuery
+from vizgrimoire.IRC import IRC
 
 from sets import Set
 

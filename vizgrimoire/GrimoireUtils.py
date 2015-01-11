@@ -270,7 +270,7 @@ def removeDecimals(data):
 
 def roundDecimals(data):
     """ Limit the max number of decimals in floats """
-    from metrics import Metrics
+    from vizgrimoire.metrics.metrics import Metrics
     if (isinstance(data, dict)):
         for key in data:
             if (isinstance(data[key], float)):
@@ -477,7 +477,7 @@ def read_main_conf(config_file):
 def get_subprojects(project, identities_db, dsquery = None):
     """ Return all subprojects ids for a project in a string join by comma """
 
-    from GrimoireSQL import ExecuteQuery
+    from vizgrimoire.GrimoireSQL import ExecuteQuery
     query = ExecuteQuery
     if dsquery is not None: query = dsquery.ExecuteQuery
 
@@ -588,7 +588,7 @@ def check_array_values(data):
 def fill_items(items, data, id_field, evol = False,
                period = None, startdate = None, enddate = None):
     """ Complete data dict items filling with 0 not existing items """
-    from GrimoireUtils import completePeriodIds
+    from vizgrimoire.GrimoireUtils import completePeriodIds
 
     # This fields should not be modified
     ts_fields = [period, 'unixtime', 'date']

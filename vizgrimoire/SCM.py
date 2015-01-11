@@ -170,7 +170,7 @@ class SCM(DataSource):
 
     @staticmethod
     def get_top_data (startdate, enddate, i_db, filter_, npeople):
-        from report import Report
+        from vizgrimoire.report import Report
         top = {}
         data = SCM.get_top_data_authors (startdate, enddate, i_db, filter_, npeople)
         top = dict(top.items() + data.items())
@@ -223,7 +223,7 @@ class SCM(DataSource):
 
     @staticmethod
     def create_filter_report(filter_, period, startdate, enddate, destdir, npeople, identities_db):
-        from report import Report
+        from vizgrimoire.report import Report
         items = Report.get_items()
         if items is None:
             items = SCM.get_filter_items(filter_, startdate, enddate, identities_db)

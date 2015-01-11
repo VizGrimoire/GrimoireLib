@@ -34,9 +34,9 @@ from grimoirelib_alch.family.activity_timezones import (
     SCMActivityTZ, MLSActivityTZ
     )
 
-from analyses import Analyses
-from SCM import SCM
-from MLS import MLS
+from vizgrimoire.analysis.analyses import Analyses
+from vizgrimoire.SCM import SCM
+from vizgrimoire.MLS import MLS
 
 from datetime import datetime, timedelta
 from jsonpickle import encode, set_encoder_options
@@ -166,8 +166,8 @@ class Timezone(Analyses):
 
 if __name__ == '__main__':
 
-    from query_builder import DSQuery
-    from metrics_filter import MetricFilters
+    from vizgrimoire.metrics.query_builder import DSQuery
+    from vizgrimoire.metrics.metrics_filter import MetricFilters
 
     # Get 
     filters = MetricFilters("months", "'2013-06-01'", "'2014-01-01'", [])

@@ -23,10 +23,10 @@
 # Code Contributors New and Gone from source code review system
 # 
 
-from analyses import Analyses
-from query_builder import DSQuery
-from metrics_filter import MetricFilters
-from GrimoireUtils import createJSON, completePeriodIds
+from vizgrimoire.analysis.analyses import Analyses
+from vizgrimoire.metrics.query_builder import DSQuery
+from vizgrimoire.metrics.metrics_filter import MetricFilters
+from vizgrimoire.GrimoireUtils import createJSON, completePeriodIds
 
 class ContributorsNewGone(Analyses):
     id = "contributors_new_gone"
@@ -255,12 +255,12 @@ class ContributorsNewGoneSCM(ContributorsNewGone):
         return data
 
     def create_report(self, data_source, destdir):
-        from SCM import SCM
+        from vizgrimoire.SCM import SCM
         if data_source != SCM: return
         self.result(data_source, destdir)
 
     def result(self, data_source, destdir = None):
-        from SCM import SCM
+        from vizgrimoire.SCM import SCM
         if data_source != SCM or destdir is None: return
 
         result_dict = {}
@@ -555,12 +555,12 @@ class ContributorsNewGoneSCR(ContributorsNewGone):
         return data
 
     def create_report(self, data_source, destdir):
-        from SCR import SCR
+        from vizgrimoire.SCR import SCR
         if data_source != SCR: return
         self.result(destdir)
 
     def result(self, data_source, destdir = None):
-        from SCR import SCR
+        from vizgrimoire.SCR import SCR
         if data_source != SCR or destdir is None: return
 
         period = self.filters.period

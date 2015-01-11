@@ -27,15 +27,15 @@ import os
 
 import datetime
 
-from GrimoireSQL import GetSQLGlobal, GetSQLPeriod, ExecuteQuery, BuildQuery
+from vizgrimoire.GrimoireSQL import GetSQLGlobal, GetSQLPeriod, ExecuteQuery, BuildQuery
 
-from GrimoireUtils import GetPercentageDiff, GetDates, getPeriod, createJSON, completePeriodIds
+from vizgrimoire.GrimoireUtils import GetPercentageDiff, GetDates, getPeriod, createJSON, completePeriodIds
 
-from data_source import DataSource
+from vizgrimoire.data_source import DataSource
 
-from filter import Filter
+from vizgrimoire.filter import Filter
 
-from metrics_filter import MetricFilters
+from vizgrimoire.metrics.metrics_filter import MetricFilters
 
 
 class QAForums(DataSource):
@@ -161,7 +161,7 @@ class QAForums(DataSource):
 
     @staticmethod
     def create_filter_report(filter_, period, startdate, enddate, destdir, npeople, identities_db):
-        from report import Report
+        from vizgrimoire.report import Report
         items = Report.get_items()
         if items is None:
             items =  QAForums.get_filter_items(filter_, startdate, enddate, identities_db)
@@ -208,7 +208,7 @@ class QAForums(DataSource):
 
     @staticmethod
     def get_query_builder ():
-        from query_builder import QAForumsQuery
+        from vizgrimoire.metrics.query_builder import QAForumsQuery
         return QAForumsQuery
 
     @staticmethod

@@ -27,11 +27,11 @@
 # touched by one developer along the life of each of the files.
 # 
 
-from analyses import Analyses
+from vizgrimoire.analysis.analyses import Analyses
 
-from query_builder import DSQuery
+from vizgrimoire.metrics.query_builder import DSQuery
 
-from metrics_filter import MetricFilters
+from vizgrimoire.metrics.metrics_filter import MetricFilters
 
 class Territoriality(Analyses):
     # Territoriality measures the percentage of files 

@@ -31,11 +31,11 @@
 # http://firstmonday.org/ojs/index.php/fm/rt/printerFriendly/1207/1127
 
 
-from analyses import Analyses
+from vizgrimoire.analysis.analyses import Analyses
 
-from query_builder import DSQuery
+from vizgrimoire.metrics.query_builder import DSQuery
 
-from metrics_filter import MetricFilters
+from vizgrimoire.metrics.metrics_filter import MetricFilters
 
 class CommunityStructure(Analyses):
     # TODO:

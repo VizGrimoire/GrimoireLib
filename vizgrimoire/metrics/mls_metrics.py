@@ -28,13 +28,13 @@ import logging
 
 from datetime import datetime
 
-from data_source import DataSource
-from GrimoireUtils import completePeriodIds, GetDates, GetPercentageDiff
-from filter import Filter
-from metrics import Metrics
-from metrics_filter import MetricFilters
+from vizgrimoire.data_source import DataSource
+from vizgrimoire.GrimoireUtils import completePeriodIds, GetDates, GetPercentageDiff
+from vizgrimoire.filter import Filter
+from vizgrimoire.metrics.metrics import Metrics
+from vizgrimoire.metrics.metrics_filter import MetricFilters
 
-from MLS import MLS
+from vizgrimoire.MLS import MLS
 
 from sets import Set
 

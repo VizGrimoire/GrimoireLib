@@ -384,7 +384,7 @@ class DataSourceTest(unittest.TestCase):
         destdir = os.path.join("data","json")
 
 
-        from metrics_filter import MetricFilters
+        from vizgrimoire.metrics.metrics_filter import MetricFilters
 
         db_identities= Report.get_config()['generic']['db_identities']
         dbuser = Report.get_config()['generic']['db_user']
@@ -492,12 +492,12 @@ if __name__ == '__main__':
 
     init_env()
 
-    from filter import Filter
-    from GrimoireUtils import getPeriod, read_main_conf
-    from GrimoireUtils import compare_json_data, completePeriodIds
+    from vizgrimoire.filter import Filter
+    from vizgrimoire.GrimoireUtils import getPeriod, read_main_conf
+    from vizgrimoire.GrimoireUtils import compare_json_data, completePeriodIds
     # from GrimoireUtils import createJSON, compareJSON
-    from GrimoireUtils import createJSON
-    from report import Report
+    from vizgrimoire.GrimoireUtils import createJSON
+    from vizgrimoire.report import Report
 
     opts = read_options()
 

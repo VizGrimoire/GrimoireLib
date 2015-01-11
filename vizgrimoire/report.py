@@ -19,15 +19,15 @@
 ##   Alvaro del Castillo <acs@bitergia.com>
 
 
-from GrimoireSQL import SetDBChannel
-from GrimoireUtils import read_main_conf
+from vizgrimoire.GrimoireSQL import SetDBChannel
+from vizgrimoire.GrimoireUtils import read_main_conf
 import logging, time
-import SCM, ITS, MLS, SCR, Mediawiki, IRC, DownloadsDS, QAForums, ReleasesDS
-from filter import Filter
-from metrics import Metrics
-from metrics_filter import MetricFilters
-from analyses import Analyses
-from query_builder import DSQuery
+import vizgrimoire.SCM as SCM, vizgrimoire.ITS as ITS, vizgrimoire.MLS as MLS, vizgrimoire.SCR as SCR, vizgrimoire.Mediawiki as Mediawiki, vizgrimoire.IRC as IRC, vizgrimoire.DownloadsDS as DownloadsDS, vizgrimoire.QAForums as QAForums, vizgrimoire.ReleasesDS as ReleasesDS
+from vizgrimoire.filter import Filter
+from vizgrimoire.metrics.metrics import Metrics
+from vizgrimoire.metrics.metrics_filter import MetricFilters
+from vizgrimoire.analysis.analyses import Analyses
+from vizgrimoire.metrics.query_builder import DSQuery
 
 class Report(object):
     """Basic class for a Grimoire automator based dashboard"""

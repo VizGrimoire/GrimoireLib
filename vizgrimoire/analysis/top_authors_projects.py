@@ -22,11 +22,11 @@
 #     Daniel Izquierdo Cortazar <dizquierdo@bitergia.com>
 #
 
-from analyses import Analyses
+from vizgrimoire.analysis.analyses import Analyses
 
-from query_builder import SCMQuery
+from vizgrimoire.metrics.query_builder import SCMQuery
 
-from metrics_filter import MetricFilters
+from vizgrimoire.metrics.metrics_filter import MetricFilters
 
 class TopAuthorsProjects(Analyses):
     # this class provides a list of top contributors
@@ -69,6 +69,6 @@ if __name__ == '__main__':
     print top_authors.result()
 
     #example using query_builder function
-    from query_builder import SCMQuery
+    from vizgrimoire.metrics.query_builder import SCMQuery
     dbcon = SCMQuery("root", "", "dic_cvsanaly_openstack_2259", "dic_cvsanaly_openstack_2259")
     print dbcon.get_project_top_authors("integrated", "'2014-01-01'", "'2014-04-01'", 10)

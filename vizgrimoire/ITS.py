@@ -77,7 +77,7 @@ class ITS(DataSource):
     @staticmethod
     def _get_backend():
         if ITS._backend == None:
-            automator = report.Report.get_config()
+            automator = vizgrimoire.report.Report.get_config()
             its_backend = automator['bicho']['backend']
             backend = Backend(its_backend)
         else:
@@ -210,7 +210,7 @@ class ITS(DataSource):
 
     @staticmethod
     def create_filter_report(filter_, period, startdate, enddate, destdir, npeople, identities_db):
-        from report import Report
+        from vizgrimoire.report import Report
         items = Report.get_items()
         if items is None:
             items = ITS.get_filter_items(filter_, startdate, enddate, identities_db)
@@ -423,7 +423,7 @@ class ITS(DataSource):
 
     @staticmethod
     def get_query_builder():
-        from query_builder import ITSQuery
+        from vizgrimoire.metrics.query_builder import ITSQuery
         return ITSQuery
 
     @staticmethod

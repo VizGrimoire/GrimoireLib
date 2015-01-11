@@ -29,15 +29,15 @@ import MySQLdb
 
 import re, sys
 
-from GrimoireUtils import completePeriodIds, GetDates, GetPercentageDiff
+from vizgrimoire.GrimoireUtils import completePeriodIds, GetDates, GetPercentageDiff
 
-from metrics import Metrics
+from vizgrimoire.metrics.metrics import Metrics
 
-from metrics_filter import MetricFilters
+from vizgrimoire.metrics.metrics_filter import MetricFilters
 
-from query_builder import QAForumsQuery
+from vizgrimoire.metrics.query_builder import QAForumsQuery
 
-from QAForums import QAForums
+from vizgrimoire.QAForums import QAForums
 
 
 class Questions(Metrics):

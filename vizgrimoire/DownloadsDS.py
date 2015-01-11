@@ -27,12 +27,12 @@
 
 import logging, os
 
-from GrimoireSQL import ExecuteQuery, BuildQuery
-from GrimoireUtils import completePeriodIds, createJSON
+from vizgrimoire.GrimoireSQL import ExecuteQuery, BuildQuery
+from vizgrimoire.GrimoireUtils import completePeriodIds, createJSON
 
-from data_source import DataSource
+from vizgrimoire.data_source import DataSource
 
-from metrics_filter import MetricFilters
+from vizgrimoire.metrics.metrics_filter import MetricFilters
 
 
 class DownloadsDS(DataSource):
@@ -171,7 +171,7 @@ class DownloadsDS(DataSource):
 
     @staticmethod
     def create_filter_report(filter_, period, startdate, enddate, destdir, npeople, identities_db):
-        from report import Report
+        from vizgrimoire.report import Report
         items = Report.get_items()
         if items is None:
             items = DownloadsDS.get_filter_items(filter_, startdate, enddate, identities_db)
@@ -195,7 +195,7 @@ class DownloadsDS(DataSource):
 
     @staticmethod
     def get_query_builder ():
-        from query_builder import DownloadsDSQuery
+        from vizgrimoire.metrics.query_builder import DownloadsDSQuery
         return DownloadsDSQuery
 
     @staticmethod

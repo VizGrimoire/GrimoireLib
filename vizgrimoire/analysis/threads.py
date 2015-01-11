@@ -22,9 +22,9 @@
 
 # Mailing lists main topics study
 
-import GrimoireUtils
-import GrimoireSQL
-from GrimoireSQL import ExecuteQuery
+import vizgrimoire.GrimoireUtils
+import vizgrimoire.GrimoireSQL
+from vizgrimoire.GrimoireSQL import ExecuteQuery
 
 class Email(object):
     """This class contains the main attributes of an email

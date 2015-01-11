@@ -735,8 +735,8 @@ class Companies(Metrics):
     data_source = ITS
 
     def get_list(self):
-        from data_source import DataSource
-        from filter import Filter
+        from vizgrimoire.data_source import DataSource
+        from vizgrimoire.filter import Filter
         bots = DataSource.get_filter_bots(Filter("company"))
         fbots = ''
         for bot in bots:
@@ -820,8 +820,8 @@ class Domains(Metrics):
         return q
 
     def get_list(self):
-        from data_source import DataSource
-        from filter import Filter
+        from vizgrimoire.data_source import DataSource
+        from vizgrimoire.filter import Filter
         startdate = self.filters.startdate
         enddate = self.filters.enddate
         closed_condition = ITS._get_closed_condition()
@@ -862,7 +862,7 @@ class Projects(Metrics):
     def get_list (self):
         # Projects activity needs to include subprojects also
         logging.info ("Getting projects list for ITS")
-        from metrics_filter import MetricFilters
+        from vizgrimoire.metrics.metrics_filter import MetricFilters
 
         q = "SELECT p.id AS name FROM  %s.projects p" % (self.db.identities_db)
         projects = self.db.ExecuteQuery(q)

@@ -28,10 +28,10 @@ import logging
 import MySQLdb
 from numpy import median, average
 
-from GrimoireUtils import completePeriodIds, checkListArray, medianAndAvgByPeriod, removeDecimals
-from metrics import Metrics
-from metrics_filter import MetricFilters
-from SCR import SCR
+from vizgrimoire.GrimoireUtils import completePeriodIds, checkListArray, medianAndAvgByPeriod, removeDecimals
+from vizgrimoire.metrics.metrics import Metrics
+from vizgrimoire.metrics.metrics_filter import MetricFilters
+from vizgrimoire.SCR import SCR
 
 class TimeToReviewPendingSCR(Metrics):
     """

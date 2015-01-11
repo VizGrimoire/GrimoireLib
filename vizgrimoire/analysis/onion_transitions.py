@@ -33,9 +33,9 @@
 
 
 import logging
-from analyses import Analyses
-from query_builder import DSQuery
-from metrics_filter import MetricFilters
+from vizgrimoire.analysis.analyses import Analyses
+from vizgrimoire.metrics.query_builder import DSQuery
+from vizgrimoire.metrics.metrics_filter import MetricFilters
 
 class OnionTransitions(Analyses):
     # TODO:

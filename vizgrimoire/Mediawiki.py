@@ -22,13 +22,13 @@
 import logging, os
 
 from filter import Filter
-from GrimoireSQL import GetSQLGlobal, GetSQLPeriod, GetSQLReportFrom 
-from GrimoireSQL import GetSQLReportWhere, ExecuteQuery, BuildQuery
-from GrimoireUtils import GetPercentageDiff, GetDates, completePeriodIds, createJSON
-from metrics_filter import MetricFilters
+from vizgrimoire.GrimoireSQL import GetSQLGlobal, GetSQLPeriod, GetSQLReportFrom 
+from vizgrimoire.GrimoireSQL import GetSQLReportWhere, ExecuteQuery, BuildQuery
+from vizgrimoire.GrimoireUtils import GetPercentageDiff, GetDates, completePeriodIds, createJSON
+from vizgrimoire.metrics.metrics_filter import MetricFilters
 
 
-from data_source import DataSource
+from vizgrimoire.data_source import DataSource
 
 
 class Mediawiki(DataSource):
@@ -140,7 +140,7 @@ class Mediawiki(DataSource):
 
     @staticmethod
     def create_filter_report(filter_, period, startdate, enddate, destdir, npeople, identities_db):
-        from report import Report
+        from vizgrimoire.report import Report
         items = Report.get_items()
         if items is None:
             items = Mediawiki.get_filter_items(filter_, startdate, enddate, identities_db)
@@ -191,7 +191,7 @@ class Mediawiki(DataSource):
 
     @staticmethod
     def get_query_builder():
-        from query_builder import MediawikiQuery
+        from vizgrimoire.metrics.query_builder import MediawikiQuery
         return MediawikiQuery
 
     @staticmethod

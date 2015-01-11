@@ -17,7 +17,7 @@
 ## Authors:
 ##   Alvaro del Castillo <acs@bitergia.com>
 
-from GrimoireSQL import ExecuteQuery
+from vizgrimoire.GrimoireSQL import ExecuteQuery
 
 def GetPersonIdentifiers (upeople_id):
     q = "select identity,type from identities where upeople_id='"+str(upeople_id)+"'"

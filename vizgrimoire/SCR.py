@@ -30,17 +30,17 @@ from numpy import median, average
 import time
 from datetime import datetime, timedelta
 
-from GrimoireSQL import GetSQLGlobal, GetSQLPeriod
-from GrimoireSQL import ExecuteQuery
-from GrimoireUtils import GetPercentageDiff, GetDates, completePeriodIds
-from GrimoireUtils import checkListArray, removeDecimals, get_subprojects
-from GrimoireUtils import getPeriod, createJSON, checkFloatArray, medianAndAvgByPeriod, check_array_values
-from metrics_filter import MetricFilters
-from query_builder import DSQuery
+from vizgrimoire.GrimoireSQL import GetSQLGlobal, GetSQLPeriod
+from vizgrimoire.GrimoireSQL import ExecuteQuery
+from vizgrimoire.GrimoireUtils import GetPercentageDiff, GetDates, completePeriodIds
+from vizgrimoire.GrimoireUtils import checkListArray, removeDecimals, get_subprojects
+from vizgrimoire.GrimoireUtils import getPeriod, createJSON, checkFloatArray, medianAndAvgByPeriod, check_array_values
+from vizgrimoire.metrics.metrics_filter import MetricFilters
+from vizgrimoire.metrics.query_builder import DSQuery
 
 
-from data_source import DataSource
-from filter import Filter
+from vizgrimoire.data_source import DataSource
+from vizgrimoire.filter import Filter
 
 
 class SCR(DataSource):
@@ -87,13 +87,13 @@ class SCR(DataSource):
     def __get_data__ (period, startdate, enddate, identities_db, filter_ = None, evol = False):
         data = {}
         DS = SCR
-        from GrimoireUtils import fill_and_order_items
+        from vizgrimoire.GrimoireUtils import fill_and_order_items
 
         type_analysis = None
         if filter_ is not None:
             type_analysis = [filter_.get_name(), filter_.get_item()]
 
-        from report import Report
+        from vizgrimoire.report import Report
         automator = Report.get_config()
 
         if evol:
@@ -110,7 +110,7 @@ class SCR(DataSource):
 
         metrics_reports = SCR.get_metrics_core_reports()
         if filter_ is None:
-            from report import Report
+            from vizgrimoire.report import Report
             reports_on = Report.get_config()['r']['reports'].split(",")
             for r in metrics_reports:
                 if r in reports_on: metrics_on += [r]
@@ -277,7 +277,7 @@ class SCR(DataSource):
 
     @staticmethod
     def create_filter_report(filter_, period, startdate, enddate, destdir, npeople, identities_db):
-        from report import Report
+        from vizgrimoire.report import Report
         items = Report.get_items()
         if items is None:
             items = SCR.get_filter_items(filter_, startdate, enddate, identities_db)
@@ -397,7 +397,7 @@ class SCR(DataSource):
 
     @staticmethod
     def get_query_builder():
-        from query_builder import SCRQuery
+        from vizgrimoire.metrics.query_builder import SCRQuery
         return SCRQuery
 
     @staticmethod

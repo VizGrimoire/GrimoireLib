@@ -28,18 +28,18 @@ import logging
 import MySQLdb
 import numpy
 
-from GrimoireUtils import completePeriodIds, checkListArray, medianAndAvgByPeriod, check_array_values
-from query_builder import DSQuery
+from vizgrimoire.GrimoireUtils import completePeriodIds, checkListArray, medianAndAvgByPeriod, check_array_values
+from vizgrimoire.metrics.query_builder import DSQuery
 
-from metrics import Metrics
+from vizgrimoire.metrics.metrics import Metrics
 
-from metrics_filter import MetricFilters
+from vizgrimoire.metrics.metrics_filter import MetricFilters
 
-from query_builder import SCRQuery
+from vizgrimoire.metrics.query_builder import SCRQuery
 
-from query_builder import ITSQuery
+from vizgrimoire.metrics.query_builder import ITSQuery
 
-from SCR import SCR
+from vizgrimoire.SCR import SCR
 
 from sets import Set
 
@@ -224,13 +224,13 @@ class Pending(Metrics):
             merged = metrics['merged'].get_agg()
             abandoned = metrics['abandoned'].get_agg()
 
-        from report import Report
+        from vizgrimoire.report import Report
         filter = Report.get_filter(self.filters.type_analysis[0])
         items = SCR.get_filter_items(filter, self.filters.startdate,
                                      self.filters.enddate, self.db.identities_db)
         items = items.pop('name')
 
-        from GrimoireUtils import fill_and_order_items
+        from vizgrimoire.GrimoireUtils import fill_and_order_items
         id_field = DSQuery.get_group_field(self.filters.type_analysis[0])
         id_field = id_field.split('.')[1] # remove table name
         submitted = check_array_values(submitted)
@@ -1098,7 +1098,7 @@ class TimeToReview(Metrics):
 
     def get_agg(self):
         from numpy import median, average
-        from GrimoireUtils import removeDecimals
+        from vizgrimoire.GrimoireUtils import removeDecimals
 
         q = self._get_sql()
         if q is None: return {}
@@ -1359,7 +1359,7 @@ if __name__ == '__main__':
     print pending.get_agg()
 
     timewaiting = TimeToReviewPatch(dbcon, filters)
-    from data_handler import DHESA
+    from vizgrimoire.datahandlers.data_handler import DHESA
     values = timewaiting.get_agg()
     dhesa = DHESA(values["waitingtime4submitter"])
     print values["waitingtime4submitter"]

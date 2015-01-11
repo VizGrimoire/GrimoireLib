@@ -29,15 +29,15 @@ import re
 import sys
 import datetime
 
-from GrimoireSQL import GetSQLGlobal, GetSQLPeriod
-from GrimoireSQL import ExecuteQuery, BuildQuery
-from GrimoireUtils import GetPercentageDiff, GetDates, completePeriodIds, getPeriod, createJSON, get_subprojects
-from metrics_filter import MetricFilters
-from threads import Threads
+from vizgrimoire.GrimoireSQL import GetSQLGlobal, GetSQLPeriod
+from vizgrimoire.GrimoireSQL import ExecuteQuery, BuildQuery
+from vizgrimoire.GrimoireUtils import GetPercentageDiff, GetDates, completePeriodIds, getPeriod, createJSON, get_subprojects
+from vizgrimoire.metrics.metrics_filter import MetricFilters
+from vizgrimoire.analysis.threads import Threads
 
-from data_source import DataSource
-import report
-from filter import Filter
+from vizgrimoire.data_source import DataSource
+import vizgrimoire.report
+from vizgrimoire.filter import Filter
 
 
 class MLS(DataSource):
@@ -222,7 +222,7 @@ class MLS(DataSource):
 
     @staticmethod
     def create_filter_report(filter_, period, startdate, enddate, destdir, npeople, identities_db):
-        from report import Report
+        from vizgrimoire.report import Report
         items = Report.get_items()
         if items is None:
             items = MLS.get_filter_items(filter_, startdate, enddate, identities_db)
@@ -341,7 +341,7 @@ class MLS(DataSource):
 
     @staticmethod
     def get_query_builder():
-        from query_builder import MLSQuery
+        from vizgrimoire.metrics.query_builder import MLSQuery
         return MLSQuery
 
     @staticmethod

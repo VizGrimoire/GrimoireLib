@@ -33,14 +33,14 @@ import MySQLdb
 import numpy
 from sets import Set
 
-from GrimoireUtils import completePeriodIds, checkListArray, medianAndAvgByPeriod, check_array_values
-from query_builder import DSQuery
-from metrics import Metrics
+from vizgrimoire.GrimoireUtils import completePeriodIds, checkListArray, medianAndAvgByPeriod, check_array_values
+from vizgrimoire.metrics.query_builder import DSQuery
+from vizgrimoire.metrics.metrics import Metrics
 
-from metrics_filter import MetricFilters
-from query_builder import ITSQuery
+from vizgrimoire.metrics.metrics_filter import MetricFilters
+from vizgrimoire.metrics.query_builder import ITSQuery
 
-from ITS import ITS
+from vizgrimoire.ITS import ITS
 
 class PullRequests(Metrics):
     """This class calculates the number of pull requests (submitted reviews) 
@@ -58,7 +58,7 @@ class PullRequests(Metrics):
     This class needs to work on a database only containing Pull Requests.
     """
 
-    id = "jira_pull_requests"
+    id = "submitted"
     name = "Submitted reviews"
     desc = "Number of submitted reviews"
     data_source = ITS
@@ -90,7 +90,7 @@ class Submitters(Metrics):
 
     """
 
-    id = "jira_submitters_pull_requests"
+    id = "submitters"
     name = "Jira submitters pull requests"
     desc = "Jira developers submitting pull requests"
     data_source = ITS
@@ -119,7 +119,7 @@ class Abandoned(Metrics):
 
     """
 
-    id = "jira_abandoned_pull_requests"
+    id = "abandoned"
     name = "Jira abandoned pull requests"
     desc = "Jira pull requests that were abandoned at some point"
     data_source = ITS
@@ -154,6 +154,10 @@ class Merged(Metrics):
         the resolution is 'Fixed'.
 
     """
+    id = "merged"
+    name = "Merged"
+    desc = "Pull Requests merged"
+    data_source = ITS
 
     def _get_sql(self, evolutionary):
         fields = Set([])
@@ -175,28 +179,121 @@ class Merged(Metrics):
         query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                self.filters.enddate, " ch.changed_on ",
                                fields, tables, filters, evolutionary, self.filters.type_analysis)
-        print query
         return query
 
-import its_metrics as its
+import vizgrimoire.metrics.its_metrics as its
 
 class Trackers(its.Trackers):
-
     """ List of trackers
     """
 
-    id = "jira_trackers"
+    id = "trackers"
     name = "Jira Trackers"
     desc = "Jira Trackers"
     data_source = ITS
 
 
+class Companies(its.Companies):
+    """ List of organizations
+    """
+
+    id = "companies"
+    name = "Jira Companies"
+    desc = "Jira companies in the review process"
+    data_source = ITS
+
+
+from vizgrimoire.GrimoireUtils import createJSON
+
+
+def create_json(dbcon, filters):
+
+    ITS.set_backend("jira")
+    ITS._get_backend().closed_condition = " i.status = 'Closed' "
+
+    pullrequests = PullRequests(dbcon, filters)
+    submitters = Submitters(dbcon, filters)
+    abandoned = Abandoned(dbcon, filters)
+    merged = Merged(dbcon, filters)
+    trackers = Trackers(dbcon, filters)
+
+    #timeseries data
+    data = dict(pullrequests.get_ts().items() +
+                submitters.get_ts().items() +
+                abandoned.get_ts().items() +
+                merged.get_ts().items() +
+                trackers.get_ts().items())
+    if filters.type_analysis == []:
+        createJSON(data, "scr-evolutionary.json")
+    else:
+        tracker = filters.type_analysis[1]
+        tracker = tracker.replace("'", "")
+        name = tracker.split("/")[-1:][0]
+        createJSON(data, name + "-scr-evolutionary.json")
+
+    #aggregated data
+    data = dict(pullrequests.get_agg().items() +
+                submitters.get_agg().items() +
+                abandoned.get_agg().items() +
+                merged.get_agg().items() +
+                trackers.get_agg().items())
+
+    enddate = filters.enddate
+
+    for i in [7, 365, 0]:
+        data = dict(data.items() +
+                    pullrequests.get_trends(enddate, i).items() +
+                    submitters.get_trends(enddate, i).items() +
+                    abandoned.get_trends(enddate, i).items() +
+                    merged.get_trends(enddate, i).items() +
+                    trackers.get_trends(enddate, i).items())
+
+    if filters.type_analysis == []:
+        createJSON(data, "scr-static.json")
+    else:
+        tracker = filters.type_analysis[1]
+        tracker = tracker.replace("'", "")
+        name = tracker.split("/")[-1:][0]
+        createJSON(data, name + "-scr-static.json")
+
+
 if __name__ == '__main__':
 
     # PYTHONPATH=./:../../:../analysis/:../ python scr_jira_metrics.py
-    filters = MetricFilters("month", "'2014-04-01'", "'2014-07-01'", [])
-    dbcon = ITSQuery("root", "", "example")
+    filters = MetricFilters("month", "'2008-10-20'", "'2014-10-01'", [])
+    dbcon = ITSQuery("root", "", "lcanas_bicho_gerrit_liferay_4444", "lcanas_cvsanaly_liferay_4444")
 
+    create_json(dbcon, filters)
+
+    ITS.set_backend("jira")
+    ITS._get_backend().closed_condition = " i.status = 'Closed' "
+    #per tracker data
+    trackers = Trackers(dbcon, filters)
+    trackers_list = trackers.get_list()
+    trackers_names = []
+    for tracker in trackers_list["name"]:
+        tracker_name = tracker.split("/")[-1:][0]
+        trackers_names.append(tracker_name)
+        tracker_str = "'" + tracker + "'"
+        filters = MetricFilters("month", "'2008-10-20'", "'2014-10-01'", ['repository', tracker_str])
+        create_json(dbcon, filters)
+
+    createJSON({"name":trackers_names}, "scr-repos.json")
+
+    companies = Companies(dbcon, filters)
+    companies_list = companies.get_list()
+    companies_names = []
+    for company in companies_list["name"]:
+        company_name = company.split("/")[-1:][0]
+        companies_names.append(company_name)
+        company_str = "'" + company + "'"
+        dbcon = ITSQuery("root", "", "lcanas_bicho_gerrit_liferay_4444", "lcanas_cvsanaly_liferay_4444")
+        filters = MetricFilters("month", "'2008-10-20'", "'2014-10-01'", ['company', company_str])
+        create_json(dbcon, filters)
+
+    createJSON({"name":companies_names}, "scr-companies.json")
+
+    exit(0)
     print "Pull requests"
     example = PullRequests(dbcon, filters)
     print example.get_agg()
@@ -221,4 +318,4 @@ if __name__ == '__main__':
     example = Trackers(dbcon, filters)
     print example.get_agg()
     print example.get_ts()  
-
+    print example.get_list()

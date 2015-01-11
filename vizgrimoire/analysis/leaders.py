@@ -24,13 +24,13 @@
 
 import numpy as np
 
-from analyses import Analyses
+from vizgrimoire.analysis.analyses import Analyses
 
-from query_builder import SCMQuery
+from vizgrimoire.metrics.query_builder import SCMQuery
 
-from metrics_filter import MetricFilters
+from vizgrimoire.metrics.metrics_filter import MetricFilters
 
-from scm_metrics import Commits
+from vizgrimoire.metrics.scm_metrics import Commits
 
 class Leaders(Analyses):
     # This class aims at being a meta-class that contains several analyses
