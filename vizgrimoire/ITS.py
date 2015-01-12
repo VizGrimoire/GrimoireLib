@@ -75,6 +75,7 @@ class ITS(DataSource):
 
     @staticmethod
     def _get_backend():
+        import vizgrimoire.report
         if ITS._backend == None:
             automator = vizgrimoire.report.Report.get_config()
             its_backend = automator['bicho']['backend']
