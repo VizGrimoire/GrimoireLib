@@ -38,11 +38,11 @@ from query_builder import SCRQuery
 
 from query_builder import ITSQuery
 
-from SCR import SCR
+from Pullpo import Pullpo
 
 from sets import Set
 
-class SCRPullQuery(DSQuery):
+class PullpoQuery(DSQuery):
 
     def GetSQLReportFrom (self, type_analysis):
         #generic function to generate 'from' clauses
@@ -116,14 +116,42 @@ class SCRPullQuery(DSQuery):
         q = self.BuildQuery (period, startdate, enddate, date_field, fields, tables,
                              filters, evolutionary, type_analysis)
         return q
-    pass
+
+    def GetTimeToReviewQuerySQL (self, startdate, enddate, type_analysis = [], bots = []):
+        fields = Set([])
+        tables = Set([])
+        filters = Set([])
+
+        filter_bots = ''
+        for bot in bots:
+            filters.add("people.login <> '"+bot+"'")
+
+        fields.add("TIMESTAMPDIFF(SECOND, created_at, closed_at)/(24*3600) AS revtime")
+
+        tables.add("pull_requests pr")
+        tables.union_update(self.GetSQLReportFrom(type_analysis))
+
+        filters.union_update(self.GetSQLReportWhere(type_analysis))
+        # filters.add("merged_at is NOT NULL")
+        # remove autoreviews
+        # filters.add("i.submitted_by<>ch.changed_by")
+        #filters.add("ORDER BY ch_ext.changed_on")
+
+        fields_str = self._get_fields_query(fields)
+        tables_str = self._get_tables_query(tables)
+        filters_str = self._get_filters_query(filters)
+        q = self.GetSQLGlobal('closed_at', fields_str, tables_str, filters_str,
+                              startdate, enddate)
+        # min_days_for_review = 0.042 # one hour
+        # q = "SELECT revtime, changed_on FROM ("+q+") qrevs WHERE revtime>"+str(min_days_for_review)
+        return q
 
 
 class Submitted(Metrics):
     id = "submitted"
     name = "Submitted reviews"
     desc = "Number of submitted code review processes"
-    data_source = SCR
+    data_source = Pullpo
 
     def _get_sql(self, evolutionary):
         q = self.db.GetReviewsSQL(self.filters.period, self.filters.startdate,
@@ -139,7 +167,7 @@ class Merged(Metrics):
     id = "merged"
     name = "Merged changes"
     desc = "Number of changes merged into the source code"
-    data_source = SCR
+    data_source = Pullpo
 
     def _get_sql(self, evolutionary):
         q = self.db.GetReviewsSQL(self.filters.period, self.filters.startdate,
@@ -151,7 +179,7 @@ class Mergers(Metrics):
     id = "mergers"
     name = "Successful submitters"
     desc = "Number of persons submitting changes that got accepted"
-    data_source = SCR
+    data_source = Pullpo
 
     def _get_sql(self, evolutionary):
         pass
@@ -160,7 +188,7 @@ class Abandoned(Metrics):
     id = "abandoned"
     name = "Abandoned reviews"
     desc = "Number of abandoned review processes"
-    data_source = SCR
+    data_source = Pullpo
 
     def _get_sql(self, evolutionary):
         q = self.db.GetReviewsSQL(self.filters.period, self.filters.startdate,
@@ -168,7 +196,7 @@ class Abandoned(Metrics):
                                   self.filters.type_analysis, evolutionary)
         return q
 
-class BMISCR(Metrics):
+class BMIPullpo(Metrics):
     """This class calculates the efficiency closing reviews
 
     This class is based on the Backlog Management Index that in issues, it is
@@ -180,9 +208,9 @@ class BMISCR(Metrics):
     """
 
     id = "bmiscr"
-    name = "BMI SCR"
+    name = "BMI Pullpo"
     desc = "Efficiency reviewing: (merged+abandoned reviews)/(submitted reviews)"
-    data_source = SCR
+    data_source = Pullpo
 
     def get_ts(self):
         abandoned_reviews = Abandoned(self.db, self.filters)
@@ -241,25 +269,25 @@ class Pending(Metrics):
     id = "pending"
     name = "Pending reviews"
     desc = "Number of pending review processes"
-    data_source = SCR
+    data_source = Pullpo
 
     def _get_metrics_for_pending(self):
         # We need to fix the same filter for all metrics
         metrics_for_pendig = {}
 
-        metric = SCR.get_metrics("submitted", SCR)
+        metric = Pullpo.get_metrics("submitted", Pullpo)
         if metric is None:
             metric = Submitted(self.db, self.filters)
         metric.filters = self.filters
         metrics_for_pendig['submitted'] = metric
 
-        metric = SCR.get_metrics("merged", SCR)
+        metric = Pullpo.get_metrics("merged", Pullpo)
         if metric is None:
             metric = Merged(self.db, self.filters)
         metric.filters = self.filters
         metrics_for_pendig['merged'] = metric
 
-        metric = SCR.get_metrics("abandoned", SCR)
+        metric = Pullpo.get_metrics("abandoned", Pullpo)
         if metric is None:
             metric = Abandoned(self.db, self.filters)
         metric.filters = self.filters
@@ -281,7 +309,7 @@ class Pending(Metrics):
 
         from report import Report
         filter = Report.get_filter(self.filters.type_analysis[0])
-        items = SCR.get_filter_items(filter, self.filters.startdate,
+        items = Pullpo.get_filter_items(filter, self.filters.startdate,
                                      self.filters.enddate, self.db.identities_db)
         items = items.pop('name')
 
@@ -372,7 +400,7 @@ class Closed(Metrics):
     id = "closed"
     name = "Closed reviews"
     desc = "Number of closed review processes (merged or abandoned)"
-    data_source = SCR
+    data_source = Pullpo
 
     def _get_sql(self, evolutionary):
         q = self.db.GetReviewsSQL(self.filters.period, self.filters.startdate,
@@ -384,7 +412,7 @@ class New(Metrics):
     id = "new"
     name = "New reviews"
     desc = "Number of new review processes"
-    data_source = SCR
+    data_source = Pullpo
 
     def _get_sql(self, evolutionary):
         q = self.db.GetReviewsSQL(self.filters.period, self.filters.startdate,
@@ -409,7 +437,7 @@ class Companies(Metrics):
     id = "companies"
     name = "Organizations"
     desc = "Number of organizations (companies, etc.) with persons active in code review"
-    data_source = SCR
+    data_source = Pullpo
 
     def _get_sql(self, evolutionary):
         fields = Set([])
@@ -449,7 +477,7 @@ class Countries(Metrics):
     id = "countries"
     name = "Countries"
     desc = "Number of countries with persons active in code review"
-    data_source = SCR
+    data_source = Pullpo
 
     def _get_sql(self, evolutionary):
         fields = Set([])
@@ -489,7 +517,7 @@ class Domains(Metrics):
     id = "domains"
     name = "Domains"
     desc = "Number of domains with persons active in code review"
-    data_source = SCR
+    data_source = Pullpo
 
     def _get_sql(self, evolutionary):
         pass
@@ -498,14 +526,14 @@ class Projects(Metrics):
     id = "projects"
     name = "Projects"
     desc = "Number of projects in code review"
-    data_source = SCR
+    data_source = Pullpo
 
     def _get_sql(self, evolutionary):
         pass
 
     def get_list (self):
         # Projects activity needs to include subprojects also
-        logging.info ("Getting projects list for SCR")
+        logging.info ("Getting projects list for Pullpo")
 
         # Get all projects list
         q = "SELECT p.id AS name FROM  %s.projects p" % (self.db.identities_db)
@@ -516,7 +544,7 @@ class Projects(Metrics):
         for project in projects['name']:
             type_analysis = ['project', project]
 
-            metric = SCR.get_metrics("submitted", SCR)
+            metric = Pullpo.get_metrics("submitted", Pullpo)
             type_analysis_orig = metric.filters.type_analysis
             metric.filters.type_analysis = type_analysis
             reviews = metric.get_agg()
@@ -537,7 +565,7 @@ class Repositories(Metrics):
     id = "repositories"
     name = "Repositories"
     desc = "Number of repositories with persons active in code review"
-    data_source = SCR
+    data_source = Pullpo
 
     def _get_sql(self, evolutionary):
         fields = Set([])
@@ -573,7 +601,7 @@ class People(Metrics):
     id = "people2"
     name = "People"
     desc = "Number of people active in code review activities"
-    data_source = SCR
+    data_source = Pullpo
 
     def _get_sql(self, evolutionary):
         pass
@@ -581,7 +609,7 @@ class People(Metrics):
     def _get_top_global (self, days = 0, metric_filters = None):
         """ Implemented using Submitters """
         top = None
-        submitters = SCR.get_metrics("submitters", SCR)
+        submitters = Pullpo.get_metrics("submitters", Pullpo)
         if submitters is None:
             #TODO: absolutely wrong: EmailsSenders???
             submitters = EmailsSenders(self.db, self.filters)
@@ -599,7 +627,7 @@ class Reviewers(Metrics):
     id = "reviewers"
     name = "Reviewers"
     desc = "Number of persons reviewing code review activities"
-    data_source = SCR
+    data_source = Pullpo
     action = "reviews"
 
     # Not sure if this top is right
@@ -664,7 +692,7 @@ class Closers(Metrics):
     id = "closers"
     name = "Closers"
     desc = "Number of persons closing code review activities"
-    data_source = SCR
+    data_source = Pullpo
     action = "closed"
 
     def _get_top_global (self, days = 0, metric_filters = None):
@@ -712,13 +740,13 @@ class Submitters(Metrics):
     id = "submitters"
     name = "Submitters"
     desc = "Number of persons submitting code review processes"
-    data_source = SCR
+    data_source = Pullpo
     action = "submitted"
 
     def __get_sql_trk_prj__(self, evolutionary):
         """ First we get the submitters then join with unique identities """
 
-        tpeople_sql  = "SELECT  distinct(submitted_by) as submitted_by, created_at  "
+        tpeople_sql  = "SELECT distinct(user_id) as submitted_by, created_at  "
         tpeople_sql += " FROM pull_requests pr, " + self.db._get_tables_query(self.db.GetSQLReportFrom(self.filters.type_analysis))
         filters_ext = self.db._get_filters_query(self.db.GetSQLReportWhere(self.filters.type_analysis))
         if (filters_ext != ""):
@@ -753,7 +781,7 @@ class Submitters(Metrics):
         #Specific case for the basic option where people_upeople table is needed
         #and not taken into account in the initial part of the query
         tables.add("people_upeople pup")
-        filters.add("pr.submitted_by = pup.people_id")
+        filters.add("pr.user_id = pup.people_id")
 
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                self.filters.enddate, " created_at ",
@@ -762,9 +790,11 @@ class Submitters(Metrics):
 
     def _get_sql(self, evolutionary):
         if (self.filters.type_analysis is not None and (self.filters.type_analysis[0] in  ["repository","project"])):
-            return self.__get_sql_trk_prj__(evolutionary)
+            q = self.__get_sql_trk_prj__(evolutionary)
         else:
-            return self.__get_sql_default__(evolutionary)
+            q =  self.__get_sql_default__(evolutionary)
+        print(q)
+        return q
 
     def _get_top_global (self, days = 0, metric_filters = None):
         if metric_filters == None:
@@ -789,7 +819,7 @@ class Submitters(Metrics):
             "            count(distinct(pr.id)) as "+action+" "+\
             "        FROM people_upeople pup, pull_requests pr, "+self.db.identities_db+".upeople up "+\
             "        WHERE "+ filter_bots+ " "+\
-            "            pr.submitted_by = pup.people_id and "+\
+            "            pr.user_id = pup.people_id and "+\
             "            pup.upeople_id = up.id and "+\
             "            pr.created_at >= "+ startdate+ " and "+\
             "            pr.created_at < "+ enddate+ " "+\
@@ -800,10 +830,11 @@ class Submitters(Metrics):
         return(self.db.ExecuteQuery(q))
 
 class TimeToReview(Metrics):
+    """ The time is measure for closed reviews merged """
     id = "review_time"
     name = "Review Time"
     desc = "Time to review"
-    data_source = SCR
+    data_source = Pullpo
 
     def _get_sql(self):
         if self.filters.period != "month": return None
@@ -831,24 +862,5 @@ class TimeToReview(Metrics):
         return {"review_time_days_median":ttr_median, "review_time_days_avg":ttr_avg}
 
     def get_ts(self):
-        q = self._get_sql()
-        if q is None: return {}
-        review_list = self.db.ExecuteQuery(q)
-        checkListArray(review_list)
-        metrics_list = {}
-
-
-        med_avg_list = medianAndAvgByPeriod(self.filters.period, review_list['changed_on'], review_list['revtime'])
-        if (med_avg_list != None):
-            metrics_list['review_time_days_median'] = med_avg_list['median']
-            metrics_list['review_time_days_avg'] = med_avg_list['avg']
-            metrics_list['month'] = med_avg_list['month']
-        else:
-            metrics_list['review_time_days_median'] = []
-            metrics_list['review_time_days_avg'] = []
-            metrics_list['month'] = []
-
-        metrics_list = completePeriodIds(metrics_list, self.filters.period,
-                          self.filters.startdate, self.filters.enddate)
-
+        raise Exception("Not implemented time to review evolution in time for github pull requests")
         return metrics_list

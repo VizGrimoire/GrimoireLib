@@ -31,11 +31,17 @@ import vizgrimoire.IRC as IRC
 import vizgrimoire.DownloadsDS as DownloadsDS
 import vizgrimoire.QAForums as QAForums
 import vizgrimoire.ReleasesDS as ReleasesDS
+import vizgrimoire.Pullpo as Pullpo
 from vizgrimoire.filter import Filter
 from vizgrimoire.metrics.metrics import Metrics
 from vizgrimoire.metrics.metrics_filter import MetricFilters
 from vizgrimoire.analysis.analyses import Analyses
 from vizgrimoire.metrics.query_builder import DSQuery
+from filter import Filter
+from metrics import Metrics
+from metrics_filter import MetricFilters
+from analyses import Analyses
+from query_builder import DSQuery
 
 class Report(object):
     """Basic class for a Grimoire automator based dashboard"""
@@ -77,7 +83,7 @@ class Report(object):
     def _init_data_sources():
         Report._all_data_sources = [SCM.SCM, ITS.ITS, MLS.MLS, SCR.SCR, 
                                     Mediawiki.Mediawiki, IRC.IRC, DownloadsDS.DownloadsDS,
-                                    QAForums.QAForums, ReleasesDS.ReleasesDS]
+                                    QAForums.QAForums, ReleasesDS.ReleasesDS, Pullpo.Pullpo]
         if 'people_out' in Report.get_config()['r']:
             bots = Report.get_config()['r']['people_out'].split(",")
             for ds in Report._all_data_sources:
