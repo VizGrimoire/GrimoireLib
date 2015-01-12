@@ -106,7 +106,7 @@ def create_people_identifiers(startdate, enddate, destdir):
     logging.info("Generating people identifiers")
 
     from vizgrimoire.SCM import GetPeopleListSCM
-    import vizgrimoire.analysis.People
+    import vizgrimoire.People
 
     scm = None
     for ds in Report.get_data_sources():
