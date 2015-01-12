@@ -22,7 +22,15 @@
 from vizgrimoire.GrimoireSQL import SetDBChannel
 from vizgrimoire.GrimoireUtils import read_main_conf
 import logging, time
-import vizgrimoire.SCM as SCM, vizgrimoire.ITS as ITS, vizgrimoire.MLS as MLS, vizgrimoire.SCR as SCR, vizgrimoire.Mediawiki as Mediawiki, vizgrimoire.IRC as IRC, vizgrimoire.DownloadsDS as DownloadsDS, vizgrimoire.QAForums as QAForums, vizgrimoire.ReleasesDS as ReleasesDS
+import vizgrimoire.SCM as SCM
+import vizgrimoire.ITS as ITS
+import vizgrimoire.MLS as MLS
+import vizgrimoire.SCR as SCR
+import vizgrimoire.Mediawiki as Mediawiki
+import vizgrimoire.IRC as IRC
+import vizgrimoire.DownloadsDS as DownloadsDS
+import vizgrimoire.QAForums as QAForums
+import vizgrimoire.ReleasesDS as ReleasesDS
 from vizgrimoire.filter import Filter
 from vizgrimoire.metrics.metrics import Metrics
 from vizgrimoire.metrics.metrics_filter import MetricFilters

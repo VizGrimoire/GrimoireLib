@@ -28,11 +28,11 @@
 import logging
 import datetime
 import sys
-import GrimoireUtils, GrimoireSQL
-from GrimoireUtils import dataFrame2Dict, createJSON, completePeriodIds
+import vizgrimoire.GrimoireUtils, vizgrimoire.GrimoireSQL
+from vizgrimoire.GrimoireUtils import dataFrame2Dict, createJSON, completePeriodIds
 from optparse import OptionParser
-from threads import Threads
-import MLS
+from vizgrimoire.analysis.threads import Threads
+import vizgrimoire.MLS
 
 def read_options():
     parser = OptionParser(usage="usage: %prog [options]",

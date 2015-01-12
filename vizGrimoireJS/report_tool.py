@@ -105,8 +105,8 @@ def create_reports_r(enddate, destdir):
 def create_people_identifiers(startdate, enddate, destdir):
     logging.info("Generating people identifiers")
 
-    from SCM import GetPeopleListSCM
-    import People
+    from vizgrimoire.SCM import GetPeopleListSCM
+    import vizgrimoire.analysis.People
 
     scm = None
     for ds in Report.get_data_sources():
@@ -130,7 +130,7 @@ def create_people_identifiers(startdate, enddate, destdir):
     createJSON(people_data, destdir+"/people.json")
 
 def create_reports_studies(period, startdate, enddate, destdir):
-    from metrics_filter import MetricFilters
+    from vizgrimoire.metrics.metrics_filter import MetricFilters
 
     db_identities= Report.get_config()['generic']['db_identities']
     dbuser = Report.get_config()['generic']['db_user']
@@ -224,8 +224,8 @@ def init_env():
 if __name__ == '__main__':
 
     init_env()
-    from GrimoireUtils import getPeriod, read_main_conf, createJSON
-    from report import Report
+    from vizgrimoire.GrimoireUtils import getPeriod, read_main_conf, createJSON
+    from vizgrimoire.report import Report
 
     logging.basicConfig(level=logging.INFO,format='%(asctime)s %(message)s')
     logging.info("Starting Report analysis")

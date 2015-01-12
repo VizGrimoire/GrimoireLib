@@ -75,9 +75,9 @@ def init_env():
 
 if __name__ == '__main__':
     init_env()
-    from metric import Metric
-    from SCM import SCM
-    from report import Report
+    from vizgrimoire.metrics.metric import Metric
+    from vizgrimoire.SCM import SCM
+    from vizgrimoire.report import Report
 
     logging.basicConfig(level=logging.INFO,format='%(asctime)s %(message)s')
     logging.info("Grimoire Metrics Tool")

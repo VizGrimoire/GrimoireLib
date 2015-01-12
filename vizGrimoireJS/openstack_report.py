@@ -197,7 +197,7 @@ def build_releases(releases_dates):
 def scm_general(dbcon, filters):
     # Aggregated information for SCM data source
 
-    from onion_model import CommunityStructure
+    from vizgrimoire.analysis.onion_model import CommunityStructure
     onion = CommunityStructure(dbcon, filters)
     result = onion.result()
 
@@ -254,7 +254,7 @@ def scm_report(dbcon, filters):
 def its_report(dbcon, filters):
     # Per release its information
 
-    from ITS import ITS
+    from vizgrimoire.ITS import ITS
     ITS.set_backend("launchpad")
 
     project_name = filters.type_analysis[1]
@@ -394,7 +394,7 @@ def mls_report(dbcon, filters):
     dataset["senders"] = senders.get_agg()["senders"]
     dataset["senders_init"] = senders_init.get_agg()["senders_init"]
 
-    from threads import Threads
+    from vizgrimoire.analysis.threads import Threads
     SetDBChannel(dbcon.user, dbcon.password, dbcon.database)
     threads = Threads(filters.startdate, filters.enddate, dbcon.identities_db)
     top_longest_threads = threads.topLongestThread(10)
@@ -458,7 +458,7 @@ def qaforums_report(dbcon, filters):
     dataset["comments"] = comments.get_agg()["csent"]
     dataset["qsenders"] = q_senders.get_agg()["qsenders"]
 
-    import top_questions_qaforums as top
+    import vizgrimoire.analysis.top_questions_qaforums as top
     tops = top.TopQuestions(dbcon, filters)
     commented = tops.top_commented()
     commented["qid"] = commented.pop("question_identifier")
@@ -590,7 +590,7 @@ def data_source_increment_activity(opts, people_out, affs_out):
     messages = irc.Sent(irc_dbcon, filters)
 
 
-    from ITS import ITS
+    from vizgrimoire.ITS import ITS
     ITS.set_backend("launchpad")
 
     net_values.append(commits.get_trends(releases[1], 365)["commits_365"])
@@ -740,7 +740,7 @@ def projects_efficiency(opts, people_out, affs_out):
         time2review = scr.TimeToReview(scr_dbcon, project_filters)
    
         # ITS BMI index
-        from ITS import ITS
+        from vizgrimoire.ITS import ITS
         ITS.set_backend("launchpad")
 
         if project_id == 'Documentation':
@@ -768,9 +768,9 @@ def projects_efficiency(opts, people_out, affs_out):
     createCSV({"projects":projects_list, "bmi":bmi_list, "timereview":time2review_list, "bmiits":bmi_its}, "./release/integrated_projects_efficiency.csv")    
 
 def timezone_analysis(opts):
-    from timezone import Timezone
-    from SCM import SCM
-    from MLS import MLS
+    from vizgrimoire.analysis.timezone import Timezone
+    from vizgrimoire.SCM import SCM
+    from vizgrimoire.MLS import MLS
 
     scm_dbcon = DSQuery(opts.dbuser, opts.dbpassword, opts.dbcvsanaly, opts.dbidentities)
     mls_dbcon = MLSQuery(opts.dbuser, opts.dbpassword, opts.dbmlstats, opts.dbidentities)
@@ -1033,18 +1033,18 @@ if __name__ == '__main__':
 
     init_env()
 
-    from metrics import Metrics
-    from query_builder import DSQuery, SCMQuery, QAForumsQuery, MLSQuery, SCRQuery, ITSQuery, IRCQuery
-    from metrics_filter import MetricFilters
-    import scm_metrics as scm
-    import qaforums_metrics as qa
-    import mls_metrics as mls
-    import scr_metrics as scr
-    import its_metrics as its
-    import irc_metrics as irc
-    from GrimoireUtils import createJSON
-    from GrimoireSQL import SetDBChannel
-    from data_handler import DHESA
+    from vizgrimoire.metrics.metrics import Metrics
+    from vizgrimoire.metrics.query_builder import DSQuery, SCMQuery, QAForumsQuery, MLSQuery, SCRQuery, ITSQuery, IRCQuery
+    from vizgrimoire.metrics.metrics_filter import MetricFilters
+    import vizgrimoire.metrics.scm_metrics as scm
+    import vizgrimoire.metrics.qaforums_metrics as qa
+    import vizgrimoire.metrics.mls_metrics as mls
+    import vizgrimoire.metrics.scr_metrics as scr
+    import vizgrimoire.metrics.its_metrics as its
+    import vizgrimoire.metrics.irc_metrics as irc
+    from vizgrimoire.GrimoireUtils import createJSON
+    from vizgrimoire.GrimoireSQL import SetDBChannel
+    from vizgrimoire.datahandlers.data_handler import DHESA
 
     # parse options
     opts = read_options()    

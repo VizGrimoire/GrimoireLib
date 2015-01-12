@@ -34,7 +34,6 @@ from vizgrimoire.metrics.metrics_filter import MetricFilters
 
 from vizgrimoire.data_source import DataSource
 from vizgrimoire.filter import Filter
-import vizgrimoire.report
 
 class ITS(DataSource):
     _metrics_set = []

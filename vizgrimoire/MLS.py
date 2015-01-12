@@ -34,9 +34,7 @@ from vizgrimoire.GrimoireSQL import ExecuteQuery, BuildQuery
 from vizgrimoire.GrimoireUtils import GetPercentageDiff, GetDates, completePeriodIds, getPeriod, createJSON, get_subprojects
 from vizgrimoire.metrics.metrics_filter import MetricFilters
 from vizgrimoire.analysis.threads import Threads
-
 from vizgrimoire.data_source import DataSource
-import vizgrimoire.report
 from vizgrimoire.filter import Filter
 
 

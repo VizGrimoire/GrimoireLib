@@ -28,11 +28,11 @@
 import logging
 import sys
 
-import GrimoireUtils, GrimoireSQL
-from GrimoireUtils import createJSON, completePeriodIds
-from GrimoireUtils import getPeriod
-from SCM import GetPeopleListSCM
-import People
+import vizgrimoire.GrimoireUtils, vizgrimoire.GrimoireSQL
+from vizgrimoire.GrimoireUtils import createJSON, completePeriodIds
+from vizgrimoire.GrimoireUtils import getPeriod
+from vizgrimoire.SCM import GetPeopleListSCM
+import vizgrimoire.People
 
 from utils import read_options
 

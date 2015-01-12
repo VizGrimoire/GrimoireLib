@@ -27,11 +27,11 @@ from os.path import isfile, join
 
 import imp, inspect
 
-from metrics import Metrics
+from vizgrimoire.metrics.metrics import Metrics
 
-from query_builder import DSQuery, SCMQuery, ITSQuery
+from vizgrimoire.metrics.query_builder import DSQuery, SCMQuery, ITSQuery
 
-from metrics_filter import MetricFilters
+from vizgrimoire.metrics.metrics_filter import MetricFilters
 
 
 

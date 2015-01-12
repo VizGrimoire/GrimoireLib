@@ -18,11 +18,11 @@ def init_env():
 if __name__ == '__main__':
 
     init_env()
-    from GrimoireUtils import getPeriod, read_main_conf, createJSON
-    from metrics_filter import MetricFilters
-    from query_builder import SCRQuery
-    from report import Report
-    from scr_metrics import Pending
+    from vizgrimoire.GrimoireUtils import getPeriod, read_main_conf, createJSON
+    from vizgrimoire.metrics.metrics_filter import MetricFilters
+    from vizgrimoire.metrics.query_builder import SCRQuery
+    from vizgrimoire.report import Report
+    from vizgrimoire.metrics.scr_metrics import Pending
 
     db = "cp_gerrit_GrimoireLibTests"
     db_identities = "cp_cvsanaly_GrimoireLibTests"
