@@ -34,15 +34,108 @@ from metrics import Metrics
 
 from metrics_filter import MetricFilters
 
-from query_builder import SCRQuery
-
-from query_builder import ITSQuery
-
 from Pullpo import Pullpo
 
 from sets import Set
 
 class PullpoQuery(DSQuery):
+
+    def GetSQLRepositoriesFrom (self):
+        # tables necessary for repositories
+        fields = Set([])
+        fields.add("repositories re")
+
+        return fields
+
+    def GetSQLRepositoriesWhere(self, repository):
+        # filters necessaries for repositories
+        filters = Set([])
+        filters.add("pr.repo_id = re.id")
+        filters.add("re.name = " + repository)
+
+        return filters
+
+    def GetSQLCompaniesFrom(self):
+        # tables necessary to companies analysis
+        tables = Set([])
+        tables.add("people_upeople pup")
+        tables.add(self.identities_db + ".companies c")
+        tables.add(self.identities_db + ".upeople_companies upc")
+
+        return tables
+
+    def GetSQLCompaniesWhere(self, name):
+        # filters necessary to companies analysis
+        filters = Set([])
+        filters.add("pr.user_id = pup.people_id")
+        filters.add("pup.upeople_id = upc.upeople_id")
+        filters.add("upc.company_id = c.id")
+        filters.add("pr.created_at >= upc.init")
+        filters.add("pr.created_at < upc.end")
+        filters.add("c.name = " + name)
+
+        return filters
+
+    def GetSQLCountriesFrom(self):
+        # tables necessary to countries analysis
+        tables = Set([])
+        tables.add("people_upeople pup")
+        tables.add(self.identities_db + ".countries c")
+        tables.add(self.identities_db + ".upeople_countries upc")
+
+        return tables
+
+    def GetSQLCountriesWhere(self, name):
+        # filters necessary to countries analysis
+        filters = Set([])
+        filters.add("pr.user_id = pup.people_id")
+        filters.add("pup.upeople_id = upc.upeople_id")
+        filters.add("upc.country_id = c.id")
+        filters.add("c.name = " + name)
+
+        return filters
+
+    def GetSQLDomainsFrom(self):
+        # tables necessary to domains analysis
+        tables = Set([])
+        tables.add("people_upeople pup")
+        tables.add(self.identities_db + ".domains d")
+        tables.add(self.identities_db + ".upeople_domains upd")
+
+        return tables
+
+    def GetSQLDomainsWhere(self, name):
+        # filters necessary to domains analysis
+        filters = Set([])
+        filters.add("pr.user_id = pup.people_id")
+        filters.add("pup.upeople_id = upd.upeople_id")
+        filters.add("upd.domain_id = d.id")
+        filters.add("d.name = " + name)
+
+        return filters
+
+    def GetSQLProjectFrom (self):
+        # projects are mapped to repositories
+        tables = Set([])
+        tables.add("repositories re")
+
+        return tables
+
+    def GetSQLProjectWhere (self, project):
+        # include all repositories for a project and its subprojects
+        filters = Set([])
+
+        repos = """re.url IN (
+               SELECT re.name
+               FROM   %s.projects p, %s.project_repositories prep
+               WHERE  p.project_id = prep.project_id AND p.project_id IN (%s)
+                   AND prep.data_source='pullpo'
+        )""" % (self.identities_db, self.identities_db, self.get_subprojects(project))
+        filters.add(repos)
+        filters.add("re.id = pr.repo_id")
+
+        return filters
+
 
     def GetSQLReportFrom (self, type_analysis):
         #generic function to generate 'from' clauses
@@ -50,8 +143,6 @@ class PullpoQuery(DSQuery):
         #such analysis
 
         From = Set([])
-
-        return From
 
         if (type_analysis is None or len(type_analysis) != 2): return From
 
@@ -61,8 +152,8 @@ class PullpoQuery(DSQuery):
             if analysis == 'repository': From.union_update(self.GetSQLRepositoriesFrom())
             elif analysis == 'company': From.union_update(self.GetSQLCompaniesFrom())
             elif analysis == 'country': From.union_update(self.GetSQLCountriesFrom())
+            elif analysis == 'domain': From.union_update(self.GetSQLDomainsFrom())
             elif analysis == 'project': From.union_update(self.GetSQLProjectFrom())
-
         return From
 
     def GetSQLReportWhere (self, type_analysis):
@@ -72,7 +163,6 @@ class PullpoQuery(DSQuery):
         #such analysis
 
         where = Set([])
-        return where
         if (type_analysis is None or len(type_analysis) != 2): return where
 
         analysis = type_analysis[0]
@@ -82,6 +172,7 @@ class PullpoQuery(DSQuery):
             if analysis == 'repository': where.union_update(self.GetSQLRepositoriesWhere(value))
             elif analysis == 'company': where.union_update(self.GetSQLCompaniesWhere(value))
             elif analysis == 'country': where.union_update(self.GetSQLCountriesWhere(value))
+            elif analysis == 'domain': where.union_update(self.GetSQLDomainsWhere(value))
             elif analysis == 'project':
                 if (self.identities_db is None):
                     logging.error("project filter not supported without identities_db")
@@ -157,10 +248,6 @@ class Submitted(Metrics):
         q = self.db.GetReviewsSQL(self.filters.period, self.filters.startdate,
                                   self.filters.enddate, "submitted",
                                   self.filters.type_analysis, evolutionary)
-
-
-        print(q)
-
         return q
 
 class Merged(Metrics):
