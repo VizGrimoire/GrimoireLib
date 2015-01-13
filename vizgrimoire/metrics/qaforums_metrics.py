@@ -225,7 +225,7 @@ class Participants(Metrics):
                    t.date >= %s and
                    t.date < %s 
                    %s
-             group by p.username order by count(*) desc limit %s
+             group by p.username order by count(*) desc, p.username limit %s
              """ % (startdate, enddate, date_limit, limit)
 
         return self.db.ExecuteQuery(query)
