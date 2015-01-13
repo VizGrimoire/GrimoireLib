@@ -433,6 +433,296 @@ class New(Metrics):
                                  self.filters.startdate, self.filters.enddate)
 
 
+class TimeToReview(Metrics):
+    """ The time is measure for closed reviews merged """
+    id = "review_time"
+    name = "Review Time"
+    desc = "Time to review"
+    data_source = Pullpo
+
+    def _get_sql(self):
+        if self.filters.period != "month": return None
+        bots = []
+        q = self.db.GetTimeToReviewQuerySQL (self.filters.startdate, self.filters.enddate,
+                                             self.filters.type_analysis, bots)
+        return q
+
+    def get_agg(self):
+        from numpy import median, average
+        from GrimoireUtils import removeDecimals
+
+        q = self._get_sql()
+        if q is None: return {}
+        data = self.db.ExecuteQuery(q)
+        data = data['revtime']
+        if (isinstance(data, list) == False): data = [data]
+        # ttr_median = sorted(data)[len(data)//2]
+        if (len(data) == 0):
+            ttr_median = float("nan")
+            ttr_avg = float("nan")
+        else:
+            ttr_median = float(median(removeDecimals(data)))
+            ttr_avg = float(average(removeDecimals(data)))
+        return {"review_time_days_median":ttr_median, "review_time_days_avg":ttr_avg}
+
+    def get_ts(self):
+        raise Exception("Not implemented time to review evolution in time for github pull requests")
+        return metrics_list
+
+######################
+# Contributors metrics
+######################
+
+class People(Metrics):
+    id = "people2"
+    name = "People"
+    desc = "Number of people active in code review activities"
+    data_source = Pullpo
+
+    def _get_sql(self, evolutionary):
+        pass
+
+    def _get_top_global (self, days = 0, metric_filters = None):
+        """ Implemented using Submitters """
+        top = None
+        submitters = Pullpo.get_metrics("submitters", Pullpo)
+        if submitters is None:
+            submitters = Submitters(self.db, self.filters)
+            top = submitters._get_top_global(days, metric_filters)
+        else:
+            afilters = submitters.filters
+            submitters.filters = self.filters
+            top = submitters._get_top_global(days, metric_filters)
+            submitters.filters = afilters
+
+        top['name'] = top.pop('openers')
+        return top
+
+class Reviewers(Metrics):
+    """ People assigned to pull requests """
+    id = "reviewers"
+    name = "Reviewers"
+    desc = "Number of persons reviewing code review activities"
+    data_source = Pullpo
+    action = "reviews"
+
+    # Not sure if this top is right
+    def _get_top_global (self, days = 0, metric_filters = None):
+        if metric_filters == None:
+            metric_filters = self.filters
+
+        startdate = metric_filters.startdate
+        enddate = metric_filters.enddate
+        limit = metric_filters.npeople
+        filter_bots = self.db.get_bots_filter_sql(self.data_source, metric_filters)
+        if filter_bots != "": filter_bots += " AND "
+        date_limit = ""
+
+        #TODO: warning -> not using GetSQLReportFrom/Where
+        if (days != 0 ):
+            q = "SELECT @maxdate:=max(updated_at) from pull_requests limit 1"
+            self.db.ExecuteQuery(q)
+            date_limit = " AND DATEDIFF(@maxdate, updated_at)<" + str(days)
+
+        q = "SELECT up.id as id, up.identifier as reviewers, "+\
+            "               count(distinct(pr.id)) as reviewed "+\
+            "        FROM people_upeople pup, pull_requests pr, "+ self.db.identities_db+".upeople up "+\
+            "        WHERE "+ filter_bots+ " "+\
+            "            pr.assignee_id = pup.people_id and "+\
+            "            pup.upeople_id = up.id and "+\
+            "            pr.updated_at >= "+ startdate + " and "+\
+            "            pr.updated_at < "+ enddate + " "+\
+            "            "+ date_limit + " "+\
+            "        GROUP BY up.identifier "+\
+            "        ORDER BY reviewed desc, reviewers "+\
+            "        LIMIT " + str(limit)
+
+        return(self.db.ExecuteQuery(q))
+
+
+
+    def _get_sql(self, evolutionary):
+        fields = Set([])
+        tables = Set([])
+        filters = Set([])
+
+        fields.add("count(distinct(assignee_id)) as reviewers")
+        tables.add("pull_requests pr")
+        tables.union_update(self.db.GetSQLReportFrom(self.filters.type_analysis))
+        filters.union_update(self.db.GetSQLReportWhere(self.filters.type_analysis))
+
+        tables.add("people_upeople pup")
+        filters.add("pr.assignee_id  = pup.people_id")
+
+        q = self.db.BuildQuery (self.filters.period, self.filters.startdate,
+                                self.filters.enddate, " pr.updated_at",
+                                fields, tables, filters, evolutionary, self.filters.type_analysis)
+        return q
+
+
+class Closers(Metrics):
+    id = "closers"
+    name = "Closers"
+    desc = "Number of persons closing code review activities"
+    data_source = Pullpo
+    action = "closed"
+
+    def _get_top_global (self, days = 0, metric_filters = None):
+
+        if metric_filters == None:
+            metric_filters = self.filters
+
+        startdate = metric_filters.startdate
+        enddate = metric_filters.enddate
+        limit = metric_filters.npeople
+        filter_bots = self.db.get_bots_filter_sql(self.data_source, metric_filters)
+        if filter_bots != "": filter_bots += " AND "
+        date_limit = ""
+
+        if (days != 0 ):
+            q = "SELECT @maxdate:=max(created_at) from pull_requests limit 1"
+            self.db.ExecuteQuery(q)
+            date_limit = " AND DATEDIFF(@maxdate, created_at)<"+str(days)
+
+        # TODO: warning-> not using GetSQLReportFrom/Where
+        merged_sql = " AND closed_at IS NOT NULL"
+        rol = "closers"
+        action = "closed"
+
+        q = "SELECT up.id as id, up.identifier as "+rol+", "+\
+            "            count(distinct(pr.id)) as "+action+" "+\
+            "        FROM people_upeople pup, pull_requests pr, "+self.db.identities_db+".upeople up "+\
+            "        WHERE "+ filter_bots+ " "+\
+            "            pr.user_id = pup.people_id and "+\
+            "            pup.upeople_id = up.id and "+\
+            "            pr.created_at >= "+ startdate+ " and "+\
+            "            pr.created_at < "+ enddate+ " "+\
+            "            "+date_limit+ merged_sql+ " "+\
+            "        GROUP BY up.identifier "+\
+            "        ORDER BY "+action+" desc, id "+\
+            "        LIMIT "+ str(limit)
+        return(self.db.ExecuteQuery(q))
+
+
+    def _get_sql(self, evolutionary):
+        """ This function returns the evolution or agg number of people closing pull requests """
+        fields = Set([])
+        tables = Set([])
+        filters = Set([])
+
+        fields.add("count(distinct(pup.upeople_id)) as closers")
+        tables.add("pull_requests pr")
+        tables.union_update(self.db.GetSQLReportFrom(self.filters.type_analysis))
+        filters.union_update(self.db.GetSQLReportWhere(self.filters.type_analysis))
+
+        #Specific case for the basic option where people_upeople table is needed
+        #and not taken into account in the initial part of the query
+        tables.add("people_upeople pup")
+        filters.add("pr.user_id = pup.people_id")
+        filters.add("closed_at IS NOT NULL")
+
+        q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
+                               self.filters.enddate, " closed_at ",
+                               fields, tables, filters, evolutionary, self.filters.type_analysis)
+        return q
+
+# Pretty similar to ITS openers
+class Submitters(Metrics):
+    id = "submitters"
+    name = "Submitters"
+    desc = "Number of persons submitting code review processes"
+    data_source = Pullpo
+    action = "submitted"
+
+    def __get_sql_trk_prj__(self, evolutionary):
+        """ First we get the submitters then join with unique identities """
+
+        tpeople_sql  = "SELECT distinct(user_id) as submitted_by, created_at  "
+        tpeople_sql += " FROM pull_requests pr, " + self.db._get_tables_query(self.db.GetSQLReportFrom(self.filters.type_analysis))
+        filters_ext = self.db._get_filters_query(self.db.GetSQLReportWhere(self.filters.type_analysis))
+        if (filters_ext != ""):
+            tpeople_sql += " WHERE " + filters_ext
+
+        fields = Set([])
+        tables = Set([])
+        filters = Set([])
+
+        fields.add("count(distinct(upeople_id)) as submitters")
+        tables.add("people_upeople pup")
+        tables.add("(%s) tpeople" % (tpeople_sql))
+        filters.add("tpeople.submitted_by = pup.people_id")
+
+        q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
+                               self.filters.enddate, " tpeople.created_at ",
+                               fields, tables, filters, evolutionary, self.filters.type_analysis)
+        return q
+
+
+    def __get_sql_default__(self, evolutionary):
+        """ This function returns the evolution or agg number of people opening issues """
+        fields = Set([])
+        tables = Set([])
+        filters = Set([])
+
+        fields.add("count(distinct(pup.upeople_id)) as submitters")
+        tables.add("pull_requests pr")
+        tables.union_update(self.db.GetSQLReportFrom(self.filters.type_analysis))
+        filters.union_update(self.db.GetSQLReportWhere(self.filters.type_analysis))
+
+        #Specific case for the basic option where people_upeople table is needed
+        #and not taken into account in the initial part of the query
+        tables.add("people_upeople pup")
+        filters.add("pr.user_id = pup.people_id")
+
+        q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
+                               self.filters.enddate, " created_at ",
+                               fields, tables, filters, evolutionary, self.filters.type_analysis)
+        return q
+
+    def _get_sql(self, evolutionary):
+        if (self.filters.type_analysis is not None and (self.filters.type_analysis[0] in  ["repository","project"])):
+            q = self.__get_sql_trk_prj__(evolutionary)
+        else:
+            q =  self.__get_sql_default__(evolutionary)
+        return q
+
+    def _get_top_global (self, days = 0, metric_filters = None):
+        if metric_filters == None:
+            metric_filters = self.filters
+        startdate = metric_filters.startdate
+        enddate = metric_filters.enddate
+        limit = metric_filters.npeople
+        filter_bots = self.db.get_bots_filter_sql(self.data_source, metric_filters)
+        if filter_bots != "": filter_bots += " AND "
+
+        date_limit = ""
+        rol = "openers"
+        action = "opened"
+
+        #TODO: warning -> not using GetSQLReportFrom/Where
+        if (days != 0 ):
+            q = "SELECT @maxdate:=max(created_at) from pull_requests limit 1"
+            self.db.ExecuteQuery(q)
+            date_limit = " AND DATEDIFF(@maxdate, created_at)<"+str(days)
+
+        q = "SELECT up.id as id, up.identifier as "+rol+", "+\
+            "            count(distinct(pr.id)) as "+action+" "+\
+            "        FROM people_upeople pup, pull_requests pr, "+self.db.identities_db+".upeople up "+\
+            "        WHERE "+ filter_bots+ " "+\
+            "            pr.user_id = pup.people_id and "+\
+            "            pup.upeople_id = up.id and "+\
+            "            pr.created_at >= "+ startdate+ " and "+\
+            "            pr.created_at < "+ enddate+ " "+\
+            "            "+date_limit +  " "+\
+            "        GROUP BY up.identifier "+\
+            "        ORDER BY "+action+" desc, id "+\
+            "        LIMIT "+ str(limit)
+        return(self.db.ExecuteQuery(q))
+
+#################
+# FILTERS metrics
+#################
+
 class Companies(Metrics):
     id = "companies"
     name = "Organizations"
@@ -595,272 +885,3 @@ class Repositories(Metrics):
         names = self.db.ExecuteQuery(q)
         if not isinstance(names['name'], (list)): names['name'] = [names['name']]
         return(names)
-
-
-class People(Metrics):
-    id = "people2"
-    name = "People"
-    desc = "Number of people active in code review activities"
-    data_source = Pullpo
-
-    def _get_sql(self, evolutionary):
-        pass
-
-    def _get_top_global (self, days = 0, metric_filters = None):
-        """ Implemented using Submitters """
-        top = None
-        submitters = Pullpo.get_metrics("submitters", Pullpo)
-        if submitters is None:
-            #TODO: absolutely wrong: EmailsSenders???
-            submitters = EmailsSenders(self.db, self.filters)
-            top = submitters._get_top_global(days, metric_filters)
-        else:
-            afilters = submitters.filters
-            submitters.filters = self.filters
-            top = submitters._get_top_global(days, metric_filters)
-            submitters.filters = afilters
-
-        top['name'] = top.pop('openers')
-        return top
-
-class Reviewers(Metrics):
-    id = "reviewers"
-    name = "Reviewers"
-    desc = "Number of persons reviewing code review activities"
-    data_source = Pullpo
-    action = "reviews"
-
-    # Not sure if this top is right
-    def _get_top_global (self, days = 0, metric_filters = None):
-        if metric_filters == None:
-            metric_filters = self.filters
-
-        startdate = metric_filters.startdate
-        enddate = metric_filters.enddate
-        limit = metric_filters.npeople
-        filter_bots = self.db.get_bots_filter_sql(self.data_source, metric_filters)
-        if filter_bots != "": filter_bots += " AND "
-        date_limit = ""
-
-        #TODO: warning -> not using GetSQLReportFrom/Where
-        if (days != 0 ):
-            q = "SELECT @maxdate:=max(changed_on) from changes limit 1"
-            self.db.ExecuteQuery(q)
-            date_limit = " AND DATEDIFF(@maxdate, changed_on)<" + str(days)
-
-        q = "SELECT up.id as id, up.identifier as reviewers, "+\
-            "               count(distinct(c.id)) as reviewed "+\
-            "        FROM people_upeople pup, changes c, "+ self.db.identities_db+".upeople up "+\
-            "        WHERE "+ filter_bots+ " "+\
-            "            c.changed_by = pup.people_id and "+\
-            "            pup.upeople_id = up.id and "+\
-            "            c.changed_on >= "+ startdate + " and "+\
-            "            c.changed_on < "+ enddate + " "+\
-            "            "+ date_limit + " "+\
-            "        GROUP BY up.identifier "+\
-            "        ORDER BY reviewed desc, reviewers "+\
-            "        LIMIT " + str(limit)
-
-        return(self.db.ExecuteQuery(q))
-
-
-
-    def _get_sql(self, evolutionary):
-        fields = Set([])
-        tables = Set([])
-        filters = Set([])
-
-        fields.add("count(distinct(changed_by)) as reviewers")
-        tables.add("changes ch")
-        tables.add("pull_requests pr")
-        tables.union_update(self.db.GetSQLReportFrom(self.filters.type_analysis))
-        filters.add("ch.issue_id = pr.id")
-        filters.union_update(self.db.GetSQLReportWhere(self.filters.type_analysis))
-
-        #Specific case for the basic option where people_upeople table is needed
-        #and not taken into account in the initial part of the query
-        tables.add("people_upeople pup")
-        filters.add("ch.changed_by  = pup.people_id")
-
-        q = self.db.BuildQuery (self.filters.period, self.filters.startdate,
-                                self.filters.enddate, " ch.changed_on",
-                                fields, tables, filters, evolutionary, self.filters.type_analysis)
-        return q
-
-
-class Closers(Metrics):
-    id = "closers"
-    name = "Closers"
-    desc = "Number of persons closing code review activities"
-    data_source = Pullpo
-    action = "closed"
-
-    def _get_top_global (self, days = 0, metric_filters = None):
-
-        if metric_filters == None:
-            metric_filters = self.filters
-
-        startdate = metric_filters.startdate
-        enddate = metric_filters.enddate
-        limit = metric_filters.npeople
-        filter_bots = self.db.get_bots_filter_sql(self.data_source, metric_filters)
-        if filter_bots != "": filter_bots += " AND "
-        date_limit = ""
-
-        if (days != 0 ):
-            q = "SELECT @maxdate:=max(created_at) from issues limit 1"
-            self.db.ExecuteQuery(q)
-            date_limit = " AND DATEDIFF(@maxdate, created_at)<"+str(days)
-
-        # TODO: warning-> not using GetSQLReportFrom/Where
-        merged_sql = " AND status='MERGED' "
-        rol = "mergers"
-        action = "merged"
-
-        q = "SELECT up.id as id, up.identifier as "+rol+", "+\
-            "            count(distinct(pr.id)) as "+action+" "+\
-            "        FROM people_upeople pup, pull_requests pr, "+self.db.identities_db+".upeople up "+\
-            "        WHERE "+ filter_bots+ " "+\
-            "            pr.submitted_by = pup.people_id and "+\
-            "            pup.upeople_id = up.id and "+\
-            "            pr.created_at >= "+ startdate+ " and "+\
-            "            pr.created_at < "+ enddate+ " "+\
-            "            "+date_limit+ merged_sql+ " "+\
-            "        GROUP BY up.identifier "+\
-            "        ORDER BY "+action+" desc, id "+\
-            "        LIMIT "+ str(limit)
-        return(self.db.ExecuteQuery(q))
-
-
-    def _get_sql(self, evolutionary):
-        pass
-
-# Pretty similar to ITS openers
-class Submitters(Metrics):
-    id = "submitters"
-    name = "Submitters"
-    desc = "Number of persons submitting code review processes"
-    data_source = Pullpo
-    action = "submitted"
-
-    def __get_sql_trk_prj__(self, evolutionary):
-        """ First we get the submitters then join with unique identities """
-
-        tpeople_sql  = "SELECT distinct(user_id) as submitted_by, created_at  "
-        tpeople_sql += " FROM pull_requests pr, " + self.db._get_tables_query(self.db.GetSQLReportFrom(self.filters.type_analysis))
-        filters_ext = self.db._get_filters_query(self.db.GetSQLReportWhere(self.filters.type_analysis))
-        if (filters_ext != ""):
-            tpeople_sql += " WHERE " + filters_ext
-
-        fields = Set([])
-        tables = Set([])
-        filters = Set([])
-
-        fields.add("count(distinct(upeople_id)) as submitters")
-        tables.add("people_upeople pup")
-        tables.add("(%s) tpeople" % (tpeople_sql))
-        filters.add("tpeople.submitted_by = pup.people_id")
-
-        q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
-                               self.filters.enddate, " tpeople.created_at ",
-                               fields, tables, filters, evolutionary, self.filters.type_analysis)
-        return q
-
-
-    def __get_sql_default__(self, evolutionary):
-        """ This function returns the evolution or agg number of people opening issues """
-        fields = Set([])
-        tables = Set([])
-        filters = Set([])
-
-        fields.add("count(distinct(pup.upeople_id)) as submitters")
-        tables.add("pull_requests pr")
-        tables.union_update(self.db.GetSQLReportFrom(self.filters.type_analysis))
-        filters.union_update(self.db.GetSQLReportWhere(self.filters.type_analysis))
-
-        #Specific case for the basic option where people_upeople table is needed
-        #and not taken into account in the initial part of the query
-        tables.add("people_upeople pup")
-        filters.add("pr.user_id = pup.people_id")
-
-        q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
-                               self.filters.enddate, " created_at ",
-                               fields, tables, filters, evolutionary, self.filters.type_analysis)
-        return q
-
-    def _get_sql(self, evolutionary):
-        if (self.filters.type_analysis is not None and (self.filters.type_analysis[0] in  ["repository","project"])):
-            q = self.__get_sql_trk_prj__(evolutionary)
-        else:
-            q =  self.__get_sql_default__(evolutionary)
-        print(q)
-        return q
-
-    def _get_top_global (self, days = 0, metric_filters = None):
-        if metric_filters == None:
-            metric_filters = self.filters
-        startdate = metric_filters.startdate
-        enddate = metric_filters.enddate
-        limit = metric_filters.npeople
-        filter_bots = self.db.get_bots_filter_sql(self.data_source, metric_filters)
-        if filter_bots != "": filter_bots += " AND "
-
-        date_limit = ""
-        rol = "openers"
-        action = "opened"
-
-        #TODO: warning -> not using GetSQLReportFrom/Where
-        if (days != 0 ):
-            q = "SELECT @maxdate:=max(created_at) from issues limit 1"
-            self.db.ExecuteQuery(q)
-            date_limit = " AND DATEDIFF(@maxdate, created_at)<"+str(days)
-
-        q = "SELECT up.id as id, up.identifier as "+rol+", "+\
-            "            count(distinct(pr.id)) as "+action+" "+\
-            "        FROM people_upeople pup, pull_requests pr, "+self.db.identities_db+".upeople up "+\
-            "        WHERE "+ filter_bots+ " "+\
-            "            pr.user_id = pup.people_id and "+\
-            "            pup.upeople_id = up.id and "+\
-            "            pr.created_at >= "+ startdate+ " and "+\
-            "            pr.created_at < "+ enddate+ " "+\
-            "            "+date_limit +  " "+\
-            "        GROUP BY up.identifier "+\
-            "        ORDER BY "+action+" desc, id "+\
-            "        LIMIT "+ str(limit)
-        return(self.db.ExecuteQuery(q))
-
-class TimeToReview(Metrics):
-    """ The time is measure for closed reviews merged """
-    id = "review_time"
-    name = "Review Time"
-    desc = "Time to review"
-    data_source = Pullpo
-
-    def _get_sql(self):
-        if self.filters.period != "month": return None
-        bots = []
-        q = self.db.GetTimeToReviewQuerySQL (self.filters.startdate, self.filters.enddate,
-                                             self.filters.type_analysis, bots)
-        return q
-
-    def get_agg(self):
-        from numpy import median, average
-        from GrimoireUtils import removeDecimals
-
-        q = self._get_sql()
-        if q is None: return {}
-        data = self.db.ExecuteQuery(q)
-        data = data['revtime']
-        if (isinstance(data, list) == False): data = [data]
-        # ttr_median = sorted(data)[len(data)//2]
-        if (len(data) == 0):
-            ttr_median = float("nan")
-            ttr_avg = float("nan")
-        else:
-            ttr_median = float(median(removeDecimals(data)))
-            ttr_avg = float(average(removeDecimals(data)))
-        return {"review_time_days_median":ttr_median, "review_time_days_avg":ttr_avg}
-
-    def get_ts(self):
-        raise Exception("Not implemented time to review evolution in time for github pull requests")
-        return metrics_list
