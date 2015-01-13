@@ -26,19 +26,14 @@
 import logging
 import MySQLdb
 import numpy
-
-from GrimoireUtils import completePeriodIds, checkListArray, medianAndAvgByPeriod, check_array_values
-from query_builder import DSQuery
-
-from metrics import Metrics
-
-from metrics_filter import MetricFilters
-
-from Pullpo import Pullpo
-
-from query_builder import PullpoQuery
-
 from sets import Set
+
+from vizgrimoire.GrimoireUtils import completePeriodIds, checkListArray, medianAndAvgByPeriod, check_array_values
+from vizgrimoire.metrics.query_builder import DSQuery
+from vizgrimoire.metrics.metrics import Metrics
+from vizgrimoire.metrics.metrics_filter import MetricFilters
+from vizgrimoire.Pullpo import Pullpo
+from vizgrimoire.metrics.query_builder import PullpoQuery
 
 class Submitted(Metrics):
     id = "submitted"
@@ -50,7 +45,6 @@ class Submitted(Metrics):
         q = self.db.GetReviewsSQL(self.filters.period, self.filters.startdate,
                                   self.filters.enddate, "submitted",
                                   self.filters.type_analysis, evolutionary)
-        print(q)
         return q
 
 class Merged(Metrics):

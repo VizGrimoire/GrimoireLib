@@ -37,11 +37,6 @@ from vizgrimoire.metrics.metrics import Metrics
 from vizgrimoire.metrics.metrics_filter import MetricFilters
 from vizgrimoire.analysis.analyses import Analyses
 from vizgrimoire.metrics.query_builder import DSQuery
-from filter import Filter
-from metrics import Metrics
-from metrics_filter import MetricFilters
-from analyses import Analyses
-from query_builder import DSQuery
 
 class Report(object):
     """Basic class for a Grimoire automator based dashboard"""

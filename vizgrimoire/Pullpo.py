@@ -29,17 +29,17 @@ from numpy import median, average
 import time
 from datetime import datetime, timedelta
 
-from GrimoireSQL import GetSQLGlobal, GetSQLPeriod
-from GrimoireSQL import ExecuteQuery
-from GrimoireUtils import GetPercentageDiff, GetDates, completePeriodIds
-from GrimoireUtils import checkListArray, removeDecimals, get_subprojects
-from GrimoireUtils import getPeriod, createJSON, checkFloatArray, medianAndAvgByPeriod, check_array_values
-from metrics_filter import MetricFilters
-from query_builder import DSQuery
+from vizgrimoire.GrimoireSQL import GetSQLGlobal, GetSQLPeriod
+from vizgrimoire.GrimoireSQL import ExecuteQuery
+from vizgrimoire.GrimoireUtils import GetPercentageDiff, GetDates, completePeriodIds
+from vizgrimoire.GrimoireUtils import checkListArray, removeDecimals, get_subprojects
+from vizgrimoire.GrimoireUtils import getPeriod, createJSON, checkFloatArray, medianAndAvgByPeriod, check_array_values
+from vizgrimoire.metrics.metrics_filter import MetricFilters
+from vizgrimoire.metrics.query_builder import DSQuery
 
 
-from data_source import DataSource
-from filter import Filter
+from vizgrimoire.data_source import DataSource
+from vizgrimoire.filter import Filter
 
 
 class Pullpo(DataSource):
