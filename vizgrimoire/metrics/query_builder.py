@@ -2434,7 +2434,7 @@ class PullpoQuery(DSQuery):
         # filters necessaries for repositories
         filters = Set([])
         filters.add("pr.repo_id = re.id")
-        filters.add("re.name = " + repository)
+        filters.add("re.url = " + repository)
 
         return filters
 

@@ -50,6 +50,7 @@ class Submitted(Metrics):
         q = self.db.GetReviewsSQL(self.filters.period, self.filters.startdate,
                                   self.filters.enddate, "submitted",
                                   self.filters.type_analysis, evolutionary)
+        print(q)
         return q
 
 class Merged(Metrics):
@@ -355,8 +356,8 @@ class TimeToReview(Metrics):
         return {"review_time_days_median":ttr_median, "review_time_days_avg":ttr_avg}
 
     def get_ts(self):
-        raise Exception("Not implemented time to review evolution in time for github pull requests")
-        return metrics_list
+        logging.warning("Not implemented time to review evolution in time for github pull requests")
+        return {}
 
 ######################
 # Contributors metrics
@@ -628,7 +629,7 @@ class Companies(Metrics):
         tables.add("pull_requests pr")
         tables.add("people_upeople pup")
         tables.add(self.db.identities_db + ".upeople_companies upc")
-        filters.add("pr.submitted_by = pup.people_id")
+        filters.add("pr.user_id = pup.people_id")
         filters.add("pup.upeople_id = upc.upeople_id")
 
         q = self.db.BuildQuery (self.filters.period, self.filters.startdate,
@@ -642,7 +643,7 @@ class Companies(Metrics):
                            self.db.identities_db+".upeople_companies upc, "+\
                     "     people_upeople pup, "+\
                     "     pull_requests pr "+\
-                   "WHERE pr.submitted_by = pup.people_id AND "+\
+                   "WHERE pr.user_id = pup.people_id AND "+\
                    "  upc.upeople_id = pup.upeople_id AND "+\
                    "  c.id = upc.company_id AND "+\
                    "  pr.state = 'merged' AND "+\
@@ -668,7 +669,7 @@ class Countries(Metrics):
         tables.add("pull_requests pr")
         tables.add("people_upeople pup")
         tables.add(self.db.identities_db + ".upeople_countries upc")
-        filters.add("pr.submitted_by = pup.people_id")
+        filters.add("pr.user_id = pup.people_id")
         filters.add("pup.upeople_id = upc.upeople_id")
 
         q = self.db.BuildQuery (self.filters.period, self.filters.startdate,
@@ -677,19 +678,20 @@ class Countries(Metrics):
         return q
 
     def get_list  (self):
-        q = "SELECT c.name as name, COUNT(DISTINCT(pr.id)) AS issues "+\
+        q = "SELECT c.name as name, COUNT(DISTINCT(pr.id)) AS submitted "+\
                "FROM  "+self.db.identities_db+".countries c, "+\
                        self.db.identities_db+".upeople_countries upc, "+\
                 "    people_upeople pup, "+\
                 "    pull_requests pr "+\
-               "WHERE pr.submitted_by = pup.people_id AND "+\
+               "WHERE  pr.user_id = pup.people_id AND "+\
                "  upc.upeople_id = pup.upeople_id AND "+\
                "  c.id = upc.country_id AND "+\
                "  pr.state = 'merged' AND "+\
                "  pr.created_at >="+  self.filters.startdate+ " AND "+\
                "  pr.created_at < "+ self.filters.enddate+ " "+\
                "GROUP BY c.name "+\
-               "ORDER BY issues DESC "
+               "ORDER BY submitted DESC, name "
+        
         return(self.db.ExecuteQuery(q))
 
 class Domains(Metrics):
@@ -751,11 +753,11 @@ class Repositories(Metrics):
         tables = Set([])
         filters = Set([])
 
-        fields.add("count(distinct(t.id)) as repositories")
+        fields.add("count(distinct(re.id)) as repositories")
         tables.add("pull_requests pr")
-        tables.add("trackers t")
+        tables.add("repositories re")
         tables.union_update(self.db.GetSQLReportFrom(self.filters.type_analysis))
-        filters.add("pr.tracker_id = t.id")
+        filters.add("pr.repo_id = re.id")
         filters.union_update(self.db.GetSQLReportWhere(self.filters.type_analysis))
         q = self.db.BuildQuery (self.filters.period, self.filters.startdate,
                                 self.filters.enddate, " pr.created_at",
@@ -764,13 +766,13 @@ class Repositories(Metrics):
 
     def get_list  (self):
         #TODO: warning -> not using GetSQLReportFrom/Where
-        q = "SELECT t.url as name, COUNT(DISTINCT(pr.id)) AS issues "+\
-               " FROM  pull_requests pr, trackers t "+\
-               " WHERE pr.tracker_id = t.id AND "+\
+        q = "SELECT re.url as name, COUNT(DISTINCT(pr.id)) AS submitted "+\
+               " FROM  pull_requests pr, repositories re "+\
+               " WHERE pr.repo_id = re.id AND "+\
                "  pr.created_at >="+  self.filters.startdate+ " AND "+\
                "  pr.created_at < "+ self.filters.enddate +\
-               " GROUP BY t.url "+\
-               " ORDER BY issues DESC "
+               " GROUP BY re.id "+\
+               " ORDER BY submitted DESC, name "
         names = self.db.ExecuteQuery(q)
         if not isinstance(names['name'], (list)): names['name'] = [names['name']]
         return(names)

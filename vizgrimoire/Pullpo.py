@@ -281,13 +281,34 @@ class Pullpo(DataSource):
 
     @staticmethod
     def get_person_evol(upeople_id, period, startdate, enddate, identities_db, type_analysis):
-        evol = GetPeopleEvolPullpo(upeople_id, period, startdate, enddate)
+        evol = Pullpo.get_people_query(upeople_id, startdate, enddate, True, period)
         evol = completePeriodIds(evol, period, startdate, enddate)
         return evol
 
     @staticmethod
     def get_person_agg(upeople_id, startdate, enddate, identities_db, type_analysis):
-        return GetPeopleStaticPullpo(upeople_id, startdate, enddate)
+        agg = Pullpo.get_people_query(upeople_id, startdate, enddate)
+        return agg
+
+    # TODO: this should be done using people filter metrics
+    @staticmethod
+    def get_people_query(developer_id, startdate, enddate, evol = False, period = None):
+        query_builder = Pullpo.get_query_builder()
+        fields ='COUNT(distinct(pr.id)) AS submissions'
+        tables = 'pull_requests pr, people_upeople pup'
+        filters = 'pr.user_id = pup.people_id'
+        filters +=" AND pup.upeople_id="+str(developer_id)
+        if (evol) :
+            q = GetSQLPeriod(period,'pr.created_at', fields, tables, filters,
+                    startdate, enddate)
+        else :
+            fields += ",DATE_FORMAT (min(pr.created_at),'%Y-%m-%d') as first_date, "+\
+                      "DATE_FORMAT (max(pr.created_at),'%Y-%m-%d') as last_date"
+            q = GetSQLGlobal('pr.created_at', fields, tables, filters, 
+                             startdate, enddate)
+
+        data  = ExecuteQuery(q)
+        return (data)
 
     @staticmethod
     def create_r_reports(vizr, enddate, destdir):
