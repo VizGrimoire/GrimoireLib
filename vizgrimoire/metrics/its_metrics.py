@@ -61,7 +61,6 @@ class Opened(Metrics):
                                self.filters.enddate, " submitted_on ", fields,
                                tables, filters, evolutionary,
                                self.filters.type_analysis, self.filters.global_filter)
-        print(q)
         return q
 
 class Openers(Metrics):
@@ -524,9 +523,8 @@ class Changed(Metrics):
                                fields, tables, filters, evolutionary,
                                self.filters.type_analysis, self.filters.global_filter)
 
-        #Action needed to replace issues filters by changes one
+        #Action needed to replace issues filters by changed one
         query = query.replace("i.submitted", "ch.changed")
-
         return query
 
     def _get_sql(self, evolutionary, close = False):

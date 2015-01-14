@@ -245,7 +245,7 @@ class Metrics(object):
 
         group_field = DSQuery.get_group_field(self.filters.type_analysis[0])
         if 'CONCAT' not in group_field:
-            group_field = group_field.split('.')[1] # remove table name whe GROUP BY one field
+            group_field = group_field.split('.')[1] # remove table name when GROUP BY one field
         field = prev.keys()[0]
         if field == group_field: field = prev.keys()[1]
 
@@ -272,7 +272,7 @@ class Metrics(object):
         # Create the dict with trend metrics
         data = {}
         data[group_field] = prev[group_field]
-        data[self.id+'_'+str(days)] = last[field]
+        data[self.id+'_'+str(days)] = last_ordered[field]
         data['diff_net'+self.id+'_'+str(days)] = \
             [last_ordered[field][i] - prev[field][i] for i in range(0, len(prev[field]))]
         data['percentage_'+self.id+'_'+str(days)] = \
