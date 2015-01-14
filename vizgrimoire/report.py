@@ -31,6 +31,7 @@ import vizgrimoire.IRC as IRC
 import vizgrimoire.DownloadsDS as DownloadsDS
 import vizgrimoire.QAForums as QAForums
 import vizgrimoire.ReleasesDS as ReleasesDS
+import vizgrimoire.Pullpo as Pullpo
 from vizgrimoire.filter import Filter
 from vizgrimoire.metrics.metrics import Metrics
 from vizgrimoire.metrics.metrics_filter import MetricFilters
@@ -77,7 +78,7 @@ class Report(object):
     def _init_data_sources():
         Report._all_data_sources = [SCM.SCM, ITS.ITS, MLS.MLS, SCR.SCR, 
                                     Mediawiki.Mediawiki, IRC.IRC, DownloadsDS.DownloadsDS,
-                                    QAForums.QAForums, ReleasesDS.ReleasesDS]
+                                    QAForums.QAForums, ReleasesDS.ReleasesDS, Pullpo.Pullpo]
         if 'people_out' in Report.get_config()['r']:
             bots = Report.get_config()['r']['people_out'].split(",")
             for ds in Report._all_data_sources:

@@ -217,7 +217,7 @@ class DataSourceTest(unittest.TestCase):
 #                    if ds.get_name() not in ["irc","scr"]:
 #                        item_name = "'"+item+"'"
                     item_file = item
-                    if ds.get_name() in ["its","scr"] :
+                    if ds.get_name() in ["its","scr","pullpo"] :
                         item_file = item.replace("/","_")
 
                     elif ds.get_name() == "mls":
@@ -249,7 +249,7 @@ class DataSourceTest(unittest.TestCase):
                 if (isinstance(items, dict)): items = items['name']
                 if not isinstance(items, (list)): items = [items]
 
-                if ds.get_name() in ["scr"] :
+                if ds.get_name() in ["scr","pullpo"] :
                     items = [item.replace("/","_") for item in items]
 
                 elif ds.get_name() == "mls":
@@ -261,8 +261,8 @@ class DataSourceTest(unittest.TestCase):
                 test_json = os.path.join("json",fn)
                 new_json = opts.destdir+"/"+ fn
 
-                if ds.get_name() not in ["scr"] :
-                    # scr repos format is more complex and 
+                if ds.get_name() not in ["scr","pullpo"] :
+                    # scr, pullpo repos format is more complex and
                     # is checked already in test_get_agg_evol_filters_data 
                     self.assertTrue(self.compareJSON(test_json, new_json))
 
