@@ -375,6 +375,7 @@ class DataSource(object):
                 if r in reports_on: metrics_on += [r]
 
         for item in all_metrics:
+            print item
             if item.id not in metrics_on: continue
             mfilter_orig = item.filters
             mfilter.global_filter = mfilter_orig.global_filter

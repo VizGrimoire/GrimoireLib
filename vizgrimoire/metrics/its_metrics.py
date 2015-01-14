@@ -61,6 +61,7 @@ class Opened(Metrics):
                                self.filters.enddate, " submitted_on ", fields,
                                tables, filters, evolutionary,
                                self.filters.type_analysis, self.filters.global_filter)
+        print(q)
         return q
 
 class Openers(Metrics):

@@ -458,7 +458,10 @@ def GetITSSQLRepositoriesFrom ():
 
 def GetITSSQLRepositoriesWhere (repository):
     # fields necessary to match info among tables
-    return (" i.tracker_id = t.id and t.url = "+repository+" ")
+    filters = " i.tracker_id = t.id "
+    if repository is not None:
+        filters += "and t.url = "+repository+" "
+    return filters
 
 def GetITSSQLProjectsFrom ():
     # tables necessary for repositories
@@ -508,10 +511,12 @@ def GetITSSQLCountriesFrom (i_db):
 
 def GetITSSQLCountriesWhere (name):
     # filters for the countries analysis
-    return(" i.submitted_by = pup.people_id and "+\
+    filters = " i.submitted_by = pup.people_id and "+\
            "pup.upeople_id = upc.upeople_id and "+\
-           "upc.country_id = c.id and "+\
-           "c.name = "+name)
+           "upc.country_id = c.id "
+    if name is not None:
+           filters += " and c.name = "+name
+    return filters
 
 
 def GetITSSQLDomainsFrom (i_db):
@@ -524,10 +529,13 @@ def GetITSSQLDomainsFrom (i_db):
 
 def GetITSSQLDomainsWhere (name):
     # filters for the domains analysis
-    return(" i.submitted_by = pup.people_id and "+\
+    filters = " i.submitted_by = pup.people_id and "+\
            "pup.upeople_id = upd.upeople_id and "+\
-           "upd.domain_id = d.id and "+\
-           "d.name = "+name)
+           "upd.domain_id = d.id "
+
+    if name is not None:
+            filters += " and d.name = "+name
+    return filters
 
 ##########
 #Generic functions to obtain FROM and WHERE clauses per type of report
