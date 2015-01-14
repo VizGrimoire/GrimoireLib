@@ -204,6 +204,8 @@ class SCM(DataSource):
             metric = DataSource.get_metrics("projects", SCM)
         elif (filter_name == "people2"):
             metric = DataSource.get_metrics("people2", SCM)
+        elif (filter_name == "company,country"):
+            metric = DataSource.get_metrics("companies+countries", SCM)
         else:
             logging.error("SCM " + filter_name + " not supported")
             return items
@@ -315,7 +317,11 @@ class SCM(DataSource):
         # New API for getting all metrics with one query
         check = False # activate to debug issues
         filter_name = filter_.get_name()
-        if filter_name == "people2" or filter_name == "company":
+
+        # Change filter to GrimoireLib notation
+        filter_name = filter_name.replace("+",",")
+
+        if filter_name == "people2" or filter_name == "company" or filter_name == "company,country" :
             filter_all = Filter(filter_name, None)
             agg_all = SCM.get_agg_data(period, startdate, enddate,
                                        identities_db, filter_all)
@@ -327,7 +333,8 @@ class SCM(DataSource):
             fn = os.path.join(destdir, filter_.get_evolutionary_filename_all(SCM()))
             createJSON(evol_all, fn)
 
-            if check:
+            # check is only done fpr basic filters. Composed should work if basic does.
+            if check and not "," in filter_name:
                 SCM._check_report_all_data(evol_all, filter_, startdate, enddate,
                                            identities_db, True, period)
                 SCM._check_report_all_data(agg_all, filter_, startdate, enddate,

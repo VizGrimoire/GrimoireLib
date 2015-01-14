@@ -403,6 +403,7 @@ class Files(Metrics):
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                self.filters.enddate, " s.date ", fields,
                                tables, filters, evolutionary, self.filters.type_analysis)
+        print(q)
         return q
 
 
@@ -1037,6 +1038,38 @@ class Countries(Metrics):
             "order by commits desc"
 
         return self.db.ExecuteQuery(q)
+
+class CompaniesCountries(Metrics):
+    """ Countries in Companies participating in the source code management system """
+
+    id = "companies+countries"
+    name = "Countries"
+    desc = "Countries in Companies participating in the source code management system"
+    data_source = SCM
+
+    def get_list(self):
+        rol = "author" #committer
+        identities_db = self.db.identities_db
+        startdate = self.filters.startdate
+        enddate = self.filters.enddate
+
+        q = "SELECT count(s.id) as commits, CONCAT(c.name, '_', cou.name) as name "+\
+            "FROM scmlog s, people_upeople pup, "+\
+            identities_db+".countries cou, "+identities_db+".upeople_countries upcou, "+\
+            identities_db+".companies c, "+identities_db+".upeople_companies upc "+\
+            "WHERE pup.people_id = s."+rol+"_id AND "+\
+            "      pup.upeople_id  = upcou.upeople_id and "+\
+            "      upcou.country_id = cou.id and "+\
+            "      pup.upeople_id  = upc.upeople_id and "+\
+            "      upc.company_id = c.id and "+\
+            "      s.date >= upc.init  and s.date < upc.end and "+\
+            "      s.date >="+startdate+ " and "+\
+            "      s.date < "+enddate+ " "+\
+            "group by c.name, cou.name "+\
+            "order by commits desc, c.name, cou.name"
+        print q
+        clist = self.db.ExecuteQuery(q) 
+        return clist
 
 class Domains(Metrics):
     """ Domains participating in the source code management system """

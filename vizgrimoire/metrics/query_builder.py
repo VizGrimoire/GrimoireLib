@@ -303,13 +303,15 @@ class DSQuery(object):
         """ Return the name of the field to group by in filter all queries """
 
         field = None
-        supported = ['people2','company']
+        supported = ['people2','company','company,country']
 
         analysis = filter_type
 
-        if analysis not in supported: return field
+        if analysis not in supported:
+            raise Exception("Can't get_group_field for " +  filter_type)
         if analysis == 'people2': field = "up.identifier"
-        elif analysis == "company": field = "c.name"
+        elif analysis == "company": field = "com.name"
+        elif analysis == "company,country": field = "CONCAT(com.name,'_',cou.name)"
 
         return field
 
@@ -373,8 +375,8 @@ class SCMQuery(DSQuery):
         #tables necessaries for companies
         tables = Set([])
         tables.add("people_upeople pup")
-        tables.add(self.identities_db + ".upeople_companies upc")
-        tables.add(self.identities_db + ".companies c")
+        tables.add(self.identities_db + ".upeople_companies upcom")
+        tables.add(self.identities_db + ".companies com")
 
         return tables
 
@@ -382,11 +384,11 @@ class SCMQuery(DSQuery):
          #fields necessaries to match info among tables
          fields = Set([])
          fields.add("s."+role+"_id = pup.people_id")
-         fields.add("pup.upeople_id = upc.upeople_id")
-         fields.add("s.date >= upc.init")
-         fields.add("s.date < upc.end")
-         fields.add("upc.company_id = c.id")
-         if company is not None: fields.add("c.name =" + company)
+         fields.add("pup.upeople_id = upcom.upeople_id")
+         fields.add("s.date >= upcom.init")
+         fields.add("s.date < upcom.end")
+         fields.add("upcom.company_id = com.id")
+         if company is not None: fields.add("com.name =" + company)
 
          return fields
 
@@ -394,8 +396,8 @@ class SCMQuery(DSQuery):
         #tables necessaries for companies
         tables = Set([])
         tables.add("people_upeople pup")
-        tables.add(self.identities_db + ".upeople_countries upc")
-        tables.add(self.identities_db + ".countries c")
+        tables.add(self.identities_db + ".upeople_countries upcou")
+        tables.add(self.identities_db + ".countries cou")
 
         return tables
 
@@ -403,9 +405,9 @@ class SCMQuery(DSQuery):
          #fields necessaries to match info among tables
         fields = Set([])
         fields.add("s."+role+"_id = pup.people_id")
-        fields.add("pup.upeople_id = upc.upeople_id")
-        fields.add("upc.country_id = c.id")
-        fields.add("c.name ="+ country)
+        fields.add("pup.upeople_id = upcou.upeople_id")
+        fields.add("upcou.country_id = cou.id")
+        if country is not None: fields.add("cou.name ="+ country)
 
         return fields
 
@@ -575,7 +577,7 @@ class SCMQuery(DSQuery):
                 elif analysis == 'logmessage': From.union_update(self.GetSQLLogMessageFrom())
                 elif analysis == 'people': From.union_update(self.GetSQLPeopleFrom())
                 elif analysis == 'people2': From.union_update(self.GetSQLPeopleFrom())
-                else: raise Exception( analysis + " not supported")
+                else: raise Exception( analysis + " not supported in From")
 
         # Adding tables (if) needed when filtering bots.
         if filters.people_out is not None:
@@ -621,7 +623,7 @@ class SCMQuery(DSQuery):
                 elif analysis == 'logmessage': where.union_update(self.GetSQLLogMessageWhere(value))
                 elif analysis == 'people': where.union_update(self.GetSQLPeopleWhere(value))
                 elif analysis == 'people2': where.union_update(self.GetSQLPeopleWhere(value))
-                else: raise Exception( analysis + " not supported")
+                else: raise Exception( analysis + " not supported in Where")
 
         # Adding conditions (if) needed when filtering bots
         if filters.people_out is not None:

@@ -346,11 +346,13 @@ class DataSource(object):
             people_out = Report.get_config()['r']["people_out"]
             people_out = people_out.split(",")
 
+
         type_analysis = None
         if filter_ is not None:
             type_analysis = filter_.get_type_analysis()
 
         if type_analysis and type_analysis[1] is None:
+            # We need the items for filling later values in group by queries
             items = DS.get_filter_items(filter_, startdate, enddate, identities_db)
             if items is None: return data
             items = items.pop('name')

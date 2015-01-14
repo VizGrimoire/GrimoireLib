@@ -30,7 +30,8 @@ class Filter(object):
                      ["country","cou","countries"], ["domain","dom","domains"],
                      ["project","prj","projects"], ["tag", "tag", "tags"],
                      ["people","people","people"],
-                     ["people2","people2","people2"]
+                     ["people2","people2","people2"],
+                     ["company+country","com+cou","companies+countries"]
                     ]
 
     def __init__(self, name, item = None):
