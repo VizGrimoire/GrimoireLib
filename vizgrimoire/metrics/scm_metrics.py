@@ -403,7 +403,6 @@ class Files(Metrics):
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                self.filters.enddate, " s.date ", fields,
                                tables, filters, evolutionary, self.filters.type_analysis)
-        print(q)
         return q
 
 
@@ -1067,8 +1066,7 @@ class CompaniesCountries(Metrics):
             "      s.date < "+enddate+ " "+\
             "group by c.name, cou.name "+\
             "order by commits desc, c.name, cou.name"
-        print q
-        clist = self.db.ExecuteQuery(q) 
+        clist = self.db.ExecuteQuery(q)
         return clist
 
 class Domains(Metrics):
