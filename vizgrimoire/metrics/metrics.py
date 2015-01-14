@@ -177,7 +177,7 @@ class Metrics(object):
         query = self._get_sql(True)
         ts = self.db.ExecuteQuery(query)
         if self.filters.type_analysis and self.filters.type_analysis[1] is None:
-            id_field = DSQuery.get_group_field(self.filters.type_analysis[0])
+            id_field = DSQuery.get_group_field(self.filters.type_analysis[0], self.db)
             if 'CONCAT' not in id_field:
                 id_field = id_field.split('.')[1] # remove table name
             ts = Metrics._convert_group_to_ts(ts, id_field)
@@ -191,6 +191,7 @@ class Metrics(object):
     def get_agg(self):
         """ Returns an aggregated value """
         q = self._get_sql(False)
+        print q
         return self.db.ExecuteQuery(q)
 
 
@@ -243,7 +244,7 @@ class Metrics(object):
         self.filters.global_filter = filters.global_filter
         prev = check_array_values(self.get_agg())
 
-        group_field = DSQuery.get_group_field(self.filters.type_analysis[0])
+        group_field = DSQuery.get_group_field(self.filters.type_analysis[0], self.db)
         if 'CONCAT' not in group_field:
             group_field = group_field.split('.')[1] # remove table name when GROUP BY one field
         field = prev.keys()[0]

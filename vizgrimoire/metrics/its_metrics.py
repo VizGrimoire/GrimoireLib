@@ -176,7 +176,8 @@ class Openers(Metrics):
         return (data)
 
     def _get_sql(self, evolutionary):
-        if (self.filters.type_analysis is not None and (self.filters.type_analysis[0] in  ["repository","project"])):
+        if (self.filters.type_analysis is not None and self.filters.type_analysis[1] is not None
+            and (self.filters.type_analysis[0] in  ["repository","project"])):
             q= self.__get_sql_trk_prj__(evolutionary)
         else:
             q = self.__get_sql_default__(evolutionary)
@@ -530,6 +531,7 @@ class Changed(Metrics):
     def _get_sql(self, evolutionary, close = False):
         if (self.filters.type_analysis is not None
             and len(self.filters.type_analysis) == 2
+            and self.filters.type_analysis[1] is not None
             and (self.filters.type_analysis[0] in  ["repository","project"])):
             q = self.__get_sql_trk_prj__(evolutionary, close)
         else:
@@ -630,7 +632,8 @@ class Changers(Metrics):
         return query
 
     def _get_sql(self, evolutionary, close = False):
-        if (self.filters.type_analysis is not None and (self.filters.type_analysis[0] in  ["repository","project"])):
+        if (self.filters.type_analysis is not None and self.filters.type_analysis[1] is not None
+            and (self.filters.type_analysis[0] in  ["repository","project"])):
             return self.__get_sql_trk_prj__(evolutionary, close)
         else:
             return self.__get_sql_default__(evolutionary, close)
