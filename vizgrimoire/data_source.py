@@ -325,7 +325,7 @@ class DataSource(object):
     def get_metrics_data(DS, period, startdate, enddate, identities_db, 
                          filter_ = None, evol = False):
         """ Get basic data from all core metrics """
-        from GrimoireUtils import fill_and_order_items
+        from vizgrimoire.GrimoireUtils import fill_and_order_items
         data = {}
 
         from report import Report
@@ -415,9 +415,10 @@ class DataSource(object):
                     item.filters = mfilter_orig
 
                     if type_analysis and type_analysis[1] is None:
-                        id_field = DSQuery.get_group_field(type_analysis[0])
-                        id_field = id_field.split('.')[1] # remove table name
-                        period_data = fill_and_order_items(items, period_data, id_field)
+                        group_field = DSQuery.get_group_field(type_analysis[0])
+                        if 'CONCAT' not in group_field:
+                            group_field = group_field.split('.')[1] # remove table name
+                        period_data = fill_and_order_items(items, period_data, group_field)
 
                     data = dict(data.items() + period_data.items())
 
