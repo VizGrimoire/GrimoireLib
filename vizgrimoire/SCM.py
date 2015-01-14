@@ -321,7 +321,7 @@ class SCM(DataSource):
         # Change filter to GrimoireLib notation
         filter_name = filter_name.replace("+",",")
 
-        if filter_name == "people2" or filter_name == "company" or filter_name == "company,country" :
+        if filter_name in ["people2","company","company,country","country","repository","domain"] :
             filter_all = Filter(filter_name, None)
             agg_all = SCM.get_agg_data(period, startdate, enddate,
                                        identities_db, filter_all)

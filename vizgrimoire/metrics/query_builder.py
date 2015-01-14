@@ -303,7 +303,7 @@ class DSQuery(object):
         """ Return the name of the field to group by in filter all queries """
 
         field = None
-        supported = ['people2','company','company,country']
+        supported = ['people2','company','country','domain','project','repository','company,country']
 
         analysis = filter_type
 
@@ -311,6 +311,9 @@ class DSQuery(object):
             raise Exception("Can't get_group_field for " +  filter_type)
         if analysis == 'people2': field = "up.identifier"
         elif analysis == "company": field = "com.name"
+        elif analysis == "country": field = "cou.name"
+        elif analysis == "domain": field = "d.name"
+        elif analysis == "repository": field = "r.name"
         elif analysis == "company,country": field = "CONCAT(com.name,'_',cou.name)"
 
         return field
@@ -340,8 +343,8 @@ class SCMQuery(DSQuery):
     def GetSQLRepositoriesWhere (self, repository):
         #fields necessaries to match info among tables
         fields = Set([])
-        fields.add("r.name ="+ repository)
         fields.add("r.id = s.repository_id")
+        if repository is not None: fields.add("r.name ="+ repository)
 
         return fields
 
@@ -426,7 +429,7 @@ class SCMQuery(DSQuery):
         fields.add("s."+role+"_id = pup.people_id")
         fields.add("pup.upeople_id = upd.upeople_id")
         fields.add("upd.domain_id = d.id")
-        fields.add("d.name ="+ domain)
+        if domain is not None: fields.add("d.name ="+ domain)
 
         return fields
 
