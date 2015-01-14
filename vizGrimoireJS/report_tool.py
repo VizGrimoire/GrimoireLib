@@ -75,7 +75,7 @@ def create_reports_filters(period, startdate, enddate, destdir, npeople, identit
             logging.info("-> " + filter_.get_name())
             # Tested in all this filters the group by
             # if filter_.get_name() in ["people2","company","company+country","country","repository","domain"]:
-            if filter_.get_name() in ["people2"]:
+            if filter_.get_name() in ["people2","company+country"]:
                 logging.info("---> Using new filter API")
                 ds.create_filter_report_all(filter_, period, startdate, enddate, 
                                             destdir, npeople, identities_db)

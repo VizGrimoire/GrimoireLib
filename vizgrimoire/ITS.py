@@ -191,6 +191,8 @@ class ITS(DataSource):
             metric = DataSource.get_metrics("projects", ITS)
         elif (filter_name == "people2"):
             metric = DataSource.get_metrics("people2", ITS)
+        elif (filter_name == "company,country"):
+            metric = DataSource.get_metrics("companies+countries", ITS)
         else:
             logging.error(filter_name + " not supported")
             return items
@@ -269,7 +271,11 @@ class ITS(DataSource):
     def create_filter_report_all(filter_, period, startdate, enddate, destdir, npeople, identities_db):
         check = False # activate to debug issues
         filter_name = filter_.get_name()
-        if filter_name == "people2" or filter_name == "company":
+
+        # Change filter to GrimoireLib notation
+        filter_name = filter_name.replace("+",",")
+
+        if filter_name in ["people2","company","company,country","country","repository","domain"] :
             filter_all = Filter(filter_name, None)
             agg_all = ITS.get_agg_data(period, startdate, enddate,
                                        identities_db, filter_all)

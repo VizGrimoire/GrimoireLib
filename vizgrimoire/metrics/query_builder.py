@@ -62,7 +62,7 @@ class DSQuery(object):
         group_field = None
         count_field = None
         if all_items:
-            group_field = self.get_group_field(all_items)
+            group_field = self.get_group_field(all_items, self)
             # Expected format: "count(distinct(pup.upeople_id)) AS authors"
             count_field = fields.split(" ")[2]
             fields = group_field + ", " + fields
@@ -85,7 +85,7 @@ class DSQuery(object):
                      all_items = None):
         group_field = None
         if all_items :
-            group_field = self.get_group_field(all_items)
+            group_field = self.get_group_field(all_items, self)
             fields = group_field + ", " + fields
 
         iso_8601_mode = 3
@@ -299,9 +299,8 @@ class DSQuery(object):
         return  project_with_children_str
 
     @staticmethod
-    def get_group_field (filter_type):
+    def get_group_field (filter_type, ds_query = None):
         """ Return the name of the field to group by in filter all queries """
-
         field = None
         supported = ['people2','company','country','domain','project','repository','company,country']
 
@@ -313,7 +312,9 @@ class DSQuery(object):
         elif analysis == "company": field = "com.name"
         elif analysis == "country": field = "cou.name"
         elif analysis == "domain": field = "d.name"
-        elif analysis == "repository": field = "r.name"
+        elif analysis == "repository":
+            field = "r.name"
+            if type(ds_query) == ITSQuery: field = "t.url"
         elif analysis == "company,country": field = "CONCAT(com.name,'_',cou.name)"
 
         return field
@@ -703,7 +704,7 @@ class ITSQuery(DSQuery):
         # fields necessary to match info among tables
         filters = Set([])
         filters.add("i.tracker_id = t.id")
-        filters.add("t.url = "+repository)
+        if repository is not None: filters.add("t.url = "+repository)
 
         return filters
 
@@ -742,8 +743,8 @@ class ITSQuery(DSQuery):
         # fields necessary for the companies analysis
         tables = Set([])
         tables.add("people_upeople pup")
-        tables.add(self.identities_db + ".companies c")
-        tables.add(self.identities_db + ".upeople_companies upc")
+        tables.add(self.identities_db + ".companies com")
+        tables.add(self.identities_db + ".upeople_companies upcom")
 
         return tables
 
@@ -751,12 +752,12 @@ class ITSQuery(DSQuery):
         # filters for the companies analysis
         filters = Set([])
         filters.add("i.submitted_by = pup.people_id")
-        filters.add("pup.upeople_id = upc.upeople_id")
-        filters.add("upc.company_id = c.id")
-        filters.add("i.submitted_on >= upc.init")
-        filters.add("i.submitted_on < upc.end")
+        filters.add("pup.upeople_id = upcom.upeople_id")
+        filters.add("upcom.company_id = com.id")
+        filters.add("i.submitted_on >= upcom.init")
+        filters.add("i.submitted_on < upcom.end")
         if name is not None:
-            filters.add("c.name = "+name)
+            filters.add("com.name = "+name)
 
         return filters
 
@@ -775,7 +776,7 @@ class ITSQuery(DSQuery):
         filters.add("i.submitted_by = pup.people_id")
         filters.add("pup.upeople_id = upcou.upeople_id")
         filters.add("upcou.country_id = cou.id")
-        filters.add("cou.name = "+name)
+        if name is not None: filters.add("cou.name = "+name)
 
         return filters
 
@@ -794,7 +795,7 @@ class ITSQuery(DSQuery):
         filters.add("i.submitted_by = pup.people_id")
         filters.add("pup.upeople_id = upd.upeople_id")
         filters.add("upd.domain_id = d.id")
-        filters.add("d.name = " + name)
+        if name is not None: filters.add("d.name = " + name)
 
         return filters
 

@@ -808,6 +808,36 @@ class Countries(Metrics):
         data = self.db.ExecuteQuery(q)
         return (data)
 
+class CompaniesCountries(Metrics):
+    """ Countries in Companies participating in the issue tracking system """
+
+    id = "companies+countries"
+    name = "Countries"
+    desc = "Countries in Companies participating in the issue tracking system"
+    data_source = ITS
+
+    def get_list(self):
+        identities_db = self.db.identities_db
+        startdate = self.filters.startdate
+        enddate = self.filters.enddate
+
+        q = "SELECT count(i.id) as tickets, CONCAT(c.name, '_', cou.name) as name "+\
+            "FROM issues i, people_upeople pup, "+\
+            identities_db+".countries cou, "+identities_db+".upeople_countries upcou, "+\
+            identities_db+".companies c, "+identities_db+".upeople_companies upc "+\
+            "WHERE pup.people_id = i.submitted_by and "+\
+            "      pup.upeople_id  = upcou.upeople_id and "+\
+            "      upcou.country_id = cou.id and "+\
+            "      pup.upeople_id  = upc.upeople_id and "+\
+            "      upc.company_id = c.id and "+\
+            "      i.submitted_on >= upc.init  and i.submitted_on < upc.end and "+\
+            "      i.submitted_on >="+startdate+ " and "+\
+            "      i.submitted_on < "+enddate+ " "+\
+            "group by c.name, cou.name "+\
+            "order by tickets desc, c.name, cou.name"
+        clist = self.db.ExecuteQuery(q)
+        return clist
+
 class Domains(Metrics):
     """ Domains metric class for issue tracking systems """
     id = "domains"
