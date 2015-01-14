@@ -21,8 +21,8 @@
 ## Authors:
 ##   Daniel Izquierdo-Cortazar <dizquierdo@bitergia.com>
 ##
-## python eclipse_mm.py -a eclipse_source_code_20141127 -d eclipse_reviews_20141127 -i eclipse_source_code_20141127 -r 2014-01-01,2014-10-20 -c eclipse_tickets_20141127 -b eclipse_mailing_lists_20141127
-
+## python eclipse_mm.py -a cp_cvsanaly_PolarsysMaturity -d cp_gerrit_PolarsysMaturity -i cp_cvsanaly_PolarsysMaturity -r 1900-01-01,2100-01-01 -c cp_bicho_PolarsysMaturity -b cp_mlstats_PolarsysMaturity
+ 
 
 import imp, inspect
 from optparse import OptionParser
@@ -139,11 +139,13 @@ def scm_report(dbcon, filters, sloc):
                        count(distinct(a.id)) as pokes 
                 from actions a, 
                      scmlog s,
-                     repositories r
+                     repositories r,
+                     projects pr
                 where a.commit_id = s.id and 
                       s.date >=%s and
                       s.repository_id = r.id and
-                      r.name = %s
+                      r.name = pr.title and
+                      pr.id = %s
                       group by a.file_id """ % (filters.startdate, value)
 
     file_pokes =  dbcon.ExecuteQuery(query)
@@ -434,6 +436,6 @@ if __name__ == '__main__':
         mls_dbcon = MLSQuery(opts.dbuser, opts.dbpassword, opts.dbmlstats, opts.dbidentities)
         data.update(mls_report(mls_dbcon, filters, project_sloc))
 
-        createJSON(data, project + "-grimoirelib-prj-static.json")
+        createJSON(data, "../../../json/" + project + "-grimoirelib-prj-static.json")
 
 
