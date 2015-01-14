@@ -175,7 +175,7 @@ class Pullpo(DataSource):
 
     @staticmethod
     def create_filter_report(filter_, period, startdate, enddate, destdir, npeople, identities_db):
-        from report import Report
+        from vizgrimoire.report import Report
         items = Report.get_items()
         if items is None:
             items = Pullpo.get_filter_items(filter_, startdate, enddate, identities_db)
@@ -316,7 +316,7 @@ class Pullpo(DataSource):
 
     @staticmethod
     def get_query_builder():
-        from query_builder import PullpoQuery
+        from vizgrimoire.metrics.query_builder import PullpoQuery
         return PullpoQuery
 
     @staticmethod
@@ -342,3 +342,4 @@ class Pullpo(DataSource):
     @staticmethod
     def get_metrics_core_trends():
         return ['submitted','merged','pending','abandoned','closed','submitters']
+
