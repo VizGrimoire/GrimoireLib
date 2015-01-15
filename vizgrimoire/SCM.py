@@ -611,35 +611,6 @@ def people () :
     data = ExecuteQuery(q)
     return (data);
 
-# Companies / Countries support
-
-def scm_companies_countries_evol (identities_db, company, country, period, startdate, enddate) :
-
-    rol = "author" #committer
-
-    q = "SELECT ((to_days(s.date) - to_days("+startdate+")) div "+str(period)+") as id, "+\
-        "count(s.id) AS commits, "+\
-        "COUNT(DISTINCT(s."+rol+"_id)) as "+rol+"s "+\
-        "FROM scmlog s,  "+\
-        "     people_upeople pup, "+\
-        "     "+identities_db+".countries ct, "+\
-        "     "+identities_db+".upeople_countries upct, "+\
-        "     "+identities_db+".companies com, "+\
-        "     "+identities_db+".upeople_companies upcom "+\
-        "WHERE pup.people_id = s."+rol+"_id AND "+\
-        "      pup.upeople_id  = upct.upeople_id and "+\
-        "      pup.upeople_id = upcom.upeople_id AND "+\
-        "      upcom.company_id = com.id AND "+\
-        "      upct.country_id = ct.id and "+\
-        "      s.date >="+ startdate+ " and "+\
-        "      s.date < "+ enddate+ " and "+\
-        "      ct.name = '"+ country+ "' AND "+\
-        "      com.name ='"+company+"' "+\
-        "GROUP BY ((to_days(s.date) - to_days("+startdate+")) div "+str(period)+")"
-
-    data = ExecuteQuery(q)	
-    return (data)
-
 ##############
 # Micro Studies
 ##############
