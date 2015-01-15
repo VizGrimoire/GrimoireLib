@@ -554,25 +554,6 @@ def top_files_modified () :
     data = ExecuteQuery(q)
     return (data)	
 
-def top_authors_year (year, limit) :
-    # Given a year, this functions provides the top 10 authors 
-    # of such year
-    q = "SELECT u.id as id, u.identifier as authors, "+\
-        "       count(distinct(s.id)) as commits "+\
-        "FROM scmlog s, actions a, "+\
-        "     people_upeople pup, "+\
-        "     upeople u "+\
-        "where s.id = a.commit_id and " +\
-        "      s.author_id = pup.people_id and "+\
-        "      pup.upeople_id = u.id and "+\
-        "      year(s.date) = "+year+" "+\
-        "group by u.identifier "+\
-        "order by commits desc "+\
-        "LIMIT " + limit
-
-    data = ExecuteQuery(q)
-    return (data)
-
 
 def people () :
     # List of people participating in the source code development
