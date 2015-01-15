@@ -852,6 +852,9 @@ class Backend(object):
         elif (its_type == 'github'):
             self.closed_condition = "field='closed'"
 
+        elif (its_type == 'storyboard'):
+            self.closed_condition = "(new_value='merged' or new_value='invalid')"
+
         elif (its_type == 'jira'):
             self.closed_condition = "(new_value='Closed')"
             self.reopened_condition = "new_value='Reopened'"
