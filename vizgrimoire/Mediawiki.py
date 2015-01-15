@@ -22,8 +22,8 @@
 import logging, os
 
 from filter import Filter
-from vizgrimoire.GrimoireSQL import GetSQLGlobal, GetSQLPeriod, GetSQLReportFrom 
-from vizgrimoire.GrimoireSQL import GetSQLReportWhere, ExecuteQuery, BuildQuery
+from vizgrimoire.GrimoireSQL import GetSQLGlobal, GetSQLPeriod 
+from vizgrimoire.GrimoireSQL import ExecuteQuery, BuildQuery
 from vizgrimoire.GrimoireUtils import GetPercentageDiff, GetDates, completePeriodIds, createJSON
 from vizgrimoire.metrics.metrics_filter import MetricFilters
 
