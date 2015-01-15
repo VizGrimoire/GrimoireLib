@@ -644,57 +644,6 @@ def GetStaticPeopleMLS (developer_id, startdate, enddate) :
     return (data)
 
 
-#####################
-# MICRO STUDIES
-#####################
-
-def StaticNumSent (startdate, enddate):
-    fields = " COUNT(*) as sent "
-    tables = GetTablesOwnUniqueIdsMLS()
-    filters = GetFiltersOwnUniqueIdsMLS()
-    q = GetSQLGlobal('first_date', fields, tables, filters,
-            startdate, enddate)
-    sent = ExecuteQuery(q)
-    return(sent)
-
-
-def StaticNumSenders (startdate, enddate):
-    fields = " COUNT(DISTINCT(pup.upeople_id)) as senders "
-    tables = GetTablesOwnUniqueIdsMLS()
-    filters = GetFiltersOwnUniqueIdsMLS()
-    q = GetSQLGlobal('first_date', fields, tables, filters,
-            startdate, enddate)
-    senders = ExecuteQuery(q)
-    return(senders)
-
-def GetDiffSentDays (period, init_date, days):
-    chardates = GetDates(init_date, days)
-    last = StaticNumSent(chardates[1], chardates[0])
-    last = int(last['sent'])
-    prev = StaticNumSent(chardates[2], chardates[1])
-    prev = int(prev['sent'])
-
-    data = {}
-    data['diff_netsent_'+str(days)] = last - prev
-    data['percentage_sent_'+str(days)] = GetPercentageDiff(prev, last)
-    data['sent_'+str(days)] = last
-    return (data)
-
-def GetDiffSendersDays (period, init_date, days):
-    # This function provides the percentage in activity between two periods
-
-    chardates = GetDates(init_date, days)
-    last = StaticNumSenders(chardates[1], chardates[0])
-    last = int(last['senders'])
-    prev = StaticNumSenders(chardates[2], chardates[1])
-    prev = int(prev['senders'])
-
-    data = {}
-    data['diff_netsenders_'+str(days)] = last - prev
-    data['percentage_senders_'+str(days)] = GetPercentageDiff(prev, last)
-    data['senders_'+str(days)] = last
-    return (data)
-
 def GetSentSummaryCompanies (period, startdate, enddate, identities_db, num_companies):
     count = 1
     first_companies = {}
