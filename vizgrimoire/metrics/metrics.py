@@ -191,7 +191,6 @@ class Metrics(object):
     def get_agg(self):
         """ Returns an aggregated value """
         q = self._get_sql(False)
-        print q
         return self.db.ExecuteQuery(q)
 
 
