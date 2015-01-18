@@ -24,6 +24,7 @@ from vizgrimoire.GrimoireUtils import read_main_conf
 import logging, time
 import vizgrimoire.SCM as SCM
 import vizgrimoire.ITS as ITS
+import vizgrimoire.ITS_1 as ITS_1
 import vizgrimoire.MLS as MLS
 import vizgrimoire.SCR as SCR
 import vizgrimoire.Mediawiki as Mediawiki
@@ -76,7 +77,7 @@ class Report(object):
 
     @staticmethod
     def _init_data_sources():
-        Report._all_data_sources = [SCM.SCM, ITS.ITS, MLS.MLS, SCR.SCR, 
+        Report._all_data_sources = [SCM.SCM, ITS.ITS, ITS_1.ITS_1, MLS.MLS, SCR.SCR,
                                     Mediawiki.Mediawiki, IRC.IRC, DownloadsDS.DownloadsDS,
                                     QAForums.QAForums, ReleasesDS.ReleasesDS, Pullpo.Pullpo]
         if 'people_out' in Report.get_config()['r']:
@@ -138,6 +139,7 @@ class Report(object):
                     metric_filters.global_filter = ds.get_global_filter(ds)
                 metrics = metrics_class(builder(dbuser, dbpass, db, db_identities), metric_filters)
                 ds.add_metrics(metrics, ds)
+                if ds == ITS.ITS: ds.add_metrics(metrics, ITS_1.ITS_1)
 
                 # Specific filters
                 if ds.get_name() == "scr":
