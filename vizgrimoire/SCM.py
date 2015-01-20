@@ -158,11 +158,13 @@ class SCM(DataSource):
             top['authors.last month'] = mauthors.get_list(mfilter, 31)
             top['authors.last year'] = mauthors.get_list(mfilter, 365)
         elif filter_.get_name() in ["company","repository","project"]:
-            if filter_.get_name() == "repository":
+            if filter_.get_name() in ["company","repository","project"]:
                 top['authors.'] = mauthors.get_list(mfilter, 0)
                 top['authors.last month'] = mauthors.get_list(mfilter, 31)
                 top['authors.last year'] = mauthors.get_list(mfilter, 365)
             else:
+                # If we have performance issues with tops, remove filters above
+                # to avoid computing trends for tops
                 top = mauthors.get_list(mfilter) 
         else:
             logging.info("Top authors not support for " + filter_.get_name())

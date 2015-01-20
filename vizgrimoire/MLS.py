@@ -167,11 +167,12 @@ class MLS(DataSource):
             item = filter_.get_item()
 
             if filter_name in ["company","domain","repository","domain","country"]:
-                if filter_name == "repository":
+                if filter_name in ["company","domain","repository","domain","country"]:
                     top['senders.'] = msenders.get_list(mfilter, 0)
                     top['senders.last month'] = msenders.get_list(mfilter, 31)
                     top['senders.last year'] = msenders.get_list(mfilter, 365)
                 else:
+                    # Remove filters above if there are performance issues
                     top = msenders.get_list(mfilter)
             else:
                 top = None
