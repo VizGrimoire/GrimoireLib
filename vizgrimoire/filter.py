@@ -104,7 +104,7 @@ class Filter(object):
             name = item+"-"+ds.get_name()+"-"+self.get_name_short()+"-top-"
             if (ds.get_name() == "scm"):
                 name += "authors.json"
-            elif (ds.get_name() == "its"):
+            elif (ds.get_name() == "its" or ds.get_name() == "its_1"):
                 name += "closers.json"
             elif (ds.get_name() == "mls"): 
                 name += "senders.json"
@@ -120,7 +120,7 @@ class Filter(object):
         if (ds.get_name() == "scm"):
             if (self.get_name() == "company"):
                 name += "companies-commits-summary.json"
-        elif (ds.get_name() == "its"):
+        elif (ds.get_name() == "its" or ds.get_name() == "its_1"):
             if (self.get_name() == "company"):
                 name += "closed-companies-summary.json"
         elif (ds.get_name() == "mls"):
