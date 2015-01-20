@@ -379,6 +379,7 @@ class DataSource(object):
             if item.id not in metrics_on: continue
             mfilter_orig = item.filters
             mfilter.global_filter = mfilter_orig.global_filter
+            mfilter.set_closed_condition(mfilter_orig.closed_condition)
             item.filters = mfilter
             if evol: mvalue = item.get_ts()
             else:    mvalue = item.get_agg()

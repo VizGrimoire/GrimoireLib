@@ -35,6 +35,8 @@ class MetricFilters(object):
         self.people_out = people_out
         self.companies_out = companies_out
         self.global_filter = global_filter
+        self.closed_condition = None
 
     def set_global_filter(self, value): self.global_filter = value
+    def set_closed_condition(self, value): self.closed_condition = value
 

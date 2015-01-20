@@ -207,11 +207,13 @@ class Metrics(object):
         self.filters = MetricFilters(filters.period,
                                      chardates[1], chardates[0], filters.type_analysis)
         self.filters.global_filter = filters.global_filter
+        self.filters.closed_condition = filters.closed_condition
         last = self.get_agg()
         last = int(last[self.id])
         self.filters = MetricFilters(filters.period,
                                      chardates[2], chardates[1], filters.type_analysis)
         self.filters.global_filter = filters.global_filter
+        self.filters.closed_condition = filters.closed_condition
         prev = self.get_agg()
         prev = int(prev[self.id])
 
@@ -235,12 +237,14 @@ class Metrics(object):
         self.filters = MetricFilters(filters.period,
                                      chardates[1], chardates[0], filters.type_analysis)
         self.filters.global_filter = filters.global_filter
+        self.filters.closed_condition = filters.closed_condition
         last = check_array_values(self.get_agg())
 
         # last = int(last[self.id])
         self.filters = MetricFilters(filters.period,
                                      chardates[2], chardates[1], filters.type_analysis)
         self.filters.global_filter = filters.global_filter
+        self.filters.closed_condition = filters.closed_condition
         prev = check_array_values(self.get_agg())
 
         group_field = DSQuery.get_group_field(self.filters.type_analysis[0], self.db)

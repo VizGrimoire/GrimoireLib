@@ -231,6 +231,9 @@ class TimeToClose(Metrics):
         tables.union_update(self.db.GetSQLReportFrom(self.filters))
 
         closed_condition = ITS._get_closed_condition()
+        if self.filters.closed_condition is not None:
+             closed_condition = self.filters.closed_condition
+
         # TODO: if RESOLVED and CLOSED appear in the same period of study, this 
         # will affect the total time to close the issue. Both timeframes will
         # be taken into account.
@@ -263,6 +266,9 @@ class Closers(Metrics):
         limit = metric_filters.npeople
         filter_bots = self.db.get_bots_filter_sql(self.data_source, metric_filters)
         closed_condition =  ITS._get_closed_condition()
+        if self.filters.closed_condition is not None:
+             closed_condition = self.filters.closed_condition
+
 
         fields = Set([])
         tables = Set([])
@@ -299,6 +305,9 @@ class Closers(Metrics):
         limit = metric_filters.npeople
         filter_bots = self.db.get_bots_filter_sql(self.data_source, metric_filters)
         closed_condition =  ITS._get_closed_condition()
+        if self.filters.closed_condition is not None:
+             closed_condition = self.filters.closed_condition
+
 
         fields = Set([])
         tables = Set([])
@@ -337,6 +346,9 @@ class Closers(Metrics):
         limit = metric_filters.npeople
         filter_bots = self.db.get_bots_filter_sql(self.data_source, metric_filters)
         closed_condition =  ITS._get_closed_condition()
+        if self.filters.closed_condition is not None:
+             closed_condition = self.filters.closed_condition
+
         if filter_bots != '': filter_bots = " AND " + filter_bots
 
         dtables = dfilters = ""
@@ -376,6 +388,9 @@ class Closers(Metrics):
         filter_bots = self.db.get_bots_filter_sql(self.data_source, metric_filters)
         if filter_bots != "": filter_bots += " AND "
         closed_condition =  ITS._get_closed_condition()
+        if self.filters.closed_condition is not None:
+             closed_condition = self.filters.closed_condition
+
 
         dtables = dfilters = ""
         if (days > 0):
@@ -488,6 +503,9 @@ class Changed(Metrics):
 
         if close:
             closed_condition =  ITS._get_closed_condition()
+            if self.filters.closed_condition is not None:
+                 closed_condition = self.filters.closed_condition
+
             fields = Set([])
             fields.add("count(distinct(t.id)) as closed")
             filters.add(closed_condition)
@@ -513,6 +531,9 @@ class Changed(Metrics):
 
         if close:
             closed_condition =  ITS._get_closed_condition()
+            if self.filters.closed_condition is not None:
+                 closed_condition = self.filters.closed_condition
+
             fields = Set([])
             fields.add("count(distinct(i.id)) as closed")
             filters.add(closed_condition)
@@ -561,6 +582,9 @@ class Changers(Metrics):
 
         if close:
             closed_condition =  ITS._get_closed_condition()
+            if self.filters.closed_condition is not None:
+                 closed_condition = self.filters.closed_condition
+
             filters.add(closed_condition)
 
         filters.union_update(self.db.GetSQLReportWhere(self.filters))
@@ -617,6 +641,9 @@ class Changers(Metrics):
             fields = Set([])
             fields.add("count(distinct(pup.upeople_id)) as closers")
             closed_condition =  ITS._get_closed_condition()
+            if self.filters.closed_condition is not None:
+                 closed_condition = self.filters.closed_condition
+
             filters.add(closed_condition)
         filters.union_update(self.db.GetSQLReportWhere(self.filters))
         #unique identities filters
@@ -746,6 +773,9 @@ class Companies(Metrics):
         startdate = self.filters.startdate
         enddate = self.filters.enddate
         closed_condition = ITS._get_closed_condition()
+        if self.filters.closed_condition is not None:
+             closed_condition = self.filters.closed_condition
+
 
         # list each of the companies analyzed
         # those are order by number of closed issues
@@ -791,6 +821,9 @@ class Countries(Metrics):
         startdate = self.filters.startdate
         enddate = self.filters.enddate
         closed_condition = ITS._get_closed_condition()
+        if self.filters.closed_condition is not None:
+             closed_condition = self.filters.closed_condition
+
 
         q = "select cou.name "+\
             "from issues i, "+\
@@ -857,6 +890,9 @@ class Domains(Metrics):
         startdate = self.filters.startdate
         enddate = self.filters.enddate
         closed_condition = ITS._get_closed_condition()
+        if self.filters.closed_condition is not None:
+             closed_condition = self.filters.closed_condition
+
         bots = DataSource.get_filter_bots(Filter("domain"))
         fbots = ''
         for bot in bots:
