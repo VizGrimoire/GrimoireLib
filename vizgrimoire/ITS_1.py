@@ -21,12 +21,26 @@
 ## Authors:
 ##   Alvaro del Castillo <acs@bitergia.com>
 
-from vizgrimoire.ITS import ITS
+from vizgrimoire.ITS import ITS, Backend
 
 class ITS_1(ITS):
+    _metrics_set = []
+    _backend = None
+
     @staticmethod
     def get_db_name():
         return "db_bicho_1"
 
     @staticmethod
     def get_name(): return "its_1"
+
+    @staticmethod
+    def _get_backend():
+        import vizgrimoire.report
+        if ITS_1._backend == None:
+            automator = vizgrimoire.report.Report.get_config()
+            its_backend = automator['bicho_1']['backend']
+            backend = Backend(its_backend)
+        else:
+            backend = ITS_1._backend
+        return backend
