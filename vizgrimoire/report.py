@@ -92,6 +92,29 @@ class Report(object):
     @staticmethod
     def _init_metrics(metrics_path):
         """Register all available metrics"""
+        def get_default_filter():
+            npeople = Metrics.default_npeople
+            people_out = None
+            if 'people_out' in Report._automator['r']:
+                people_out = Report._automator['r']['people_out'].split(",")
+            companies_out = None
+            if 'companies_out' in Report._automator['r']:
+                companies_out = Report._automator['r']['companies_out'].split(",")
+            type_analysis = None
+            if 'start_date' not in Report._automator['r']:
+                raise Exception("Start date not configured in automator main.conf")
+            start_date = Report._automator['r']['start_date']
+            if 'end_date' in Report._automator['r']:
+                end_date = Report._automator['r']['end_date']
+            else:
+                end_date = time.strftime('%Y-%m-%d')
+
+
+            metric_filters = MetricFilters(Metrics.default_period, "'"+start_date+"'", "'"+end_date+"'",
+                                           type_analysis,
+                                           npeople, people_out, companies_out)
+            return metric_filters
+
         logging.info("Loading metrics modules from %s" % (metrics_path))
         from os import listdir
         from os.path import isfile, join
@@ -100,26 +123,6 @@ class Report(object):
         db_identities = Report._automator['generic']['db_identities']
         dbuser = Report._automator['generic']['db_user']
         dbpass = Report._automator['generic']['db_password']
-        npeople = Metrics.default_npeople
-        people_out = None
-        if 'people_out' in Report._automator['r']:
-            people_out = Report._automator['r']['people_out'].split(",")
-        companies_out = None
-        if 'companies_out' in Report._automator['r']:
-            companies_out = Report._automator['r']['companies_out'].split(",")
-        type_analysis = None
-        if 'start_date' not in Report._automator['r']:
-            raise Exception("Start date not configured in automator main.conf")
-        start_date = Report._automator['r']['start_date']
-        if 'end_date' in Report._automator['r']:
-            end_date = Report._automator['r']['end_date']
-        else:
-            end_date = time.strftime('%Y-%m-%d')
-
-        metric_filters = MetricFilters(Metrics.default_period, "'"+start_date+"'", "'"+end_date+"'",
-                                       type_analysis,
-                                       npeople, people_out, companies_out)
-
         metrics_mod = [ f for f in listdir(metrics_path) 
                        if isfile(join(metrics_path,f)) and f.endswith("_metrics.py")]
 
@@ -135,11 +138,19 @@ class Report(object):
                 if ds.get_db_name() not in Report._automator['generic']: continue
                 builder = ds.get_query_builder()
                 db = Report._automator['generic'][ds.get_db_name()]
+                metric_filters = get_default_filter()
                 if (ds.get_global_filter(ds) is not None):
                     metric_filters.global_filter = ds.get_global_filter(ds)
                 metrics = metrics_class(builder(dbuser, dbpass, db, db_identities), metric_filters)
                 ds.add_metrics(metrics, ds)
-                if ds == ITS.ITS: ds.add_metrics(metrics, ITS_1.ITS_1)
+                if ds == ITS.ITS:
+                    db_its1_name = ITS_1.ITS_1.get_db_name()
+                    if db_its1_name in Report._automator['generic']:
+                        db_its1 = Report._automator['generic'][db_its1_name]
+                        metric_filters = get_default_filter()
+                        metric_filters.set_closed_condition(ITS_1.ITS_1._get_closed_condition())
+                        metrics = metrics_class(builder(dbuser, dbpass, db_its1, db_identities), metric_filters)
+                        ITS_1.ITS_1.add_metrics(metrics, ITS_1.ITS_1)
 
                 # Specific filters
                 if ds.get_name() == "scr":
