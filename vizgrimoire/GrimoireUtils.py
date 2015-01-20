@@ -465,7 +465,7 @@ def read_main_conf(config_file):
     sec = parser.sections()
     # we'll read "generic" for db information and "r" for start_date and "bicho" for backend
     for s in sec:
-        if not((s == "generic") or (s == "r") or (s == "bicho")):
+        if not(s in ["generic","r","bicho","bicho_1"]):
             continue
         options[s] = {}
         opti = parser.options(s)
