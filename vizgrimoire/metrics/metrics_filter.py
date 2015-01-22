@@ -111,6 +111,14 @@ class MetricFilters(object):
         # strings and go for a smarter way of doing this.
         # TODO: need to check all constants to check that user is
         # selecting a supported type of analysis.
+        
+        if not isinstance(value, str):
+            raise TypeError("String expected")
+
+        if value[0] <> "'" and value[len(value) - 1] <> "'":
+            value = "'" + value + "'"
+            print value
+
         if self.type_analysis is None or self.type_analysis == []:
             self.type_analysis = [typeof_analysis, value]
         else:
