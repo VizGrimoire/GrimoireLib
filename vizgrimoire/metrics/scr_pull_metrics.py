@@ -470,8 +470,8 @@ class Closers(Metrics):
 
         # TODO: warning-> not using GetSQLReportFrom/Where
         merged_sql = " AND closed_at IS NOT NULL"
-        rol = "closers"
-        action = "closed"
+        rol = "mergers"
+        action = "merged"
 
         q = "SELECT up.id as id, up.identifier as "+rol+", "+\
             "            count(distinct(pr.id)) as "+action+" "+\
