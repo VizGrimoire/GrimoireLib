@@ -34,8 +34,6 @@ import locale
 import numpy as np
 from datetime import datetime
 
-#NLOC = 914354
-sloc = {"tools.cdt": 914354, "modeling.mdt.papyrus": 3105991, "modeling.sirius": 568338}
 
 def read_options():
 
@@ -157,9 +155,9 @@ def scm_report(dbcon, filters, sloc):
     ksloc = float(sloc) / 1000.0
 
     dataset = {}
-    dataset["scm_commits_1m"] = scm_commits_1m / ksloc
-    dataset["scm_committed_files_1m"] = scm_committed_files_1m / ksloc
-    dataset["scm_committers_1m"] = scm_committers_1m / ksloc
+    dataset["scm_commits_1m"] = scm_commits_1m 
+    dataset["scm_committed_files_1m"] = scm_committed_files_1m 
+    dataset["scm_committers_1m"] = scm_committers_1m 
     dataset["scm_stability_1m"] = avg_file_pokes
     print dataset["scm_stability_1m"]
     
@@ -180,7 +178,20 @@ def its_report(dbcon, filters, sloc):
     its_updates_1m = changes.get_trends(filters.enddate, 30)["changed_30"]
     opened = its.Opened(dbcon, filters)
     its_updates_1m += opened.get_agg()["opened"]
-    its_bugs_opened_1m = opened.get_agg()["opened"]
+
+    # ITS BUGS OPEN
+    query = """ select count(distinct(i.id)) as opened_issues 
+                from issues i, trackers t
+                where (i.status<>'CLOSED' and i.status<>'RESOLVED') and
+                i.tracker_id = t.id and
+                t.url IN (
+                          SELECT repository_name
+                          FROM %s.projects p, %s.project_repositories pr
+                          WHERE p.project_id = pr.project_id AND pr.data_source='its'
+                                and p.id=%s) ;
+            """ % (dbcon.identities_db, dbcon.identities_db, filters.type_analysis[1])
+
+    its_bugs_open = dbcon.ExecuteQuery(query)["opened_issues"]
 
     # Name: ITS authors
     # Mnemo: ITS_AUTH_1M
@@ -220,12 +231,12 @@ def its_report(dbcon, filters, sloc):
     its_bugs_density = float(opened.get_agg()["opened"]) / ksloc
 
     dataset = {}
-    dataset["its_updates_1m"] = float(its_updates_1m) / ksloc
-    dataset["its_auth_1m"] = float(its_auth_1m) / ksloc
+    dataset["its_updates_1m"] = its_updates_1m
+    dataset["its_auth_1m"] = its_auth_1m
     dataset["its_bugs_density"] = its_bugs_density
     dataset["its_fix_med_1m"] = its_fix_med_1m
-    dataset["its_bugs_opened_1m"] = float(its_bugs_opened_1m) / ksloc
-    print dataset["its_bugs_opened_1m"] 
+    dataset["its_bugs_open"] = its_bugs_open
+    print dataset["its_bugs_open"] 
    
     return dataset 
 
@@ -309,9 +320,9 @@ def mls_report(dbcon, filters, sloc):
         mls_dev_resp_ratio_1m = 0
 
     dataset = {}
-    dataset["mls_dev_vol_1m"] = float(mls_dev_vol_1m) / ksloc
-    dataset["mls_dev_subj_1m"] = float(mls_dev_subj_1m) / ksloc
-    dataset["mls_dev_auth_1m"] = float(mls_dev_auth_1m) / ksloc
+    dataset["mls_dev_vol_1m"] = mls_dev_vol_1m
+    dataset["mls_dev_subj_1m"] = mls_dev_subj_1m
+    dataset["mls_dev_auth_1m"] = mls_dev_auth_1m
     dataset["mls_dev_resp_ratio_1m"] = mls_dev_resp_ratio_1m
     dataset["mls_usr_resp_time_med_1m"] = mls_usr_resp_time_med_1m
     
@@ -399,8 +410,6 @@ if __name__ == '__main__':
 
     for repo in repos_list["name"]:
         import re
-        if not re.match(".*cdt.*", repo):
-            continue
 
         print repo
         #filters = MetricFilters("month", startdate, enddate, ["project", "'"+project+"'"], opts.npeople,
@@ -450,7 +459,6 @@ if __name__ == '__main__':
 
 
     for project in projects["id"]:
-        break
         print project
         if project not in projects_sloc["id"]:
             #ignoring some projects not found in the list of sloc
