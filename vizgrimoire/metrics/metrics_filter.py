@@ -26,6 +26,21 @@ class MetricFilters(object):
 
     """ Specific filters for each analysis """
 
+    # Generic supported periods
+
+    """Allows to have per year time series analysis"""
+    PERIOD_YEAR = "year"
+
+    """Allows to have per month time series analysis"""
+    PERIOD_MONTH = "month"
+
+    """Allows to have per week time series analysis"""
+    PERIOD_WEEK = "week"
+
+    """Allows to have per day time series analysis"""
+    PERIOD_DAY = "day"
+
+
     # Generic type of analysis to any data source
 
     """Allows per repository type of analysis.
@@ -117,13 +132,24 @@ class MetricFilters(object):
 
         if value[0] <> "'" and value[len(value) - 1] <> "'":
             value = "'" + value + "'"
-            print value
 
         if self.type_analysis is None or self.type_analysis == []:
             self.type_analysis = [typeof_analysis, value]
         else:
             self.type_analysis[0] = self.type_analysis[0] + "," + typeof_analysis
             self.type_analysis[1] = self.type_analysis[1] + "," + value
+
+
+    def add_period(self, typeof_period):
+        """This function set the period type of analysis."""
+
+        if (typeof_period <> MetricFilters.PERIOD_YEAR and
+           typeof_period <> MetricFilters.PERIOD_MONTH and
+           typeof_period <> MetricFilters.PERIOD_WEEK and
+           typeof_period <> MetricFilters.PERIOD_DAY):
+            raise NameError("Period not supported")
+
+        self.period = typeof_period
 
 
     def set_global_filter(self, value): self.global_filter = value
