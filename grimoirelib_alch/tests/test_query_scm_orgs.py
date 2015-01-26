@@ -63,9 +63,7 @@ class TestSCMQueryOrgs (unittest.TestCase):
 
         res = self.session.query().select_orgs() \
             .filter_orgs(org[1] for org in correct)
-        for row in res.all():
-            print row.org_id, row.org_name
-        self.assertEqual (res.limit(5).all(), correct)
+        self.assertEqual (res.all(), correct)
 
 
 if __name__ == "__main__":
