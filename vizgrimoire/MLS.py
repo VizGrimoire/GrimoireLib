@@ -129,7 +129,9 @@ class MLS(DataSource):
             l_threads['message_id'].append(email.message_id)
             l_threads['length'].append(main_topics.lenThread(email.message_id))
             l_threads['subject'].append(email.subject)
-            l_threads['date'].append(email.date.strftime("%Y-%m-%d"))
+            if not isinstance(email.date, list):
+                #not expected result: an empty list.
+                l_threads['date'].append(email.date.strftime("%Y-%m-%d"))
             l_threads['initiator_name'].append(email.initiator_name)
             l_threads['initiator_id'].append(email.initiator_id)
             l_threads['url'].append(email.url)
