@@ -154,7 +154,7 @@ class DataSource(object):
 
     @staticmethod
     def get_filter_bots(filter_):
-        from report import Report
+        from vizgrimoire.report import Report
         bots = []
 
         # If not using Report (automator) bots are not supported.
@@ -284,7 +284,7 @@ class DataSource(object):
     @staticmethod
     def get_studies_data(ds, period, startdate, enddate, evol):
         """ Get data from studies to be included in agg and evol global JSONs  """
-        from report import Report
+        from vizgrimoire.report import Report
         data = {}
 
         db_identities = Report.get_config()['generic']['db_identities']
@@ -328,7 +328,7 @@ class DataSource(object):
         from vizgrimoire.GrimoireUtils import fill_and_order_items
         data = {}
 
-        from report import Report
+        from vizgrimoire.report import Report
         automator = Report.get_config()
 
         if evol:
@@ -369,7 +369,7 @@ class DataSource(object):
 
         # Reports = filters metrics not available inside filters
         if type_analysis is None:
-            from report import Report
+            from vizgrimoire.report import Report
             reports_on = Report.get_config()['r']['reports'].split(",")
             for r in metrics_reports:
                 if r in reports_on: metrics_on += [r]
