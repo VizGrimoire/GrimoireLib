@@ -152,6 +152,14 @@ class DB (GrimoireDatabase):
             tablename = 'upeople',
             schemaname = self.schema_id)
 
+        DB.Companies = GrimoireDatabase._table (
+            bases = (self.Base,), name = 'Companies',
+            tablename = 'companies',
+            schemaname = self.schema_id,
+            columns = dict (
+                id = Column(Integer, primary_key = True)
+                )
+            )
 
 class Query (GrimoireQuery):
     """Class for dealing with SCM queries"""
@@ -490,6 +498,24 @@ class Query (GrimoireQuery):
                     DB.SCMLog.repository_id == DB.Repositories.id)
         return query
 
+    def select_orgs (self):
+        """Select organizations data.
+
+        Include id and name, as they appear in the companies table.
+        Warning: doesn't join other tables. For now, only works alone.
+
+        Returns
+        -------
+
+        Query
+            Including new columns in SELECT
+        
+        """
+
+        query = self.add_columns (label("org_id", DB.Companies.id),
+                                  label("org_name", DB.Companies.name))
+        return query
+
     def filter_nomerges (self):
         """Consider only commits that touch files (no merges)
 
@@ -646,6 +672,24 @@ class Query (GrimoireQuery):
         query = query.filter(or_(*conditions))
         return query
 
+    def filter_orgs (self, orgs):
+        """Filter organizations matching a list of names
+
+        Fiters query by a list of organization names, checking for
+        them in the companies table.
+
+        Parameters
+        ----------
+        
+        orgs: list of str
+            List of organizations
+
+        """
+
+        query = self
+        query = query.filter(DB.Companies.name.in_(orgs))
+        return query
+
     def group_by_period (self):
         """Group by time period (per month)"""
 
@@ -740,7 +784,7 @@ if __name__ == "__main__":
                    schema = 'vizgrimoire_cvsanaly',
                    schema_id = 'vizgrimoire_cvsanaly')
     session = database.build_session(Query, echo = False)
-    
+
     #---------------------------------
     print_banner ("Number of commits")
     res = session.query().select_nscmlog(["commits",]) \
