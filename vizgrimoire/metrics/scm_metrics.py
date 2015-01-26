@@ -82,6 +82,7 @@ class NewAuthors(Metrics):
     id = "newauthors"
     name = "New Authors"
     desc = "New authors joining the community"
+    data_source = SCM
 
     def _get_sql(self, evolutionary):
 
