@@ -437,17 +437,20 @@ class ITS(DataSource):
     @staticmethod
     def get_metrics_core_agg():
         m = ['closed','closers','changed','changers',"opened",'openers','trackers']
-        m += ['allhistory_participants']
+        m += ['allhistory_participants','bmitickets']
         return m
 
     @staticmethod
     def get_metrics_core_ts():
         m = ['closed','closers','changed','changers',"opened",'openers','trackers']
+        m += ['bmitickets']
         return m
 
     @staticmethod
     def get_metrics_core_trends():
-        return ['closed','closers','changed','changers',"opened",'openers']
+        m = ['closed','closers','changed','changers',"opened",'openers']
+        m += ['bmitickets']
+        return m
 
 
 ##############
