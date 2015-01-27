@@ -481,10 +481,8 @@ class BMIIndex(Metrics):
 
         closed = closed_tickets.get_agg()
         opened = opened_tickets.get_agg()
-        print closed
-        print opened
 
-        if opened <= 0:
+        if int(opened["opened"]) <= 0:
             # a value is needed when there's a division by 0
             data["bmitickets"] = closed["closed"] * 100
         else:
