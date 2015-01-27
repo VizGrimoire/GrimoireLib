@@ -453,6 +453,69 @@ class Closers(Metrics):
             changers.filters = cfilters
         return q
 
+class BMIIndex(Metrics):
+    """ The Backlog Management Index measures efficiency dealing with tickets
+
+        This is based on the book "Metrics and Models in Software Quality
+        Engineering. Chapter 4.3.1. By Stephen H. Kan.
+
+        BMI is calculated as the number of closed tickets out of the opened
+        tickets in a given period. This metric aims at having an overview of
+        how the community deals with tickets. Continuous values under 1
+        (or 100 if this is calculated as a percentage) shows low peformance
+        given that the community leaves a lot of opened tickets. Continuous 
+        values close to 1 or over 1 shows a better performance. This would
+        indicate that most of the tickets are being closed.
+    """
+
+    id = "bmitickets"
+    name = "Backlog Management Index"
+    desc = "Number of tickets closed out of the opened ones in a given period"
+    data_source = ITS
+
+    def get_agg(self):
+        data = {}
+
+        closed_tickets = Closed(self.db, self.filters)
+        opened_tickets = Opened(self.db, self.filters)
+
+        closed = closed_tickets.get_agg()
+        opened = opened_tickets.get_agg()
+        print closed
+        print opened
+
+        if opened <= 0:
+            # a value is needed when there's a division by 0
+            data["bmitickets"] = closed["closed"] * 100
+        else:
+            data["bmitickets"] = (float(closed["closed"]) / float(opened["opened"])) * 100.0
+
+        return data
+
+    def get_ts(self):
+        data = {}
+
+        closed_tickets = Closed(self.db, self.filters)
+        opened_tickets = Opened(self.db, self.filters)
+
+        closed = closed_tickets.get_ts()
+        opened = opened_tickets.get_ts()
+
+        evol_bmi = []
+        for i in closed["closed"]:
+
+            index = closed["closed"].index(i)
+            if opened["opened"][index] == 0:
+                #div by 0
+                evol_bmi.append(i * 100) # some "neutral" value, although this should be infinite
+            else:
+                evol_bmi.append((float(i) / float(opened['opened'][index])) * 100.0)
+
+        data["bmitickets"] = evol_bmi
+
+        return data
+
+
 class Changed(Metrics):
     """ Tickets Changed metric class for issue tracking systems. Also supports closed metric. """
     id = "changed"

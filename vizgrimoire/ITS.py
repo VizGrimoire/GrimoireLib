@@ -727,29 +727,6 @@ def GetPeopleStaticITS (developer_id, startdate, enddate, closed_condition) :
 # Micro studies
 #################
 
-def EvolBMIIndex(period, startdate, enddate, identities_db, type_analysis, closed_condition):
-    # Metric based on chapter 4.3.1 from
-    # "Metrics and Models in Software Quality Engineering"
-    # by Stephen H. Kan
-    closed = EvolIssuesClosed(period, startdate, enddate, identities_db, type_analysis, closed_condition)
-    closed = completePeriodIds(closed, period, startdate, enddate)
-    opened = EvolIssuesOpened(period, startdate, enddate, identities_db, type_analysis)
-    opened = completePeriodIds(opened, period, startdate, enddate)
-
-    evol_bmi = []
-    for i in closed["closed"]:
-
-        index = closed["closed"].index(i)
-        if opened["opened"][index] == 0:
-            #div by 0
-            evol_bmi.append(100) # some "neutral" value, although this should be infinite
-        else:
-            evol_bmi.append((float(i) / float(opened['opened'][index])) * 100)
-
-    return {'closed' : closed['closed'],
-            'opened' : opened['opened'],
-            'bmi' : evol_bmi}
-
 def GetClosedSummaryCompanies (period, startdate, enddate, identities_db, closed_condition, num_companies):
     count = 1
     first_companies = {}
