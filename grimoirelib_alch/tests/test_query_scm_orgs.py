@@ -65,6 +65,17 @@ class TestSCMQueryOrgs (unittest.TestCase):
             .filter_orgs(org[1] for org in correct)
         self.assertEqual (res.all(), correct)
 
+    def test_filter_org_ids (self):
+        """Test filter_org_ids
+
+        """
+
+        correct = 11518
+
+        res = self.session.query().select_nscmlog(["commits",]) \
+            .filter_org_ids(list = (1,2,), kind = "authors")
+        self.assertEqual (res.scalar(), correct)
+
 
 if __name__ == "__main__":
     unittest.main()

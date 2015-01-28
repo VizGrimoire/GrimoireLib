@@ -161,6 +161,12 @@ class DB (GrimoireDatabase):
                 )
             )
 
+        DB.UPeopleCompanies = GrimoireDatabase._table (
+            bases = (self.Base,), name = 'UPeopleCompanies',
+            tablename = 'upeople_companies',
+            schemaname = self.schema_id,
+            )
+
 class Query (GrimoireQuery):
     """Class for dealing with SCM queries"""
 
@@ -689,6 +695,40 @@ class Query (GrimoireQuery):
         query = self
         query = query.filter(DB.Companies.name.in_(orgs))
         return query
+
+    def filter_org_ids (self, list, kind = "all"):
+        """Filter organizations matching a list of organization ids
+
+        Fiters query by a list of organization ids.
+
+        Parameters
+        ----------
+        
+        list: list of int
+            List of organization ids
+
+        """
+
+        query = self
+        if kind == "authors":
+            query = query \
+                .join (DB.PeopleUPeople,
+                       DB.SCMLog.author_id == DB.PeopleUPeople.people_id) \
+                .join (DB.UPeopleCompanies,
+                       DB.PeopleUPeople.upeople_id == DB.UPeopleCompanies.upeople_id) \
+                .filter (DB.SCMLog.author_date.between (
+                               DB.UPeopleCompanies.init,
+                               DB.UPeopleCompanies.end
+                               )) \
+                .filter (DB.UPeopleCompanies.company_id.in_(list))
+            return query
+        elif kind == "committers":
+            return None   
+        elif kind == "all":
+            return None
+        else:
+            raise Exception ("filter_persons: Unknown kind %s." \
+                             % kind)
 
     def group_by_period (self):
         """Group by time period (per month)"""
