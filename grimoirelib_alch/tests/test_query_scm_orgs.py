@@ -70,11 +70,14 @@ class TestSCMQueryOrgs (unittest.TestCase):
 
         """
 
-        correct = 11518
+        correct = (11518,11626)
 
         res = self.session.query().select_nscmlog(["commits",]) \
             .filter_org_ids(list = (1,2,), kind = "authors")
-        self.assertEqual (res.scalar(), correct)
+        self.assertEqual (res.scalar(), correct[0])
+        res = self.session.query().select_nscmlog(["commits",]) \
+            .filter_org_ids(list = (1,2,), kind = "committers")
+        self.assertEqual (res.scalar(), correct[1])
 
 
 if __name__ == "__main__":

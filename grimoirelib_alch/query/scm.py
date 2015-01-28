@@ -696,7 +696,7 @@ class Query (GrimoireQuery):
         query = query.filter(DB.Companies.name.in_(orgs))
         return query
 
-    def filter_org_ids (self, list, kind = "all"):
+    def filter_org_ids (self, list, kind = "authors"):
         """Filter organizations matching a list of organization ids
 
         Fiters query by a list of organization ids.
@@ -706,29 +706,33 @@ class Query (GrimoireQuery):
         
         list: list of int
             List of organization ids
+        kind: {"authors", "committers"}
+            Kind of actor to consider
 
         """
 
         query = self
         if kind == "authors":
-            query = query \
-                .join (DB.PeopleUPeople,
-                       DB.SCMLog.author_id == DB.PeopleUPeople.people_id) \
-                .join (DB.UPeopleCompanies,
-                       DB.PeopleUPeople.upeople_id == DB.UPeopleCompanies.upeople_id) \
-                .filter (DB.SCMLog.author_date.between (
-                               DB.UPeopleCompanies.init,
-                               DB.UPeopleCompanies.end
-                               )) \
-                .filter (DB.UPeopleCompanies.company_id.in_(list))
-            return query
+            person_id = DB.SCMLog.author_id
+            date_id = DB.SCMLog.author_date
         elif kind == "committers":
-            return None   
-        elif kind == "all":
-            return None
+            person_id = DB.SCMLog.committer_id
+            date_id = DB.SCMLog.date
         else:
-            raise Exception ("filter_persons: Unknown kind %s." \
+            raise Exception ("filter_org_ids: Unknown kind %s." \
                              % kind)
+        query = query \
+            .join (DB.PeopleUPeople,
+                   person_id == DB.PeopleUPeople.people_id) \
+            .join (DB.UPeopleCompanies,
+                   DB.PeopleUPeople.upeople_id == \
+                       DB.UPeopleCompanies.upeople_id) \
+            .filter (date_id.between (
+                           DB.UPeopleCompanies.init,
+                           DB.UPeopleCompanies.end
+                           )) \
+            .filter (DB.UPeopleCompanies.company_id.in_(list))
+        return query
 
     def group_by_period (self):
         """Group by time period (per month)"""
