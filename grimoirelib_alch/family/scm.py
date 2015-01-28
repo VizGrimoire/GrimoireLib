@@ -25,6 +25,7 @@
 
 from common import DBFamily, DBCondition
 from grimoirelib_alch.query.scm import DB, Query
+from sqlalchemy import inspect
 
 class Entities(type):
     """Watcher for a metaclass, maintaining a dictionary with its subclasses
@@ -219,7 +220,6 @@ class SCM (DBFamily):
     def total (self):
         """Return the total count for the entity"""
 
-        print self.query
         return self.query.scalar()
 
     def list (self, limit = 10):
@@ -309,6 +309,49 @@ class PeriodCondition (DBCondition):
         self.start = start
         self.end = end
         self.date = date
+
+class OrgsCondition (DBCondition):
+    """Organization Condition for qualifying an entity.
+
+    Specifies the organizations of interest: only their activity will
+    be considered.
+    """
+
+    def __init__ (self, orgs, actors = "authors"):
+        """Instatiation of the object.
+
+        Parameters
+        ----------
+
+        orgs: list of str
+           List of organziations of interest 
+        actors: {"authors", "committers"}
+            Kind of actors to consider
+
+        """
+
+        self.org_names = orgs
+        self.actors = actors
+
+    def filter (self, query):
+        """Filter to apply for this condition
+
+        Parameters
+        ----------
+
+        query: Query
+           Query to which the filter will be applied
+
+        """
+
+        # Get the session for this query, use it for getting org ids,
+        # and build the filter
+        session = inspect(query).session
+        query_orgs = session.query().select_orgs() \
+            .filter_orgs (self.org_names)
+        self.org_ids = [org.org_id for org in query_orgs.all()]
+        return query.filter_org_ids(list = self.org_ids,
+                                    kind = self.actors)
 
 
 if __name__ == "__main__":
