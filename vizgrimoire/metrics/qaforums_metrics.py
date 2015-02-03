@@ -29,6 +29,8 @@ import MySQLdb
 
 import re, sys
 
+from sets import Set
+
 from vizgrimoire.GrimoireUtils import completePeriodIds, GetDates, GetPercentageDiff
 
 from vizgrimoire.metrics.metrics import Metrics
@@ -150,9 +152,13 @@ class Participants(Metrics):
     desc = "All participants included in this metric, those commenting, asking and answering"
     data_source = QAForums
 
+    #TODO: missing getsqlreportfrom/where methods
     def _get_sql(self, evolutionary):
-        fields = " count(distinct(t.identifier)) as participants"
-        tables = """
+        fields = Set([])
+        tables = Set([])
+        filters = Set([])
+        fields.add("count(distinct(t.identifier)) as participants")
+        tables.add("""
                   (
                      (select p.identifier as identifier, 
                              q.added_at as date 
@@ -171,8 +177,7 @@ class Participants(Metrics):
                       from comments c, 
                            people p 
                       where c.user_identifier=p.identifier)) t
-                 """
-        filters = ""
+                 """)
         query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                    self.filters.enddate, " t.date ", fields,
                                    tables, filters, evolutionary, self.filters.type_analysis)
@@ -196,6 +201,7 @@ class Participants(Metrics):
             res = self.db.ExecuteQuery(sql)
             date_limit = " AND DATEDIFF(@maxdate, t.date)<"+str(days)
 
+        # TODO: Missing use of GetSQLReportFrom/Where
         query = """
              select pup.upeople_id as id, 
                     p.username as name, 
@@ -242,6 +248,7 @@ class Tags(Metrics):
     def _get_sql(self, evolutionary):
         pass
 
+    #TODO: Missing use of GetSQLReportFrom methods
     def get_list(self):
         # Returns list of tags
         query = "select tag as name from tags"

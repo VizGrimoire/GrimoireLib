@@ -2183,7 +2183,10 @@ class QAForumsQuery(DSQuery):
         # and the value itself
 
         #WARNING: if needed, identities_db is accessed as self.identities_db
-        tables = ""
+        fields = Set([])
+        tables = Set([])
+        filters = Set([])
+
         report = ""
         value = ""
 
@@ -2194,7 +2197,8 @@ class QAForumsQuery(DSQuery):
         #TODO: repository needs to be change to tag, once this is accepted as new
         #      data source in VizGrimoireJS-lib
         if report == "repository":
-            tables = ", tags t, questionstags qt "
+            tables.add("tags t")
+            tables.add("questionstags qt")
 
         #rest of reports to be implemented
 
@@ -2208,7 +2212,10 @@ class QAForumsQuery(DSQuery):
         shorttable = str(table[0])
 
         #WARNING: if needed, identities_db is accessed as self.identities_db
-        where = ""
+        fields = Set([])
+        tables = Set([])
+        filters = Set([])
+
         report = ""
         value = ""
 
@@ -2219,10 +2226,11 @@ class QAForumsQuery(DSQuery):
         #TODO: repository needs to be change to tag, once this is accepted as new
         #      data source in VizGrimoireJS-lib
         if report == "repository":
-            where = shorttable + ".question_identifier = qt.question_identifier and " +\
-                    " qt.tag_id = t.id and t.tag = " + value
-
-        return where
+            filters.add(shorttable + ".question_identifier = qt.question_identifier")
+            filters.add("qt.tag_id = t.id")
+            filters.add("t.tag = " + value)
+ 
+        return filters
 
     def __get_date_field(self, table_name):
         # the tables of the Sibyl tool are not coherent among them
@@ -2262,21 +2270,28 @@ class QAForumsQuery(DSQuery):
                  type_post = "questions"):
         # type_post has to be "comment", "question", "answer"
 
+        fields = Set([])
+        tables = Set([])
+        filters = Set([])
+
         date_field = self.__get_date_field(type_post)
         date_field = " " + date_field + " "
 
         if ( type_post == "questions"):
-            fields = " count(distinct(q.id)) as qsent "
-            tables = " questions q " + self.GetSQLReportFrom(type_analysis)
-            filters = self.GetSQLReportWhere(type_analysis, "questions")
+            fields.add("count(distinct(q.id)) as qsent")
+            tables.add("questions q")
+            tables.union_update(self.GetSQLReportFrom(type_analysis))
+            filters.union_update(self.GetSQLReportWhere(type_analysis, "questions"))
         elif ( type_post == "answers"):
-            fields = " count(distinct(a.id)) as asent "
-            tables = " answers a " + self.GetSQLReportFrom(type_analysis)
-            filters = self.GetSQLReportWhere(type_analysis, "answers")
+            fields.add("count(distinct(a.id)) as asent")
+            tables.add("answers a")
+            tables.union_update(self.GetSQLReportFrom(type_analysis))
+            filters.union_update(self.GetSQLReportWhere(type_analysis, "answers"))
         else:
-            fields = " count(distinct(c.id)) as csent "
-            tables = " comments c " + self.GetSQLReportFrom(type_analysis)
-            filters = self.GetSQLReportWhere(type_analysis, "comments")
+            fields.add("count(distinct(c.id)) as csent")
+            tables.add("comments c")
+            tables.union_update(self.GetSQLReportFrom(type_analysis))
+            filters.union_update(self.GetSQLReportWhere(type_analysis, "comments"))
 
         q = self.BuildQuery(period, startdate, enddate, date_field, fields,
                             tables, filters, evolutionary, type_analysis)
@@ -2285,23 +2300,30 @@ class QAForumsQuery(DSQuery):
 
     def get_senders(self, period, startdate, enddate, type_analysis, evolutionary,
                     type_post = "questions"):
+        fields = Set([])
+        tables = Set([])
+        filters = Set([])
+
         table_name = type_post
         date_field = self.__get_date_field(table_name)
         author_field = self.__get_author_field(table_name)
 
 
         if ( type_post == "questions"):
-            fields = " count(distinct(q.%s)) as qsenders " % (author_field)
-            tables = " questions q " + self.GetSQLReportFrom(type_analysis)
-            filters = self.GetSQLReportWhere(type_analysis, "questions")
+            fields.add("count(distinct(q.%s)) as qsenders" % (author_field))
+            tables.add("questions q")
+            tables.union_update(self.GetSQLReportFrom(type_analysis))
+            filters.union_update(self.GetSQLReportWhere(type_analysis, "questions"))
         elif ( type_post == "answers"):
-            fields = " count(distinct(a.%s)) as asenders " % (author_field)
-            tables = " answers a " + self.GetSQLReportFrom(type_analysis)
-            filters = self.GetSQLReportWhere(type_analysis, "answers")
+            fields.add("count(distinct(a.%s)) as asenders" % (author_field))
+            tables.add("answers a")
+            tables.union_update(self.GetSQLReportFrom(type_analysis))
+            filters.union_update(self.GetSQLReportWhere(type_analysis, "answers"))
         else:
-            fields = " count(distinct(c.%s)) as csenders " % (author_field)
-            tables = " comments c " + self.GetSQLReportFrom(type_analysis)
-            filters = self.GetSQLReportWhere(type_analysis, "comments")
+            fields.add("count(distinct(c.%s)) as csenders" % (author_field))
+            tables.add("comments c")
+            tables.union_update(self.GetSQLReportFrom(type_analysis))
+            filters.union_update(self.GetSQLReportWhere(type_analysis, "comments"))
 
 
         q = self.BuildQuery(period, startdate, enddate, date_field, fields,
@@ -2313,6 +2335,11 @@ class QAForumsQuery(DSQuery):
 
     def static_num_sent(self, period, startdate, enddate, type_analysis=[],
                         type_post = "questions"):
+
+        fields = Set([])
+        tables = Set([])
+        filters = Set([])
+
         table_name = type_post #type_post matches the name of the table
         date_field = self.__get_date_field(table_name)
         prefix_table = table_name[0]
@@ -2324,24 +2351,27 @@ class QAForumsQuery(DSQuery):
         if type_post == "comments":
             metric_name = "csent"
 
-        fields = "SELECT count(distinct("+prefix_table+".id)) as "+metric_name+", \
+        fields.add("count(distinct("+prefix_table+".id)) as "+metric_name+", \
         DATE_FORMAT (min(" + prefix_table + "." + date_field + "), '%Y-%m-%d') as first_date, \
-        DATE_FORMAT (max(" + prefix_table + "." + date_field + "), '%Y-%m-%d') as last_date "
+        DATE_FORMAT (max(" + prefix_table + "." + date_field + "), '%Y-%m-%d') as last_date")
 
-        tables = " FROM %s %s " % (table_name, prefix_table)
-        tables = tables + self.GetSQLReportFrom(type_analysis)
+        tables.add("%s %s" % (table_name, prefix_table))
+        tables.union_update(self.GetSQLReportFrom(type_analysis))
 
-        filters = "WHERE %s.%s >= %s AND %s.%s < %s " % (prefix_table, date_field, startdate, prefix_table, date_field, enddate)
-        extra_filters = self.GetSQLReportWhere(type_analysis, type_post)
-        if extra_filters <> "":
-            filters = filters + " and " + extra_filters
+        filters.add("%s.%s >= %s AND %s.%s < %s " % (prefix_table, date_field, startdate, prefix_table, date_field, enddate))
+        filters.union_update(self.GetSQLReportWhere(type_analysis, type_post))
 
-        q = fields + tables + filters
+        query = "select " + fields + " from " + tables + " where " + filters
 
-        return q
+        return query
 
     def static_num_senders(self, period, startdate, enddate, type_analysis=[],
                            type_post = "questions"):
+
+        fields = Set([])
+        tables = Set([])
+        filters = Set([])
+
         table_name = type_post #type_post matches the name of the table
         date_field = self.__get_date_field(table_name)
         author_field = self.__get_author_field(table_name)
@@ -2354,16 +2384,15 @@ class QAForumsQuery(DSQuery):
         if type_post == "comments":
             metric_name = "csenders"
 
-        fields = "SELECT count(distinct(%s.%s)) as %s" % (prefix_table, author_field, metric_name)
-        tables = " FROM %s %s " % (table_name, prefix_table)
-        tables = tables + self.GetSQLReportFrom(type_analysis)
-        filters = "WHERE %s.%s >= %s AND %s.%s < %s " % (prefix_table, date_field, startdate, prefix_table, date_field, enddate)
-        extra_filters = self.GetSQLReportWhere(type_analysis, type_post)
-        if extra_filters <> "":
-            filters = filters + " and " + extra_filters
-        q = fields + tables + filters
+        fields.add("count(distinct(%s.%s)) as %s" % (prefix_table, author_field, metric_name))
+        tables.add("%s %s " % (table_name, prefix_table))
+        tables.union_update(self.GetSQLReportFrom(type_analysis))
+        filters.add("%s.%s >= %s AND %s.%s < %s " % (prefix_table, date_field, startdate, prefix_table, date_field, enddate))
+        filters.union_update(self.GetSQLReportWhere(type_analysis, type_post))
 
-        return q
+        query = "select " + fields + " from " + tables + " where " + filters
+
+        return query
 
     def __get_date_field(self, table_name):
         # the tables of the Sibyl tool are not coherent among them
