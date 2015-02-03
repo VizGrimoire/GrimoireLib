@@ -43,7 +43,8 @@ class QAForums(DataSource):
 
     @staticmethod
     def get_db_name():
-        return "db_qaforums"
+        # return "db_qaforums"
+        return "db_sibyl"
 
     @staticmethod
     def get_name():
