@@ -218,6 +218,8 @@ class SCM(DataSource):
 
     @staticmethod
     def get_filter_summary(filter_, period, startdate, enddate, identities_db, limit):
+        from vizgrimoire.analysis.summaries import GetCommitsSummaryCompanies
+
         summary = None
         filter_name = filter_.get_name()
 
@@ -563,52 +565,6 @@ def people () :
     q = "select id,identifier from upeople"
 
     data = ExecuteQuery(q)
-    return (data);
+    return (data)
 
-##############
-# Micro Studies
-##############
 
-def GetCommitsSummaryCompanies (period, startdate, enddate, identities_db, num_companies):
-    # This function returns the following dataframe structrure
-    # unixtime, date, week/month/..., company1, company2, ... company[num_companies -1], others
-    # The 3 first fields are used for data and ordering purposes
-    # The "companyX" fields are those that provide info about that company
-    # The "Others" field is the aggregated value of the rest of the companies
-    # Companies above num_companies will be aggregated in Others
-
-    metric = DataSource.get_metrics("companies", SCM)
-    companies = metric.get_list()
-    companies = companies['name']
-
-    first_companies = {}
-    count = 1
-    for company in companies:
-        company_name = "'"+company+"'"
-        type_analysis = ['company', company_name]
-        mcommits = DataSource.get_metrics("commits", SCM)
-        mfilter = MetricFilters(period, startdate, enddate, type_analysis)
-        mfilter_orig = mcommits.filters
-        mcommits.filters = mfilter
-        commits = mcommits.get_ts()
-        mcommits.filters = mfilter_orig
-        # commits = EvolCommits(period, startdate, enddate, identities_db, ["company", company_name])
-        # commits = completePeriodIds(commits, period, startdate, enddate)
-        # Rename field commits to company name
-        commits[company] = commits["commits"]
-        del commits['commits']
-
-        if (count <= num_companies):
-            #Case of companies with entity in the dataset
-            first_companies = dict(first_companies.items() + commits.items())
-        else :
-            #Case of companies that are aggregated in the field Others
-            if 'Others' not in first_companies:
-                first_companies['Others'] = commits[company]
-            else:
-                first_companies['Others'] = [a+b for a, b in zip(first_companies['Others'],commits[company])]
-        count = count + 1
-
-    #TODO: remove global variables...
-    first_companies = completePeriodIds(first_companies, period, startdate, enddate)
-    return(first_companies)
