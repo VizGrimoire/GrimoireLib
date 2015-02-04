@@ -968,8 +968,8 @@ class Companies(Metrics):
         return filter_items
 
     def get_list(self, metric_filters = None):
-        from data_source import DataSource
-        from filter import Filter
+        from vizgrimoire.data_source import DataSource
+        from vizgrimoire.filter import Filter
         # bots = DataSource.get_filter_bots(Filter("company"))
 
         if metric_filters == None:
@@ -1119,8 +1119,7 @@ class Projects(Metrics):
     data_source = SCM
 
     def get_list(self):
-        from data_source import DataSource
-        from metrics_filter import MetricFilters
+        from vizgrimoire.data_source import DataSource
 
         identities_db = self.db.identities_db
         startdate = self.filters.startdate

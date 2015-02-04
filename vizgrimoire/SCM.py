@@ -466,7 +466,7 @@ class SCM(DataSource):
 
     @staticmethod
     def get_query_builder():
-        from query_builder import SCMQuery
+        from vizgrimoire.metrics.query_builder import SCMQuery
         return SCMQuery
 
     @staticmethod
