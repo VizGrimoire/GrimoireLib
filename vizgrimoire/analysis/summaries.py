@@ -20,6 +20,9 @@
 ## Authors:
 ##   Daniel Izquierdo <dizquierdo@bitergia.com>
 
+from vizgrimoire.data_source import DataSource
+from vizgrimoire.metrics.metrics_filter import MetricFilters
+from vizgrimoire.GrimoireUtils import completePeriodIds
 
 def GetCommitsSummaryCompanies (period, startdate, enddate, identities_db, num_companies):
     # This function returns the following dataframe structrure
@@ -29,10 +32,7 @@ def GetCommitsSummaryCompanies (period, startdate, enddate, identities_db, num_c
     # The "Others" field is the aggregated value of the rest of the companies
     # Companies above num_companies will be aggregated in Others
 
-    from vizgrimoire.data_source import DataSource
-    from vizgrimoire.metrics.metrics_filter import MetricFilters
     from vizgrimoire.SCM import SCM
-    from vizgrimoire.GrimoireUtils import completePeriodIds
 
     metric = DataSource.get_metrics("companies", SCM)
     companies = metric.get_list()
@@ -69,4 +69,41 @@ def GetCommitsSummaryCompanies (period, startdate, enddate, identities_db, num_c
     #TODO: remove global variables...
     first_companies = completePeriodIds(first_companies, period, startdate, enddate)
     return(first_companies)
+
+
+def GetClosedSummaryCompanies (period, startdate, enddate, identities_db, closed_condition, num_companies):
+
+    from vizgrimoire.ITS import ITS
+
+    count = 1
+    first_companies = {}
+
+    metric = DataSource.get_metrics("companies", ITS)
+    companies = metric.get_list()
+    companies = companies['name']
+
+    for company in companies:
+        type_analysis = ["company", "'"+company+"'"]
+        filter_com = MetricFilters(period, startdate, enddate, type_analysis)
+        mclosed = ITS.get_metrics("closed", ITS)
+        mclosed.filters = filter_com
+        closed = mclosed.get_ts()
+        # Rename field closed to company name
+        closed[company] = closed["closed"]
+        del closed['closed']
+
+        if (count <= num_companies):
+            #Case of companies with entity in the dataset
+            first_companies = dict(first_companies.items() + closed.items())
+        else :
+            #Case of companies that are aggregated in the field Others
+            if 'Others' not in first_companies:
+                first_companies['Others'] = closed[company]
+            else:
+                first_companies['Others'] = [a+b for a, b in zip(first_companies['Others'],closed[company])]
+        count = count + 1
+    first_companies = completePeriodIds(first_companies, period, startdate, enddate)
+
+    return(first_companies)
+
 

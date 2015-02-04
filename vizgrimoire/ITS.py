@@ -209,6 +209,8 @@ class ITS(DataSource):
         closed_condition =  cls._get_closed_condition()
 
         if (filter_name == "company"):
+            from vizgrimoire.analysis.summaries import GetClosedSummaryCompanies
+
             summary =  GetClosedSummaryCompanies(period, startdate, enddate, identities_db, closed_condition, limit)
         return summary
 
@@ -725,43 +727,6 @@ def GetPeopleStaticITS (developer_id, startdate, enddate, closed_condition) :
 
     data = ExecuteQuery(q)
     return (data)
-
-#################
-# Micro studies
-#################
-
-def GetClosedSummaryCompanies (period, startdate, enddate, identities_db, closed_condition, num_companies):
-    count = 1
-    first_companies = {}
-
-    metric = DataSource.get_metrics("companies", ITS)
-    companies = metric.get_list()
-    companies = companies['name']
-
-    for company in companies:
-        type_analysis = ["company", "'"+company+"'"]
-        filter_com = MetricFilters(period, startdate, enddate, type_analysis)
-        mclosed = ITS.get_metrics("closed", ITS)
-        mclosed.filters = filter_com
-        closed = mclosed.get_ts()
-        # Rename field closed to company name
-        closed[company] = closed["closed"]
-        del closed['closed']
-
-        if (count <= num_companies):
-            #Case of companies with entity in the dataset
-            first_companies = dict(first_companies.items() + closed.items())
-        else :
-            #Case of companies that are aggregated in the field Others
-            if 'Others' not in first_companies:
-                first_companies['Others'] = closed[company]
-            else:
-                first_companies['Others'] = [a+b for a, b in zip(first_companies['Others'],closed[company])]
-        count = count + 1
-    first_companies = completePeriodIds(first_companies, period, startdate, enddate)
-
-    return(first_companies)
-
 
 class Backend(object):
 
