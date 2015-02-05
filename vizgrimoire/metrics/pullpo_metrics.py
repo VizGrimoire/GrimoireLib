@@ -197,7 +197,7 @@ class Pending(Metrics):
                                      self.filters.enddate, self.db.identities_db)
         items = items.pop('name')
 
-        from GrimoireUtils import fill_and_order_items
+        from vizgrimoire.GrimoireUtils import fill_and_order_items
         id_field = DSQuery.get_group_field(self.filters.type_analysis[0])
         id_field = id_field.split('.')[1] # remove table name
         submitted = check_array_values(submitted)
@@ -333,7 +333,7 @@ class TimeToReview(Metrics):
 
     def get_agg(self):
         from numpy import median, average
-        from GrimoireUtils import removeDecimals
+        from vizgrimoire.GrimoireUtils import removeDecimals
 
         q = self._get_sql()
         if q is None: return {}
