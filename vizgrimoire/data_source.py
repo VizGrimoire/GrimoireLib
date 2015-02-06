@@ -128,6 +128,11 @@ class DataSource(object):
         """Create the aggregated report"""
         raise NotImplementedError
 
+    @staticmethod
+    def get_alerts():
+        """Get the alerts detected"""
+        raise NotImplementedError
+
     def get_top_filename (self, filter_ = None):
         """Get the filename used to store top data"""
         name = None

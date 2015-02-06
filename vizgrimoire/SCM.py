@@ -105,6 +105,15 @@ class SCM(DataSource):
         createJSON (data, os.path.join(destdir, filename))
 
     @staticmethod
+    def get_alerts():
+        """Get the alerts detected"""
+        alerts = {}
+        newcomers = DataSource.get_metrics("newauthors", SCM)
+        if newcomers is None: return top
+        alerts['newcomers'] = newcomers.get_list()
+        return alerts
+
+    @staticmethod
     def get_top_metrics ():
         return ["authors"]
 
