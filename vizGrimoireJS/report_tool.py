@@ -164,6 +164,13 @@ def create_reports_studies(period, startdate, enddate, destdir):
                 traceback.print_exc(file=sys.stdout)
                 continue
 
+def create_alerts(startdate, enddate, destdir):
+    for ds in Report.get_data_sources():
+        if ds.get_name() != "scm": continue
+        logging.info("ALERTS for " + ds.get_name())
+        alerts = ds.get_alerts()
+        createJSON(alerts, destdir+"/"+ds.get_name()+"-alerts.json")
+
 def set_data_source(ds_name):
     ds_ok = False
     dss_active = Report.get_data_sources()
@@ -269,6 +276,10 @@ if __name__ == '__main__':
         set_metric(opts.metric, opts.data_source)
     if (opts.study):
         set_study(opts.study)
+    if (opts.alerts):
+        create_alerts(startdate, enddate, opts.destdir)
+        logging.info("Alerts generated OK")
+        sys.exit(0)
 
     if not opts.filter and not opts.study:
         logging.info("Creating global evolution metrics...")
@@ -282,6 +293,7 @@ if __name__ == '__main__':
                 create_report_people(startdate, enddate, opts.destdir, opts.npeople, identities_db)
             # create_reports_r(end_date, opts.destdir)
             create_people_identifiers(startdate, enddate, opts.destdir, opts.npeople, identities_db)
+            logging.info("Creating alerts...")
 
     if not opts.study and not opts.no_filters and not opts.metric:
         create_reports_filters(period, startdate, enddate, opts.destdir, opts.npeople, identities_db)

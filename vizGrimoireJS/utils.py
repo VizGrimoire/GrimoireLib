@@ -119,6 +119,11 @@ def read_options():
                       dest="metric",
                       help="Select metric from data source to be generated.")
 
+    parser.add_option("--alerts",
+                      action="store_true",
+                      dest="alerts",
+                      help="Generate alerts.")
+
     (opts, args) = parser.parse_args()
 
     if len(args) != 0:
