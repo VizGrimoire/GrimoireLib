@@ -52,12 +52,12 @@ def create_agg_report(startdate, enddate, destdir, identities_db):
         Report.connect_ds(ds)
         ds.create_agg_report (period, startdate, enddate, destdir, identities_db)
 
-def get_top_report(startdate, enddate, identities_db, npeople):
+def get_top_report(startdate, enddate, npeople, identities_db):
     all_ds_top = {}
 
     for ds in Report.get_data_sources():
         Report.connect_ds(ds)
-        top = ds.get_top_data (startdate, enddate, identities_db, npeople)
+        top = ds.get_top_data (startdate, enddate, identities_db, None, npeople)
         all_ds_top[ds.get_name()] = top 
     return all_ds_top
 
@@ -104,29 +104,34 @@ def create_reports_r(enddate, destdir):
         logging.info("Creating R reports for " + ds.get_name())
         ds.create_r_reports(vizr, enddate, destdir)
 
-def create_people_identifiers(startdate, enddate, destdir):
+def create_people_identifiers(startdate, enddate, destdir, npeople, identities_db):
     logging.info("Generating people identifiers")
+
+    people = get_top_report(startdate, enddate, npeople, identities_db);
+    people_ids = [] # upeople_ids which need identifiers
+    people_data = {} # identifiers for upeople_ids
+    ds_scm = None
+
+    for ds in Report.get_data_sources():
+        if ds.get_name() == "scm": ds_scm = ds
+        periods = [".",".last year",".last month"]
+        top_names = ds.get_top_metrics();
+        print people[ds.get_name()].keys()
+        for period in periods:
+            for top_name in top_names:
+                if top_name+period in people[ds.get_name()]:
+                    if 'id' in people[ds.get_name()][top_name+period]:
+                        print top_name+period
+                        people_ids += people[ds.get_name()][top_name+period]['id']
+    people_ids = list(set(people_ids))
 
     from vizgrimoire.SCM import GetPeopleListSCM
     import vizgrimoire.People as People
 
-    scm = None
-    for ds in Report.get_data_sources():
-        if ds.get_name() == "scm":
-            scm = ds
-            break
-    if scm == None: return
+    # TODO: Identities db is the same than SCM
+    Report.connect_ds(ds_scm)
 
-    Report.connect_ds(scm)
-
-    people_data = {}
-    people = GetPeopleListSCM(startdate, enddate)
-    people = people['pid']
-    limit = 100
-    if (len(people)<limit): limit = len(people);
-    people = people[0:limit]
-
-    for upeople_id in people:
+    for upeople_id in people_ids:
         people_data[upeople_id] = People.GetPersonIdentifiers(upeople_id)
 
     createJSON(people_data, destdir+"/people.json")
@@ -276,7 +281,7 @@ if __name__ == '__main__':
             if (automator['r']['reports'].find('people')>-1):
                 create_report_people(startdate, enddate, opts.destdir, opts.npeople, identities_db)
             # create_reports_r(end_date, opts.destdir)
-            create_people_identifiers(startdate, enddate, opts.destdir)
+            create_people_identifiers(startdate, enddate, opts.destdir, opts.npeople, identities_db)
 
     if not opts.study and not opts.no_filters and not opts.metric:
         create_reports_filters(period, startdate, enddate, opts.destdir, opts.npeople, identities_db)

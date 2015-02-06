@@ -105,6 +105,10 @@ class SCM(DataSource):
         createJSON (data, os.path.join(destdir, filename))
 
     @staticmethod
+    def get_top_metrics ():
+        return ["authors"]
+
+    @staticmethod
     def get_project_top_companies (project, startdate, enddate, limit):
         # Hack to get a SCMQuery
         dbcon = SCM.get_metrics_set(SCM)[0].db

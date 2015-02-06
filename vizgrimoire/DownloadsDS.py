@@ -124,6 +124,10 @@ class DownloadsDS(DataSource):
         createJSON (data, os.path.join(destdir, filename))
 
     @staticmethod
+    def get_top_metrics ():
+        return ["ips","packages"]
+
+    @staticmethod
     def get_top_data (startdate, enddate, identities_db, filter_ = None, npeople = None):
 
         def filter_ips(ips):

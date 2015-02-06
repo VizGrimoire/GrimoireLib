@@ -109,6 +109,9 @@ class Pullpo(DataSource):
         filename = Pullpo().get_agg_filename()
         createJSON (data, os.path.join(destdir, filename))
 
+    @staticmethod
+    def get_top_metrics ():
+        return ["reviewers","submitters","mergers"]
 
     @staticmethod
     def get_top_data (startdate, enddate, identities_db, filter_, npeople):

@@ -138,6 +138,11 @@ class DataSource(object):
         return name
 
     @staticmethod
+    def get_top_metrics ():
+        """Get the top metric names"""
+        raise NotImplementedError
+
+    @staticmethod
     def get_top_data (startdate, enddate, identities_db, filter_, npeople):
         """Get the top data"""
         raise NotImplementedError

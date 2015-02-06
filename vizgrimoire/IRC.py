@@ -79,6 +79,10 @@ class IRC(DataSource):
         createJSON (data, os.path.join(destdir, filename))
 
     @staticmethod
+    def get_top_metrics ():
+        return ["senders"]
+
+    @staticmethod
     def get_top_data (startdate, enddate, identities_db, filter_, npeople):
         top = {}
         msenders = DataSource.get_metrics("senders", IRC)
