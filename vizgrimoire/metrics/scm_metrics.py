@@ -84,31 +84,43 @@ class NewAuthors(Metrics):
     desc = "New authors joining the community"
     data_source = SCM
 
-    def _get_sql(self, evolutionary):
+    def _get_sql_generic(self, evolutionary, list = None):
 
         fields = Set([])
         tables = Set([])
         filters = Set([])
 
-        fields.add("count(distinct(t.upeople_id)) as newauthors")
+        if list is None:
+            fields.add("count(distinct(t.upeople_id)) as newauthors")
+        else:
+            fields.add("distinct(t.upeople_id) as newauthors, p.name, p.email, t.date")
         tables.add("scmlog s")
         tables.add("people_upeople pup")
-        tables.add("""(select pup.upeople_id as upeople_id,
-                              min(s.date) as date
-                       from people_upeople pup,
-                            scmlog s
+        tables.add("people p")
+        tables.add("""(select pup.upeople_id as upeople_id, min(s.date) as date
+                       from people_upeople pup, scmlog s
                        where s.author_id=pup.people_id
                        group by pup.upeople_id) t
                    """)
         tables.union_update(self.db.GetSQLReportFrom(self.filters))
         filters.add("s.author_id = pup.people_id")
         filters.add("pup.upeople_id=t.upeople_id")
+        filters.add("pup.people_id=p.id")
         filters.union_update(self.db.GetSQLReportWhere(self.filters, "author"))
 
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                self.filters.enddate, " t.date ", fields,
                                tables, filters, evolutionary, self.filters.type_analysis)
+        q += " ORDER BY t.date DESC"
         return q
+
+    def _get_sql(self, evolutionary):
+        return self._get_sql_generic(evolutionary)
+
+    def get_list(self):
+        q = self._get_sql_generic(None, True)
+        data = self.db.ExecuteQuery(q)
+        return data
 
 
 class Authors(Metrics):
