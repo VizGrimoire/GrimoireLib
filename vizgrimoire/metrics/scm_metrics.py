@@ -93,7 +93,7 @@ class NewAuthors(Metrics):
         if list is None:
             fields.add("count(distinct(t.upeople_id)) as newauthors")
         else:
-            fields.add("distinct(t.upeople_id) as newauthors, p.name, p.email, t.date")
+            fields.add("distinct(t.upeople_id) as uid, p.name, p.email, t.date")
         tables.add("scmlog s")
         tables.add("people_upeople pup")
         tables.add("people p")
