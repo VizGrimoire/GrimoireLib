@@ -121,7 +121,6 @@ def create_people_identifiers(startdate, enddate, destdir, npeople, identities_d
             for top_name in top_names:
                 if top_name+period in people[ds.get_name()]:
                     if 'id' in people[ds.get_name()][top_name+period]:
-                        print top_name+period
                         people_ids += people[ds.get_name()][top_name+period]['id']
     people_ids = list(set(people_ids))
 
