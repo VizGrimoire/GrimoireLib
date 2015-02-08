@@ -119,7 +119,8 @@ class Timezone(Analyses):
                 conditions = (period, nomerges))
         elif data_source == MLS:
             logging.info("Analyzing timezone for MLS")
-            period = MLSPeriodCondition (start = startdate, end = enddate)
+            period = MLSPeriodCondition (start = startdate, end = enddate,
+                                         date = "first")
             database = MLSDatabase (url = url,
                                     schema = schema,
                                     schema_id = schema_id)
