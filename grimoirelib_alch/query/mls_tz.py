@@ -53,6 +53,7 @@ class Query (MLSQuery):
                   func.count(func.distinct(DB.Messages.message_ID))),
             label("authors",
                   func.count(func.distinct(DB.MessagesPeople.email_address))))
+        self.joined.append (DB.Messages)
         if DB.MessagesPeople not in self.joined:
             query = query.join (DB.MessagesPeople)
             self.joined.append (DB.MessagesPeople)
