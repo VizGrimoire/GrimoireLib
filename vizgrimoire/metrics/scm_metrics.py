@@ -114,7 +114,8 @@ class NewAuthors(Metrics):
         if islist:
             q += " GROUP BY t.upeople_id "
 
-        q += " ORDER BY t.date DESC"
+        if not evolutionary: q += " ORDER BY t.date DESC"
+
         return q
 
     def _get_sql(self, evolutionary):

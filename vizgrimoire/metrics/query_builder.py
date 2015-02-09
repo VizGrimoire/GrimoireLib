@@ -254,6 +254,7 @@ class DSQuery(object):
 
     def ExecuteQuery (self, sql):
         if sql is None: return {}
+        print sql
         result = {}
         self.cursor.execute(sql)
         rows = self.cursor.rowcount
