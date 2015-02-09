@@ -110,13 +110,14 @@ def create_people_identifiers(startdate, enddate, destdir, npeople, identities_d
     people = get_top_report(startdate, enddate, npeople, identities_db);
     people_ids = [] # upeople_ids which need identifiers
     people_data = {} # identifiers for upeople_ids
-    ds_scm = None
+    ds_scm = Report.get_data_source("scm")
+    if ds_scm is None:
+        # Without SCM (identities) data source can not continue
+        return
 
     for ds in Report.get_data_sources():
-        if ds.get_name() == "scm": ds_scm = ds
         periods = [".",".last year",".last month"]
         top_names = ds.get_top_metrics();
-        print people[ds.get_name()].keys()
         for period in periods:
             for top_name in top_names:
                 if top_name+period in people[ds.get_name()]:
@@ -292,7 +293,6 @@ if __name__ == '__main__':
                 create_report_people(startdate, enddate, opts.destdir, opts.npeople, identities_db)
             # create_reports_r(end_date, opts.destdir)
             create_people_identifiers(startdate, enddate, opts.destdir, opts.npeople, identities_db)
-            logging.info("Creating alerts...")
 
     if not opts.study and not opts.no_filters and not opts.metric:
         create_reports_filters(period, startdate, enddate, opts.destdir, opts.npeople, identities_db)
