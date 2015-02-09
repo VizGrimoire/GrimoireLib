@@ -84,16 +84,16 @@ class NewAuthors(Metrics):
     desc = "New authors joining the community"
     data_source = SCM
 
-    def _get_sql_generic(self, evolutionary, list = None):
+    def _get_sql_generic(self, evolutionary, islist = False):
 
         fields = Set([])
         tables = Set([])
         filters = Set([])
 
-        if list is None:
+        if not islist:
             fields.add("count(distinct(t.upeople_id)) as newauthors")
         else:
-            fields.add("distinct(t.upeople_id) as uid, p.name, p.email, t.date")
+            fields.add("t.upeople_id as uid, p.name, p.email, t.date")
         tables.add("scmlog s")
         tables.add("people_upeople pup")
         tables.add("people p")
@@ -111,6 +111,9 @@ class NewAuthors(Metrics):
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                self.filters.enddate, " t.date ", fields,
                                tables, filters, evolutionary, self.filters.type_analysis)
+        if islist:
+            q += " GROUP BY t.upeople_id "
+
         q += " ORDER BY t.date DESC"
         return q
 
