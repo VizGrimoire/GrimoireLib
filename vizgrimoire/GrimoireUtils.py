@@ -303,6 +303,17 @@ def convertDatetime(data):
                 data[i] = str(data[i])
     return data
 
+# Rename "CONCAT(com.name,'_',cou.name)" to "filter"
+# Create filter_type="CONCAT(com.name,'_',cou.name)"
+def convertCombinedFiltersName(data):
+    import re
+    for key in data:
+        if re.match("CONCAT\(.*_.*\)",key):
+            data['filter_type'] = key
+            data['filter'] = data.pop(key)
+            break
+    return data
+
 # Until we use VizPy we will create JSON python files with _py
 def createJSON(data, filepath, check=False, skip_fields = []):
     check = False # for production mode
@@ -311,6 +322,7 @@ def createJSON(data, filepath, check=False, skip_fields = []):
     filepath_r = filepath_tokens[0]+"_r.json"
 
     checked_data = convertDatetime(roundDecimals(removeDecimals(data)))
+    checked_data = convertCombinedFiltersName(checked_data)
     json_data = json.dumps(checked_data, sort_keys=True)
     json_data = json_data.replace('NaN','"NA"')
     if check == False: #forget about R JSON checking
