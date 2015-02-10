@@ -91,6 +91,61 @@ class StoriesOpeners(Metrics):
                                self.filters.type_analysis, self.filters.global_filter)
         return q
 
+    # TODO: once stories are integrated in ITSQuery, moved this logic there
+    def GetTablesOwnUniqueIds (self, table='') :
+        tables = Set([])
+        # TODO: The acronym "c" is already used for companies
+        tables.add("stories sto")
+        tables.add("people peo")
+        tables.add("people_upeople pup")
+        tables.add(self.db.identities_db+".upeople up")
+
+        return (tables)
+
+    def GetFiltersOwnUniqueIds (self, table='') :
+        filters = Set([])
+        filters.add("pup.people_id = peo.id")
+        filters.add("sto.creator_id = peo.user_id")
+        filters.add("pup.upeople_id = up.id")
+
+        return (filters)
+
+
+    def _get_top_global(self, days = 0, metric_filters = None):
+
+        if metric_filters == None:
+            metric_filters = self.filters
+
+        tables_set = self.GetTablesOwnUniqueIds("stories")
+        filters_set = self.GetFiltersOwnUniqueIds("stories")
+        tables = self.db._get_fields_query(tables_set)
+        filters = self.db._get_filters_query(filters_set)
+
+        startdate = metric_filters.startdate
+        enddate = metric_filters.enddate
+        limit = metric_filters.npeople
+        filter_bots = ''
+        # filter_bots = self.db.get_bots_filter_sql(self.data_source, metric_filters)
+        # if filter_bots != "": filter_bots += " AND "
+
+        dtables = dfilters = " "
+        if (days > 0):
+            dtables = " , (SELECT MAX(updated_at) as last_date from stories) t "
+            dfilters = " AND DATEDIFF (last_date, updated_at) < %s " % (days)
+
+        q = "SELECT up.id as id, up.identifier as stories_openers, "+\
+            "    count(distinct(sto.story_id)) as stories_opened "+\
+            "FROM " + tables + dtables + \
+            "WHERE "+filter_bots + filters +" and "+\
+            "    sto.created_at >= "+ startdate+ " and "+\
+            "    sto.created_at < "+ enddate + dfilters +\
+            "    GROUP BY up.identifier "+\
+            "    ORDER BY stories_opened desc, stories_openers "+\
+            "    LIMIT " + str(limit)
+
+        data = self.db.ExecuteQuery(q)
+        return (data)
+
 class StoriesClosed(Metrics):
     """ Stories Closed metric class for issue tracking systems """
 

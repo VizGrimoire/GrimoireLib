@@ -136,8 +136,10 @@ class ITS(DataSource):
         bots = cls.get_bots()
         closed_condition =  cls._get_closed_condition()
         top = None
-        mopeners = DataSource.get_metrics("openers", ITS)
-        mclosers = DataSource.get_metrics("closers", ITS)
+        mopeners = DataSource.get_metrics("openers", cls)
+        mclosers = DataSource.get_metrics("closers", cls)
+        stories_openers = DataSource.get_metrics("stories_openers", cls)
+        print stories_openers
         if mopeners is None or mclosers is None: return None
         period = None
         type_analysis = None
@@ -158,6 +160,15 @@ class ITS(DataSource):
             top_openers_data['openers.last year'] = mopeners.get_list(mfilter, 365)
 
             top = dict(top_closers_data.items() + top_openers_data.items())
+
+            if stories_openers is not None:
+                top_sopeners_data = {}
+                top_sopeners_data['stories_openers.'] = stories_openers.get_list(mfilter, 0)
+                top_sopeners_data['stories_openers.last month'] = stories_openers.get_list(mfilter, 31)
+                top_sopeners_data['stories_openers.last year'] = stories_openers.get_list(mfilter, 365)
+
+                top = dict(top.items() + top_sopeners_data.items())
+
 
         else:
             filter_name = filter_.get_name()
@@ -303,9 +314,9 @@ class ITS(DataSource):
         else:
             raise Exception(filter_name +" does not support yet group by items sql queries")
 
-    @staticmethod
-    def get_top_people(startdate, enddate, identities_db, npeople):
-        top_data = ITS.get_top_data (startdate, enddate, identities_db, None, npeople)
+    @classmethod
+    def get_top_people(cls, startdate, enddate, identities_db, npeople):
+        top_data = cls.get_top_data (startdate, enddate, identities_db, None, npeople)
         if top_data is None: return None
 
         top = top_data['closers.']["id"]
@@ -314,6 +325,13 @@ class ITS(DataSource):
         top += top_data['openers.']["id"]
         top += top_data['openers.last year']["id"]
         top += top_data['openers.last month']["id"]
+        if 'stories_openers' in top_data:
+            print "YESSS"
+            raise
+            top += top_data['stories_openers.']["id"]
+            top += top_data['stories_openers.last year']["id"]
+            top += top_data['stories_openers.last month']["id"]
+
         # remove duplicates
         people = list(set(top))
 
