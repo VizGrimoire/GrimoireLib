@@ -129,7 +129,7 @@ class DataSource(object):
         raise NotImplementedError
 
     @staticmethod
-    def get_alerts():
+    def get_events():
         """Get the alerts detected"""
         raise NotImplementedError
 

@@ -164,12 +164,12 @@ def create_reports_studies(period, startdate, enddate, destdir):
                 traceback.print_exc(file=sys.stdout)
                 continue
 
-def create_alerts(startdate, enddate, destdir):
+def create_events(startdate, enddate, destdir):
     for ds in Report.get_data_sources():
         if ds.get_name() != "scm": continue
-        logging.info("ALERTS for " + ds.get_name())
-        alerts = ds.get_alerts()
-        createJSON(alerts, destdir+"/"+ds.get_name()+"-alerts.json")
+        logging.info("EVENTS for " + ds.get_name())
+        events = ds.get_events()
+        createJSON(events, destdir+"/"+ds.get_name()+"-events.json")
 
 def set_data_source(ds_name):
     ds_ok = False
@@ -276,9 +276,9 @@ if __name__ == '__main__':
         set_metric(opts.metric, opts.data_source)
     if (opts.study):
         set_study(opts.study)
-    if (opts.alerts):
-        create_alerts(startdate, enddate, opts.destdir)
-        logging.info("Alerts generated OK")
+    if (opts.events):
+        create_events(startdate, enddate, opts.destdir)
+        logging.info("Events generated OK")
         sys.exit(0)
 
     if not opts.filter and not opts.study:
