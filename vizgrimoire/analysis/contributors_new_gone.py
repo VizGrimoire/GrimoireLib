@@ -325,7 +325,7 @@ class ContributorsNewGoneSCM(ContributorsNewGone):
 
 class ContributorsNewGoneSCR(ContributorsNewGone):
 
-    id = "contributors_new_gone_Scr"
+    id = "contributors_new_gone_scr"
     name = "ContributorsNewGoneSCR"
     desc = "Number of contributors new and gone in a project in the code revision system."
 
@@ -336,7 +336,7 @@ class ContributorsNewGoneSCR(ContributorsNewGone):
 
         q_people = """
             SELECT submitted_by FROM (SELECT MIN(submitted_on) AS first, submitted_by
-            FROM issues
+            FROM issues i
             %s
             GROUP BY submitted_by
             HAVING DATEDIFF(NOW(), first) <= %s) plist """ % (filters, period)
@@ -348,7 +348,7 @@ class ContributorsNewGoneSCR(ContributorsNewGone):
 
         q_people = """
             SELECT submitted_by FROM (SELECT MAX(submitted_on) AS last, submitted_by
-            FROM issues
+            FROM issues i
             %s
             GROUP BY submitted_by
             HAVING DATEDIFF(NOW(), last)>%s) plist """ % (filters, period)
@@ -364,7 +364,7 @@ class ContributorsNewGoneSCR(ContributorsNewGone):
         if (filters != ""): filters  = " WHERE " + filters
         q_total_period = """
             SELECT COUNT(id) as total, submitted_by, MIN(submitted_on) AS first
-            FROM issues
+            FROM issues i
             %s
             GROUP BY submitted_by
             HAVING DATEDIFF(NOW(), first) <= %s
@@ -382,7 +382,7 @@ class ContributorsNewGoneSCR(ContributorsNewGone):
         if (filters != ""): filters  = " WHERE " + filters
         q_total_period = """
             SELECT COUNT(id) as total, submitted_by, MAX(submitted_on) AS last
-            FROM issues
+            FROM issues i
             %s
             GROUP BY submitted_by
             HAVING DATEDIFF(NOW(), last)>%s
@@ -419,9 +419,9 @@ class ContributorsNewGoneSCR(ContributorsNewGone):
         # SELECT %s url, submitted_by, name, email, submitted_on, status
         q= """
         SELECT %s url, submitted_by, name, email, submitted_on, status
-        FROM %s people, issues_ext_gerrit, issues
+        FROM %s people, issues_ext_gerrit, issues i
         WHERE %s submitted_by = people.id AND DATEDIFF(NOW(), submitted_on) %s %s
-              AND issues_ext_gerrit.issue_id = issues.id
+              AND issues_ext_gerrit.issue_id = i.id
               AND submitted_by IN (%s)
         ORDER BY %s submitted_on""" % \
             (fields, tables, filters, newgone, period, q_people, order_by)
@@ -461,7 +461,7 @@ class ContributorsNewGoneSCR(ContributorsNewGone):
         if (gone): period = 180
         fields = "TIMESTAMPDIFF(SECOND, submitted_on, changed_on)/(24*3600) AS revtime"
         tables = "changes"
-        filters = " changes.issue_id = issues.id "
+        filters = " changes.issue_id = i.id "
         filters += "AND field='status' AND new_value='MERGED'"
         order_by = "revtime DESC"
         q = self.GetNewGoneSubmittersSQL(period, fields, tables, filters, order_by)
@@ -480,7 +480,7 @@ class ContributorsNewGoneSCR(ContributorsNewGone):
         if (gone): period = 180
         fields = "TIMESTAMPDIFF(SECOND, submitted_on, changed_on)/(24*3600) AS revtime"
         tables = "changes"
-        filters = " changes.issue_id = issues.id "
+        filters = " changes.issue_id = i.id "
         filters += "AND field='status' AND new_value='ABANDONED'"
         order_by = "revtime DESC"
         q = self.GetNewGoneSubmittersSQL(period, fields, tables, filters, order_by)
@@ -504,8 +504,7 @@ class ContributorsNewGoneSCR(ContributorsNewGone):
 
         q_people = self.GetNewPeopleListSQL(period)
 
-        filters = self.db.GetIssuesFiltered()
-        if (filters != ""): filters  += " AND "
+        filters =  "" # already filtered in subqueries
 
         # Total submissions for new people in period
         q = """
@@ -539,8 +538,7 @@ class ContributorsNewGoneSCR(ContributorsNewGone):
     #        ORDER BY submitted_on, total DESC
     #        """ % (q_all_people,date_leaving,date_gone)
 
-        filters = self.db.GetIssuesFiltered()
-        if (filters != ""): filters  += " AND "
+        filters =  "" # already filtered in subqueries
 
         q_gone  = """
             SELECT total, name, email, submitted_on, people_upeople.upeople_id from
@@ -557,7 +555,7 @@ class ContributorsNewGoneSCR(ContributorsNewGone):
     def create_report(self, data_source, destdir):
         from SCR import SCR
         if data_source != SCR: return
-        self.result(destdir)
+        self.result(data_source, destdir)
 
     def result(self, data_source, destdir = None):
         from SCR import SCR
@@ -577,7 +575,7 @@ class ContributorsNewGoneSCR(ContributorsNewGone):
         code_contrib["submitters"] = self.GetGoneSubmitters()
         code_contrib["mergers"] = self.GetGoneMergers()
         code_contrib["abandoners"] = self.GetGoneAbandoners()
-        createJSON(code_cdestdir+"/scr-code-contrib-gone.json")
+        createJSON(code_contrib, destdir+"/scr-code-contrib-gone.json")
 
 
         data = self.GetNewSubmittersActivity()
