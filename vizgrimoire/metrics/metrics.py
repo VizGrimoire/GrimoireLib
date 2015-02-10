@@ -228,8 +228,8 @@ class Metrics(object):
 
     def _get_trends_all_items(self, date, days):
         """ Returns the trend metrics between now and now-days values """
-        from GrimoireUtils import check_array_values
-        from query_builder import DSQuery
+        from vizgrimoire.GrimoireUtils import check_array_values
+        from vizgrimoire.metrics.query_builder import DSQuery
         # Keeping state of origin filters
         filters = self.filters
 
