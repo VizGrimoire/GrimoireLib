@@ -222,7 +222,7 @@ class QAForums(DataSource):
 
     @staticmethod
     def get_metrics_core_ts():
-        return ['qsent','asent','csent','qsenders','asenders','csenders','participants']
+        return ['qsent','asent','csent', 'unanswered', 'qsenders','asenders','csenders','participants']
 
     @staticmethod
     def get_metrics_core_trends():

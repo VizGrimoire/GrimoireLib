@@ -22,23 +22,13 @@
 ##   Daniel Izquierdo-Cortazar <dizquierdo@bitergia.com>
 ##
 
-
-import logging
-
-import MySQLdb
-
-import re, sys
+import datetime
+import time
 
 from sets import Set
 
-from vizgrimoire.GrimoireUtils import completePeriodIds, GetDates, GetPercentageDiff
-
+from vizgrimoire.GrimoireUtils import completePeriodIds, createTimeSeries
 from vizgrimoire.metrics.metrics import Metrics
-
-from vizgrimoire.metrics.metrics_filter import MetricFilters
-
-from vizgrimoire.metrics.query_builder import QAForumsQuery
-
 from vizgrimoire.QAForums import QAForums
 
 
@@ -98,6 +88,61 @@ class QuestionSenders(Metrics):
         limit = metric_filters.npeople
 
         return self.db.get_top_senders(days, startdate, enddate, limit, "questions")
+
+class UnansweredQuestions(Metrics):
+    """UnansweredQuestions class"""
+
+    id = "unanswered"
+    name = "Unanswered Questions"
+    desc = "Questions without any answer"
+    data_source = QAForums
+
+    def _get_sql_unaswered(self, enddate):
+        sql = """SELECT COUNT(DISTINCT(q.question_identifier)) unanswered
+                 FROM questions q
+                 WHERE q.added_at < '%s'
+                 AND q.question_identifier NOT IN
+                     (SELECT a.question_identifier
+                      FROM answers a
+                      WHERE a.submitted_on < '%s');
+              """ % (enddate, enddate)
+        return sql
+
+    def __gen_dates(self, period, startdate, enddate):
+        dates = createTimeSeries({})
+        dates.pop('id')
+        dates[period] = []
+
+        dates = completePeriodIds(dates, period, startdate, enddate)
+
+        # Remove zeros
+        dates['date'] = [d for d in dates['date'] if d != 0]
+        dates['unixtime'] = [d for d in dates['unixtime'] if d != 0]
+
+        return dates
+
+    def get_ts(self):
+        data = self.__gen_dates(self.filters.period,
+                                self.filters.startdate,
+                                self.filters.enddate)
+
+        # Generate periods
+        last_date = int(time.mktime(datetime.datetime.strptime(
+                        self.filters.enddate, "'%Y-%m-%d'").timetuple()))
+
+        periods = list(data['unixtime'][1:])
+        periods.append(last_date)
+
+        data['unanswered'] = []
+
+        for p in periods:
+            enddate = datetime.datetime.fromtimestamp(int(p)).strftime('%Y-%m-%d %H:%M:%S')
+            query = self._get_sql_unaswered(enddate)
+            res = self.db.ExecuteQuery(query)
+
+            data['unanswered'].append(res['unanswered'])
+
+        return data
 
 class AnswerSenders(Metrics):
     """AnswerSenders class"""
