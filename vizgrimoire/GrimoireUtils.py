@@ -307,7 +307,9 @@ def convertDatetime(data):
 # Create filter_type="CONCAT(com.name,'_',cou.name)"
 def convertCombinedFiltersName(data):
     import re
+    if not isinstance(data, dict): return data
     for key in data:
+        if not isinstance(key, str): continue
         if re.match("CONCAT\(.*_.*\)",key):
             data['filter_type'] = key
             data['filter'] = data.pop(key)
