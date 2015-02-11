@@ -1919,7 +1919,7 @@ class SCRQuery(DSQuery):
                    "  i.submitted_on >="+  startdate+ " AND "+\
                    "  i.submitted_on < "+ enddate+ " "+\
                    "GROUP BY c.name "+\
-                   "ORDER BY total DESC " + limit_sql
+                   "ORDER BY total DESC,name " + limit_sql
         return(self.ExecuteQuery(q))
 
     # Global filter to remove all results from Wikimedia KPIs from SCR
