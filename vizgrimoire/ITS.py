@@ -138,8 +138,8 @@ class ITS(DataSource):
         top = None
         mopeners = DataSource.get_metrics("openers", cls)
         mclosers = DataSource.get_metrics("closers", cls)
+        # We should check this metric is ON
         stories_openers = DataSource.get_metrics("stories_openers", cls)
-        print stories_openers
         if mopeners is None or mclosers is None: return None
         period = None
         type_analysis = None
@@ -161,7 +161,7 @@ class ITS(DataSource):
 
             top = dict(top_closers_data.items() + top_openers_data.items())
 
-            if stories_openers is not None:
+            if False and stories_openers is not None:
                 top_sopeners_data = {}
                 top_sopeners_data['stories_openers.'] = stories_openers.get_list(mfilter, 0)
                 top_sopeners_data['stories_openers.last month'] = stories_openers.get_list(mfilter, 31)
@@ -326,8 +326,6 @@ class ITS(DataSource):
         top += top_data['openers.last year']["id"]
         top += top_data['openers.last month']["id"]
         if 'stories_openers' in top_data:
-            print "YESSS"
-            raise
             top += top_data['stories_openers.']["id"]
             top += top_data['stories_openers.last year']["id"]
             top += top_data['stories_openers.last month']["id"]
