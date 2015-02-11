@@ -528,6 +528,6 @@ if __name__ == '__main__':
 
     DataSourceTest.init()
     suite = unittest.TestLoader().loadTestsFromTestCase(DataSourceTest)
-    unittest.TextTestRunner(verbosity=2).run(suite)
-
+    result = unittest.TextTestRunner(verbosity=2).run(suite)
     DataSourceTest.close()
+    sys.exit(not result.wasSuccessful())
