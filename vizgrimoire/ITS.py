@@ -28,7 +28,7 @@ import logging, os, re
 
 from vizgrimoire.GrimoireSQL import GetSQLGlobal, GetSQLPeriod
 from vizgrimoire.GrimoireSQL import ExecuteQuery, BuildQuery
-from vizgrimoire.GrimoireUtils import GetPercentageDiff, GetDates, completePeriodIds, getPeriod
+from vizgrimoire.GrimoireUtils import GetPercentageDiff, GetDates, completePeriodIds, getPeriod, check_array_value
 from vizgrimoire.GrimoireUtils import createJSON, get_subprojects
 from vizgrimoire.metrics.metrics_filter import MetricFilters
 
@@ -321,10 +321,10 @@ class ITS(DataSource):
 
         top = top_data['closers.']["id"]
         top += top_data['closers.last year']["id"]
-        top += top_data['closers.last month']["id"]
+        top += check_array_value(top_data['closers.last month']["id"])
         top += top_data['openers.']["id"]
         top += top_data['openers.last year']["id"]
-        top += top_data['openers.last month']["id"]
+        top += check_array_value(top_data['openers.last month']["id"])
         if 'stories_openers' in top_data:
             top += top_data['stories_openers.']["id"]
             top += top_data['stories_openers.last year']["id"]

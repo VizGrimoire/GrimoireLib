@@ -105,6 +105,7 @@ def create_reports_r(enddate, destdir):
         ds.create_r_reports(vizr, enddate, destdir)
 
 def create_people_identifiers(startdate, enddate, destdir, npeople, identities_db):
+    from vizgrimoire.GrimoireUtils import check_array_values
     logging.info("Generating people identifiers")
 
     people = get_top_report(startdate, enddate, npeople, identities_db);
@@ -122,7 +123,7 @@ def create_people_identifiers(startdate, enddate, destdir, npeople, identities_d
             for top_name in top_names:
                 if top_name+period in people[ds.get_name()]:
                     if 'id' in people[ds.get_name()][top_name+period]:
-                        people_ids += people[ds.get_name()][top_name+period]['id']
+                        people_ids += check_array_values(people[ds.get_name()][top_name+period])['id']
     people_ids = list(set(people_ids))
 
     from vizgrimoire.SCM import GetPeopleListSCM
