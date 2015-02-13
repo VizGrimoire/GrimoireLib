@@ -21,7 +21,7 @@
 ## Authors:
 ##   Alvaro del Castillo <acs@bitergia.com>
 
-import logging
+import logging, re
 
 class Filter(object):
 
@@ -74,6 +74,7 @@ class Filter(object):
         else:
             selfname_short = self.get_name_short()
             item = self.get_item().replace("/","_").replace("<","__").replace(">","___")
+            if re.compile("^\..*").match(item) is not None: item = "_"+item
             name = item+"-"+ds.get_name()+"-"+selfname_short+"-evolutionary.json"
 
         return name
@@ -89,6 +90,7 @@ class Filter(object):
         else:
             selfname_short = self.get_name_short()
             item = self.get_item().replace("/","_").replace("<","__").replace(">","___")
+            if re.compile("^\..*").match(item) is not None: item = "_"+item
             name = item+"-"+ds.get_name()+"-"+selfname_short+"-static.json"
 
         return name

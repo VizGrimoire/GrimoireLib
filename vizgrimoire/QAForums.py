@@ -23,7 +23,7 @@
 
 import logging
 
-import os
+import os, re
 
 import datetime
 
@@ -179,8 +179,13 @@ class QAForums(DataSource):
         if not isinstance(items, list):
             items = [items]
 
+        file_items = []
+        for item in items:
+            if re.compile("^\..*").match(item) is not None: item = "_"+item
+            file_items.append(item)
+
         fn = os.path.join(destdir, filter_.get_filename(QAForums()))
-        createJSON(items, fn)
+        createJSON(file_items, fn)
         for item in items:
             logging.info(item)
             filter_item = Filter(filter_.get_name(), item)
