@@ -50,6 +50,7 @@ class Metrics(object):
     data_source = None
     domains_limit = 30
     max_decimals = 2
+    min_item_per_tag = 20
 
     def __init__(self, dbcon = None, filters = None):
         """db connection and filter to be used"""

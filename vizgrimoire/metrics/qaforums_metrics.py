@@ -307,7 +307,7 @@ class Tags(Metrics):
                          q.added_at >= %s and
                          q.added_at < %s
                    group by t.tag 
-                   having total > 20
-                   order by total desc, name;""" % (self.filters.startdate, self.filters.enddate)
+                   having total > %s
+                   order by total desc, name;""" % (self.filters.startdate, self.filters.enddate, Metrics.min_item_per_tag)
         data = self.db.ExecuteQuery(query)
         return data
