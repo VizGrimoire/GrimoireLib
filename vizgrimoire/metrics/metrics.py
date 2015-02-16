@@ -20,7 +20,10 @@
 ##
 ## Authors:
 ##   Daniel Izquierdo-Cortazar <dizquierdo@bitergia.com>
+##   Alvaro del Castillo <acs@bitergia.com>
 
+
+import logging
 
 from vizgrimoire.GrimoireUtils import completePeriodIds, GetDates, GetPercentageDiff, check_array_values
 from vizgrimoire.metrics.query_builder import DSQuery
@@ -233,6 +236,13 @@ class Metrics(object):
         from vizgrimoire.metrics.query_builder import DSQuery
         # Keeping state of origin filters
         filters = self.filters
+
+        # metrics not supported in group_by queries
+        metrics_not_supported = ['bmitickets']
+
+        if self.id in metrics_not_supported:
+            logging.warning(self.id + " not supported in GROUP BY queries.")
+            return {}
 
         chardates = GetDates(date, days)
         self.filters = MetricFilters(filters.period,

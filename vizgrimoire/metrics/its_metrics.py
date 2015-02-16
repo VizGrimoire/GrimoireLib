@@ -482,6 +482,11 @@ class BMIIndex(Metrics):
         closed = closed_tickets.get_agg()
         opened = opened_tickets.get_agg()
 
+        if type(opened["opened"]) is list:
+            # GROUP BY not supported
+            logging.info("agg BMI metric does NOT support GROUP BY queries")
+            return data
+
         if int(opened["opened"]) <= 0:
             # a value is needed when there's a division by 0
             data["bmitickets"] = closed["closed"] * 100
@@ -498,6 +503,12 @@ class BMIIndex(Metrics):
 
         closed = closed_tickets.get_ts()
         opened = opened_tickets.get_ts()
+
+        if type(opened["opened"]) is list:
+            # GROUP BY not supported
+            logging.info("evol BMI metric does NOT support GROUP BY queries")
+            return data
+
 
         evol_bmi = []
         for i in closed["closed"]:
