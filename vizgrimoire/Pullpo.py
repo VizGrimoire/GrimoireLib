@@ -134,12 +134,12 @@ class Pullpo(DataSource):
 
             top_openers = {}
             top_openers['openers.'] = mopeners.get_list(mfilter, 0)
-            top_openers['openers.last_month']= mopeners.get_list(mfilter, 31)
+            top_openers['openers.last month']= mopeners.get_list(mfilter, 31)
             top_openers['openers.last year'] = mopeners.get_list(mfilter, 365)
 
             top_mergers = {}
             top_mergers['mergers.'] = mmergers.get_list(mfilter, 0)
-            top_mergers['mergers.last_month'] = mmergers.get_list(mfilter, 31)
+            top_mergers['mergers.last month'] = mmergers.get_list(mfilter, 31)
             top_mergers['mergers.last year'] = mmergers.get_list(mfilter, 365)
 
             # The order of the list item change so we can not check it
@@ -273,10 +273,10 @@ class Pullpo(DataSource):
         top += Pullpo._safeTopIds(top_data['reviewers.last month'])
         top += Pullpo._safeTopIds(top_data['openers.'])
         top += Pullpo._safeTopIds(top_data['openers.last year'])
-        top += Pullpo._safeTopIds(top_data['openers.last_month'])
+        top += Pullpo._safeTopIds(top_data['openers.last month'])
         top += Pullpo._safeTopIds(top_data['mergers.'])
         top += Pullpo._safeTopIds(top_data['mergers.last year'])
-        top += Pullpo._safeTopIds(top_data['mergers.last_month'])
+        top += Pullpo._safeTopIds(top_data['mergers.last month'])
         # remove duplicates
         people = list(set(top)) 
 
