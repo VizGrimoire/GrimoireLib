@@ -640,11 +640,11 @@ class Companies(Metrics):
                    "WHERE pr.user_id = pup.people_id AND "+\
                    "  upc.upeople_id = pup.upeople_id AND "+\
                    "  c.id = upc.company_id AND "+\
-                   "  pr.state = 'merged' AND "+\
                    "  pr.created_at >="+  self.filters.startdate+ " AND "+\
                    "  pr.created_at < "+ self.filters.enddate+ " "+\
                    "GROUP BY c.name "+\
                    "ORDER BY total DESC, c.name "
+        #           "  pr.state = 'merged' AND "+\
         return(self.db.ExecuteQuery(q))
 
 class Countries(Metrics):
@@ -680,11 +680,11 @@ class Countries(Metrics):
                "WHERE  pr.user_id = pup.people_id AND "+\
                "  upc.upeople_id = pup.upeople_id AND "+\
                "  c.id = upc.country_id AND "+\
-               "  pr.state = 'merged' AND "+\
                "  pr.created_at >="+  self.filters.startdate+ " AND "+\
                "  pr.created_at < "+ self.filters.enddate+ " "+\
                "GROUP BY c.name "+\
                "ORDER BY submitted DESC, name "
+               # "  pr.state = 'merged' AND "+\
         
         return(self.db.ExecuteQuery(q))
 
