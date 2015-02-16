@@ -504,7 +504,7 @@ class BMIIndex(Metrics):
         closed = closed_tickets.get_ts()
         opened = opened_tickets.get_ts()
 
-        if type(opened["opened"]) is list:
+        if type(opened["opened"][0]) is list:
             # GROUP BY not supported
             logging.info("evol BMI metric does NOT support GROUP BY queries")
             return data
