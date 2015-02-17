@@ -238,7 +238,6 @@ if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO,format='%(asctime)s %(message)s')
     logging.info("Starting Report analysis")
     opts = read_options()
-    reports = opts.reports.split(",")
 
     Report.init(opts.config_file, opts.metrics_path)
 

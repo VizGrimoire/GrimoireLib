@@ -55,11 +55,6 @@ def read_options():
                       dest="destdir",
                       default="../../../json",
                       help="Destination directory for JSON files")
-    parser.add_option("-r", "--reports",
-                      action="store",
-                      dest="reports",
-                      default="",
-                      help="Reports to be generated (repositories, companies, countries, people)")
     parser.add_option("-s", "--start",
                       action="store",
                       dest="startdate",
