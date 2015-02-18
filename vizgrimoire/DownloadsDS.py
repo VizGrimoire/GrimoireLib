@@ -212,4 +212,4 @@ class DownloadsDS(DataSource):
 
     @staticmethod
     def get_metrics_core_trends():
-        return ['downloads','packages']
+        return ['downloads','packages','ips']
