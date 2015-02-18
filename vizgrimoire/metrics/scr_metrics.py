@@ -943,6 +943,51 @@ class ActiveCoreReviewers(Metrics):
                                 fields, tables, filters, evolutionary, self.filters.type_analysis)
         return q
 
+    def _get_top_global(self, days, metric_filters):
+        # TODO: missing calculation of last x days in the query
+        fields = Set([])
+        tables = Set([])
+        filters = Set([])
+
+        fields.add("up.id as id")
+        fields.add("up.identifier as identifier")
+        fields.add("count(distinct(ch.id)) as reviews")
+
+        tables.add("changes ch")
+        tables.add("issues_ext_gerrit ieg")
+        tables.add("issues i")
+        tables.union_update(self.db.GetSQLReportFrom(self.filters.type_analysis))
+
+        filters.add("ch.issue_id = i.id")
+        #TODO: warning -> at some point the filter for branches should be at
+        #                 the GetSQLReportFrom/Where method.
+        filters.add("ieg.branch like '%master%'")
+        filters.add("ieg.issue_id = i.id")
+        filters.union_update(self.db.GetSQLReportWhere(self.filters.type_analysis))
+
+        #Specific case for the basic option where people_upeople table is needed
+        #and not taken into account in the initial part of the query
+        tables.add(self.db.identities_db + ".upeople up")
+        tables.add("people_upeople pup")
+        filters.add("ch.changed_by  = pup.people_id")
+        filters.add("pup.upeople_id = up.id")
+        filters.add("(ch.new_value = -2 or ch.new_value = 2)")
+        filters.add("field = 'Code-Review'")
+        #dates
+        filters.add("changed_on >= " + self.filters.startdate)
+        filters.add("changed_on < " + self.filters.enddate)
+
+        select = self.db._get_fields_query(fields)
+        from_ = self.db._get_tables_query(tables)
+        filters = self.db._get_filters_query(filters)
+
+        query = "select " + select + " from " + from_ + " where " + filters
+        query = query + " group by up.id, up.identifier"
+        query = query + " order by count(distinct(ch.id)) desc "
+
+        return self.db.ExecuteQuery(query)
+
+
 
 class Closers(Metrics):
     id = "closers"
