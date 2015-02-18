@@ -312,7 +312,7 @@ class ITS(DataSource):
                 cls._check_report_all_data(agg_all, filter_, startdate, enddate,
                                            identities_db, False, period)
         else:
-            raise Exception(filter_name +" does not support yet group by items sql queries")
+            logging.error(filter_name +" does not support yet group by items sql queries")
 
     @classmethod
     def get_top_people(cls, startdate, enddate, identities_db, npeople):

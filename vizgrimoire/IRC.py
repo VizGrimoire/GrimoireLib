@@ -167,7 +167,7 @@ class IRC(DataSource):
             fn = os.path.join(destdir, filter_.get_evolutionary_filename_all(IRC()))
             createJSON(evol_all, fn)
         else:
-            raise Exception(IRC.get_name()+ " " + filter_name +" does not support yet group by items sql queries")
+            logging.error(IRC.get_name()+ " " + filter_name +" does not support yet group by items sql queries")
 
     @staticmethod
     def get_top_people(startdate, enddate, identities_db, npeople):

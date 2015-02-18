@@ -213,7 +213,7 @@ class QAForums(DataSource):
             fn = os.path.join(destdir, filter_.get_evolutionary_filename_all(QAForums()))
             createJSON(evol_all, fn)
         else:
-            raise Exception(IRC.get_name()+ " " + filter_name +" does not support yet group by items sql queries")
+            logging.error(QAForums.get_name()+ " " + filter_name +" does not support yet group by items sql queries")
 
 
     @staticmethod

@@ -124,6 +124,11 @@ class DownloadsDS(DataSource):
         createJSON (data, os.path.join(destdir, filename))
 
     @staticmethod
+    def create_filter_report_all(filter_, period, startdate, enddate, destdir, npeople, identities_db):
+        filter_name = filter_.get_name()
+        logging.error(DownloadsDS.get_name()+ " " + filter_name +" does not support yet group by items sql queries")
+
+    @staticmethod
     def get_top_metrics ():
         return ["ips","packages"]
 
