@@ -26,7 +26,8 @@
 from grimoirelib_alch.query.scm import DB as SCMDatabase
 from grimoirelib_alch.family.scm import (
     NomergesCondition as SCMNomergesCondition,
-    PeriodCondition as SCMPeriodCondition
+    PeriodCondition as SCMPeriodCondition,
+    OrgsCondition as SCMOrgsCondition
     )
 from grimoirelib_alch.query.its import DB as ITSDatabase
 from grimoirelib_alch.family.its import PeriodCondition as ITSPeriodCondition
@@ -68,6 +69,40 @@ def produce_json (filename, data, compact = True):
     data_json = encode(data, unpicklable=False)
     with codecs.open(filename, "w", "utf-8") as file:
         file.write(data_json)
+
+def parse_analysis (type_analysis):
+    """Parse a "type_analysis", returning a dictionary.
+
+    Gets as parameter a "type_analysis", which is one of the
+    filters that a metrics object can include, and produces
+    a dictionary in it. "type_analysis" is a list with two
+    elements, of the form ["company,repo", "'SwiftStack','onerepo'"].
+    With it, produces a dictionary such as:
+    {"company": "SwiftStack", "repo": "onerepo"}
+    
+    Parametrers
+    -----------
+    
+    type_analysis: list of str
+        type_analysis to parse
+    
+    Returns
+    -------
+
+    dict: dictionary
+    
+    """
+
+    analysis_dict = {}
+    analysis_list = type_analysis[0].split(",")
+    values_list = type_analysis[1].split(",")
+    for i, analysis in enumerate(analysis_list):
+        value = values_list[i]
+        if value.startswith("'") and value.endswith("'"):
+            value = value[1:-1]
+        analysis_dict[analysis] = value
+    return analysis_dict
+
 
 class Ages(Analyses):
     """Clase for calculating the Ages analysis.
@@ -115,6 +150,8 @@ class Ages(Analyses):
         # Get startdate, endate as datetime objects
         startdate = datetime.strptime(self.filters.startdate, "'%Y-%m-%d'")
         enddate = datetime.strptime(self.filters.enddate, "'%Y-%m-%d'")
+        # Get dictionary with analysis, if any
+        analysis_dict = parse_analysis (self.filters.type_analysis)
         if data_source == SCM:
             logging.info("Analyzing aging for SCM")
             # Activity data (start time, end time for contributions) for
@@ -123,13 +160,19 @@ class Ages(Analyses):
             # as activity)
             period = SCMPeriodCondition (start = startdate, end = enddate)
             nomerges = SCMNomergesCondition()
+            conditions = [period, nomerges]
+            if self.filters.COMPANY in analysis_dict:
+                orgs = SCMOrgsCondition (
+                    orgs = (analysis_dict[self.filters.COMPANY],),
+                    actors = "authors")
+                conditions.append(orgs)
             database = SCMDatabase (url = url,
                                     schema = schema,
                                     schema_id = schema_id)
             data = SCMActivityPersons (
                 datasource = database,
                 name = "list_uauthors",
-                conditions = (period, nomerges))
+                conditions = conditions)
         elif data_source == ITS:
             logging.info("Analyzing aging for ITS")
             # Activity data (start time, end time for contributions) for
@@ -227,8 +270,10 @@ if __name__ == '__main__':
     from vizgrimoire.metrics.query_builder import DSQuery
     from vizgrimoire.metrics.metrics_filter import MetricFilters
 
-    # Get 
     filters = MetricFilters("months", "'2013-06-01'", "'2014-01-01'", [])
+    # Warning: next "Red Hat" string will be changed to "'Red Hat'" by
+    # the internals of Automator etc.
+    filters.add_filter (filters.COMPANY, "SwiftStack")
     dbcon = DSQuery(user = "jgb", password = "XXX", 
                     database = "oscon_openstack_scm",
                     identities_db = "oscon_openstack_scm")
