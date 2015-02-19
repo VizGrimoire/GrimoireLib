@@ -140,9 +140,17 @@ class DownloadsDS(DataSource):
             new_ips['downloads'] = ips['downloads']
             new_ips['ips'] = []
             for ip in ips['ips']:
+                print "Filtering IPs"
+                # ipv4
                 new_ip_aux = ip.split(".")
-                if len(new_ip_aux) != 4: new_ip = ip
-                else: new_ip = "x.x."+new_ip_aux[2]+"."+new_ip_aux[3]
+                new_ip = ip
+                if len(new_ip_aux) == 4:
+                    new_ip = "x.x."+new_ip_aux[2]+"."+new_ip_aux[3]
+                # ipv6
+                new_ip_aux = ip.split(":")
+                if len(new_ip_aux) > 1:
+                    raise
+                    new_ip = new_ip_aux[0]+":X"
                 new_ips['ips'].append(new_ip)
             return new_ips
 
