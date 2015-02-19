@@ -148,7 +148,6 @@ class DownloadsDS(DataSource):
                 # ipv6
                 new_ip_aux = ip.split(":")
                 if len(new_ip_aux) > 1:
-                    raise
                     new_ip = new_ip_aux[0]+":X"
                 new_ips['ips'].append(new_ip)
             return new_ips
