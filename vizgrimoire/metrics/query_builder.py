@@ -161,70 +161,29 @@ class DSQuery(object):
 
         return tables_str
 
-    def _get_filters_query(self, filters, type_analysis = None):
+    def _get_filters_query(self, filters):
         # Returns a string with filters separated by "and"
         filters_str = ""
-        join = None
-
-        if type_analysis != None and len(type_analysis) == 3:
-            # includes how to join the filters
-            join = type_analysis[2]
 
         if len(filters) > 0:
             filters_str = str(filters.pop())
             for i in range(len(filters)):
-                if join == None:
-                    filters_str += " and " + str(filters.pop())
-                else:
-                    filters_str += " " + join.split(",")[i] + " " + str(filters.pop())
-        if (join != None): filters_str = "(" + filters_str + ")" # Mixed AND and OR in general query
+                filters_str += " and " + str(filters.pop())
         return filters_str
 
-    def _get_global_filters(self, global_filter):
-        global_filters = ""
-
-        if global_filter is not None:
-            global_where = self._get_where_type_analysis_set(global_filter)
-            if len(global_filter) == 3:
-                global_filters = self._get_filters_query(global_where, global_filter)
-            else:
-                global_filters = self._get_filters_query(global_where)
-
-        return global_filters
-
-    def _add_global_query_sets (self, tables, filters, global_filter):
-        global_from = self._get_from_type_analysis_set(global_filter)
-        global_where = self._get_where_type_analysis_set(global_filter)
-        tables.union_update(global_from)
-        filters.union_update(global_where)
-
     def BuildQuery (self, period, startdate, enddate, date_field, fields,
-                    tables, filters, evolutionary, type_analysis = None,
-                    global_filter = None):
+                    tables, filters, evolutionary, type_analysis = None):
         # Select the way to evolutionary or aggregated dataset
         # filter_all: get data for all items in a filter
         q = ""
-        global_filters = ""
 
         if isinstance(fields, Set):
             # Special case where query fields are sets.
             # TODO: The "if" should be removed after the migration given that
             # all of the queries will use this.
-            if global_filter is not None:
-                if len(global_filter) == 2:
-                    # Don't support OR global filters based in tables not already in query
-                    self._add_global_query_sets(tables, filters, global_filter)
-                elif len(global_filter) == 3:
-                    # Add the filters not added by sets
-                    global_filters = self._get_global_filters(global_filter)
-
             fields = self._get_fields_query(fields)
             tables = self._get_tables_query(tables)
-            filters = self._get_filters_query(filters, type_analysis)
-
-            if global_filters != "":
-                if filters == "": filters =  global_filters
-                else: filters = global_filters + " AND " + filters
+            filters = self._get_filters_query(filters)
 
         # if all_items build a query for getting all items in one query
         all_items = None
@@ -757,7 +716,14 @@ class ITSQuery(DSQuery):
         filters.add("i.submitted_on >= upcom.init")
         filters.add("i.submitted_on < upcom.end")
         if name is not None:
-            filters.add("com.name = "+name)
+            if type(name) is str:
+                filters.add("com.name = "+name)
+            if type(name) is list:
+                val = ""
+                for iname in name:
+                    val += "com.name = "+ iname + " OR "
+                val = "("+val [:-4]+")" # remove last OR and add ()
+                filters.add(val)
 
         return filters
 
@@ -827,7 +793,14 @@ class ITSQuery(DSQuery):
 
     def GetSQLTicketTypeWhere (self, ticket_type):
         filters = Set([])
-        filters.add("i.type = " + ticket_type)
+        if type(ticket_type) is str:
+            filters.add("i.type = " + ticket_type)
+        if type(ticket_type) is list:
+            val = ""
+            for item in ticket_type:
+                val += "i.type = "+ item + " OR "
+            val = "("+val [:-4]+")" # remove last OR and add ()
+            filters.add(val)
 
         return filters
 
@@ -860,7 +833,23 @@ class ITSQuery(DSQuery):
 
         From = self._get_from_type_analysis_set(filters.type_analysis)
 
+        if filters.global_filter is not None:
+            From.union_update(self._get_from_type_analysis_set(filters.global_filter))
+
         return From
+
+    def _get_where_global_filter_set(self, global_filter):
+        if len(global_filter) == 2:
+            fields = global_filter[0].split(",")
+            values = global_filter[1].split(",")
+            if len(fields) > 1:
+                if fields.count(fields[0]) == len(fields):
+                    # Same fields, different values, use OR
+                    global_filter = [fields[0],values]
+
+        global_where = self._get_where_type_analysis_set(global_filter)
+
+        return global_where
 
 
     def _get_where_type_analysis_set(self, type_analysis):
@@ -870,11 +859,17 @@ class ITSQuery(DSQuery):
 
         if type_analysis is not None and len(type_analysis)>1:
             analysis = type_analysis[0]
-            value = type_analysis[1]
+            values = type_analysis[1]
 
-            # To be improved... not a very smart way of doing this...
-            if type_analysis[1] is not None:
-                list_values = type_analysis[1].split(",")
+            if values is not None:
+                if type(values) is str:
+                    # To be improved... not a very smart way of doing this...
+                    list_values = values.split(",")
+                elif type(values) is list:
+                    # On item or list of lists. Unify to list of lists
+                    list_values = values
+                    if list_values[0] is not list:
+                        list_values = [list_values]
             else:
                 list_values = None
 
@@ -902,6 +897,9 @@ class ITSQuery(DSQuery):
         #generic function to generate 'where' clauses
 
         where = self._get_where_type_analysis_set(filters.type_analysis)
+
+        if filters.global_filter is not None:
+            where.union_update(self._get_where_global_filter_set(filters.global_filter))
 
         return where
 

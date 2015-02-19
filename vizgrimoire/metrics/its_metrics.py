@@ -60,7 +60,7 @@ class Opened(Metrics):
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                self.filters.enddate, " submitted_on ", fields,
                                tables, filters, evolutionary,
-                               self.filters.type_analysis, self.filters.global_filter)
+                               self.filters.type_analysis)
         return q
 
 class Openers(Metrics):
@@ -137,7 +137,7 @@ class Openers(Metrics):
         query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                self.filters.enddate, " submitted_on ",
                                fields, tables, filters, evolutionary,
-                               self.filters.type_analysis, self.filters.global_filter)
+                               self.filters.type_analysis)
         return query
 
     def _get_top_global(self, days = 0, metric_filters = None):
@@ -615,7 +615,7 @@ class Changed(Metrics):
         query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                self.filters.enddate, " ch.changed_on ",
                                fields, tables, filters, evolutionary,
-                               self.filters.type_analysis, self.filters.global_filter)
+                               self.filters.type_analysis)
 
         #Action needed to replace issues filters by changed one
         query = query.replace("i.submitted", "ch.changed")
@@ -725,7 +725,7 @@ class Changers(Metrics):
         query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                self.filters.enddate, " ch.changed_on ",
                                fields, tables, filters, evolutionary,
-                               self.filters.type_analysis, self.filters.global_filter)
+                               self.filters.type_analysis)
         #Action needed to replace issues filters by changes one
         query = query.replace("i.submitted", "ch.changed")
         return query
@@ -759,7 +759,7 @@ class Changers(Metrics):
         query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                self.filters.enddate, " ch.changed_on ",
                                fields, tables, filters, evolutionary,
-                               self.filters.type_analysis, self.filters.global_filter)
+                               self.filters.type_analysis)
         #Action needed to replace issues filters by changes one
         query = query.replace("i.submitted", "ch.changed")
         return query
@@ -825,7 +825,7 @@ class Trackers(Metrics):
         query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                self.filters.enddate, " i.submitted_on ",
                                fields, tables, filters, evolutionary,
-                               self.filters.type_analysis, self.filters.global_filter)
+                               self.filters.type_analysis)
         return query
 
 class Companies(Metrics):
