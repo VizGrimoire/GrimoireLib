@@ -48,18 +48,18 @@ class SCM(DataSource):
 
     @staticmethod
     def get_date_init(startdate, enddate, identities_db = None, type_analysis = None):
-        fields = "DATE_FORMAT (min(s.date), '%Y-%m-%d') as first_date"
+        fields = "DATE_FORMAT (min(s.author_date), '%Y-%m-%d') as first_date"
         tables = "scmlog s"
         filters = ""
-        q = GetSQLGlobal('s.date',fields, tables, filters, startdate, enddate)
+        q = GetSQLGlobal('s.author_date',fields, tables, filters, startdate, enddate)
         return ExecuteQuery(q)
 
     @staticmethod
     def get_date_end(startdate, enddate, identities_db = None, type_analysis = None):
-        fields = "DATE_FORMAT (max(s.date), '%Y-%m-%d') as last_date"
+        fields = "DATE_FORMAT (max(s.author_date), '%Y-%m-%d') as last_date"
         tables = "scmlog s"
         filters = ""
-        q = GetSQLGlobal('s.date',fields, tables, filters, startdate, enddate)
+        q = GetSQLGlobal('s.author_date',fields, tables, filters, startdate, enddate)
         return ExecuteQuery(q)
 
     @staticmethod
@@ -516,7 +516,7 @@ def GetPeopleListSCM (startdate, enddate) :
     tables = GetTablesOwnUniqueIdsSCM()
     filters = GetFiltersOwnUniqueIdsSCM()
     filters +=" GROUP BY pid ORDER BY total desc, pid"
-    q = GetSQLGlobal('s.date',fields,tables, filters, startdate, enddate)
+    q = GetSQLGlobal('s.author_date',fields,tables, filters, startdate, enddate)
 
     data = ExecuteQuery(q)
     return (data)
@@ -527,12 +527,12 @@ def GetPeopleQuerySCM (developer_id, period, startdate, enddate, evol) :
     filters = GetFiltersOwnUniqueIdsSCM()
     filters +=" AND pup.upeople_id="+str(developer_id)
     if (evol) :
-        q = GetSQLPeriod(period,'s.date', fields, tables, filters,
+        q = GetSQLPeriod(period,'s.author_date', fields, tables, filters,
                 startdate, enddate)
     else :
-        fields += ",DATE_FORMAT (min(s.date),'%Y-%m-%d') as first_date, "+\
-                  "DATE_FORMAT (max(s.date),'%Y-%m-%d') as last_date"
-        q = GetSQLGlobal('s.date', fields, tables, filters, 
+        fields += ",DATE_FORMAT (min(s.author_date),'%Y-%m-%d') as first_date, "+\
+                  "DATE_FORMAT (max(s.author_date),'%Y-%m-%d') as last_date"
+        q = GetSQLGlobal('s.author_date', fields, tables, filters, 
                 startdate, enddate)
 
     return (q)

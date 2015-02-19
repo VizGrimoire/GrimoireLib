@@ -86,8 +86,8 @@ class OnionTransitions(Analyses):
                 " from scmlog s, "+\
                 "      people_upeople pup, "+\
                 "      people p "+\
-                " where s.date>="+ from_date+" and "+\
-                "       s.date<"+ to_date+" and "+\
+                " where s.author_date>="+ from_date+" and "+\
+                "       s.author_date<"+ to_date+" and "+\
                 "       s.author_id = pup.people_id and "+\
                 "       s.author_id = p.id and "+\
                 "       p.email <> '%gerrit@%' and "+\
@@ -300,8 +300,8 @@ class OnionTransitions(Analyses):
              "where s.author_id = p.id and "+\
              "      p.email <> '%gerrit@%' and "+\
              "      p.email <> '%jenkins@%' and "+\
-             "      s.date>="+ from_date +" and "+\
-             "      s.date<"+ to_date+";"
+             "      s.author_date>="+ from_date +" and "+\
+             "      s.author_date<"+ to_date+";"
         return(q)
 
     def _get_personal_commits_query(self, from_date, to_date):
@@ -328,8 +328,8 @@ class OnionTransitions(Analyses):
             " from scmlog s, "+\
             "      people_upeople pup, "+\
             "      people p "+\
-            " where s.date>="+ from_date+" and "+\
-            "       s.date<"+ to_date+" and "+\
+            " where s.author_date>="+ from_date+" and "+\
+            "       s.author_date<"+ to_date+" and "+\
             "       s.author_id = pup.people_id and "+\
             "       s.author_id = p.id and "+\
             "       p.email <> '%gerrit@%' and "+\

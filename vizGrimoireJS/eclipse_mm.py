@@ -146,7 +146,7 @@ def scm_report(dbcon, filters, sloc):
                      repositories r,
                      projects pr
                 where a.commit_id = s.id and 
-                      s.date >=%s and
+                      s.author_date >=%s and
                       s.repository_id = r.id and
                       r.name = pr.title and
                       pr.id = %s
