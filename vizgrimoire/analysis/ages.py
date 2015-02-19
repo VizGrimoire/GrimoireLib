@@ -94,6 +94,7 @@ def parse_analysis (type_analysis):
     """
 
     analysis_dict = {}
+    if len(type_analysis) == 0: return analysis_dict
     analysis_list = type_analysis[0].split(",")
     values_list = type_analysis[1].split(",")
     for i, analysis in enumerate(analysis_list):
