@@ -389,8 +389,8 @@ class SCMQuery(DSQuery):
          fields = Set([])
          fields.add("s."+role+"_id = pup.people_id")
          fields.add("pup.upeople_id = upcom.upeople_id")
-         fields.add("s.date >= upcom.init")
-         fields.add("s.date < upcom.end")
+         fields.add("s.author_date >= upcom.init")
+         fields.add("s.author_date < upcom.end")
          fields.add("upcom.company_id = com.id")
          if company is not None: fields.add("com.name =" + company)
 
@@ -646,12 +646,12 @@ class SCMQuery(DSQuery):
         filters = "pup.people_id = s.author_id and s.id = a.commit_id "
         filters +=" AND pup.upeople_id="+str(developer_id)
         if (evol) :
-            q = self.GetSQLPeriod(period,'s.date', fields, tables, filters,
+            q = self.GetSQLPeriod(period,'s.author_date', fields, tables, filters,
                     startdate, enddate)
         else :
-            fields += ",DATE_FORMAT (min(s.date),'%Y-%m-%d') as first_date, "+\
-                      "DATE_FORMAT (max(s.date),'%Y-%m-%d') as last_date"
-            q = self.GetSQLGlobal('s.date', fields, tables, filters, 
+            fields += ",DATE_FORMAT (min(s.author_date),'%Y-%m-%d') as first_date, "+\
+                      "DATE_FORMAT (max(s.author_date),'%Y-%m-%d') as last_date"
+            q = self.GetSQLGlobal('s.author_date', fields, tables, filters, 
                     startdate, enddate)
 
         return (q)

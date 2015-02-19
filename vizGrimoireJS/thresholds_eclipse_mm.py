@@ -140,7 +140,7 @@ def scm_report(dbcon, filters, sloc):
                      scmlog s,
                      repositories r
                 where a.commit_id = s.id and 
-                      s.date >=%s and
+                      s.author_date >=%s and
                       s.repository_id = r.id and
                       r.name = %s
                       group by a.file_id """ % (filters.startdate, value)

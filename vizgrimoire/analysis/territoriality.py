@@ -66,8 +66,8 @@ class Territoriality(Analyses):
                          people_upeople pup, 
                          file_types ft %s
                     where a.commit_id=s.id and 
-                          s.date >= %s and
-                          s.date < %s and
+                          s.author_date >= %s and
+                          s.author_date < %s and
                           s.author_id=pup.people_id  and 
                           a.file_id=ft.file_id and 
                           ft.type='code' %s
@@ -79,8 +79,8 @@ class Territoriality(Analyses):
                     from actions a, 
                          scmlog s, 
                          file_types ft %s
-                    where s.date >= %s and
-                          s.date < %s and
+                    where s.author_date >= %s and
+                          s.author_date < %s and
                           a.commit_id=s.id  and 
                           a.file_id=ft.file_id and 
                           ft.type='code'  %s

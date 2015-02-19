@@ -51,7 +51,7 @@ class TopAuthorsProjects(Analyses):
         q = fields + projects_from + projects_where
         q += " AND pup.people_id = s.author_id AND u.id = pup.upeople_id "
         q += " AND a.commit_id = s.id "
-        q += " AND s.date >= " + self.filters.startdate + " and s.date < " + self.filters.enddate
+        q += " AND s.author_date >= " + self.filters.startdate + " and s.author_date < " + self.filters.enddate
         q += " GROUP by u.id ORDER BY commits DESC, u.id"
         q += " limit " + str(self.filters.npeople)
 

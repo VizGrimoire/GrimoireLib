@@ -84,7 +84,7 @@ class CompaniesActivity(Analyses):
         from_ =  self.get_scm_from_companies()
 
         if year is not None:
-            where = " WHERE YEAR(s.date) = " + str(year)
+            where = " WHERE YEAR(s.author_date) = " + str(year)
             field = field + "_" + str(year)
         sql = """
             select c.name, count(c.id) as %s
@@ -101,7 +101,7 @@ class CompaniesActivity(Analyses):
         from_ =  self.get_scm_from_companies()
 
         if year is not None:
-            where = " WHERE YEAR(s.date) = " + str(year)
+            where = " WHERE YEAR(s.author_date) = " + str(year)
             field = field + "_" + str(year)
         sql = """
             select c.name, count(distinct(s.author_id)) as %s
@@ -124,12 +124,12 @@ class CompaniesActivity(Analyses):
         from_ =  self.get_scm_from_companies(True)
 
         if year is not None:
-            where = " WHERE YEAR(s.date) = " + str(year)
+            where = " WHERE YEAR(s.author_date) = " + str(year)
             field = field + "_" + str(year)
         if active:
 	    if where == "": where = " WHERE "
   	    else: where += " AND "
-            where += " DATEDIFF(NOW(), s.date) < " + active_max_days
+            where += " DATEDIFF(NOW(), s.author_date) < " + active_max_days
         sql = """
             select c.name, count(distinct(s.committer_id)) as %s
             %s %s
@@ -145,7 +145,7 @@ class CompaniesActivity(Analyses):
         from_ =  self.get_scm_from_companies()
 
         if year is not None:
-            where = " WHERE YEAR(s.date) = " + str(year)
+            where = " WHERE YEAR(s.author_date) = " + str(year)
             field = field + "_" + str(year)
         sql = """
             select c.name, count(a.id) as %s
@@ -167,7 +167,7 @@ class CompaniesActivity(Analyses):
         # Remove commits from cvs2svn migration with removed lines issues
         where = "WHERE  message NOT LIKE '%cvs2svn%'"
         if year is not None:
-            where += " AND YEAR(s.date) = " + str(year)
+            where += " AND YEAR(s.author_date) = " + str(year)
             field = field + "_" + str(year)
 
         sql = """
@@ -194,7 +194,7 @@ class CompaniesActivity(Analyses):
         from_ =  self.get_scm_from_companies()
 
         if year is not None:
-            where += " AND YEAR(s.date) = " + str(year)
+            where += " AND YEAR(s.author_date) = " + str(year)
             field = field + "_" + str(year)
 
         sql = """
@@ -215,7 +215,7 @@ class CompaniesActivity(Analyses):
         from_ =  self.get_scm_from_companies()
 
         if year is not None:
-            where += " AND YEAR(s.date) = " + str(year)
+            where += " AND YEAR(s.author_date) = " + str(year)
             field = field + "_" + str(year)
 
         sql = """
@@ -236,7 +236,7 @@ class CompaniesActivity(Analyses):
         from_ =  self.get_scm_from_companies()
 
         if year is not None:
-            where += " AND YEAR(s.date) = " + str(year)
+            where += " AND YEAR(s.author_date) = " + str(year)
             field = field + "_" + str(year)
 
         sql = """
