@@ -1518,6 +1518,36 @@ class SCRQuery(DSQuery):
 
         return filters
 
+    def GetSQLAutoReviewsFrom(self):
+        tables = Set([])
+
+        return tables
+
+    def GetSQLAutoReviewsWhere(self, value):
+        """ Remove auto reviews
+
+        An auto review is defined as the process of submitting
+        the changeset and merging a patch from that changeset into
+        the source code.
+
+        Limitations: if there are other developers that upload other
+        patchset to the loop, those are not taking into account.
+        """
+
+        filters = Set([])
+
+        filters.add("""i.id not in
+                       (select distinct(i.id) as issue_id
+                       from issues i,
+                            changes ch
+                       where i.submitted_by <> ch.changed_by and
+                             i.id = ch.issue_id and
+                             ch.field = 'status' and
+                             ch.new_value = 'MERGED')
+                    """)
+
+        return filters
+
     ##########
     #Generic functions to obtain FROM and WHERE clauses per type of report
     ##########
@@ -1528,16 +1558,18 @@ class SCRQuery(DSQuery):
 
         From = Set([])
 
-        if (type_analysis is None or len(type_analysis) != 2): return From
+        if type_analysis is not None:
 
-        analysis = type_analysis[0]
+            list_analysis = type_analysis[0].split(",")
 
-        if (analysis):
-            if analysis == 'repository': From.union_update(self.GetSQLRepositoriesFrom())
-            elif analysis == 'company': From.union_update(self.GetSQLCompaniesFrom())
-            elif analysis == 'country': From.union_update(self.GetSQLCountriesFrom())
-            elif analysis == 'project': From.union_update(self.GetSQLProjectFrom())
-            elif analysis == 'people2': From.union_update(self.GetSQLPeopleFrom())
+            for analysis in list_analysis:
+                if analysis == 'repository': From.union_update(self.GetSQLRepositoriesFrom())
+                elif analysis == 'company': From.union_update(self.GetSQLCompaniesFrom())
+                elif analysis == 'country': From.union_update(self.GetSQLCountriesFrom())
+                elif analysis == 'project': From.union_update(self.GetSQLProjectFrom())
+                elif analysis == 'people2': From.union_update(self.GetSQLPeopleFrom())
+                elif analysis == 'autoreviews': From.union_update(self.GetSQLAutoReviewsFrom())
+                else: raise Exception( analysis + " not supported in From")
 
         return From
 
@@ -1548,22 +1580,44 @@ class SCRQuery(DSQuery):
         #such analysis
 
         where = Set([])
-        if (type_analysis is None or len(type_analysis) != 2): return where
 
-        analysis = type_analysis[0]
-        value = type_analysis[1]
+        if type_analysis is not None and len(type_analysis)>1:
+            analysis = type_analysis[0]
+            values = type_analysis[1]
 
-        if (analysis):
-            if analysis == 'repository': where.union_update(self.GetSQLRepositoriesWhere(value))
-            elif analysis == 'company': where.union_update(self.GetSQLCompaniesWhere(value))
-            elif analysis == 'country': where.union_update(self.GetSQLCountriesWhere(value))
-            elif analysis == 'people2': where.union_update(self.GetSQLPeopleWhere(value, "issues"))
-            elif analysis == 'project':
-                if (self.identities_db is None):
-                    logging.error("project filter not supported without identities_db")
-                    sys.exit(0)
+            if values is not None:
+                if type(values) is str:
+                    # To be improved... not a very smart way of doing this...
+                    list_values = values.split(",")
+                elif type(values) is list:
+                    # On item or list of lists. Unify to list of lists
+                    list_values = values
+                    if list_values[0] is not list:
+                        list_values = [list_values]
+            else:
+                list_values = None
+
+            list_analysis = type_analysis[0].split(",")
+
+            pos = 0
+            for analysis in list_analysis:
+                if list_values is not None:
+                    value = list_values[pos]
                 else:
-                    where.union_update(self.GetSQLProjectWhere(value))
+                    value = None
+
+
+                if analysis == 'repository': where.union_update(self.GetSQLRepositoriesWhere(value))
+                elif analysis == 'company': where.union_update(self.GetSQLCompaniesWhere(value))
+                elif analysis == 'country': where.union_update(self.GetSQLCountriesWhere(value))
+                elif analysis == 'people2': where.union_update(self.GetSQLPeopleWhere(value, "issues"))
+                elif analysis == 'autoreviews': where.union_update(self.GetSQLAutoReviewsWhere(value))
+                elif analysis == 'project':
+                    if (self.identities_db is None):
+                        logging.error("project filter not supported without identities_db")
+                        sys.exit(0)
+                    else:
+                        where.union_update(self.GetSQLProjectWhere(value))
         return where
 
     def GetReviewsSQL (self, period, startdate, enddate, type_, type_analysis, evolutionary):
