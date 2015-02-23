@@ -507,6 +507,10 @@ class Participants(Metrics):
         
         fields.add("count(distinct(u.id)) as participants")
 
+        # It does not make sense to link to the table issues.
+        # Thus it does not make sense some filters to be applied here
+        # For example the 'autoreviews'
+        #tables.add("issues i")
         tables.add("people_upeople pup")
         tables.add(self.db.identities_db + ".upeople u")
 
@@ -568,11 +572,10 @@ class Participants(Metrics):
         query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                    self.filters.enddate, "t.submitted_on",
                                    fields, tables, filters, evolutionary)
-        print query
         return query
  
 
-    def _get_top_global(self, days = 0, metric_filters = None):
+    def get_list(self):
         fields = Set([])
         tables = Set([])
         filters = Set([])
@@ -1102,8 +1105,9 @@ class ActiveCoreReviewers(Metrics):
                                 fields, tables, filters, evolutionary, self.filters.type_analysis)
         return q
 
-    def _get_top_global(self, days, metric_filters):
+    def get_list(self):
         # TODO: missing calculation of last x days in the query
+
         fields = Set([])
         tables = Set([])
         filters = Set([])
@@ -1145,7 +1149,6 @@ class ActiveCoreReviewers(Metrics):
         query = query + " order by count(distinct(ch.id)) desc "
 
         return self.db.ExecuteQuery(query)
-
 
 
 class Closers(Metrics):
