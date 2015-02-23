@@ -162,167 +162,68 @@ class Authors(Metrics):
         return q
 
 
-    def _get_top_repository (self, metric_filters = None, days = None):
-        if metric_filters == None:
-            metric_filters = self.filters
-        startdate = metric_filters.startdate
-        enddate = metric_filters.enddate
-        repo = metric_filters.type_analysis[1]
-        limit = metric_filters.npeople
-        filter_bots = self.db.get_bots_filter_sql(self.data_source, metric_filters)
+    def get_list (self, metric_filters = None, days = 0):
 
-        #TODO: accessing private methods, please remove at some point
-        repos_from = Set([])
-        repos_from.union_update(self.db.GetSQLReportFrom(self.filters))
-        # Needed for unique identities and no merges
-        repos_from.union_update(Set(['actions a','scmlog s','people_upeople pup', 'upeople up']))
-        repos_from = "FROM " + self.db._get_tables_query(repos_from)
-        # Remove first and
-        repos_where = Set([])
-        repos_where.union_update(self.db.GetSQLReportWhere(self.filters))
-        repos_where = " where " + self.db._get_filters_query(repos_where)
-
-        dtables = dfilters = ""
-        if (days > 0):
-            dtables = ", (SELECT MAX(date) as last_date from scmlog) dt"
-            dfilters = " AND DATEDIFF (last_date, date) < %s " % (days)
-
-        fields =  "SELECT COUNT(DISTINCT(s.id)) as commits, up.id, up.identifier as authors "
-        repos_from += dtables
-        q = fields + repos_from + repos_where
-        q += dfilters
-        if filter_bots != "": q += " AND "+ filter_bots
-        q += " AND pup.people_id = s.author_id AND up.id = pup.upeople_id "
-        q += " and s.id = a.commit_id "
-        q += " AND s.author_date >= " + startdate + " and s.author_date < " + enddate
-        q += " GROUP by up.id ORDER BY commits DESC, authors"
-        q += " limit " + str(self.filters.npeople)
-
-        res = self.db.ExecuteQuery(q)
-	res = check_array_values (res)
-
-        return res
-
-    def _get_top_company (self, metric_filters = None, days = None):
-        if metric_filters == None:
-            metric_filters = self.filters
-        startdate = metric_filters.startdate
-        enddate = metric_filters.enddate
-        company = metric_filters.type_analysis[1]
-        limit = metric_filters.npeople
-        filter_bots = self.db.get_bots_filter_sql(self.data_source, metric_filters)
-        if filter_bots != '': filter_bots += " AND "
-
-        q = """
-        SELECT id, authors, count(logid) AS commits FROM (
-        SELECT DISTINCT up.id AS id, up.identifier AS authors, s.id as logid
-        FROM people p,  scmlog s,  actions a, people_upeople pup, upeople up,
-             upeople_companies upc,  companies c
-        WHERE  %s s.id = a.commit_id AND p.id = s.author_id AND s.author_id = pup.people_id  AND
-          pup.upeople_id = upc.upeople_id AND pup.upeople_id = up.id AND  s.author_date >= upc.init AND
-          s.author_date < upc.end AND upc.company_id = c.id AND
-          s.author_date >=%s AND s.author_date < %s AND c.name =%s) t
-        GROUP BY id
-        ORDER BY commits DESC, authors
-        LIMIT %s
-        """ % (filter_bots, startdate, enddate, company, limit)
-
-        data = self.db.ExecuteQuery(q)
-        return (data)
-
-    def _get_top_project(self, metric_filters = None, days = None):
-        if metric_filters == None:
-            metric_filters = self.filters
-        startdate = metric_filters.startdate
-        enddate = metric_filters.enddate
-        project = metric_filters.type_analysis[1]
-        limit = metric_filters.npeople
-        filter_bots = self.db.get_bots_filter_sql(self.data_source, metric_filters)
-
+        fields = Set([])
         tables = Set([])
         filters = Set([])
 
-        tables = self.db.GetSQLReportFrom(self.filters)
+        #TODO: Code to be removed after report tool properly works
+        new_filters = False
+        old_filters = None
+        if metric_filters is not None:
+            old_filters = self.filters
+            self.filters = metric_filters
+            self.filters.people_out = old_filters.people_out
+            new_filters = True
+        #TODO: End of the code to be removed
 
-        filters = self.db.GetSQLReportWhere(self.filters)
-
-        fields =  "SELECT COUNT(DISTINCT(s.id)) as commits, up.id, up.identifier as authors "
-
-        tables.add("actions a")
-        tables.add("scmlog s")
-        tables.add("people_upeople pup")
-        tables.add(self.db.identities_db + ".upeople up")
-        tables.union_update(self.db.GetSQLReportFrom(self.filters))
-        tables_str = self.db._get_tables_query(tables)
-
-        filters.add("pup.people_id = s.author_id")
-        filters.add("up.id = pup.upeople_id")
-        filters.add("a.commit_id = s.id")
-        filters.add("s.author_date >= " + startdate)
-        filters.add("s.author_date < " + enddate)
-        if filter_bots<>'': filters.add(filter_bots)
-        filters_str = self.db._get_filters_query(filters)
-
-        filters_str += " GROUP by up.id ORDER BY commits DESC, authors"
-        filters_str += " limit " + str(self.filters.npeople)
-
-        query = fields + " from " + tables_str + " where " + filters_str
-
-        res = self.db.ExecuteQuery(query)
-
-        return res
-
-    def _get_top_global (self, days = 0, metric_filters = None, role = "author") :
-        # This function returns the top people participating in the source code.
-        # In addition, the number of days allows to limit the study to the last
-        # X days specified in that parameter
-
-        if metric_filters == None:
-            metric_filters = self.filters
-        startdate = metric_filters.startdate
-        enddate = metric_filters.enddate
-        limit = metric_filters.npeople
-        filter_bots = self.db.get_bots_filter_sql(self.data_source, metric_filters)
-        if filter_bots != "": filter_bots = "WHERE " + filter_bots
-
-        dtables = dfilters = ""
+        #Building parts of the query to control timeframe of study
         if (days > 0):
-            dtables = " (SELECT MAX(date) as last_date from scmlog) dt"
-            dfilters = " DATEDIFF (last_date, date) < %s " % (days)
+            tables.add("(SELECT MAX(date) as last_date from scmlog) dt")
+            filters.add("DATEDIFF (last_date, date) < %s " % (days))
 
-        fields = "SELECT s."+role+"_id, COUNT(DISTINCT(s.id)) as total "
-        tables = self.db.GetSQLReportFrom(self.filters)
-        tables.add("actions a")
+        #Building core part of the query.
+        fields.add("u.id as id")
+        fields.add("u.identifier as authors")
+        fields.add("count(distinct(s.id)) as commits")
+
         tables.add("scmlog s")
-        if dtables != "": tables.add(dtables)
-        tables_str = " FROM " + self.db._get_tables_query(tables)
+        filters.union_update(self.db.GetSQLReportWhere(self.filters, "author"))
 
-        where = self.db.GetSQLReportWhere(self.filters)
-        if dfilters != "": where.add(dfilters)
-        where.add("s.id = a.commit_id")
-        where.add("s.author_date >= " + startdate)
-        where.add("s.author_date < " + enddate)
-        where_str = " WHERE " + self.db._get_filters_query(where)
+        #specific parts of the query depending on the report needed
+        tables.union_update(self.db.GetSQLReportFrom(self.filters))
 
-        q_people = fields + tables_str + where_str
-        q_people += " GROUP BY s."+role+"_id ORDER by total DESC, s."+role+"_id"
+        # This may be redundant code. However this is needed for specific analysis
+        # such as repositories or projects. Given that we're using sets, this is not 
+        # an issue. Not repeated tables or filters will appear in the final query.
+        tables.add("people_upeople pup")
+        tables.add(self.db.identities_db + ".upeople u")
+        filters.add("s.author_id = pup.people_id")
+        filters.add("pup.upeople_id = u.id")
 
-        q = """
-        SELECT up.id, up.identifier as %ss, SUM(total) AS commits FROM
-        (%s) t
-        JOIN people_upeople pup ON pup.people_id = %s_id
-        JOIN upeople up ON pup.upeople_id = up.id
-        %s
-        GROUP BY up.identifier ORDER BY commits desc, %ss  limit %s
-        """ % (role, q_people, role, filter_bots, role, limit)
+        query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
+                                   self.filters.enddate, " s.author_date ", fields,
+                                   tables, filters, False, self.filters.type_analysis)
 
-        data = self.db.ExecuteQuery(q)
+        query = query + " group by u.id "
+        query = query + " order by count(distinct(s.id)) desc, u.identifier "
+        query = query + " limit " + str(self.filters.npeople)
+
+        data = self.db.ExecuteQuery(query)
         for id in data:
             if not isinstance(data[id], (list)): data[id] = [data[id]]
-        return (data)
+
+        #TODO: Code to be removed after report tool properly works
+        if new_filters:
+            self.filters = old_filters
+        #TODO: End of code to be removed
+
+        return data
 
     def _get_top_supported_filters(self):
         return ['repository','company','project']
+
 
 class People(Metrics):
     """ People filter metric class for source code management systems """
