@@ -164,6 +164,7 @@ class SCM(DataSource):
         if filter_ is not None:
             type_analysis = filter_.get_type_analysis()
         mfilter = MetricFilters(period, startdate, enddate, type_analysis, npeople)
+        mfilter.global_filter = mauthors.filters.global_filter
 
         if filter_ is None:
             top['authors.'] = mauthors.get_list(mfilter, 0)

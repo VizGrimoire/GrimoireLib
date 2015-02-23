@@ -175,7 +175,9 @@ class Authors(Metrics):
         #TODO: accessing private methods, please remove at some point
         repos_from = Set([])
         repos_from.union_update(self.db.GetSQLReportFrom(self.filters))
-        repos_from = self.db._get_tables_query(repos_from)
+        # Needed for unique identities and no merges
+        repos_from.union_update(Set(['actions a','scmlog s','people_upeople pup', 'upeople up']))
+        repos_from = "FROM " + self.db._get_tables_query(repos_from)
         # Remove first and
         repos_where = Set([])
         repos_where.union_update(self.db.GetSQLReportWhere(self.filters))
@@ -187,8 +189,7 @@ class Authors(Metrics):
             dfilters = " AND DATEDIFF (last_date, date) < %s " % (days)
 
         fields =  "SELECT COUNT(DISTINCT(s.id)) as commits, up.id, up.identifier as authors "
-        fields += "FROM actions a, scmlog s, people_upeople pup, upeople up " + dtables
-        repos_from = " , " + repos_from
+        repos_from += dtables
         q = fields + repos_from + repos_where
         q += dfilters
         if filter_bots != "": q += " AND "+ filter_bots
@@ -197,6 +198,7 @@ class Authors(Metrics):
         q += " AND s.author_date >= " + startdate + " and s.author_date < " + enddate
         q += " GROUP by up.id ORDER BY commits DESC, authors"
         q += " limit " + str(self.filters.npeople)
+
         res = self.db.ExecuteQuery(q)
 	res = check_array_values (res)
 
