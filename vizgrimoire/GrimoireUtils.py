@@ -615,7 +615,9 @@ def fill_items(items, data, id_field, evol = False,
         zero_ts = completePeriodIds({id_field:[],period:[]},
                                     period, startdate, enddate)[id_field]
     fields = data.keys()
-    if id_field not in fields: return data
+    if id_field not in fields:
+        logging.info("[fill_items] " + id_field + " not found in " + ",".join(data))
+        return data
     fields.remove(id_field)
     for id in items:
         if id not in data[id_field]:

@@ -396,8 +396,15 @@ class DataSource(object):
 
             if type_analysis and type_analysis[1] is None:
                 logging.info(item.id)
-                id_field = DSQuery.get_group_field(type_analysis[0])
-                id_field = id_field.split('.')[1] # remove table name
+                id_field = None
+                # Support for combined filters
+                for idf in mvalue.keys():
+                    if "CONCAT(" in idf:
+                        id_field = idf
+                        break
+                if id_field is None:
+                    id_field = DSQuery.get_group_field(type_analysis[0])
+                    id_field = id_field.split('.')[1] # remove table name
                 mvalue = fill_and_order_items(items, mvalue, id_field,
                                               evol, period, startdate, enddate)
             data = dict(data.items() + mvalue.items())
