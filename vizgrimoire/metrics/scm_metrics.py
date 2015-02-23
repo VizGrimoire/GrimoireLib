@@ -113,8 +113,7 @@ class NewAuthors(Metrics):
                                tables, filters, evolutionary, self.filters.type_analysis)
         if islist:
             q += " GROUP BY t.upeople_id "
-
-        if not evolutionary: q += " ORDER BY t.date DESC"
+            if not evolutionary: q += " ORDER BY t.date DESC"
 
         return q
 
@@ -288,23 +287,34 @@ class Authors(Metrics):
 
         dtables = dfilters = ""
         if (days > 0):
-            dtables = ", (SELECT MAX(date) as last_date from scmlog) dt"
-            dfilters = " DATEDIFF (last_date, date) < %s AND " % (days)
+            dtables = " (SELECT MAX(date) as last_date from scmlog) dt"
+            dfilters = " DATEDIFF (last_date, date) < %s " % (days)
+
+        fields = "SELECT s."+role+"_id, COUNT(DISTINCT(s.id)) as total "
+        tables = self.db.GetSQLReportFrom(self.filters)
+        tables.add("actions a")
+        tables.add("scmlog s")
+        if dtables != "": tables.add(dtables)
+        tables_str = " FROM " + self.db._get_tables_query(tables)
+
+        where = self.db.GetSQLReportWhere(self.filters)
+        if dfilters != "": where.add(dfilters)
+        where.add("s.id = a.commit_id")
+        where.add("s.author_date >= " + startdate)
+        where.add("s.author_date < " + enddate)
+        where_str = " WHERE " + self.db._get_filters_query(where)
+
+        q_people = fields + tables_str + where_str
+        q_people += " GROUP BY s."+role+"_id ORDER by total DESC, s."+role+"_id"
 
         q = """
         SELECT up.id, up.identifier as %ss, SUM(total) AS commits FROM
-        (
-         SELECT s.%s_id, COUNT(DISTINCT(s.id)) as total
-         FROM scmlog s, actions a %s
-         WHERE %s s.id = a.commit_id AND
-            s.author_date >= %s AND  s.author_date < %s
-         GROUP BY  s.%s_id ORDER by total DESC, s.%s_id
-        ) t
+        (%s) t
         JOIN people_upeople pup ON pup.people_id = %s_id
         JOIN upeople up ON pup.upeople_id = up.id
         %s
         GROUP BY up.identifier ORDER BY commits desc, %ss  limit %s
-        """ % (role, role, dtables, dfilters, startdate, enddate, role, role, role, filter_bots, role, limit)
+        """ % (role, q_people, role, filter_bots, role, limit)
 
         data = self.db.ExecuteQuery(q)
         for id in data:
