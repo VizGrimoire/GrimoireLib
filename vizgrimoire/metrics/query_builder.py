@@ -465,6 +465,26 @@ class SCMQuery(DSQuery):
 
         return filters
 
+    def GetSQLNotLogMessageFrom(self):
+        # tables necessary to filter by message left by developers
+        tables = Set([])
+        tables.add("scmlog s")
+
+        return tables
+
+    def GetSQLNotLogMessageWhere(self, message):
+        # filters necessary to filter by message left by developers
+        filters = Set([])
+        if type(message) is str:
+            filters.add("s.message not like '%"+message+"%'")
+        if type(message) is list:
+            val = ""
+            for item in message:
+                val += "s.message not like '%"+item+"%' AND "
+            val = "("+val [:-4]+")" # remove last OR and add ()
+            filters.add(val)
+        return filters
+
     def GetSQLPeopleFrom (self):
         #tables necessaries for companies
         tables = Set([])
@@ -511,14 +531,10 @@ class SCMQuery(DSQuery):
 
         return where
 
-    def GetSQLReportFrom (self, filters):
-        # generic function to generate "from" clauses
-        # "filters" is an instance of MetricsFilter that contains all of the
-        # information needed to build the where clauses.
+    def _get_from_type_analysis_set(self, type_analysis):
 
         From = Set([])
 
-        type_analysis = filters.type_analysis
         #if (type_analysis is None or len(type_analysis) != 2): return from_str
         # the type_analysis length !=2 error should be raised in the MetricFilter instance
         if type_analysis is not None:
@@ -538,43 +554,76 @@ class SCMQuery(DSQuery):
                 elif analysis == 'module': From.union_update(self.GetSQLModuleFrom())
                 elif analysis == 'filetype': From.union_update(self.GetSQLFileTypeFrom())
                 elif analysis == 'logmessage': From.union_update(self.GetSQLLogMessageFrom())
+                elif analysis == 'notlogmessage': From.union_update(self.GetSQLNotLogMessageFrom())
                 elif analysis == 'people': From.union_update(self.GetSQLPeopleFrom())
                 elif analysis == 'people2': From.union_update(self.GetSQLPeopleFrom())
                 else: raise Exception( analysis + " not supported in From")
 
+        return From
+
+    def GetSQLReportFrom (self, filters):
+        # generic function to generate "from" clauses
+        # "filters" is an instance of MetricsFilter that contains all of the
+        # information needed to build the where clauses.
+
+        From = self._get_from_type_analysis_set(filters.type_analysis)
+
+
         # Adding tables (if) needed when filtering bots.
         if filters.people_out is not None:
             From.union_update(self.GetSQLBotFrom())
+        if filters.global_filter is not None:
+            From.union_update(self._get_from_type_analysis_set(filters.global_filter))
+
 
         return (From)
 
-    def GetSQLReportWhere (self, filters, role = "author"):
-        # Generic function to generate 'where' clauses
-        # 'filters' is an instance of MetricsFilter class with all of the 
-        # conditions needed to build the where clauses
+    # TODO: share between all data sources
+    def _get_where_global_filter_set(self, global_filter):
+        if len(global_filter) == 2:
+            fields = global_filter[0].split(",")
+            values = global_filter[1].split(",")
+            if len(fields) > 1:
+                if fields.count(fields[0]) == len(fields):
+                    # Same fields, different values, use OR
+                    global_filter = [fields[0],values]
 
+        global_where = self._get_where_type_analysis_set(global_filter)
+
+        return global_where
+
+
+    def _get_where_type_analysis_set(self, type_analysis, role = None):
         where = Set([])
 
-        type_analysis = filters.type_analysis
-        #if (type_analysis is None or len(type_analysis) != 2): return where_str 
+        #if (type_analysis is None or len(type_analysis) != 2): return where_str
         # the type_analysis !=2 error should be raised when building a new instance 
         # of the class MetricFilter
-        if type_analysis is not None:
+        if type_analysis is not None and len(type_analysis)>1:
             analysis = type_analysis[0]
-            value = type_analysis[1]
+            values = type_analysis[1]
 
-            # To be improved... not a very smart way of doing this...
-            if type_analysis[1] is not None:
-                list_values = type_analysis[1].split(",")
+            if values is not None:
+                if type(values) is str:
+                    # To be improved... not a very smart way of doing this...
+                    list_values = values.split(",")
+                elif type(values) is list:
+                    # On item or list of lists. Unify to list of lists
+                    list_values = values
+                    if list_values[0] is not list:
+                        list_values = [list_values]
             else:
                 list_values = None
+
             list_analysis = type_analysis[0].split(",")
 
+            pos = 0
             for analysis in list_analysis:
                 if list_values is not None:
-                    value = list_values[list_analysis.index(analysis)]
+                    value = list_values[pos]
                 else:
                     value = None
+
                 if analysis == 'repository': where.union_update(self.GetSQLRepositoriesWhere(value))
                 elif analysis == 'company': where.union_update(self.GetSQLCompaniesWhere(value, role))
                 elif analysis == 'country': where.union_update(self.GetSQLCountriesWhere(value, role))
@@ -584,13 +633,26 @@ class SCMQuery(DSQuery):
                 elif analysis == 'module': where.union_update(self.GetSQLModuleWhere(value))
                 elif analysis == 'filetype': where.union_update(self.GetSQLFileTypeWhere(value))
                 elif analysis == 'logmessage': where.union_update(self.GetSQLLogMessageWhere(value))
+                elif analysis == 'notlogmessage': where.union_update(self.GetSQLNotLogMessageWhere(value))
                 elif analysis == 'people': where.union_update(self.GetSQLPeopleWhere(value))
                 elif analysis == 'people2': where.union_update(self.GetSQLPeopleWhere(value))
                 else: raise Exception( analysis + " not supported in Where")
 
+        return where
+
+
+    def GetSQLReportWhere (self, filters, role = "author"):
+        # Generic function to generate 'where' clauses
+        # 'filters' is an instance of MetricsFilter class with all of the
+        # conditions needed to build the where clauses
+
+        where = self._get_where_type_analysis_set(filters.type_analysis, role)
+
         # Adding conditions (if) needed when filtering bots
         if filters.people_out is not None:
             where.union_update(self.GetSQLBotWhere(filters.people_out))
+        if filters.global_filter is not None:
+            where.union_update(self._get_where_global_filter_set(filters.global_filter))
 
         return where
 
