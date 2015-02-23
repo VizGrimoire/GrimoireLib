@@ -1521,6 +1521,8 @@ class SCRQuery(DSQuery):
     def GetSQLAutoReviewsFrom(self):
         tables = Set([])
 
+        tables.add("issues i")
+
         return tables
 
     def GetSQLAutoReviewsWhere(self, value):
@@ -1540,7 +1542,7 @@ class SCRQuery(DSQuery):
                        (select distinct(i.id) as issue_id
                        from issues i,
                             changes ch
-                       where i.submitted_by <> ch.changed_by and
+                       where i.submitted_by = ch.changed_by and
                              i.id = ch.issue_id and
                              ch.field = 'status' and
                              ch.new_value = 'MERGED')
