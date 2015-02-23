@@ -487,6 +487,82 @@ class PatchesPerReview(Metrics):
         #Not implemented
         return None
 
+class Participants(Metrics):
+    """ A participant in SCR is a person with any trace in the system
+
+    A trace is defined in the case of scr as a comment, a change or a new
+    changeset/patchset.
+    """
+
+    id = "ParticipantsSCR"
+    name = "Participants in SCR"
+    desc = "A participant is defined as any person with any type of activity in SCR"
+    data_source = SCR
+
+    def _get_sql(self, evolutionary):
+        fields = Set([])
+        tables = Set([])
+        filters = Set([])
+
+        
+        fields.add("count(distinct(t.submitted_by)) as participants")
+        
+        # Comments people
+        fields_c = Set([])
+        tables_c = Set([])
+        filters_c = Set([])
+
+        fields_c.add("comments.submitted_by as submitted_by")
+        fields_c.add("comments.submitted_on as submitted_on")
+        tables_c.add("comments")
+
+        # Changes people
+        fields_ch = Set([])
+        tables_ch = Set([])
+        filters_ch = Set([])
+
+        fields_ch.add("ch.changed_by as submitted_by")
+        fields_ch.add("ch.changed_on as submitted_on")
+        tables_ch.add("changes ch")
+
+        # Issues people
+        fields_i = Set([])
+        tables_i = Set([])
+        filters_i = Set([])
+
+        fields_i.add("i.submitted_by as submitted_by")
+        fields_i.add("i.submitted_on as submitted_on")
+        tables_i.add("issues i")
+
+        #Building queries
+        period = self.filters.period
+        startdate = self.filters.startdate
+        enddate = self.filters.enddate
+        evol = False
+    
+        comments_query = self.db.BuildQuery(period, startdate, enddate,
+                                            "comments.submitted_on",
+                                            fields_c, tables_c, filters_c,
+                                            evol)
+        changes_query = self.db.BuildQuery(period, startdate, enddate,
+                                            "ch.changed_on",
+                                            fields_ch, tables_ch, filters_ch,
+                                            evol)
+        issues_query = self.db.BuildQuery(period, startdate, enddate,
+                                            "i.submitted_on",
+                                            fields_i, tables_i, filters_i,
+                                            evol)
+
+        tables_query = "(" + comments_query + ") union (" + changes_query + ") union (" + issues_query + ")"
+        tables.add("(" + tables_query + ") t")
+        tables.union_update(self.db.GetSQLReportFrom(self.filters.type_analysis))
+        filters.union_update(self.db.GetSQLReportWhere(self.filters.type_analysis))
+
+        query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
+                                   self.filters.enddate, "t.submitted_on",
+                                   fields, tables, filters, evolutionary)
+        return query
+ 
 
 class PatchesWaitingForReviewer(Metrics):
     id = "WaitingForReviewer"
