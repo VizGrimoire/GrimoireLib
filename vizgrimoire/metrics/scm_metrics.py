@@ -113,8 +113,7 @@ class NewAuthors(Metrics):
                                tables, filters, evolutionary, self.filters.type_analysis)
         if islist:
             q += " GROUP BY t.upeople_id "
-
-        if not evolutionary: q += " ORDER BY t.date DESC"
+            if not evolutionary: q += " ORDER BY t.date DESC"
 
         return q
 
