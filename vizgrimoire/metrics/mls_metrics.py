@@ -90,11 +90,11 @@ class EmailsSenders(Metrics):
         uniqueids_tables = self.db._get_tables_query(self.db.GetTablesOwnUniqueIds())
         uniqueids_filters = self.db._get_filters_query(self.db.GetFiltersOwnUniqueIds())
 
-        q = "SELECT up.id as id, up.identifier as senders, "+\
+        q = "SELECT up.uuid as id, up.identifier as senders, "+\
                 " COUNT(m.message_id) as sent "+\
-                " FROM "+ uniqueids_tables+ ","+self.db.identities_db+".upeople up "+ dtables + \
+                " FROM "+ uniqueids_tables+ ","+self.db.identities_db+".uidentities up "+ dtables + \
                 " WHERE "+ uniqueids_filters + " AND "+\
-                "  pup.upeople_id = up.id AND "+\
+                "  pup.uuid = up.uuid AND "+\
                 "  m.first_date >= "+startdate+" AND "+\
                 "  m.first_date < "+enddate+" AND "+\
                 "  m."+rfield+"="+ repo + " " + dfilters + \
@@ -117,12 +117,12 @@ class EmailsSenders(Metrics):
         countries_tables = self.db._get_tables_query(self.db.GetSQLCountriesFrom())
         countries_filters = self.db._get_filters_query(self.db.GetSQLCountriesWhere(country_name))
 
-        q = "SELECT up.id as id, up.identifier as senders, "+\
+        q = "SELECT up.uuid as id, up.identifier as senders, "+\
             " COUNT(DISTINCT(m.message_id)) as sent "+\
             " FROM messages m, "+ countries_tables+ \
-            "  , "+self.db.identities_db+".upeople up "+\
+            "  , "+self.db.identities_db+".uidentities up "+\
             " WHERE "+ countries_filters + " AND "+\
-            "  up.id = upc.upeople_id AND "+\
+            "  up.uuid = upc.uuid AND "+\
             "  m.first_date >= "+startdate+" AND "+\
             "  m.first_date < "+enddate+\
             " GROUP BY up.identifier "+\
@@ -143,12 +143,12 @@ class EmailsSenders(Metrics):
         companies_tables = self.db._get_tables_query(self.db.GetSQLCompaniesFrom())
         companies_filters = self.db._get_filters_query(self.db.GetSQLCompaniesWhere(company_name))
 
-        q = "SELECT up.id as id, up.identifier as senders, "+\
+        q = "SELECT up.uuid as id, up.identifier as senders, "+\
             " COUNT(DISTINCT(m.message_id)) as sent "+\
-            " FROM messages m, "+self.db.identities_db+".upeople up , "+\
+            " FROM messages m, "+self.db.identities_db+".uidentities up , "+\
              companies_tables +\
             " WHERE "+ companies_filters  +" AND "+\
-            "  up.id = upc.upeople_id AND "+\
+            "  up.uuid = upc.uuid AND "+\
             "  m.first_date >= "+startdate+" AND "+\
             "  m.first_date < "+enddate+\
             " GROUP BY up.identifier "+\
@@ -169,9 +169,9 @@ class EmailsSenders(Metrics):
         q = "SELECT up.identifier as senders, "+\
             " COUNT(DISTINCT(m.message_id)) as sent "+\
             " FROM messages m, "+ domains_tables +\
-            " , "+self.db.identities_db+".upeople up "+\
+            " , "+self.db.identities_db+".uidentities up "+\
             " WHERE "+ domains_filters + " AND "+\
-            "  up.id = upd.upeople_id AND "+\
+            "  up.uuid = upd.uuid AND "+\
             "  m.first_date >= "+startdate+" AND "+\
             "  m.first_date < "+enddate+\
             " GROUP BY up.identifier "+\
@@ -198,12 +198,12 @@ class EmailsSenders(Metrics):
             dtables = ", (SELECT MAX(first_date) as last_date from messages) t"
             dfilters = " AND DATEDIFF (last_date, first_date) < %s " % (days)
 
-        q = "SELECT up.id as id, up.identifier as senders, "+\
+        q = "SELECT up.uuid as id, up.identifier as senders, "+\
                 "COUNT(distinct(m.message_id)) as sent "+\
                 "FROM "+ tables + dtables +\
-                " ,"+self.db.identities_db+".upeople up "+\
+                " ,"+self.db.identities_db+".uidentities up "+\
                 "WHERE "+ filter_bots + filters + " AND "+\
-                "  pup.upeople_id = up.id AND "+\
+                "  pup.uuid = up.uuid AND "+\
                 "  m.first_date >= "+startdate+" AND "+\
                 "  m.first_date < "+enddate +\
                 dfilters+ " "+\
@@ -221,12 +221,12 @@ class EmailsSenders(Metrics):
         tables = Set([])
         filters = Set([])
 
-        fields.add("count(distinct(pup.upeople_id)) as senders")
+        fields.add("count(distinct(pup.uuid)) as senders")
         tables.add("messages m")
         tables.union_update(self.db.GetSQLReportFrom(self.filters))
         # Adding unique ids filters (just in case)
         tables.add("messages_people mp")
-        tables.add("people_upeople pup")
+        tables.add("people_uidentities pup")
         # TODO: ownuniqueids and reportwhere should be merged all in reportwhere
         filters.union_update(self.db.GetFiltersOwnUniqueIds())
         filters.union_update(self.db.GetSQLReportWhere(self.filters))
@@ -234,7 +234,7 @@ class EmailsSenders(Metrics):
         if (self.filters.type_analysis and self.filters.type_analysis[0] in ("repository", "project")):
             #Adding people_upeople table
             tables.add("messages_people mp")
-            tables.add("people_upeople pup")
+            tables.add("people_uidentities pup")
             filters.add("m.message_ID = mp.message_id")
             filters.add("mp.email_address = pup.people_id")
             filters.add("mp.type_of_recipient = \'From\'")
@@ -282,18 +282,18 @@ class SendersResponse(Metrics):
         tables = Set([])
         filters = Set([])
 
-        fields.add("count(distinct(pup.upeople_id)) as senders_response")
+        fields.add("count(distinct(pup.uuid)) as senders_response")
         tables.add("messages m")
         tables.union_update(self.db.GetSQLReportFrom(self.filters))
         tables.add("messages_people mp")
-        tables.add("people_upeople pup")
+        tables.add("people_uidentities pup")
         filters.union_update(self.db.GetFiltersOwnUniqueIds())
         filters.union_update(self.db.GetSQLReportWhere(self.filters))
 
         if (self.filters.type_analysis and self.filters.type_analysis[0] in ("repository", "project")):
             #Adding people_upeople table
             tables.add("messages_people mp")
-            tables.add("people_upeople pup")
+            tables.add("people_uidentities pup")
             filters.add("m.message_ID = mp.message_id")
             filters.add("mp.email_address = pup.people_id")
             filters.add("mp.type_of_recipient = \'From\'")
@@ -368,12 +368,12 @@ class SendersInit(Metrics):
         tables = Set([])
         filters = Set([])
 
-        fields.add("count(distinct(pup.upeople_id)) as senders_init")
+        fields.add("count(distinct(pup.uuid)) as senders_init")
         tables.add("messages m")
         tables.union_update(self.db.GetSQLReportFrom(self.filters))
 
         tables.add("messages_people mp")
-        tables.add("people_upeople pup")
+        tables.add("people_uidentities pup")
         filters.union_update(self.db.GetFiltersOwnUniqueIds())
 
         filters.union_update(self.db.GetSQLReportWhere(self.filters))
@@ -381,7 +381,7 @@ class SendersInit(Metrics):
         if (self.filters.type_analysis and self.filters.type_analysis[0] in ("repository", "project")):
             #Adding people_upeople table
             tables.add("messages_people mp")
-            tables.add("people_upeople pup")
+            tables.add("people_uidentities pup")
             filters.add("m.message_ID = mp.message_id")
             filters.add("mp.email_address = pup.people_id")
             filters.add("mp.type_of_recipient = \'From\'")

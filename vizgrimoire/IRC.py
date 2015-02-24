@@ -181,15 +181,15 @@ class IRC(DataSource):
         return people
 
     @staticmethod
-    def get_person_evol(upeople_id, period, startdate, enddate, identities_db, type_analysis):
-        evol = GetEvolPeopleIRC(upeople_id, period, startdate, enddate)
+    def get_person_evol(uuid, period, startdate, enddate, identities_db, type_analysis):
+        evol = GetEvolPeopleIRC(uuid, period, startdate, enddate)
         evol = completePeriodIds(evol, period, startdate, enddate)
         return evol
 
 
     @staticmethod
-    def get_person_agg(upeople_id, startdate, enddate, identities_db, type_analysis):
-        return GetStaticPeopleIRC(upeople_id, startdate, enddate)
+    def get_person_agg(uuid, startdate, enddate, identities_db, type_analysis):
+        return GetStaticPeopleIRC(uuid, startdate, enddate)
 
     @staticmethod
     def create_r_reports(vizr, enddate, destdir):
@@ -249,7 +249,7 @@ def GetIRCSQLRepositoriesWhere(repository):
 
 def GetIRCSQLCompaniesFrom (i_db):
     # tables necessary to companies analysis
-    return(" , people_upeople pup, "+\
+    return(" , people_uidentities pup, "+\
                    i_db+"companies c, "+\
                    i_db+".upeople_companies upc")
 
@@ -257,7 +257,7 @@ def GetIRCSQLCompaniesFrom (i_db):
 def GetIRCSQLCompaniesWhere(name):
     # filters necessary to companies analysis
     return(" i.nick = pup.people_id and "+\
-           "pup.upeople_id = upc.upeople_id and "+\
+           "pup.uuid = upc.uuid and "+\
            "upc.company_id = c.id and "+\
            "i.submitted_on >= upc.init and "+\
            "i.submitted_on < upc.end and "+\
@@ -266,7 +266,7 @@ def GetIRCSQLCompaniesWhere(name):
 
 def GetIRCSQLCountriesFrom (i_db):
     # tables necessary to countries analysis
-    return(" , people_upeople pup, "+\
+    return(" , people_uidentities pup, "+\
            i_db+".countries c, "+\
            i_db+".upeople_countries upc")
 
@@ -274,25 +274,25 @@ def GetIRCSQLCountriesFrom (i_db):
 def GetIRCSQLCountriesWhere(name):
     # filters necessary to countries analysis
     return(" i.nick = pup.people_id and "+\
-           "pup.upeople_id = upc.upeople_id and "+\
+           "pup.uuid = upc.uuid and "+\
            "upc.country_id = c.id and "+\
            "c.name = " + name)
 
 def GetIRCSQLDomainsFrom (i_db):
     # tables necessary to domains analysis
-    return(" , people_upeople pup, "+\
+    return(" , people_uidentities pup, "+\
            i_db+".domains d, "+\
            i_db+".upeople_domains upd")
 
 def GetIRCSQLDomainsWhere (name):
     # filters necessary to domains analysis
     return(" i.nick = pup.people_id and "+\
-           "pup.upeople_id = upd.upeople_id and "+\
+           "pup.uuid = upd.uuid and "+\
            "upd.domain_id = d.id and "+\
            "d.name = " + name)
 
 def GetTablesOwnUniqueIdsIRC () :
-    tables = 'irclog, people_upeople pup'
+    tables = 'irclog, people_uidentities pup'
     return (tables)
 
 def GetFiltersOwnUniqueIdsIRC () :
@@ -357,7 +357,7 @@ def GetFiltersReposIRC () :
 # PEOPLE
 #########
 def GetListPeopleIRC (startdate, enddate) :
-    fields = "DISTINCT(pup.upeople_id) as id, count(irclog.id) total"
+    fields = "DISTINCT(pup.uuid) as id, count(irclog.id) total"
     tables = GetTablesOwnUniqueIdsIRC()
     filters = GetFiltersOwnUniqueIdsIRC()
     filters += " AND irclog.type='COMMENT' "
@@ -368,7 +368,7 @@ def GetListPeopleIRC (startdate, enddate) :
 def GetQueryPeopleIRC (developer_id, period, startdate, enddate, evol):
     fields = "COUNT(irclog.id) AS sent"
     tables = GetTablesOwnUniqueIdsIRC()
-    filters = GetFiltersOwnUniqueIdsIRC() + " AND pup.upeople_id = " + str(developer_id)
+    filters = GetFiltersOwnUniqueIdsIRC() + " AND pup.uuid = " + str(developer_id)
     filters += " AND irclog.type='COMMENT'"
 
     if (evol) :
@@ -393,7 +393,7 @@ def GetStaticPeopleIRC (developer_id, startdate, enddate) :
 
 def GetPeopleIRC():
     # Returns the ids of the IRC participants
-    q = "SELECT DISTINCT(upeople_id) AS members FROM people_upeople"
+    q = "SELECT DISTINCT(uuid) AS members FROM people_upeople"
     data = ExecuteQuery(q)
     return(data['members'])    
 

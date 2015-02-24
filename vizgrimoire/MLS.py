@@ -320,14 +320,14 @@ class MLS(DataSource):
         return people
 
     @staticmethod
-    def get_person_evol(upeople_id, period, startdate, enddate, identities_db, type_analysis):
-        evol = GetEvolPeopleMLS(upeople_id, period, startdate, enddate)
+    def get_person_evol(uuid, period, startdate, enddate, identities_db, type_analysis):
+        evol = GetEvolPeopleMLS(uuid, period, startdate, enddate)
         evol = completePeriodIds(evol, period, startdate, enddate)
         return evol
 
     @staticmethod
-    def get_person_agg(upeople_id, startdate, enddate, identities_db, type_analysis):
-        return GetStaticPeopleMLS(upeople_id, startdate, enddate)
+    def get_person_agg(uuid, startdate, enddate, identities_db, type_analysis):
+        return GetStaticPeopleMLS(uuid, startdate, enddate)
 
     @staticmethod
     def create_r_reports(vizr, enddate, destdir):
@@ -384,7 +384,7 @@ def GetMLSSQLCompaniesFrom (i_db):
     # fields necessary for the companies analysis
 
     return(" , messages_people mp, "+\
-                   "people_upeople pup, "+\
+                   "people_uidentities pup, "+\
                    i_db+".companies c, "+\
                    i_db+".upeople_companies upc")
 
@@ -394,7 +394,7 @@ def GetMLSSQLCompaniesWhere (name):
     return(" m.message_ID = mp.message_id and "+\
                "mp.email_address = pup.people_id and "+\
                "mp.type_of_recipient=\'From\' and "+\
-               "pup.upeople_id = upc.upeople_id and "+\
+               "pup.uuid = upc.uuid and "+\
                "upc.company_id = c.id and "+\
                "m.first_date >= upc.init and "+\
                "m.first_date < upc.end and "+\
@@ -404,7 +404,7 @@ def GetMLSSQLCompaniesWhere (name):
 def GetMLSSQLCountriesFrom (i_db):
     # fields necessary for the countries analysis
     return(" , messages_people mp, "+\
-               "people_upeople pup, "+\
+               "people_uidentities pup, "+\
                i_db+".countries c, "+\
                i_db+".upeople_countries upc ")
 
@@ -415,13 +415,13 @@ def GetMLSSQLCountriesWhere (name):
     return(" m.message_ID = mp.message_id and "+\
                "mp.email_address = pup.people_id and "+\
                "mp.type_of_recipient=\'From\' and "+\
-               "pup.upeople_id = upc.upeople_id and "+\
+               "pup.uuid = upc.uuid and "+\
                "upc.country_id = c.id and "+\
                "c.name="+name)
 
 def GetMLSSQLDomainsFrom (i_db) :
     return (" , messages_people mp, "+\
-               "people_upeople pup, "+\
+               "people_uidentities pup, "+\
               i_db+".domains d, "+\
               i_db+".upeople_domains upd")
 
@@ -430,7 +430,7 @@ def GetMLSSQLDomainsWhere (name) :
     return (" m.message_ID = mp.message_id and "+\
                 "mp.email_address = pup.people_id and "+\
                 "mp.type_of_recipient=\'From\' and "+\
-                "pup.upeople_id = upd.upeople_id AND "+\
+                "pup.uuid = upd.uuid AND "+\
                 "upd.domain_id = d.id AND "+\
                 "m.first_date >= upd.init AND "+\
                 "m.first_date < upd.end and "+\
@@ -566,7 +566,7 @@ def AggEmailsSent (period, startdate, enddate, identities_db, type_analysis = []
 ########################
 
 def GetTablesOwnUniqueIdsMLS () :
-    return ('messages m, messages_people mp, people_upeople pup')
+    return ('messages m, messages_people mp, people_uidentities pup')
 
 
 # Using senders only here!
@@ -587,7 +587,7 @@ def GetFiltersResponse () :
     return filters_response
 
 def GetListPeopleMLS (startdate, enddate) :
-    fields = "DISTINCT(pup.upeople_id) as id, count(m.message_ID) total"
+    fields = "DISTINCT(pup.uuid) as id, count(m.message_ID) total"
     tables = GetTablesOwnUniqueIdsMLS()
     filters = GetFiltersOwnUniqueIdsMLS()
     filters += " GROUP BY id ORDER BY total desc"
@@ -599,7 +599,7 @@ def GetListPeopleMLS (startdate, enddate) :
 def GetQueryPeopleMLS (developer_id, period, startdate, enddate, evol) :
     fields = "COUNT(m.message_ID) AS sent"
     tables = GetTablesOwnUniqueIdsMLS()
-    filters = GetFiltersOwnUniqueIdsMLS() + "AND pup.upeople_id = " + str(developer_id)
+    filters = GetFiltersOwnUniqueIdsMLS() + "AND pup.uuid = '" + str(developer_id) + "'"
 
     if (evol) :
         q = GetSQLPeriod(period,'first_date', fields, tables, filters,

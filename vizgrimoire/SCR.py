@@ -386,14 +386,14 @@ class SCR(DataSource):
         return people
 
     @staticmethod
-    def get_person_evol(upeople_id, period, startdate, enddate, identities_db, type_analysis):
-        evol = GetPeopleEvolSCR(upeople_id, period, startdate, enddate)
+    def get_person_evol(uuid, period, startdate, enddate, identities_db, type_analysis):
+        evol = GetPeopleEvolSCR(uuid, period, startdate, enddate)
         evol = completePeriodIds(evol, period, startdate, enddate)
         return evol
 
     @staticmethod
-    def get_person_agg(upeople_id, startdate, enddate, identities_db, type_analysis):
-        return GetPeopleStaticSCR(upeople_id, startdate, enddate)
+    def get_person_agg(uuid, startdate, enddate, identities_db, type_analysis):
+        return GetPeopleStaticSCR(uuid, startdate, enddate)
 
     @staticmethod
     def create_r_reports(vizr, enddate, destdir):
@@ -457,7 +457,7 @@ def GetSQLProjectWhereSCR (project, identities_db):
 
 def GetSQLCompaniesFromSCR (identities_db):
     #tables necessaries for companies
-    return (" , people_upeople pup,"+\
+    return (" , people_uidentities pup,"+\
             identities_db+".upeople_companies upc,"+\
             identities_db+".companies c")
 
@@ -465,7 +465,7 @@ def GetSQLCompaniesFromSCR (identities_db):
 def GetSQLCompaniesWhereSCR (company):
     #fields necessaries to match info among tables
     filters = "and i.submitted_by = pup.people_id "+\
-              "and pup.upeople_id = upc.upeople_id "+\
+              "and pup.uuid = upc.uuid "+\
               "and i.submitted_on >= upc.init "+\
               "and i.submitted_on < upc.end "+\
               "and upc.company_id = c.id "
@@ -474,7 +474,7 @@ def GetSQLCompaniesWhereSCR (company):
 
 def GetSQLCountriesFromSCR (identities_db):
     #tables necessaries for companies
-    return (" , people_upeople pup, "+\
+    return (" , people_uidentities pup, "+\
               identities_db+".upeople_countries upc, "+\
               identities_db+".countries c ")
 
@@ -482,7 +482,7 @@ def GetSQLCountriesFromSCR (identities_db):
 def GetSQLCountriesWhereSCR (country):
     #fields necessaries to match info among tables
     return ("and i.submitted_by = pup.people_id "+\
-              "and pup.upeople_id = upc.upeople_id "+\
+              "and pup.uuid = upc.uuid "+\
               "and upc.country_id = c.id "+\
               "and c.name ='"+country+"'")
 
@@ -590,8 +590,8 @@ def GetLongestReviews  (startdate, enddate, identities_db, type_analysis = []):
 # PEOPLE: Pretty similar to ITS
 #########
 def GetTablesOwnUniqueIdsSCR (table=''):
-    tables = 'changes c, people_upeople pup'
-    if (table == "issues"): tables = 'issues i, people_upeople pup'
+    tables = 'changes c, people_uidentities pup'
+    if (table == "issues"): tables = 'issues i, people_uidentities pup'
     return (tables)
 
 
@@ -607,7 +607,7 @@ def GetPeopleListSCR (startdate, enddate, bots):
     for bot in bots:
         filter_bots += " name<>'"+bot+"' and "
 
-    fields = "DISTINCT(pup.upeople_id) as id, count(i.id) as total, name"
+    fields = "DISTINCT(pup.uuid) as id, count(i.id) as total, name"
     tables = GetTablesOwnUniqueIdsSCR('issues') + ", people"
     filters = filter_bots
     filters += GetFiltersOwnUniqueIdsSCR('issues')+ " and people.id = pup.people_id"
@@ -618,7 +618,7 @@ def GetPeopleListSCR (startdate, enddate, bots):
 def GetPeopleQuerySCRChanges (developer_id, period, startdate, enddate, evol):
     fields = "COUNT(c.id) AS changes"
     tables = GetTablesOwnUniqueIdsSCR()
-    filters = GetFiltersOwnUniqueIdsSCR()+ " AND pup.upeople_id = "+ str(developer_id)
+    filters = GetFiltersOwnUniqueIdsSCR()+ " AND pup.uuid = '"+ str(developer_id) + "'"
 
     if (evol):
         q = GetSQLPeriod(period,'changed_on', fields, tables, filters,
@@ -634,7 +634,7 @@ def GetPeopleQuerySCRChanges (developer_id, period, startdate, enddate, evol):
 def GetPeopleQuerySCR (developer_id, period, startdate, enddate, evol):
     fields = "COUNT(c.id) AS closed"
     tables = GetTablesOwnUniqueIdsSCR()
-    filters = GetFiltersOwnUniqueIdsSCR()+ " AND pup.upeople_id = "+ str(developer_id)
+    filters = GetFiltersOwnUniqueIdsSCR()+ " AND pup.uuid = '"+ str(developer_id) + "'"
 
     if (evol):
         q = GetSQLPeriod(period,'changed_on', fields, tables, filters,
@@ -650,7 +650,7 @@ def GetPeopleQuerySCR (developer_id, period, startdate, enddate, evol):
 def GetPeopleQuerySCRSubmissions (developer_id, period, startdate, enddate, evol):
     fields = "COUNT(i.id) AS submissions"
     tables = GetTablesOwnUniqueIdsSCR('issues')
-    filters = GetFiltersOwnUniqueIdsSCR('issues')+ " AND pup.upeople_id = "+ str(developer_id)
+    filters = GetFiltersOwnUniqueIdsSCR('issues')+ " AND pup.uuid = '"+ str(developer_id) +"'"
 
     if (evol):
         q = GetSQLPeriod(period,'submitted_on', fields, tables, filters,

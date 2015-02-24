@@ -511,11 +511,11 @@ class Participants(Metrics):
         # Thus it does not make sense some filters to be applied here
         # For example the 'autoreviews'
         #tables.add("issues i")
-        tables.add("people_upeople pup")
-        tables.add(self.db.identities_db + ".upeople u")
+        tables.add("people_uidentities pup")
+        tables.add(self.db.identities_db + ".uidentities u")
 
         filters.add("t.submitted_by = pup.people_id")
-        filters.add("pup.upeople_id = u.id")
+        filters.add("pup.uuid = u.uuid")
 
         
         # Comments people
@@ -583,11 +583,11 @@ class Participants(Metrics):
         fields.add("u.identifier")
         fields.add("count(*) as events")
 
-        tables.add("people_upeople pup")
-        tables.add(self.db.identities_db + ".upeople u")
+        tables.add("people_uidentities pup")
+        tables.add(self.db.identities_db + ".uidentities u")
 
         filters.add("t.submitted_by = pup.people_id")
-        filters.add("pup.upeople_id = u.id")
+        filters.add("pup.uuid = u.uuid")
 
         # Comments people
         fields_c = Set([])
@@ -818,10 +818,10 @@ class Companies(Metrics):
         #TODO: warning -> not using GetSQLReportFrom/Where to build queries
         fields.add("count(distinct(upc.company_id)) as companies")
         tables.add("issues i")
-        tables.add("people_upeople pup")
+        tables.add("people_uidentities pup")
         tables.add(self.db.identities_db + ".upeople_companies upc")
         filters.add("i.submitted_by = pup.people_id")
-        filters.add("pup.upeople_id = upc.upeople_id")
+        filters.add("pup.uuid = upc.uuid")
 
         q = self.db.BuildQuery (self.filters.period, self.filters.startdate,
                                 self.filters.enddate, " i.submitted_on",
@@ -832,10 +832,10 @@ class Companies(Metrics):
         q = "SELECT c.id as id, c.name as name, COUNT(DISTINCT(i.id)) AS total "+\
                    "FROM  "+self.db.identities_db+".companies c, "+\
                            self.db.identities_db+".upeople_companies upc, "+\
-                    "     people_upeople pup, "+\
+                    "     people_uidentities pup, "+\
                     "     issues i "+\
                    "WHERE i.submitted_by = pup.people_id AND "+\
-                   "  upc.upeople_id = pup.upeople_id AND "+\
+                   "  upc.uuid = pup.uuid AND "+\
                    "  c.id = upc.company_id AND "+\
                    "  i.status = 'merged' AND "+\
                    "  i.submitted_on >="+  self.filters.startdate+ " AND "+\
@@ -858,10 +858,10 @@ class Countries(Metrics):
         #TODO: warning -> not using GetSQLReportFrom/Where to build queries
         fields.add("count(distinct(upc.country_id)) as countries")
         tables.add("issues i")
-        tables.add("people_upeople pup")
+        tables.add("people_uidentities pup")
         tables.add(self.db.identities_db + ".upeople_countries upc")
         filters.add("i.submitted_by = pup.people_id")
-        filters.add("pup.upeople_id = upc.upeople_id")
+        filters.add("pup.uuid = upc.uuid")
 
         q = self.db.BuildQuery (self.filters.period, self.filters.startdate,
                                 self.filters.enddate, " i.submitted_on",
@@ -872,10 +872,10 @@ class Countries(Metrics):
         q = "SELECT c.name as name, COUNT(DISTINCT(i.id)) AS issues "+\
                "FROM  "+self.db.identities_db+".countries c, "+\
                        self.db.identities_db+".upeople_countries upc, "+\
-                "    people_upeople pup, "+\
+                "    people_uidentities pup, "+\
                 "    issues i "+\
                "WHERE i.submitted_by = pup.people_id AND "+\
-               "  upc.upeople_id = pup.upeople_id AND "+\
+               "  upc.uuid = pup.uuid AND "+\
                "  c.id = upc.country_id AND "+\
                "  i.status = 'merged' AND "+\
                "  i.submitted_on >="+  self.filters.startdate+ " AND "+\
@@ -1019,12 +1019,12 @@ class Reviewers(Metrics):
             self.db.ExecuteQuery(q)
             date_limit = " AND DATEDIFF(@maxdate, changed_on)<" + str(days)
 
-        q = "SELECT up.id as id, up.identifier as reviewers, "+\
+        q = "SELECT up.uuid as id, up.identifier as reviewers, "+\
             "               count(distinct(c.id)) as reviewed "+\
-            "        FROM people_upeople pup, changes c, "+ self.db.identities_db+".upeople up "+\
+            "        FROM people_uidentities pup, changes c, "+ self.db.identities_db+".uidentities up "+\
             "        WHERE "+ filter_bots+ " "+\
             "            c.changed_by = pup.people_id and "+\
-            "            pup.upeople_id = up.id and "+\
+            "            pup.uuid = up.uuid and "+\
             "            c.changed_on >= "+ startdate + " and "+\
             "            c.changed_on < "+ enddate + " "+\
             "            "+ date_limit + " "+\
@@ -1050,7 +1050,7 @@ class Reviewers(Metrics):
 
         #Specific case for the basic option where people_upeople table is needed
         #and not taken into account in the initial part of the query
-        tables.add("people_upeople pup")
+        tables.add("people_uidentities pup")
         filters.add("ch.changed_by  = pup.people_id")
 
         q = self.db.BuildQuery (self.filters.period, self.filters.startdate,
@@ -1095,7 +1095,7 @@ class ActiveCoreReviewers(Metrics):
 
         #Specific case for the basic option where people_upeople table is needed
         #and not taken into account in the initial part of the query
-        tables.add("people_upeople pup")
+        tables.add("people_uidentities pup")
         filters.add("ch.changed_by  = pup.people_id")
         filters.add("(ch.new_value = -2 or ch.new_value = 2)")
         filters.add("field = 'Code-Review'")
@@ -1112,7 +1112,7 @@ class ActiveCoreReviewers(Metrics):
         tables = Set([])
         filters = Set([])
 
-        fields.add("up.id as id")
+        fields.add("up.uuid as id")
         fields.add("up.identifier as identifier")
         fields.add("count(distinct(ch.id)) as reviews")
 
@@ -1130,10 +1130,10 @@ class ActiveCoreReviewers(Metrics):
 
         #Specific case for the basic option where people_upeople table is needed
         #and not taken into account in the initial part of the query
-        tables.add(self.db.identities_db + ".upeople up")
-        tables.add("people_upeople pup")
+        tables.add(self.db.identities_db + ".uidentities up")
+        tables.add("people_uidentities pup")
         filters.add("ch.changed_by  = pup.people_id")
-        filters.add("pup.upeople_id = up.id")
+        filters.add("pup.uuid = up.id")
         filters.add("(ch.new_value = -2 or ch.new_value = 2)")
         filters.add("field = 'Code-Review'")
         #dates
@@ -1180,12 +1180,12 @@ class Closers(Metrics):
         rol = "mergers"
         action = "merged"
 
-        q = "SELECT up.id as id, up.identifier as "+rol+", "+\
+        q = "SELECT up.uuid as id, up.identifier as "+rol+", "+\
             "            count(distinct(i.id)) as "+action+" "+\
-            "        FROM people_upeople pup, issues i, "+self.db.identities_db+".upeople up "+\
+            "        FROM people_uidentities pup, issues i, "+self.db.identities_db+".uidentities up "+\
             "        WHERE "+ filter_bots+ " "+\
             "            i.submitted_by = pup.people_id and "+\
-            "            pup.upeople_id = up.id and "+\
+            "            pup.uuid = up.uuid and "+\
             "            i.submitted_on >= "+ startdate+ " and "+\
             "            i.submitted_on < "+ enddate+ " "+\
             "            "+date_limit+ merged_sql+ " "+\
@@ -1219,8 +1219,8 @@ class Submitters(Metrics):
         tables = Set([])
         filters = Set([])
 
-        fields.add("count(distinct(upeople_id)) as submitters")
-        tables.add("people_upeople pup")
+        fields.add("count(distinct(uuid)) as submitters")
+        tables.add("people_uidentities pup")
         tables.add("(%s) tpeople" % (tpeople_sql))
         filters.add("tpeople.submitted_by = pup.people_id")
 
@@ -1236,14 +1236,14 @@ class Submitters(Metrics):
         tables = Set([])
         filters = Set([])
 
-        fields.add("count(distinct(pup.upeople_id)) as submitters")
+        fields.add("count(distinct(pup.uuid)) as submitters")
         tables.add("issues i")
         tables.union_update(self.db.GetSQLReportFrom(self.filters.type_analysis))
         filters.union_update(self.db.GetSQLReportWhere(self.filters.type_analysis))
 
         #Specific case for the basic option where people_upeople table is needed
         #and not taken into account in the initial part of the query
-        tables.add("people_upeople pup")
+        tables.add("people_uidentities pup")
         filters.add("i.submitted_by = pup.people_id")
 
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
@@ -1276,12 +1276,12 @@ class Submitters(Metrics):
             self.db.ExecuteQuery(q)
             date_limit = " AND DATEDIFF(@maxdate, submitted_on)<"+str(days)
 
-        q = "SELECT up.id as id, up.identifier as "+rol+", "+\
+        q = "SELECT up.uuid as id, up.identifier as "+rol+", "+\
             "            count(distinct(i.id)) as "+action+" "+\
-            "        FROM people_upeople pup, issues i, "+self.db.identities_db+".upeople up "+\
+            "        FROM people_uidentities pup, issues i, "+self.db.identities_db+".uidentities up "+\
             "        WHERE "+ filter_bots+ " "+\
             "            i.submitted_by = pup.people_id and "+\
-            "            pup.upeople_id = up.id and "+\
+            "            pup.uuid = up.uuid and "+\
             "            i.submitted_on >= "+ startdate+ " and "+\
             "            i.submitted_on < "+ enddate+ " "+\
             "            "+date_limit +  " "+\

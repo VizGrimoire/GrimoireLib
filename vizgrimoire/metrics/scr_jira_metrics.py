@@ -100,10 +100,10 @@ class Submitters(Metrics):
         tables = Set([])
         filters = Set([])
 
-        fields.add("count(distinct(pup.upeople_id)) as submitters")
+        fields.add("count(distinct(pup.uuid)) as submitters")
 
         tables.add("issues i")
-        tables.add("people_upeople pup")
+        tables.add("people_uidentities pup")
         tables.union_update(self.db.GetSQLReportFrom(self.filters.type_analysis))
 
         filters.union_update(self.db.GetSQLReportWhere(self.filters.type_analysis, "issues"))

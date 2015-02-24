@@ -19,6 +19,6 @@
 
 from vizgrimoire.GrimoireSQL import ExecuteQuery
 
-def GetPersonIdentifiers (identities_db, upeople_id):
-    q = "select name from "+identities_db+".identities where uuid='"+str(upeople_id)+"'"
+def GetPersonIdentifiers (identities_db, uuid):
+    q = "select name from "+identities_db+".identities where uuid='"+str(uuid)+"'"
     return (ExecuteQuery(q))

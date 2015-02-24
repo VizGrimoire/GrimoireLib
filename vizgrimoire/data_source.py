@@ -203,25 +203,25 @@ class DataSource(object):
         """Get top people data"""
         raise NotImplementedError
 
-    def get_person_evol_file(self, upeople_id):
+    def get_person_evol_file(self, uuid):
         """Get the filename used to store evolutionary data for a person activity"""
         ds = self.get_name()
-        name = "people-"+str(upeople_id)+"-"+ds+"-evolutionary.json"
+        name = "people-"+str(uuid)+"-"+ds+"-evolutionary.json"
         return name
 
     @staticmethod
-    def get_person_evol(upeople_id, period, startdate, enddate, identities_db, type_analysis):
+    def get_person_evol(uuid, period, startdate, enddate, identities_db, type_analysis):
         """Get the evolutionary data for a person activity"""
         raise NotImplementedError
 
-    def get_person_agg_file(self, upeople_id):
+    def get_person_agg_file(self, uuid):
         """Get the filename used to store aggregated data for a person activity"""
         ds = self.get_name()
-        name = "people-"+str(upeople_id)+"-"+ds+"-static.json"
+        name = "people-"+str(uuid)+"-"+ds+"-static.json"
         return name
 
     @staticmethod
-    def get_person_agg(upeople_id, startdate, enddate, identities_db, type_analysis):
+    def get_person_agg(uuid, startdate, enddate, identities_db, type_analysis):
         """Get aggregated data for a person activity"""
         raise NotImplementedError
 
@@ -232,15 +232,15 @@ class DataSource(object):
         if people is None: return
         createJSON(people, fpeople)
 
-        for upeople_id in people :
-            evol_data = self.get_person_evol(upeople_id, period, startdate, enddate,
+        for uuid in people :
+            evol_data = self.get_person_evol(uuid, period, startdate, enddate,
                                             identities_db, type_analysis = None)
-            fperson = os.path.join(destdir,self.get_person_evol_file(upeople_id))
+            fperson = os.path.join(destdir,self.get_person_evol_file(uuid))
             createJSON (evol_data, fperson)
 
-            agg = self.get_person_agg(upeople_id, startdate, enddate,
+            agg = self.get_person_agg(uuid, startdate, enddate,
                                      identities_db, type_analysis = None)
-            fperson = os.path.join(destdir,self.get_person_agg_file(upeople_id))
+            fperson = os.path.join(destdir,self.get_person_agg_file(uuid))
             createJSON (agg, fperson)
 
     @staticmethod

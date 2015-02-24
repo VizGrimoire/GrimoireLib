@@ -408,12 +408,12 @@ class Reviewers(Metrics):
             self.db.ExecuteQuery(q)
             date_limit = " AND DATEDIFF(@maxdate, updated_at)<" + str(days)
 
-        q = "SELECT up.id as id, up.identifier as reviewers, "+\
+        q = "SELECT up.uuid as id, up.identifier as reviewers, "+\
             "               count(distinct(pr.id)) as reviewed "+\
-            "        FROM people_upeople pup, pull_requests pr, "+ self.db.identities_db+".upeople up "+\
+            "        FROM people_uidentities pup, pull_requests pr, "+ self.db.identities_db+".uidentities up "+\
             "        WHERE "+ filter_bots+ " "+\
             "            pr.assignee_id = pup.people_id and "+\
-            "            pup.upeople_id = up.id and "+\
+            "            pup.uuid = up.uuid and "+\
             "            pr.updated_at >= "+ startdate + " and "+\
             "            pr.updated_at < "+ enddate + " "+\
             "            "+ date_limit + " "+\
@@ -435,7 +435,7 @@ class Reviewers(Metrics):
         tables.union_update(self.db.GetSQLReportFrom(self.filters.type_analysis))
         filters.union_update(self.db.GetSQLReportWhere(self.filters.type_analysis))
 
-        tables.add("people_upeople pup")
+        tables.add("people_uidentities pup")
         filters.add("pr.assignee_id  = pup.people_id")
 
         q = self.db.BuildQuery (self.filters.period, self.filters.startdate,
@@ -473,12 +473,12 @@ class Closers(Metrics):
         rol = "mergers"
         action = "merged"
 
-        q = "SELECT up.id as id, up.identifier as "+rol+", "+\
+        q = "SELECT up.uuid as id, up.identifier as "+rol+", "+\
             "            count(distinct(pr.id)) as "+action+" "+\
-            "        FROM people_upeople pup, pull_requests pr, "+self.db.identities_db+".upeople up "+\
+            "        FROM people_uidentities pup, pull_requests pr, "+self.db.identities_db+".uidentities up "+\
             "        WHERE "+ filter_bots+ " "+\
             "            pr.user_id = pup.people_id and "+\
-            "            pup.upeople_id = up.id and "+\
+            "            pup.uuid = up.uuid and "+\
             "            pr.created_at >= "+ startdate+ " and "+\
             "            pr.created_at < "+ enddate+ " "+\
             "            "+date_limit+ merged_sql+ " "+\
@@ -494,14 +494,14 @@ class Closers(Metrics):
         tables = Set([])
         filters = Set([])
 
-        fields.add("count(distinct(pup.upeople_id)) as closers")
+        fields.add("count(distinct(pup.uuid)) as closers")
         tables.add("pull_requests pr")
         tables.union_update(self.db.GetSQLReportFrom(self.filters.type_analysis))
         filters.union_update(self.db.GetSQLReportWhere(self.filters.type_analysis))
 
         #Specific case for the basic option where people_upeople table is needed
         #and not taken into account in the initial part of the query
-        tables.add("people_upeople pup")
+        tables.add("people_uidentities pup")
         filters.add("pr.user_id = pup.people_id")
         filters.add("closed_at IS NOT NULL")
 
@@ -531,8 +531,8 @@ class Submitters(Metrics):
         tables = Set([])
         filters = Set([])
 
-        fields.add("count(distinct(upeople_id)) as submitters")
-        tables.add("people_upeople pup")
+        fields.add("count(distinct(uuid)) as submitters")
+        tables.add("people_uidentities pup")
         tables.add("(%s) tpeople" % (tpeople_sql))
         filters.add("tpeople.submitted_by = pup.people_id")
 
@@ -548,14 +548,14 @@ class Submitters(Metrics):
         tables = Set([])
         filters = Set([])
 
-        fields.add("count(distinct(pup.upeople_id)) as submitters")
+        fields.add("count(distinct(pup.uuid)) as submitters")
         tables.add("pull_requests pr")
         tables.union_update(self.db.GetSQLReportFrom(self.filters.type_analysis))
         filters.union_update(self.db.GetSQLReportWhere(self.filters.type_analysis))
 
         #Specific case for the basic option where people_upeople table is needed
         #and not taken into account in the initial part of the query
-        tables.add("people_upeople pup")
+        tables.add("people_uidentities pup")
         filters.add("pr.user_id = pup.people_id")
 
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
@@ -589,12 +589,12 @@ class Submitters(Metrics):
             self.db.ExecuteQuery(q)
             date_limit = " AND DATEDIFF(@maxdate, created_at)<"+str(days)
 
-        q = "SELECT up.id as id, up.identifier as "+rol+", "+\
+        q = "SELECT up.uuid as id, up.identifier as "+rol+", "+\
             "            count(distinct(pr.id)) as "+action+" "+\
-            "        FROM people_upeople pup, pull_requests pr, "+self.db.identities_db+".upeople up "+\
+            "        FROM people_uidentities pup, pull_requests pr, "+self.db.identities_db+".uidentities up "+\
             "        WHERE "+ filter_bots+ " "+\
             "            pr.user_id = pup.people_id and "+\
-            "            pup.upeople_id = up.id and "+\
+            "            pup.uuid = up.uuid and "+\
             "            pr.created_at >= "+ startdate+ " and "+\
             "            pr.created_at < "+ enddate+ " "+\
             "            "+date_limit +  " "+\
@@ -621,10 +621,10 @@ class Companies(Metrics):
         #TODO: warning -> not using GetSQLReportFrom/Where to build queries
         fields.add("count(distinct(upc.company_id)) as companies")
         tables.add("pull_requests pr")
-        tables.add("people_upeople pup")
+        tables.add("people_uidentities pup")
         tables.add(self.db.identities_db + ".upeople_companies upc")
         filters.add("pr.user_id = pup.people_id")
-        filters.add("pup.upeople_id = upc.upeople_id")
+        filters.add("pup.uuid = upc.uuid")
 
         q = self.db.BuildQuery (self.filters.period, self.filters.startdate,
                                 self.filters.enddate, " pr.created_at",
@@ -635,10 +635,10 @@ class Companies(Metrics):
         q = "SELECT c.id as id, c.name as name, COUNT(DISTINCT(pr.id)) AS total "+\
                    "FROM  "+self.db.identities_db+".companies c, "+\
                            self.db.identities_db+".upeople_companies upc, "+\
-                    "     people_upeople pup, "+\
+                    "     people_uidentities pup, "+\
                     "     pull_requests pr "+\
                    "WHERE pr.user_id = pup.people_id AND "+\
-                   "  upc.upeople_id = pup.upeople_id AND "+\
+                   "  upc.uuid = pup.uuid AND "+\
                    "  c.id = upc.company_id AND "+\
                    "  pr.created_at >="+  self.filters.startdate+ " AND "+\
                    "  pr.created_at < "+ self.filters.enddate+ " "+\
@@ -661,10 +661,10 @@ class Countries(Metrics):
         #TODO: warning -> not using GetSQLReportFrom/Where to build queries
         fields.add("count(distinct(upc.country_id)) as countries")
         tables.add("pull_requests pr")
-        tables.add("people_upeople pup")
+        tables.add("people_uidentities pup")
         tables.add(self.db.identities_db + ".upeople_countries upc")
         filters.add("pr.user_id = pup.people_id")
-        filters.add("pup.upeople_id = upc.upeople_id")
+        filters.add("pup.uuid = upc.uuid")
 
         q = self.db.BuildQuery (self.filters.period, self.filters.startdate,
                                 self.filters.enddate, " pr.created_at",
@@ -675,10 +675,10 @@ class Countries(Metrics):
         q = "SELECT c.name as name, COUNT(DISTINCT(pr.id)) AS submitted "+\
                "FROM  "+self.db.identities_db+".countries c, "+\
                        self.db.identities_db+".upeople_countries upc, "+\
-                "    people_upeople pup, "+\
+                "    people_uidentities pup, "+\
                 "    pull_requests pr "+\
                "WHERE  pr.user_id = pup.people_id AND "+\
-               "  upc.upeople_id = pup.upeople_id AND "+\
+               "  upc.uuid = pup.uuid AND "+\
                "  c.id = upc.country_id AND "+\
                "  pr.created_at >="+  self.filters.startdate+ " AND "+\
                "  pr.created_at < "+ self.filters.enddate+ " "+\

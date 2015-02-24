@@ -248,7 +248,7 @@ class Participants(Metrics):
 
         # TODO: Missing use of GetSQLReportFrom/Where
         query = """
-             select pup.upeople_id as id, 
+             select pup.uuid as id, 
                     p.username as name, 
                     count(*) as messages_sent from 
               (
@@ -270,7 +270,7 @@ class Participants(Metrics):
                        people p 
                   where c.user_identifier=p.identifier)) t,
               people p,
-              people_upeople pup
+              people_uidentities pup
              where p.identifier = t.identifier and
                    p.id = pup.people_id and 
                    t.date >= %s and

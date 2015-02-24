@@ -497,7 +497,7 @@ class SCMQuery(DSQuery):
         #fields necessaries to match info among tables
         fields = Set([])
         fields.add("s.author_id = pup.people_id")
-        fields.add("up.id = pup.uuid")
+        fields.add("up.uuid = pup.uuid")
         if name is not None: fields.add("up.identifier = "+name)
 
         return fields
@@ -842,7 +842,7 @@ class ITSQuery(DSQuery):
         if table == "issues": field = "i.submitted_by"
 
         filters.add(field + " = pup.people_id")
-        filters.add("up.id = pup.uuid")
+        filters.add("up.uuid = pup.uuid")
 
         if name is not None: filters.add("up.identifier = " + name)
 
@@ -1183,7 +1183,7 @@ class MLSQuery(DSQuery):
         filters.add("m.message_ID = mp.message_id")
         filters.add("mp.email_address = pup.people_id")
         filters.add("mp.type_of_recipient = \'From\'")
-        filters.add("up.id = pup.uuid")
+        filters.add("up.uuid = pup.uuid")
 
         if name is not None: 
             filters.add("up.identifier = " + name)
@@ -1511,7 +1511,7 @@ class SCRQuery(DSQuery):
             filters.add("ch.changed_by")
 
         filters.add(field + " = pup.people_id")
-        filters.add("up.id = pup.uuid")
+        filters.add("up.uuid = pup.uuid")
 
         if name is not None: 
             filters.add("up.identifier = " + name)
@@ -1996,7 +1996,7 @@ class SCRQuery(DSQuery):
             SELECT COUNT(i.id) AS total, p.name, pup.uuid as id,
                 QUARTER(submitted_on) as quarter, YEAR(submitted_on) year
             FROM issues i, people p , people_uidentities pup, %s.uidentities up
-            WHERE %s i.submitted_by=p.id AND pup.people_id=p.id AND pup.uuid = up.id
+            WHERE %s i.submitted_by=p.id AND pup.people_id=p.id AND pup.uuid = up.uuid
                 AND status='merged'
                 AND QUARTER(submitted_on) = %s AND YEAR(submitted_on) = %s
            GROUP BY year, quarter, pup.uuid
@@ -2151,7 +2151,7 @@ class IRCQuery(DSQuery):
         # filters necessary to countries analysis
         filters = Set([])
         filters.add("i.nick = pup.people_id")
-        filters.add("pup.uuid = up.id")
+        filters.add("pup.uuid = up.uuid")
 
         return filters
 
@@ -2213,7 +2213,7 @@ class MediawikiQuery(DSQuery):
         # filters necessary to companies analysis
         filters = Set([])
 
-        filters.add("pup.uuid = up.id")
+        filters.add("pup.uuid = up.uuid")
         if name is not None:
             filters.add("pup.people_id = " + name)
 
@@ -2251,7 +2251,7 @@ class MediawikiQuery(DSQuery):
         where = Set([])
         where.add(self.get_bots_filter_sql(Mediawiki, filters))
         where.add("pup.people_id = wiki_pages_revs.user")
-        where.add("pup.uuid = up.id")
+        where.add("pup.uuid = up.uuid")
 
         type_analysis = filters.type_analysis
 

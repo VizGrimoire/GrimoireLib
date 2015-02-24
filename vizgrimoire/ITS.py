@@ -336,17 +336,17 @@ class ITS(DataSource):
         return people
 
     @classmethod
-    def get_person_evol(cls, upeople_id, period, startdate, enddate, identities_db, type_analysis):
+    def get_person_evol(cls, uuid, period, startdate, enddate, identities_db, type_analysis):
         closed_condition =  cls._get_closed_condition()
 
-        evol = GetPeopleEvolITS(upeople_id, period, startdate, enddate, closed_condition)
+        evol = GetPeopleEvolITS(uuid, period, startdate, enddate, closed_condition)
         evol = completePeriodIds(evol, period, startdate, enddate)
         return evol
 
     @classmethod
-    def get_person_agg(cls, upeople_id, startdate, enddate, identities_db, type_analysis):
+    def get_person_agg(cls, uuid, startdate, enddate, identities_db, type_analysis):
         closed_condition =  cls._get_closed_condition()
-        return GetPeopleStaticITS(upeople_id, startdate, enddate, closed_condition)
+        return GetPeopleStaticITS(uuid, startdate, enddate, closed_condition)
 
     @classmethod
     def create_r_reports(cls, vizr, enddate, destdir):
@@ -514,14 +514,14 @@ def GetITSSQLProjectsWhere (project, identities_db):
 def GetITSSQLCompaniesFrom (i_db):
     # fields necessary for the companies analysis
 
-    return(" , people_upeople pup, "+\
+    return(" , people_uidentities pup, "+\
            i_db+".companies c, "+\
            i_db+".upeople_companies upc")
 
 def GetITSSQLCompaniesWhere (name):
     # filters for the companies analysis
     filters = " i.submitted_by = pup.people_id and "+\
-           "pup.upeople_id = upc.upeople_id and "+\
+           "pup.uuid = upc.uuid and "+\
            "upc.company_id = c.id and "+\
            "i.submitted_on >= upc.init and "+\
            "i.submitted_on < upc.end"
@@ -532,14 +532,14 @@ def GetITSSQLCompaniesWhere (name):
 def GetITSSQLCountriesFrom (i_db):
     # fields necessary for the countries analysis
 
-    return(" , people_upeople pup, "+\
+    return(" , people_uidentities pup, "+\
            i_db+".countries c, "+\
            i_db+".upeople_countries upc")
 
 def GetITSSQLCountriesWhere (name):
     # filters for the countries analysis
     filters = " i.submitted_by = pup.people_id and "+\
-           "pup.upeople_id = upc.upeople_id and "+\
+           "pup.uuid = upc.uuid and "+\
            "upc.country_id = c.id "
     if name is not None:
            filters += " and c.name = "+name
@@ -549,7 +549,7 @@ def GetITSSQLCountriesWhere (name):
 def GetITSSQLDomainsFrom (i_db):
     # fields necessary for the domains analysis
 
-    return(" , people_upeople pup, "+\
+    return(" , people_uidentities pup, "+\
            i_db+".domains d, "+\
            i_db+".upeople_domains upd")
 
@@ -557,7 +557,7 @@ def GetITSSQLDomainsFrom (i_db):
 def GetITSSQLDomainsWhere (name):
     # filters for the domains analysis
     filters = " i.submitted_by = pup.people_id and "+\
-           "pup.upeople_id = upd.upeople_id and "+\
+           "pup.uuid = upd.uuid and "+\
            "upd.domain_id = d.id "
 
     if name is not None:
@@ -639,7 +639,7 @@ def GetEndDate (startdate, enddate, identities_db, type_analysis):
 
 def AggAllParticipants (startdate, enddate):
     # All participants from the whole history
-    q = "SELECT count(distinct(pup.upeople_id)) as allhistory_participants from people_upeople pup"
+    q = "SELECT count(distinct(pup.uuid)) as allhistory_participants from people_uidentities pup"
 
     return(ExecuteQuery(q))
 
@@ -660,17 +660,17 @@ def GetTopClosersByAssignee (days, startdate, enddate, identities_db, filter) :
         ExecuteQuery(sql)
         date_limit = " AND DATEDIFF(@maxdate, changed_on)<"+str(days)
 
-    q = "SELECT up.id as id, "+\
+    q = "SELECT up.uuid as id, "+\
         "       up.identifier as closers, "+\
         "       count(distinct(ill.issue_id)) as closed "+\
-        "FROM people_upeople pup,  "+\
+        "FROM people_uidentities pup,  "+\
         "     "+ identities_db+ ".upeople_companies upc, "+\
-        "     "+ identities_db+ ".upeople up,  "+\
+        "     "+ identities_db+ ".uidentities up,  "+\
         "     "+ identities_db+ ".companies com, "+\
         "     issues_log_launchpad ill  "+\
         "WHERE ill.assigned_to = pup.people_id and "+\
-        "      pup.upeople_id = up.id and  "+\
-        "      up.id = upc.upeople_id and  "+\
+        "      pup.uuid = up.uuid and  "+\
+        "      up.uuid = upc.uuid and  "+\
         "      upc.company_id = com.id and "+\
         "      "+ affiliations+ " "+\
         "      ill.date >= upc.init and "+\
@@ -690,8 +690,8 @@ def GetTopClosersByAssignee (days, startdate, enddate, identities_db, filter) :
 
 
 def GetTablesOwnUniqueIdsITS (table='') :
-    tables = 'changes c, people_upeople pup'
-    if (table == "issues"): tables = 'issues i, people_upeople pup'
+    tables = 'changes c, people_uidentities pup'
+    if (table == "issues"): tables = 'issues i, people_uidentities pup'
     return (tables)
 
 def GetFiltersOwnUniqueIdsITS (table='') :
@@ -705,7 +705,7 @@ def GetFiltersOwnUniqueIdsITS (table='') :
 #################
 
 def GetPeopleListITS (startdate, enddate) :
-    fields = "DISTINCT(pup.upeople_id) as pid, count(c.id) as total"
+    fields = "DISTINCT(pup.uuid) as pid, count(c.id) as total"
     tables = GetTablesOwnUniqueIdsITS()
     filters = GetFiltersOwnUniqueIdsITS()
     filters += " GROUP BY pid ORDER BY total desc"
@@ -718,7 +718,7 @@ def GetPeopleListITS (startdate, enddate) :
 def GetPeopleQueryITS (developer_id, period, startdate, enddate, evol,  closed_condition) :
     fields = " COUNT(distinct(c.issue_id)) AS closed"
     tables = GetTablesOwnUniqueIdsITS()
-    filters = GetFiltersOwnUniqueIdsITS() + " AND pup.upeople_id = "+ str(developer_id)
+    filters = GetFiltersOwnUniqueIdsITS() + " AND pup.uuid = '"+ str(developer_id)+"'"
     filters += " AND "+ closed_condition
 
     if (evol) :
