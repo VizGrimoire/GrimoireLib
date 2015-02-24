@@ -821,102 +821,50 @@ class Companies(Metrics):
                                tables, filters, evol, self.filters.type_analysis)
         return q
 
-    def _get_top_project(self, fbots = None, days = None):
-        startdate = self.filters.startdate
-        enddate = self.filters.enddate
-        project = self.filters.type_analysis[1]
-        limit = self.filters.npeople
+    def get_list(self, metric_filters = None, days = 0):
+        #TODO: metric_filters parameter is deprecated and should be removed
 
+        fields = Set([])
         tables = Set([])
         filters = Set([])
 
-        tables.union_update(self.db.GetSQLReportFrom(self.filters))
+        #Building parts of the query to control timeframe of study
+        if (days > 0):
+            tables.add("(SELECT MAX(date) as last_date from scmlog) dt")
+            filters.add("DATEDIFF (last_date, date) < %s " % (days))
+
+        fields.add("c.name as name")
+        fields.add("count(distinct(s.id)) as company_commits")
+
         tables.add("scmlog s")
         tables.add("people_upeople pup")
         tables.add(self.db.identities_db + ".upeople u")
         tables.add("upeople_companies upc")
         tables.add("companies c")
-
-        filters.union_update(self.db.GetSQLReportWhere(self.filters))
-
-        fields =  "SELECT COUNT(DISTINCT(s.id)) as company_commits, c.name as companies "
+        tables.union_update(self.db.GetSQLReportFrom(self.filters))
 
         filters.add("pup.people_id = s.author_id")
         filters.add("u.id = pup.upeople_id")
         filters.add("u.id = upc.upeople_id")
         filters.add("c.id = upc.company_id")
-        filters.add("s.author_date >= " + startdate)
-        filters.add("s.author_date < " + enddate)
+        filters.add("s.author_date >= " + self.filters.startdate)
+        filters.add("s.author_date < " + self.filters.enddate)
         filters.add("s.author_date >= upc.init")
         filters.add("s.author_date < upc.end")
-        if fbots is not None and fbots<>'': filters.add(fbots)
+        filters.union_update(self.db.GetSQLReportWhere(self.filters))
+        
+        query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
+                                   self.filters.enddate, " s.author_date ", fields,
+                                   tables, filters, False, self.filters.type_analysis)
 
-        tables_str = self.db._get_tables_query(tables)
-        filters_str = self.db._get_filters_query(filters)
+        #TODO: to be included as another filter
+        for company in self.filters.companies_out:
+            query = query + " and c.name <> '" + company + "' "
 
-        filters_str += " GROUP by c.name ORDER BY company_commits DESC, c.name"
-        filters_str += " limit " + str(self.filters.npeople)
+        query = query + " GROUP by c.name ORDER BY company_commits DESC, c.name"
+        query = query + " limit " + str(self.filters.npeople)
 
-        query = fields + " from " + tables_str + " where " + filters_str
-
-        return query
-
-    def _get_top(self, fbots = None):
-        if fbots is not None and fbots !='': fbots += " AND "
-        q = """
-            select c.name, count(distinct(t.s_id)) as total
-            from companies c,  (
-              select distinct(s.id) as s_id, company_id
-              from companies c, people_upeople pup, upeople_companies upc,
-                   scmlog s,  actions a
-              where c.id = upc.company_id and  upc.upeople_id = pup.upeople_id
-                and  s.author_date >= upc.init and s.author_date < upc.end
-                and pup.people_id = s.author_id
-                and s.id = a.commit_id and
-                %s s.author_date >=%s and s.author_date < %s) t
-            where c.id = t.company_id
-            group by c.name
-            order by total desc, c.name
-        """ % (fbots, self.filters.startdate, self.filters.enddate)
-        return q
-
-
-    def _get_items_out_filter_sql (self, filter_, metric_filters = None):
-        # The items_out *must* come in metric_filters
-        filter_items = ''
-        if metric_filters is None:
-            metric_filters = self.filters
-
-        if filter_ == "company":
-            items_out = metric_filters.companies_out
-            if items_out is not None:
-                for item in items_out:
-                    filter_items += " c.name<>'"+item+"' AND "
-
-        if filter_items != '': filter_items = filter_items[:-4]
-        return filter_items
-
-    def get_list(self, metric_filters = None):
-
-        if metric_filters == None:
-            metric_filters = self.filters
-
-        # Store current filter to restore it
-        metric_filters_orig = self.filters
-        items_out = self._get_items_out_filter_sql("company", metric_filters)
-
-        if metric_filters is not None and metric_filters.type_analysis is not None:
-            self.filters = metric_filters
-
-            if metric_filters.type_analysis[0] == "project":
-                q = self._get_top_project(items_out)
-
-        else:
-            q = self._get_top(items_out)
-
-        # Restore original filter for the metric
-        self.filters = metric_filters_orig
-        return self.db.ExecuteQuery(q)
+        return self.db.ExecuteQuery(query)
 
 class Countries(Metrics):
     """ Countries participating in the source code management system """
