@@ -27,7 +27,12 @@
 
 import json, os, sys, time, traceback, unittest
 import logging
-from optparse import OptionParser
+import argparse
+
+description = """
+Driver for GrimoireLib tests.
+
+"""
 
 class DataSourceTest(unittest.TestCase):
     @staticmethod
@@ -427,52 +432,31 @@ class DataSourceTest(unittest.TestCase):
                     continue
 
 def read_options():
-    parser = OptionParser(usage="usage: %prog [options]",
-                          version="%prog 0.1")
-    parser.add_option("-s", "--start",
-                      action="store",
-                      dest="startdate",
-                      default="1900-01-01",
-                      help="Start date for the report")
-    parser.add_option("-e", "--end",
-                      action="store",
-                      dest="enddate",
-                      default="2100-01-01",
-                      help="End date for the report")
-    parser.add_option("-c", "--config-file",
-                      action="store",
-                      dest="config_file",
-                      default = "automator.conf",
-                      help="Automator config file")
-    parser.add_option("--npeople",
-                      action="store",
-                      dest="npeople",
-                      default="10",
-                      help="Limit for people analysis")
-    parser.add_option("-g", "--granularity",
-                      action="store",
-                      dest="granularity",
-                      default="months",
-                      help="year,months,weeks granularity")
-    parser.add_option("-o", "--destination",
-                      action="store",
-                      dest="destdir",
-                      default="data/json",
-                      help="Destination directory for JSON files")
-    parser.add_option("-m", "--metrics",
-                  action="store",
-                  dest="metrics_path",
-                  default = "../vizgrimoire/metrics",
-                  help="Path to the metrics modules to be loaded")
-
-    (opts, args) = parser.parse_args()
-
-    if len(args) != 0:
-        parser.error("Wrong number of arguments")
-
-    if opts.config_file is None or opts.metrics_path is None:
-        parser.error("Automator config file and metrics path are needed.")
-    return opts
+    parser = argparse.ArgumentParser(description = description)
+    parser.add_argument("--start", default="1900-01-01",
+                        dest="start_date",
+                        help="Start date for the report (default: 1900-01-01)")
+    parser.add_argument("--end", default="2100-01-01",
+                        dest="end_date",
+                        help="End date for the report (default: 2100-01-01)")
+    parser.add_argument("--config-file", default="automator.conf",
+                        dest="config_file",
+                        help="Automator config file (default: automator.conf)")
+    parser.add_argument("--npeople", default="10",
+                        help="Limit for people analysis (default: 10)")
+    parser.add_argument("--granularity", default="months",
+                        help="Granularity: year | months | weeks " \
+                            + "(default: months)")
+    parser.add_argument("--destination",
+                        dest="destdir", default="data/json",
+                        help="Destination directory for JSON files " \
+                            + "(default: data/json")
+    parser.add_argument("--metrics", dest="metrics_path",
+                        default = "../vizgrimoire/metrics",
+                        help="Path to the metrics modules to be loaded " \
+                            + "(default: ../vizgrimoire/metrics)")
+    args = parser.parse_args()
+    return args
 
 def init_env():
     # env vars for R
