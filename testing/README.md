@@ -2,14 +2,34 @@
 
 For running the GrimoireLib tests, some databases have to be deployed in a MySQL instance. The dumps corresponding to these databases are in the db directory. To deploy them, you can follow a manual procedure, run a shell script or run a (slightly more flexible) Python script. See below for details.
 
-Once the databases are deployed, install R environment in root dir:
+Once the databases are deployed, install R vizgrimoire library in the directory. For that, VizGrimoireUtils should be cloned from GitHub:
+
+    git clone https://github.com/VizGrimoire/VizGrimoireUtils.git
+
+Assuming VizGrimoireUtils was cloned in the parent directory, for installing the R vizgrimoire library (in the GrimoireLib base directory), a directory for storing it and its dependencies has to be created. Then, dependencies are installed from CRAN, using the R shell. Finally, grimoirelibR is installed from source:
 
     mkdir r-lib
-    R CMD INSTALL -l r-lib vizgrimoire
+    R
+    [in the R shell]
+    install.packages("RMySQL", lib="r-lib")
+    install.packages("rjson", lib="r-lib")
+    install.packages("RColorBrewer", lib="r-lib")
+    install.packages("ggplot2", lib="r-lib")
+    install.packages("optparse", lib="r-lib")
+    install.packages("ISOweek", lib="r-lib")
+    install.packages("rgl", lib="r-lib")
+    install.packages("zoo", lib="r-lib")
+    quit()
+    [Back in the regular shell]
+    R CMD INSTALL -l r-lib ../VizGrimoireUtils/grimoirelibR
 
-Then execute in testing dir:
+It is also important to set up a Python path with the directories where rpy2 is installed (if it is not installed in the standard directories), where GrimoireLib is installed (".." from the testing directory), and where vizgrimoire is installed ("../vizgrimoire" from the testing directory):
+
+    export PYTHONPATH=/path/to/dir-with-rpy2/:..:../vizgrimoire:$PYTHONPATH
+
+Then execute in testing directory:
+
     ./test_data_source_api.py
-
 
 ## Manaul procedure for installing databases
 
