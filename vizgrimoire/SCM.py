@@ -303,8 +303,8 @@ class SCM(DataSource):
             name = items['name'][i]
             logging.info("Checking " + name + " " + str(i) + "/" + str(len(items['name'])))
             if filter_.get_name() == "people2":
-                upeople_id = items['id'][i]
-                item = upeople_id
+                uuid = items['id'][i]
+                item = uuid
             else:
                 item = name
             pos = data[id_field].index(name)
@@ -314,7 +314,7 @@ class SCM(DataSource):
 
             if not evol:
                 if filter_.get_name() == "people2":
-                    agg = SCM.get_person_agg(upeople_id, startdate, enddate,
+                    agg = SCM.get_person_agg(uuid, startdate, enddate,
                                              idb, type_analysis)
                 else:
                     agg = SCM.get_agg_data(period, startdate, enddate,
@@ -322,7 +322,7 @@ class SCM(DataSource):
                 assert agg['commits' ] == data['commits'][pos]
             else:
                 if filter_.get_name() == "people2":
-                    ts = SCM.get_person_evol(upeople_id, period,
+                    ts = SCM.get_person_evol(uuid, period,
                                              startdate, enddate, idb, type_analysis)
                 else:
                     ts = SCM.get_evolutionary_data(period, startdate, enddate,
@@ -372,14 +372,14 @@ class SCM(DataSource):
         return people
 
     @staticmethod
-    def get_person_evol(upeople_id, period, startdate, enddate, identities_db, type_analysis):
-        evol_data = GetEvolPeopleSCM(upeople_id, period, startdate, enddate)
+    def get_person_evol(uuid, period, startdate, enddate, identities_db, type_analysis):
+        evol_data = GetEvolPeopleSCM(uuid, period, startdate, enddate)
         evol_data = completePeriodIds(evol_data, period, startdate, enddate)
         return evol_data
 
     @staticmethod
-    def get_person_agg(upeople_id, startdate, enddate, identities_db, type_analysis):
-        agg = GetStaticPeopleSCM(upeople_id,  startdate, enddate)
+    def get_person_agg(uuid, startdate, enddate, identities_db, type_analysis):
+        agg = GetStaticPeopleSCM(uuid,  startdate, enddate)
         return agg
 
     # Studies implemented in R
@@ -506,14 +506,14 @@ class SCM(DataSource):
 #
 
 def GetTablesOwnUniqueIdsSCM () :
-    return (' actions a, scmlog s, people_upeople pup')
+    return (' actions a, scmlog s, people_uidentities pup')
 
 
 def GetFiltersOwnUniqueIdsSCM () :
     return ('pup.people_id = s.author_id and s.id = a.commit_id ') 
 
 def GetPeopleListSCM (startdate, enddate) :
-    fields = "DISTINCT(pup.upeople_id) as pid, COUNT(distinct(s.id)) as total"
+    fields = "DISTINCT(pup.uuid) as pid, COUNT(distinct(s.id)) as total"
     tables = GetTablesOwnUniqueIdsSCM()
     filters = GetFiltersOwnUniqueIdsSCM()
     filters +=" GROUP BY pid ORDER BY total desc, pid"
@@ -526,7 +526,7 @@ def GetPeopleQuerySCM (developer_id, period, startdate, enddate, evol) :
     fields ='COUNT(distinct(s.id)) AS commits'
     tables = GetTablesOwnUniqueIdsSCM()
     filters = GetFiltersOwnUniqueIdsSCM()
-    filters +=" AND pup.upeople_id="+str(developer_id)
+    filters +=" AND pup.uuid='"+str(developer_id)+"'"
     if (evol) :
         q = GetSQLPeriod(period,'s.author_date', fields, tables, filters,
                 startdate, enddate)

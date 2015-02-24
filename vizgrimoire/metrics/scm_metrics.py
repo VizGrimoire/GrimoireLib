@@ -91,20 +91,20 @@ class NewAuthors(Metrics):
         filters = Set([])
 
         if not islist:
-            fields.add("count(distinct(t.upeople_id)) as newauthors")
+            fields.add("count(distinct(t.uuid)) as newauthors")
         else:
-            fields.add("t.upeople_id as uid, p.name, p.email, t.date")
+            fields.add("t.uuid as uid, p.name, p.email, t.date")
         tables.add("scmlog s")
-        tables.add("people_upeople pup")
+        tables.add("people_uidentities pup")
         tables.add("people p")
-        tables.add("""(select pup.upeople_id as upeople_id, min(s.author_date) as date
-                       from people_upeople pup, scmlog s
+        tables.add("""(select pup.uuid as uuid, min(s.author_date) as date
+                       from people_uidentities pup, scmlog s
                        where s.author_id=pup.people_id
-                       group by pup.upeople_id) t
+                       group by pup.uuid) t
                    """)
         tables.union_update(self.db.GetSQLReportFrom(self.filters))
         filters.add("s.author_id = pup.people_id")
-        filters.add("pup.upeople_id=t.upeople_id")
+        filters.add("pup.uuid=t.uuid")
         filters.add("pup.people_id=p.id")
         filters.union_update(self.db.GetSQLReportWhere(self.filters, "author"))
 
@@ -112,7 +112,7 @@ class NewAuthors(Metrics):
                                self.filters.enddate, " t.date ", fields,
                                tables, filters, evolutionary, self.filters.type_analysis)
         if islist:
-            q += " GROUP BY t.upeople_id "
+            q += " GROUP BY t.uuid "
             if not evolutionary: q += " ORDER BY t.date DESC"
 
         return q
@@ -143,7 +143,7 @@ class Authors(Metrics):
         tables = Set([])
         filters = Set([])
 
-        fields.add("count(distinct(pup.upeople_id)) as authors")
+        fields.add("count(distinct(pup.uuid)) as authors")
         tables.add("scmlog s")
         filters.union_update(self.db.GetSQLReportWhere(self.filters, "author"))
 
@@ -153,7 +153,7 @@ class Authors(Metrics):
         # This may be redundant code. However this is needed for specific analysis
         # such as repositories or projects. Given that we're using sets, this is not 
         # an issue. Not repeated tables or filters will appear in the final query.
-        tables.add("people_upeople pup")
+        tables.add("people_uidentities pup")
         filters.add("s.author_id = pup.people_id")
 
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
@@ -184,7 +184,7 @@ class Authors(Metrics):
             filters.add("DATEDIFF (last_date, date) < %s " % (days))
 
         #Building core part of the query.
-        fields.add("u.id as id")
+        fields.add(" u.uuid as id")
         fields.add("u.identifier as authors")
         fields.add("count(distinct(s.id)) as commits")
 
@@ -197,16 +197,16 @@ class Authors(Metrics):
         # This may be redundant code. However this is needed for specific analysis
         # such as repositories or projects. Given that we're using sets, this is not 
         # an issue. Not repeated tables or filters will appear in the final query.
-        tables.add("people_upeople pup")
-        tables.add(self.db.identities_db + ".upeople u")
+        tables.add("people_uidentities pup")
+        tables.add(self.db.identities_db + ".uidentities u")
         filters.add("s.author_id = pup.people_id")
-        filters.add("pup.upeople_id = u.id")
+        filters.add("pup.uuid = u.uuid")
 
         query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                    self.filters.enddate, " s.author_date ", fields,
                                    tables, filters, False, self.filters.type_analysis)
 
-        query = query + " group by u.id "
+        query = query + " group by u.uuid "
         query = query + " order by count(distinct(s.id)) desc, u.identifier "
         query = query + " limit " + str(self.filters.npeople)
 
@@ -280,7 +280,7 @@ class Committers(Metrics):
         tables = Set([])
         filters = Set([])
 
-        fields.add("count(distinct(pup.upeople_id)) as committers")
+        fields.add("count(distinct(pup.uuid)) as committers")
         tables.add("scmlog s")
         filters.union_update(self.db.GetSQLReportWhere(self.filters, "committer"))
 
@@ -290,14 +290,14 @@ class Committers(Metrics):
         if (self.filters.type_analysis is None or len (self.filters.type_analysis) != 2) :
             #Specific case for the basic option where people_upeople table is needed
             #and not taken into account in the initial part of the query
-            if "people_upeople pup" not in tables:
-                tables.add("people_upeople pup")
+            if "people_uidentities pup" not in tables:
+                tables.add("people_uidentities pup")
                 filters.add("s.committer_id = pup.people_id")
 
         elif (self.filters.type_analysis[0] == "repository" or self.filters.type_analysis[0] == "project"):
             #Adding people_upeople table
-            if "people_upeople pup" not in tables:
-                tables.add("people_upeople pup")
+            if "people_uidentities pup" not in tables:
+                tables.add("people_uidentities pup")
                 filters.add("s.committer_id = pup.people_id")
 
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate, 
@@ -607,7 +607,7 @@ class CommitsAuthor(Metrics):
         tables = Set([])
         filters = Set([])
   
-        fields.add("count(distinct(s.id))/count(distinct(pup.upeople_id)) as avg_commits_author ")
+        fields.add("count(distinct(s.id))/count(distinct(pup.uuid)) as avg_commits_author ")
         tables.add("scmlog s")
         tables.add("actions a")
         filters.add("s.id = a.commit_id")
@@ -619,7 +619,7 @@ class CommitsAuthor(Metrics):
  
         # Needed code for specific analysis such as repositories or projects
         # Given that we're using sets, this does not add extra tables or filters.
-        tables.add("people_upeople pup")
+        tables.add("people_uidentities pup")
         filters.add("s.author_id = pup.people_id")
 
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
@@ -642,7 +642,7 @@ class AuthorsPeriod(Metrics):
         tables = Set([])
         filters = Set([])
 
-        fields.add("count(distinct(pup.upeople_id))/timestampdiff("+self.filters.period+",min(s.author_date),max(s.author_date)) as avg_authors_"+self.filters.period)
+        fields.add("count(distinct(pup.uuid))/timestampdiff("+self.filters.period+",min(s.author_date),max(s.author_date)) as avg_authors_"+self.filters.period)
         tables.add("scmlog s")
         # filters = ""
 
@@ -653,7 +653,7 @@ class AuthorsPeriod(Metrics):
 
         # Needed code for specific analysis such as repositories or projects
         # Given that we're using sets, this does not add extra tables or filters.
-        tables.add("people_upeople pup")
+        tables.add("people_uidentities pup")
         filters.add("s.author_id = pup.people_id")
 
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
@@ -686,7 +686,7 @@ class CommittersPeriod(Metrics):
         self.name = "Average Committers per " + self.filters.period
         self.desc = "Average number of committers per " + self.filters.period
 
-        fields.add("count(distinct(pup.upeople_id))/timestampdiff("+self.filters.period+",min(s.author_date),max(s.author_date)) as avg_committers_"+self.filters.period)
+        fields.add("count(distinct(pup.uuid))/timestampdiff("+self.filters.period+",min(s.author_date),max(s.author_date)) as avg_committers_"+self.filters.period)
         tables.add("scmlog s")
         # filters = ""
 
@@ -698,14 +698,14 @@ class CommittersPeriod(Metrics):
         if (self.filters.type_analysis is None or len (self.filters.type_analysis) != 2) :
             #Specific case for the basic option where people_upeople table is needed
             #and not taken into account in the initial part of the query
-            if "people_upeople pup" not in tables:
-                tables.add("people_upeople pup")
+            if "people_uidentities pup" not in tables:
+                tables.add("people_uidentities pup")
                 filters.add("s.committer_id = pup.people_id")
 
         elif (self.filters.type_analysis[0] == "repository" or self.filters.type_analysis[0] == "project"):
             #Adding people_upeople table
-            if "people_upeople pup" not in tables:
-                tables.add("people_upeople pup")
+            if "people_uidentities pup" not in tables:
+                tables.add("people_uidentities pup")
                 filters.add("s.committer_id = pup.people_id")
 
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
@@ -732,7 +732,7 @@ class FilesAuthor(Metrics):
         tables = Set([])
         filters = Set([])
 
-        fields.add("count(distinct(a.file_id))/count(distinct(pup.upeople_id)) as avg_files_author")
+        fields.add("count(distinct(a.file_id))/count(distinct(pup.uuid)) as avg_files_author")
         tables.add("scmlog s")
         tables.add("actions a")
         filters.add("s.id = a.commit_id")
@@ -744,7 +744,7 @@ class FilesAuthor(Metrics):
 
         # Needed code for specific analysis such as repositories or projects
         # Given that we're using sets, this does not add extra tables or filters.
-        tables.add("people_upeople pup")
+        tables.add("people_uidentities pup")
         filters.add("s.author_id = pup.people_id")
 
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
@@ -810,10 +810,10 @@ class Companies(Metrics):
 
         fields.add("count(distinct(upc.company_id)) as companies")
         tables.add("scmlog s")
-        tables.add("people_upeople pup")
+        tables.add("people_uidentities pup")
         tables.add("upeople_companies upc")
         filters.add("s.author_id = pup.people_id")
-        filters.add("pup.upeople_id = upc.upeople_id")
+        filters.add("pup.uuid = upc.uuid")
         filters.add("s.author_date >= upc.init")
         filters.add("s.author_date < upc.end")
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
@@ -832,8 +832,8 @@ class Companies(Metrics):
 
         tables.union_update(self.db.GetSQLReportFrom(self.filters))
         tables.add("scmlog s")
-        tables.add("people_upeople pup")
-        tables.add(self.db.identities_db + ".upeople u")
+        tables.add("people_uidentities pup")
+        tables.add(self.db.identities_db + ".uidentities u")
         tables.add("upeople_companies upc")
         tables.add("companies c")
 
@@ -842,8 +842,8 @@ class Companies(Metrics):
         fields =  "SELECT COUNT(DISTINCT(s.id)) as company_commits, c.name as companies "
 
         filters.add("pup.people_id = s.author_id")
-        filters.add("u.id = pup.upeople_id")
-        filters.add("u.id = upc.upeople_id")
+        filters.add(" u.uuid = pup.uuid")
+        filters.add(" u.uuid = upc.uuid")
         filters.add("c.id = upc.company_id")
         filters.add("s.author_date >= " + startdate)
         filters.add("s.author_date < " + enddate)
@@ -867,9 +867,9 @@ class Companies(Metrics):
             select c.name, count(distinct(t.s_id)) as total
             from companies c,  (
               select distinct(s.id) as s_id, company_id
-              from companies c, people_upeople pup, upeople_companies upc,
+              from companies c, people_uidentities pup, upeople_companies upc,
                    scmlog s,  actions a
-              where c.id = upc.company_id and  upc.upeople_id = pup.upeople_id
+              where c.id = upc.company_id and  upc.uuid = pup.uuid
                 and  s.author_date >= upc.init and s.author_date < upc.end
                 and pup.people_id = s.author_id
                 and s.id = a.commit_id and
@@ -934,10 +934,10 @@ class Countries(Metrics):
 
         fields.add("count(distinct(upc.country_id)) as countries")
         tables.add("scmlog s")
-        tables.add("people_upeople pup")
+        tables.add("people_uidentities pup")
         tables.add("upeople_countries upc")
         filters.add("s.author_id = pup.people_id")
-        filters.add("pup.upeople_id = upc.upeople_id")
+        filters.add("pup.uuid = upc.uuid")
 
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                self.filters.enddate, " s.author_date ", fields,
@@ -952,11 +952,11 @@ class Countries(Metrics):
 
         q = "SELECT count(s.id) as commits, c.name as name "+\
             "FROM scmlog s,  "+\
-            "     people_upeople pup, "+\
+            "     people_uidentities pup, "+\
             "     "+identities_db+".countries c, "+\
             "     "+identities_db+".upeople_countries upc "+\
             "WHERE pup.people_id = s."+rol+"_id AND "+\
-            "      pup.upeople_id  = upc.upeople_id and "+\
+            "      pup.uuid  = upc.uuid and "+\
             "      upc.country_id = c.id and "+\
             "      s.author_date >="+startdate+ " and "+\
             "      s.author_date < "+enddate+ " "+\
@@ -980,13 +980,13 @@ class CompaniesCountries(Metrics):
         enddate = self.filters.enddate
 
         q = "SELECT count(s.id) as commits, CONCAT(c.name, '_', cou.name) as name "+\
-            "FROM scmlog s, people_upeople pup, "+\
+            "FROM scmlog s, people_uidentities pup, "+\
             identities_db+".countries cou, "+identities_db+".upeople_countries upcou, "+\
             identities_db+".companies c, "+identities_db+".upeople_companies upc "+\
             "WHERE pup.people_id = s."+rol+"_id AND "+\
-            "      pup.upeople_id  = upcou.upeople_id and "+\
-            "      upcou.country_id = cou.id and "+\
-            "      pup.upeople_id  = upc.upeople_id and "+\
+            "      pup.uuid  = upcou.uuid and "+\
+            "      upcou.country_id = co u.uuid and "+\
+            "      pup.uuid  = upc.uuid and "+\
             "      upc.company_id = c.id and "+\
             "      s.author_date >= upc.init  and s.author_date < upc.end and "+\
             "      s.author_date >="+startdate+ " and "+\
@@ -1007,8 +1007,8 @@ class Domains(Metrics):
 
     def _get_sql(self, evol):
         fields = "COUNT(DISTINCT(upd.domain_id)) AS domains"
-        tables = "scmlog s, people_upeople pup, upeople_domains upd"
-        filters = "s.author_id = pup.people_id and pup.upeople_id = upd.upeople_id "
+        tables = "scmlog s, people_uidentities pup, upeople_domains upd"
+        filters = "s.author_id = pup.people_id and pup.uuid = upd.uuid "
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                self.filters.enddate, " s.author_date ", fields,
                                tables, filters, evol, self.filters.type_analysis)
@@ -1022,11 +1022,11 @@ class Domains(Metrics):
 
         q = "SELECT count(s.id) as commits, d.name as name "+\
             "FROM scmlog s, "+\
-            "  people_upeople pup, "+\
+            "  people_uidentities pup, "+\
             "  "+identities_db+".domains d, "+\
             "  "+identities_db+".upeople_domains upd "+\
             "WHERE pup.people_id = s."+rol+"_id AND "+\
-            "  pup.upeople_id  = upd.upeople_id and "+\
+            "  pup.uuid  = upd.uuid and "+\
             "  upd.domain_id = d.id and "+\
             "  s.author_date >="+ startdate+ " and "+\
             "  s.author_date < "+ enddate+ " "+\
