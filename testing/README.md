@@ -23,32 +23,35 @@ In order to create the test dbs in MySQL.
     mysqladmin -u root create  cp_mediawiki_GrimoireLibTests
     mysqladmin -u root create  cp_downloads_GrimoireLibTests
     mysqladmin -u root create  cp_releases_GrimoireLibTests
-    mysqladmin -u root create  cp_qaforums_GrimoireLibTests
+    mysqladmin -u root create  cp_sibyl_GrimoireLibTests
     mysqladmin -u root create  cp_pullpo_GrimoireLibTests
+    mysqladmin -u root create  cp_sortinghat_GrimoireLibTests
 
 In testing/db execute:
 
-    7zr x irc.mysql.7z
-    7zr x mailing_lists.mysql.7z
-    7zr x mediawiki.mysql.7z
-    7zr x reviews.mysql.7z
-    7zr x source_code.mysql.7z
-    7zr x tickets.mysql.7z
+    7zr x bicho.mysql.7z
+    7zr x cvsanaly.mysql.7z
     7zr x downloads.mysql.7z
-    7zr x releases.mysql.7z
-    7zr x qaforums.mysql.7z
+    7zr x gerrit.mysql.7z
+    7zr x irc.mysql.7z
+    7zr x mediawiki.mysql.7z
+    7zr x mlstats.mysql.7z
     7zr x pullpo.mysql.7z
+    7zr x releases.mysql.7z
+    7zr x sibyl.mysql.7z
+    7zr x sortinghat.mysql.7z
 
-    mysql -u root cp_cvsanaly_GrimoireLibTests < source_code.mysql
     mysql -u root cp_bicho_GrimoireLibTests < tickets.mysql
+    mysql -u root cp_cvsanaly_GrimoireLibTests < source_code.mysql
+    mysql -u root cp_downloads_GrimoireLibTests < downloads.mysql
     mysql -u root cp_gerrit_GrimoireLibTests < reviews.mysql
-    mysql -u root cp_mlstats_GrimoireLibTests < mailing_lists.mysql
     mysql -u root cp_irc_GrimoireLibTests < irc.mysql
     mysql -u root cp_mediawiki_GrimoireLibTests < mediawiki.mysql
-    mysql -u root cp_downloads_GrimoireLibTests < downloads.mysql
-    mysql -u root cp_releases_GrimoireLibTests < releases.mysql
-    mysql -u root cp_qaforums_GrimoireLibTests < qaforums.mysql
+    mysql -u root cp_mlstats_GrimoireLibTests < mailing_lists.mysql
     mysql -u root cp_pullpo_GrimoireLibTests < pullpo.mysql
+    mysql -u root cp_releases_GrimoireLibTests < releases.mysql
+    mysql -u root cp_sibyl_GrimoireLibTests < sibyl.mysql
+    mysql -u root cp_sortinghat_GrimoireLibTests < sortinghat.mysql
 
 ## Shell script for creating databases
 
@@ -68,15 +71,16 @@ Other options are available, use "--help" for more information.
 
 ## Cleaning up the testing databases
 
-If you want to clean all dbs:
+If you want to clean all dbs (assuming mysql user is "root", without a password):
 
-    echo "drop database cp_cvsanaly_GrimoireLibTests" | mysql -u root
     echo "drop database cp_bicho_GrimoireLibTests" | mysql -u root
+    echo "drop database cp_cvsanaly_GrimoireLibTests" | mysql -u root
+    echo "drop database cp_downloads_GrimoireLibTests" | mysql -u root
     echo "drop database cp_gerrit_GrimoireLibTests" | mysql -u root
-    echo "drop database cp_mlstats_GrimoireLibTests" | mysql -u root
     echo "drop database cp_irc_GrimoireLibTests" | mysql -u root
     echo "drop database cp_mediawiki_GrimoireLibTests" | mysql -u root
-    echo "drop database cp_downloads_GrimoireLibTests" | mysql -u root
-    echo "drop database cp_releases_GrimoireLibTests" | mysql -u root
-    echo "drop database cp_qaforums_GrimoireLibTests" | mysql -u root
+    echo "drop database cp_mlstats_GrimoireLibTests" | mysql -u root
     echo "drop database cp_pullpo_GrimoireLibTests" | mysql -u root
+    echo "drop database cp_releases_GrimoireLibTests" | mysql -u root
+    echo "drop database cp_sibyl_GrimoireLibTests" | mysql -u root
+    echo "drop database cp_sortinghat_GrimoireLibTests" | mysql -u root
