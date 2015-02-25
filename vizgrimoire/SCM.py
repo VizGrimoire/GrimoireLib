@@ -117,13 +117,6 @@ class SCM(DataSource):
         return ["authors"]
 
     @staticmethod
-    def get_project_top_companies (project, startdate, enddate, limit):
-        # Hack to get a SCMQuery
-        dbcon = SCM.get_metrics_set(SCM)[0].db
-        top_companies = dbcon.get_project_top_companies (project, startdate, enddate, limit)
-        return top_companies
-
-    @staticmethod
     def get_project_top_authors (project, startdate, enddate, npeople):
         # Hack to get a SCMQuery
         dbcon = SCM.get_metrics_set(SCM)[0].db
@@ -150,7 +143,10 @@ class SCM(DataSource):
                 companies_out = mcompanies.filters.companies_out
                 people_out = None
                 mfilter = MetricFilters(period, startdate, enddate, filter_.get_type_analysis(), npeople, people_out, companies_out)
-                top = mcompanies.get_list(mfilter)
+                mfilter_orig = mcompanies.filters
+                mcompanies.filters = mfilter
+                top = mcompanies.get_list()
+                mcompanies.filters = mfilter_orig
         return top
 
 
@@ -190,8 +186,8 @@ class SCM(DataSource):
         data = SCM.get_top_data_authors (startdate, enddate, i_db, filter_, npeople)
         top = dict(top.items() + data.items())
         companies_on = False
-        for filter_aux in Report.get_filters():
-            if filter_aux.get_name() == "company": companies_on = True
+        if Report.get_filter_automator('company') is not None:
+            companies_on = True
         if companies_on:
             data = SCM.get_top_data_companies (startdate, enddate, i_db, filter_, npeople)
             top = dict(top.items() + data.items())

@@ -42,7 +42,8 @@ from vizgrimoire.metrics.query_builder import DSQuery
 class Report(object):
     """Basic class for a Grimoire automator based dashboard"""
 
-    _filters = []
+    _filters = [] # filters active
+    _filters_automator = [] # filters in automator file
     _items = None
     _all_data_sources = []
     _all_studies = []
@@ -71,6 +72,7 @@ class Report(object):
             filter_ = Filter.get_filter_from_plural(name)
             if filter_ is not None:
                 Report._filters.append(filter_)
+                Report._filters_automator.append(filter_)
             else:
                 logging.error("Wrong filter " + name + ", review " + Report._automator_file)
                 raise Exception('Wrong automator config file')
@@ -248,6 +250,16 @@ class Report(object):
     def get_filter(name):
         found = None
         for filter_ in Report.get_filters():
+            if filter_.get_name() == name:
+                found = filter_
+                break
+        return found
+
+    @staticmethod
+    def get_filter_automator(name):
+        # Sometimes not all automator filters are active
+        found = None
+        for filter_ in Report._filters_automator:
             if filter_.get_name() == name:
                 found = filter_
                 break

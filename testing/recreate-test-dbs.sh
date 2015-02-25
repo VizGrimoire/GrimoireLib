@@ -13,6 +13,7 @@ echo "drop database cp_downloads_GrimoireLibTests" | mysql -u root
 echo "drop database cp_releases_GrimoireLibTests" | mysql -u root
 echo "drop database cp_sibyl_GrimoireLibTests" | mysql -u root
 echo "drop database cp_pullpo_GrimoireLibTests" | mysql -u root
+echo "drop database cp_sortinghat_GrimoireLibTests" | mysql -u root
 
 
 echo Creating testing dbs
@@ -26,6 +27,7 @@ mysqladmin -u root create  cp_downloads_GrimoireLibTests
 mysqladmin -u root create  cp_releases_GrimoireLibTests
 mysqladmin -u root create  cp_sibyl_GrimoireLibTests
 mysqladmin -u root create  cp_pullpo_GrimoireLibTests
+mysqladmin -u root create  cp_sortinghat_GrimoireLibTests
 
 echo Uncompressing testing dbs dumps
 7zr -y x irc.mysql.7z
@@ -38,6 +40,7 @@ echo Uncompressing testing dbs dumps
 7zr -y x releases.mysql.7z
 7zr -y x sibyl.mysql.7z
 7zr -y x pullpo.mysql.7z
+7zr -y x sortinghat.mysql.7z
 
 echo Loading testing dbs dumps
 mysql -u root cp_cvsanaly_GrimoireLibTests < source_code.mysql
@@ -50,5 +53,6 @@ mysql -u root cp_downloads_GrimoireLibTests < downloads.mysql
 mysql -u root cp_releases_GrimoireLibTests < releases.mysql
 mysql -u root cp_sibyl_GrimoireLibTests < sibyl.mysql
 mysql -u root cp_pullpo_GrimoireLibTests < pullpo.mysql
+mysql -u root cp_sortinghat_GrimoireLibTests < sortinghat.mysql
 
 cd ..
