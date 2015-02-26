@@ -60,7 +60,7 @@ class StoriesOpened(Metrics):
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                self.filters.enddate, " created_at ", fields,
                                tables, filters, evolutionary,
-                               self.filters.type_analysis, self.filters.global_filter)
+                               self.filters.type_analysis)
         return q
 
 
@@ -88,7 +88,7 @@ class StoriesOpeners(Metrics):
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                self.filters.enddate, " created_at ", fields,
                                tables, filters, evolutionary,
-                               self.filters.type_analysis, self.filters.global_filter)
+                               self.filters.type_analysis)
         return q
 
     # TODO: once stories are integrated in ITSQuery, moved this logic there
@@ -171,7 +171,7 @@ class StoriesClosed(Metrics):
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                self.filters.enddate, " created_at ", fields,
                                tables, filters, evolutionary,
-                               self.filters.type_analysis, self.filters.global_filter)
+                               self.filters.type_analysis)
         return q
 
 
