@@ -638,6 +638,7 @@ class SCMQuery(DSQuery):
                 elif analysis == 'people2': where.union_update(self.GetSQLPeopleWhere(value))
                 else: raise Exception( analysis + " not supported in Where")
 
+                pos = pos + 1
         return where
 
 
