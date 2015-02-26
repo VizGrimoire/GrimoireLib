@@ -225,11 +225,15 @@ class DataSource(object):
         """Get aggregated data for a person activity"""
         raise NotImplementedError
 
-    def create_people_report(self, period, startdate, enddate, destdir, npeople, identities_db):
+    def create_people_report(self, period, startdate, enddate, destdir, npeople, identities_db, people_ids=None):
         """Create all files related to people activity (aggregated, evolutionary)"""
         fpeople = os.path.join(destdir,self.get_top_people_file(self.get_name()))
-        people = self.get_top_people(startdate, enddate, identities_db, npeople)
-        if people is None: return
+        if not people_ids:
+            people = self.get_top_people(startdate, enddate, identities_db, npeople)
+            if people is None: return
+        else:
+            people = people_ids
+
         createJSON(people, fpeople)
 
         for upeople_id in people :
