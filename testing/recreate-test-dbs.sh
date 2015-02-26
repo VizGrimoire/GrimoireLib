@@ -31,11 +31,11 @@ mysqladmin -u root create  cp_sortinghat_GrimoireLibTests
 
 echo Uncompressing testing dbs dumps
 7zr -y x irc.mysql.7z
-7zr -y x mailing_lists.mysql.7z
+7zr -y x mlstats.mysql.7z
 7zr -y x mediawiki.mysql.7z
-7zr -y x reviews.mysql.7z
-7zr -y x source_code.mysql.7z
-7zr -y x tickets.mysql.7z
+7zr -y x gerrit.mysql.7z
+7zr -y x cvsanaly.mysql.7z
+7zr -y x bicho.mysql.7z
 7zr -y x downloads.mysql.7z
 7zr -y x releases.mysql.7z
 7zr -y x sibyl.mysql.7z
