@@ -44,3 +44,24 @@ class ITS_1(ITS):
         else:
             backend = ITS_1._backend
         return backend
+
+    @staticmethod
+    def get_metrics_core_agg():
+        m = ['closed','closers','changed','changers',"opened",'openers','trackers']
+        m += ['allhistory_participants','bmitickets']
+        m += ['stories_opened','stories_openers','stories_closed','stories_pending']
+        return m
+
+    @staticmethod
+    def get_metrics_core_ts():
+        m = ['closed','closers','changed','changers',"opened",'openers','trackers']
+        m += ['bmitickets']
+        m += ['stories_opened','stories_openers','stories_closed','stories_pending']
+        return m
+
+    @staticmethod
+    def get_metrics_core_trends():
+        m = ['closed','closers','changed','changers',"opened",'openers']
+        m += ['bmitickets']
+        m += ['stories_opened','stories_openers','stories_closed','stories_pending']
+        return m
