@@ -232,3 +232,11 @@ class QAForums(DataSource):
     @staticmethod
     def get_metrics_core_trends():
         return ['qsent','asent','csent','qsenders','asenders','csenders','participants']
+
+    @staticmethod
+    def get_person_evol(upeople_id, period, startdate, enddate, identities_db, type_analysis):
+        pass
+
+    @staticmethod
+    def get_person_agg(upeople_id, startdate, enddate, identities_db, type_analysis):
+        pass
