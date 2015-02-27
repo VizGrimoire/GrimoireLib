@@ -294,7 +294,7 @@ if __name__ == '__main__':
             logging.info("Creating global top metrics...")
             top = create_top_report(startdate, enddate, opts.destdir, opts.npeople, identities_db)
             if (automator['r']['reports'].find('people')>-1):
-                create_report_people(startdate, enddate, opts.destdir, opts.npeople, identities_db)
+                create_report_people(startdate, enddate, opts.destdir, opts.npeople, identities_db, people_ids)
             # create_reports_r(end_date, opts.destdir)
 
     if not opts.study and not opts.no_filters and not opts.metric:
