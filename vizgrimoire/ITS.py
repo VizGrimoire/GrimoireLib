@@ -322,8 +322,8 @@ class ITS(DataSource):
         top = top_data['closers.']["id"]
         top += top_data['closers.last year']["id"]
         top += check_array_value(top_data['closers.last month']["id"])
-        top += top_data['openers.']["id"]
-        top += top_data['openers.last year']["id"]
+        top += check_array_value(top_data['openers.']["id"])
+        top += check_array_value(top_data['openers.last year']["id"])
         top += check_array_value(top_data['openers.last month']["id"])
         if 'stories_openers' in top_data:
             top += top_data['stories_openers.']["id"]
