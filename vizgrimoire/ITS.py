@@ -146,7 +146,8 @@ class ITS(DataSource):
         if filter_ is not None:
             type_analysis = filter_.get_type_analysis()
         mfilter = MetricFilters(period, startdate, enddate, type_analysis, npeople)
-
+        if mclosers.filters.closed_condition is not None:
+             mfilter.closed_condition = mclosers.filters.closed_condition
 
         if filter_ is None:
             top_closers_data = {}
