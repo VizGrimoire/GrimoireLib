@@ -285,8 +285,38 @@ class SCM(DataSource):
         createJSON(items_list, fn)
 
         if (filter_name == "company"):
+            ds = SCM
             summary =  SCM.get_filter_summary(filter_, period, startdate, enddate, identities_db, 10)
             createJSON (summary, destdir+"/"+ filter_.get_summary_filename(SCM))
+
+            # Ages study
+            if True: return
+            studies = Report.get_studies()
+            ages = None
+            for study in studies:
+                if study.id == "ages":
+                    ages = study
+
+            if ages is not None:
+                db_identities = Report.get_config()['generic']['db_identities']
+                dbuser = Report.get_config()['generic']['db_user']
+                dbpass = Report.get_config()['generic']['db_password']
+
+                if ds.get_name()+"_start_date" in Report.get_config()['r']:
+                    startdate = "'"+Report.get_config()['r'][ds.get_name()+"_start_date"]+"'"
+                if ds.get_name()+"_end_date" in Report.get_config()['r']:
+                    enddate = "'"+Report.get_config()['r'][ds.get_name()+"_end_date"]+"'"
+                ds_dbname = ds.get_db_name()
+                dbname = Report.get_config()['generic'][ds_dbname]
+                dsquery = ds.get_query_builder()
+                dbcon = dsquery(dbuser, dbpass, dbname, db_identities)
+
+                metric_filters = MetricFilters(period, startdate, enddate, filter_item.get_type_analysis())
+
+                for item in items :
+                    filter_item = Filter(filter_name, item)
+                    obj = ages(dbcon, metric_filters)
+                    res = obj.result(ds)
 
     @staticmethod
     def _check_report_all_data(data, filter_, startdate, enddate, idb,
