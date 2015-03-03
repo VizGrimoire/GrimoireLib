@@ -200,7 +200,7 @@ class ITS(DataSource):
         if (filter_name == "repository"):
             metric = DataSource.get_metrics("trackers", cls)
         elif (filter_name == "company"):
-            metric = DataSource.get_metrics("companies",  cls)
+            metric = DataSource.get_metrics("organizations",  cls)
         elif (filter_name == "country"):
             metric = DataSource.get_metrics("countries", cls)
         elif (filter_name == "domain"):
@@ -210,7 +210,7 @@ class ITS(DataSource):
         elif (filter_name == "people2"):
             metric = DataSource.get_metrics("people2", cls)
         elif (filter_name == "company,country"):
-            metric = DataSource.get_metrics("companies+countries", cls)
+            metric = DataSource.get_metrics("organizations+countries", cls)
         else:
             logging.error(filter_name + " not supported")
             return items
@@ -513,37 +513,37 @@ def GetITSSQLProjectsWhere (project, identities_db):
 
 
 def GetITSSQLCompaniesFrom (i_db):
-    # fields necessary for the companies analysis
+    # fields necessary for the organizations analysis
 
     return(" , people_uidentities pup, "+\
-           i_db+".companies c, "+\
-           i_db+".upeople_companies upc")
+           i_db+".organizations org, "+\
+           i_db+".enrolments enr")
 
 def GetITSSQLCompaniesWhere (name):
-    # filters for the companies analysis
+    # filters for the organizations analysis
     filters = " i.submitted_by = pup.people_id and "+\
-           "pup.uuid = upc.uuid and "+\
-           "upc.company_id = c.id and "+\
-           "i.submitted_on >= upc.init and "+\
-           "i.submitted_on < upc.end"
+           "pup.uuid = enr.uuid and "+\
+           "enr.organization_id = org.id and "+\
+           "i.submitted_on >= enr.start and "+\
+           "i.submitted_on < enr.end"
     if name is not None:
-           filters += " and c.name = "+name
+           filters += " and org.name = "+name
     return filters
 
 def GetITSSQLCountriesFrom (i_db):
     # fields necessary for the countries analysis
 
     return(" , people_uidentities pup, "+\
-           i_db+".countries c, "+\
-           i_db+".upeople_countries upc")
+           i_db+".organizations org, "+\
+           i_db+".enrollments enr")
 
 def GetITSSQLCountriesWhere (name):
     # filters for the countries analysis
     filters = " i.submitted_by = pup.people_id and "+\
-           "pup.uuid = upc.uuid and "+\
-           "upc.country_id = c.id "
+           "pup.uuid = nat.uuid and "+\
+           "nat.country_id = cou.id "
     if name is not None:
-           filters += " and c.name = "+name
+           filters += " and cou.name = "+name
     return filters
 
 
@@ -653,7 +653,7 @@ def GetTopClosersByAssignee (days, startdate, enddate, identities_db, filter) :
 
     affiliations = ""
     for aff in filter:
-        affiliations += " com.name<>'"+ aff +"' and "
+        affiliations += " org.name<>'"+ aff +"' and "
 
     date_limit = ""
     if (days != 0 ) :
@@ -665,17 +665,17 @@ def GetTopClosersByAssignee (days, startdate, enddate, identities_db, filter) :
         "       up.identifier as closers, "+\
         "       count(distinct(ill.issue_id)) as closed "+\
         "FROM people_uidentities pup,  "+\
-        "     "+ identities_db+ ".upeople_companies upc, "+\
+        "     "+ identities_db+ ".enrollments enr, "+\
         "     "+ identities_db+ ".uidentities up,  "+\
-        "     "+ identities_db+ ".companies com, "+\
+        "     "+ identities_db+ ".organizations org, "+\
         "     issues_log_launchpad ill  "+\
         "WHERE ill.assigned_to = pup.people_id and "+\
         "      pup.uuid = up.uuid and  "+\
-        "      up.uuid = upc.uuid and  "+\
-        "      upc.company_id = com.id and "+\
+        "      up.uuid = enr.uuid and  "+\
+        "      enr.organization_id = org.id and "+\
         "      "+ affiliations+ " "+\
-        "      ill.date >= upc.init and "+\
-        "      ill.date < upc.end and  "+\
+        "      ill.date >= enr.start and "+\
+        "      ill.date < enr.end and  "+\
         "      ill.change_id  in (  "+\
         "         select id "+\
         "         from changes  "+\

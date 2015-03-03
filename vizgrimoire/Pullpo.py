@@ -162,7 +162,7 @@ class Pullpo(DataSource):
         if (filter_name == "repository"):
             metric = DataSource.get_metrics("repositories", Pullpo)
         elif (filter_name == "company"):
-            metric = DataSource.get_metrics("companies", Pullpo)
+            metric = DataSource.get_metrics("organizations", Pullpo)
         elif (filter_name == "country"):
             metric = DataSource.get_metrics("countries", Pullpo)
         elif (filter_name == "project"):

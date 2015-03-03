@@ -83,13 +83,13 @@ class SCMLeaders(Leaders):
         tables = """
                  from actions a, 
                       scmlog s, 
-                      people_upeople pup, 
+                      people_uidentities pup, 
                       upeople u 
                  """
         where = """
                 where a.commit_id = s.id and 
                       s.author_id = pup.people_id and 
-                      pup.upeople_id = u.id and
+                      pup.uuid = u.id and
                       s.author_date >= %s and
                       s.author_date < %s
                 """ % (self.filters.startdate, self.filters.enddate)
@@ -106,27 +106,27 @@ class SCMLeaders(Leaders):
         # This function returns query to calculate top organizations contributing
         # to the source code
         fields = """
-                 select c.name as name, 
+                 select org.name as name, 
                         count(distinct(s.id)) as commits
                  """
         tables = """
                  from actions a, 
                       scmlog s, 
-                      people_upeople pup, 
-                      upeople_companies upc, 
-                      companies c 
+                      people_uidentities pup, 
+                      enrollments enr, 
+                      organizations org 
                  """
         where = """
                 where a.commit_id=s.id and 
                       s.author_id=pup.people_id and 
-                      pup.upeople_id = upc.upeople_id and 
-                      upc.company_id=c.id and 
-                      s.author_date>=upc.init and 
-                      s.author_date<upc.end and
+                      pup.uuid = enr.uuid and 
+                      enr.organization_id=org.id and 
+                      s.author_date>=enr.start and 
+                      s.author_date<enr.end and
                       s.author_date >= %s and
                       s.author_date < %s
                 """ % (self.filters.startdate, self.filters.enddate)
-        group = " group by c.name order by count(distinct(s.id)) desc limit " + str(self.filters.npeople)
+        group = " group by org.name order by count(distinct(s.id)) desc limit " + str(self.filters.npeople)
 
         if self.repository is not None:
             tables = tables + ", repositories r "

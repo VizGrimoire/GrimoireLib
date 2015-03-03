@@ -26,12 +26,12 @@ import logging, re
 class Filter(object):
 
     _filters_data = [
-                     ["repository","rep","repos"], ["company","com","companies"],
+                     ["repository","rep","repos"], ["company","com","organizations"],
                      ["country","cou","countries"], ["domain","dom","domains"],
                      ["project","prj","projects"], ["tag", "tag", "tags"],
                      ["people","people","people"],
                      ["people2","people2","people2"],
-                     ["company+country","com+cou","companies+countries"]
+                     ["company+country","com+cou","organizations+countries"]
                     ]
 
     def __init__(self, name, item = None):
@@ -121,13 +121,13 @@ class Filter(object):
 
         if (ds.get_name() == "scm"):
             if (self.get_name() == "company"):
-                name += "companies-commits-summary.json"
+                name += "organizations-commits-summary.json"
         elif (ds.get_name() == "its" or ds.get_name() == "its_1"):
             if (self.get_name() == "company"):
-                name += "closed-companies-summary.json"
+                name += "closed-organizations-summary.json"
         elif (ds.get_name() == "mls"):
             if (self.get_name() == "company"):
-                name += "sent-companies-summary.json"
+                name += "sent-organizations-summary.json"
         else:
             logging.warning("No filename for filter summary %s " % (ds.get_name()))
         return name

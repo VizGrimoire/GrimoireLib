@@ -279,14 +279,14 @@ class Closers(Metrics):
         fields.add("COUNT(DISTINCT(c.id)) as closed")
 
         tables.union_update(self.db.GetTablesCompanies(self.db.identities_db))
-        tables.add(self.db.identities_db+".companies com")
+        tables.add(self.db.identities_db+".organizations org")
         tables.add(self.db.identities_db+".uidentities up")
 
         filters.union_update(self.db.GetFiltersCompanies())
         filters.add(closed_condition)
         filters.add("pup.uuid = up.id")
-        filters.add("upc.company_id = com.id")
-        filters.add("com.name = " + company_name)
+        filters.add("enr.organization_id = com.id")
+        filters.add("org.name = " + company_name)
         filters.add("changed_on >= " + startdate)
         filters.add("changed_on < " + enddate)
         if len(filter_bots) > 0:
@@ -836,9 +836,9 @@ class Trackers(Metrics):
 
 class Companies(Metrics):
     """ Companies metric class for issue tracking systems """
-    id = "companies"
+    id = "organizations"
     name = "Organizations"
-    desc = "Number of organizations (companies, etc.) with persons active in the ticketing system"
+    desc = "Number of organizations (organizations, etc.) with persons active in the ticketing system"
     data_source = ITS
 
     def get_list(self):
@@ -847,7 +847,7 @@ class Companies(Metrics):
         bots = DataSource.get_filter_bots(Filter("company"))
         fbots = ''
         for bot in bots:
-            fbots += " c.name<>'"+bot+"' and "
+            fbots += " org.name<>'"+bot+"' and "
         startdate = self.filters.startdate
         enddate = self.filters.enddate
         closed_condition = ITS._get_closed_condition()
@@ -855,32 +855,32 @@ class Companies(Metrics):
              closed_condition = self.filters.closed_condition
 
 
-        # list each of the companies analyzed
+        # list each of the organizations analyzed
         # those are order by number of closed issues
-        q = "select c.name "+\
+        q = "select org.name "+\
             "from issues i, "+\
             "     changes ch, "+\
             "     people_uidentities pup, "+\
-            "     "+ self.db.identities_db+ ".upeople_companies upc, "+\
-            "     "+ self.db.identities_db+ ".companies c "+\
+            "     "+ self.db.identities_db+ ".enrollments enr, "+\
+            "     "+ self.db.identities_db+ ".organizations org "+\
             "where i.id = ch.issue_id and "+\
             "      ch.changed_by = pup.people_id and "+\
-            "      pup.uuid = upc.uuid and "+\
-            "      upc.company_id = c.id and "+\
+            "      pup.uuid = enr.uuid and "+\
+            "      enr.organization_id = org.id and "+\
             "      ch.changed_on >= "+ startdate+ " and "+\
             "      ch.changed_on < "+ enddate+" and "+\
-            "      i.submitted_on >= upc.init and "+\
-            "      i.submitted_on < upc.end and "+\
+            "      i.submitted_on >= enr.start and "+\
+            "      i.submitted_on < enr.end and "+\
             "      "+ fbots  +\
                    closed_condition +\
-            "      group by c.name  "+\
+            "      group by org.name  "+\
             "      order by count(distinct(i.id)) desc"
 
         data = self.db.ExecuteQuery(q)
         return (data)
 
     def _get_sql(self, evolutionary):
-        q = self.db.GetSQLIssuesStudies(self.filters, ['company', ''], evolutionary, 'companies')
+        q = self.db.GetSQLIssuesStudies(self.filters, ['company', ''], evolutionary, 'organizations')
 
         return q
 
@@ -907,12 +907,12 @@ class Countries(Metrics):
             "from issues i, "+\
             "     changes ch, "+\
             "     people_uidentities pup, "+\
-            "     "+ self.db.identities_db+ ".upeople_countries upc, "+\
+            "     "+ self.db.identities_db+ ".nationalites nat, "+\
             "     "+ self.db.identities_db+ ".countries cou "+\
             "where i.id = ch.issue_id and "+\
             "      ch.changed_by = pup.people_id and "+\
-            "      pup.uuid = upc.uuid and "+\
-            "      upc.country_id = cou.uuid and "+\
+            "      pup.uuid = nat.uuid and "+\
+            "      nat.country_id = cou.uuid and "+\
             "      ch.changed_on >= "+ startdate+ " and "+\
             "      ch.changed_on < "+ enddate+" and "+\
             "      "+ closed_condition+ " "+\
@@ -924,7 +924,7 @@ class Countries(Metrics):
 class CompaniesCountries(Metrics):
     """ Countries in Companies participating in the issue tracking system """
 
-    id = "companies+countries"
+    id = "organizations+countries"
     name = "Countries"
     desc = "Countries in Companies participating in the issue tracking system"
     data_source = ITS
@@ -934,20 +934,20 @@ class CompaniesCountries(Metrics):
         startdate = self.filters.startdate
         enddate = self.filters.enddate
 
-        q = "SELECT count(i.id) as tickets, CONCAT(c.name, '_', cou.name) as name "+\
+        q = "SELECT count(i.id) as tickets, CONCAT(org.name, '_', cou.name) as name "+\
             "FROM issues i, people_uidentities pup, "+\
-            identities_db+".countries cou, "+identities_db+".upeople_countries upcou, "+\
-            identities_db+".companies c, "+identities_db+".upeople_companies upc "+\
+            identities_db+".countries cou, "+identities_db+".nationalites nat, "+\
+            identities_db+".organizations org, "+identities_db+".enrollments enr "+\
             "WHERE pup.people_id = i.submitted_by and "+\
-            "      pup.uuid  = upcou.uuid and "+\
-            "      upcou.country_id = cou.uuid and "+\
-            "      pup.uuid  = upc.uuid and "+\
-            "      upc.company_id = c.id and "+\
-            "      i.submitted_on >= upc.init  and i.submitted_on < upc.end and "+\
+            "      pup.uuid  = nat.uuid and "+\
+            "      nat.country_id = cou.uuid and "+\
+            "      pup.uuid  = enr.uuid and "+\
+            "      enr.organization_id = org.id and "+\
+            "      i.submitted_on >= enr.start  and i.submitted_on < enr.end and "+\
             "      i.submitted_on >="+startdate+ " and "+\
             "      i.submitted_on < "+enddate+ " "+\
-            "group by c.name, cou.name "+\
-            "order by tickets desc, c.name, cou.name"
+            "group by org.name, cou.name "+\
+            "order by tickets desc, org.name, cou.name"
         clist = self.db.ExecuteQuery(q)
         return clist
 

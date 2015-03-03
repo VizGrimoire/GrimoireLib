@@ -77,11 +77,11 @@ class CommunityStructure(Analyses):
         total_commits = float(total['total'])
 
         # Database access: developer, %commits
-        q = " select pup.upeople_id, "+\
+        q = " select pup.uuid, "+\
             "        (count(distinct(s.id))) as commits "+\
             " from scmlog s, "+\
             "      actions a, "+\
-            "      people_upeople pup, "+\
+            "      people_uidentities pup, "+\
             "      people p "+\
             " where s.id = a.commit_id and "+\
             "       s.author_date>="+self.filters.startdate+" and "+\
@@ -90,7 +90,7 @@ class CommunityStructure(Analyses):
             "       s.author_id = p.id and "+\
             "       p.email <> '%gerrit@%' and "+\
             "       p.email <> '%jenkins@%' "+\
-            " group by pup.upeople_id "+\
+            " group by pup.uuid "+\
             " order by commits desc; "
 
         people = self.db.ExecuteQuery(q)

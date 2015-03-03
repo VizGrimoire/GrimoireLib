@@ -465,7 +465,7 @@ class DataSource(object):
     @staticmethod
     def get_metrics_core_reports():
         """ Reports metrics core: Only available if activated in automator conf. """
-        return ["companies","countries","domains"]
+        return ["organizations","countries","domains"]
 
     @staticmethod
     def remove_filter_data():

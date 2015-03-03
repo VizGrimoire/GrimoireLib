@@ -805,9 +805,9 @@ class ReviewsWaitingForSubmitter(Metrics):
         return q
 
 class Companies(Metrics):
-    id = "companies"
+    id = "organizations"
     name = "Organizations"
-    desc = "Number of organizations (companies, etc.) with persons active in code review"
+    desc = "Number of organizations (organizations, etc.) with persons active in code review"
     data_source = SCR
 
     def _get_sql(self, evolutionary):
@@ -816,12 +816,12 @@ class Companies(Metrics):
         filters = Set([])
 
         #TODO: warning -> not using GetSQLReportFrom/Where to build queries
-        fields.add("count(distinct(upc.company_id)) as companies")
+        fields.add("count(distinct(enr.organization_id)) as organizations")
         tables.add("issues i")
         tables.add("people_uidentities pup")
-        tables.add(self.db.identities_db + ".upeople_companies upc")
+        tables.add(self.db.identities_db + ".enrollments enr")
         filters.add("i.submitted_by = pup.people_id")
-        filters.add("pup.uuid = upc.uuid")
+        filters.add("pup.uuid = enr.uuid")
 
         q = self.db.BuildQuery (self.filters.period, self.filters.startdate,
                                 self.filters.enddate, " i.submitted_on",
@@ -829,19 +829,19 @@ class Companies(Metrics):
         return q
 
     def get_list (self):
-        q = "SELECT c.id as id, c.name as name, COUNT(DISTINCT(i.id)) AS total "+\
-                   "FROM  "+self.db.identities_db+".companies c, "+\
-                           self.db.identities_db+".upeople_companies upc, "+\
+        q = "SELECT org.id as id, org.name as name, COUNT(DISTINCT(i.id)) AS total "+\
+                   "FROM  "+self.db.identities_db+".organizations org, "+\
+                           self.db.identities_db+".enrollments enr, "+\
                     "     people_uidentities pup, "+\
                     "     issues i "+\
                    "WHERE i.submitted_by = pup.people_id AND "+\
-                   "  upc.uuid = pup.uuid AND "+\
-                   "  c.id = upc.company_id AND "+\
+                   "  enr.uuid = pup.uuid AND "+\
+                   "  org.id = enr.organization_id AND "+\
                    "  i.status = 'merged' AND "+\
                    "  i.submitted_on >="+  self.filters.startdate+ " AND "+\
                    "  i.submitted_on < "+ self.filters.enddate+ " "+\
-                   "GROUP BY c.name "+\
-                   "ORDER BY total DESC, c.name "
+                   "GROUP BY org.name "+\
+                   "ORDER BY total DESC, org.name "
         return(self.db.ExecuteQuery(q))
 
 class Countries(Metrics):
@@ -856,12 +856,12 @@ class Countries(Metrics):
         filters = Set([])
 
         #TODO: warning -> not using GetSQLReportFrom/Where to build queries
-        fields.add("count(distinct(upc.country_id)) as countries")
+        fields.add("count(distinct(nat.country_id)) as countries")
         tables.add("issues i")
         tables.add("people_uidentities pup")
-        tables.add(self.db.identities_db + ".upeople_countries upc")
+        tables.add(self.db.identities_db + ".nationalites nat")
         filters.add("i.submitted_by = pup.people_id")
-        filters.add("pup.uuid = upc.uuid")
+        filters.add("pup.uuid = nat.uuid")
 
         q = self.db.BuildQuery (self.filters.period, self.filters.startdate,
                                 self.filters.enddate, " i.submitted_on",
@@ -871,12 +871,12 @@ class Countries(Metrics):
     def get_list  (self):
         q = "SELECT c.name as name, COUNT(DISTINCT(i.id)) AS issues "+\
                "FROM  "+self.db.identities_db+".countries c, "+\
-                       self.db.identities_db+".upeople_countries upc, "+\
+                       self.db.identities_db+".nationalites nat, "+\
                 "    people_uidentities pup, "+\
                 "    issues i "+\
                "WHERE i.submitted_by = pup.people_id AND "+\
-               "  upc.uuid = pup.uuid AND "+\
-               "  c.id = upc.country_id AND "+\
+               "  nat.uuid = pup.uuid AND "+\
+               "  c.id = nat.country_id AND "+\
                "  i.status = 'merged' AND "+\
                "  i.submitted_on >="+  self.filters.startdate+ " AND "+\
                "  i.submitted_on < "+ self.filters.enddate+ " "+\

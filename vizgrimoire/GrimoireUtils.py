@@ -303,8 +303,8 @@ def convertDatetime(data):
                 data[i] = str(data[i])
     return data
 
-# Rename "CONCAT(com.name,'_',cou.name)" to "filter"
-# Create filter_type="CONCAT(com.name,'_',cou.name)"
+# Rename "CONCAT(org.name,'_',cou.name)" to "filter"
+# Create filter_type="CONCAT(org.name,'_',cou.name)"
 def convertCombinedFiltersName(data):
     import re
     if not isinstance(data, dict): return data
@@ -664,7 +664,7 @@ def order_items(items, data, id_field, evol = False, period = None):
 def fill_and_order_items(items, data, id_field, evol = False,
                          period = None, startdate = None, enddate = None):
     # Only items will appear for a filter
-    if not evol: # evol is already filled (complete data) for a company, but not all companies
+    if not evol: # evol is already filled (complete data) for a company, but not all organizations
         data = fill_items(items, data, id_field)
     if evol: data = fill_items(items, data, id_field,
                                evol, period, startdate, enddate)

@@ -20,7 +20,7 @@
 
 #############
 # TODO: missing functions wrt 
-#       evolution and agg values of countries and companies
+#       evolution and agg values of countries and organizations
 #############
 
 import logging
@@ -199,7 +199,7 @@ class MLS(DataSource):
         if (filter_name == "repository"):
             metric = DataSource.get_metrics("repositories", MLS)
         elif (filter_name == "company"):
-            metric = DataSource.get_metrics("companies", MLS)
+            metric = DataSource.get_metrics("organizations", MLS)
         elif (filter_name == "country"):
             metric = DataSource.get_metrics("countries", MLS)
         elif (filter_name == "domain"):
@@ -381,24 +381,24 @@ def GetMLSSQLRepositoriesWhere (repository):
 
 
 def GetMLSSQLCompaniesFrom (i_db):
-    # fields necessary for the companies analysis
+    # fields necessary for the organizations analysis
 
     return(" , messages_people mp, "+\
                    "people_uidentities pup, "+\
-                   i_db+".companies c, "+\
-                   i_db+".upeople_companies upc")
+                   i_db+".organizations org, "+\
+                   i_db+".enrollments enr")
 
 
 def GetMLSSQLCompaniesWhere (name):
-    # filters for the companies analysis
+    # filters for the organizations analysis
     return(" m.message_ID = mp.message_id and "+\
                "mp.email_address = pup.people_id and "+\
                "mp.type_of_recipient=\'From\' and "+\
-               "pup.uuid = upc.uuid and "+\
-               "upc.company_id = c.id and "+\
-               "m.first_date >= upc.init and "+\
-               "m.first_date < upc.end and "+\
-               "c.name = "+name)
+               "pup.uuid = enr.uuid and "+\
+               "enr.organization_id = org.id and "+\
+               "m.first_date >= enr.start and "+\
+               "m.first_date < enr.end and "+\
+               "org.name = "+name)
 
 
 def GetMLSSQLCountriesFrom (i_db):
@@ -406,7 +406,7 @@ def GetMLSSQLCountriesFrom (i_db):
     return(" , messages_people mp, "+\
                "people_uidentities pup, "+\
                i_db+".countries c, "+\
-               i_db+".upeople_countries upc ")
+               i_db+".nationalites nat ")
 
 
 def GetMLSSQLCountriesWhere (name):
@@ -415,8 +415,8 @@ def GetMLSSQLCountriesWhere (name):
     return(" m.message_ID = mp.message_id and "+\
                "mp.email_address = pup.people_id and "+\
                "mp.type_of_recipient=\'From\' and "+\
-               "pup.uuid = upc.uuid and "+\
-               "upc.country_id = c.id and "+\
+               "pup.uuid = nat.uuid and "+\
+               "nat.country_id = c.id and "+\
                "c.name="+name)
 
 def GetMLSSQLDomainsFrom (i_db) :
@@ -627,14 +627,14 @@ def GetStaticPeopleMLS (developer_id, startdate, enddate) :
     return (data)
 
 
-def GetSentSummaryCompanies (period, startdate, enddate, identities_db, num_companies):
+def GetSentSummaryCompanies (period, startdate, enddate, identities_db, num_organizations):
     count = 1
-    first_companies = {}
+    first_organizations = {}
 
-    metric = DataSource.get_metrics("companies", MLS)
-    companies = metric.get_list()
+    metric = DataSource.get_metrics("organizations", MLS)
+    organizations = metric.get_list()
 
-    for company in companies:
+    for company in organizations:
         type_analysis = ["company", "'"+company+"'"]
         sent = EvolEmailsSent(period, startdate, enddate, identities_db, type_analysis)
         sent = completePeriodIds(sent, period, startdate, enddate)
@@ -642,17 +642,17 @@ def GetSentSummaryCompanies (period, startdate, enddate, identities_db, num_comp
         sent[company] = sent["sent"]
         del sent['sent']
 
-        if (count <= num_companies):
-            #Case of companies with entity in the dataset
-            first_companies = dict(first_companies.items() + sent.items())
+        if (count <= num_organizations):
+            #Case of organizations with entity in the dataset
+            first_organizations = dict(first_organizations.items() + sent.items())
         else :
-            #Case of companies that are aggregated in the field Others
-            if 'Others' not in first_companies:
-                first_companies['Others'] = sent[company]
+            #Case of organizations that are aggregated in the field Others
+            if 'Others' not in first_organizations:
+                first_organizations['Others'] = sent[company]
             else:
-                first_companies['Others'] = [a+b for a, b in zip(first_companies['Others'],sent[company])]
+                first_organizations['Others'] = [a+b for a, b in zip(first_organizations['Others'],sent[company])]
         count = count + 1
 
-    first_companies = completePeriodIds(first_companies, period, startdate, enddate)
+    first_organizations = completePeriodIds(first_organizations, period, startdate, enddate)
 
-    return(first_companies)
+    return(first_organizations)

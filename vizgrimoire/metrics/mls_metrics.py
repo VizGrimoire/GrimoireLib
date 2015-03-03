@@ -122,7 +122,7 @@ class EmailsSenders(Metrics):
             " FROM messages m, "+ countries_tables+ \
             "  , "+self.db.identities_db+".uidentities up "+\
             " WHERE "+ countries_filters + " AND "+\
-            "  up.uuid = upc.uuid AND "+\
+            "  up.uuid = nat.uuid AND "+\
             "  m.first_date >= "+startdate+" AND "+\
             "  m.first_date < "+enddate+\
             " GROUP BY up.identifier "+\
@@ -140,15 +140,15 @@ class EmailsSenders(Metrics):
         #TODO: instead of directly using the private method for building 
         # from or where clauses, this code should use GetSQLReportFrom/Where
         # and sets where strings are added.
-        companies_tables = self.db._get_tables_query(self.db.GetSQLCompaniesFrom())
-        companies_filters = self.db._get_filters_query(self.db.GetSQLCompaniesWhere(company_name))
+        organizations_tables = self.db._get_tables_query(self.db.GetSQLCompaniesFrom())
+        organizations_filters = self.db._get_filters_query(self.db.GetSQLCompaniesWhere(company_name))
 
         q = "SELECT up.uuid as id, up.identifier as senders, "+\
             " COUNT(DISTINCT(m.message_id)) as sent "+\
             " FROM messages m, "+self.db.identities_db+".uidentities up , "+\
-             companies_tables +\
-            " WHERE "+ companies_filters  +" AND "+\
-            "  up.uuid = upc.uuid AND "+\
+             organizations_tables +\
+            " WHERE "+ organizations_filters  +" AND "+\
+            "  up.uuid = enr.uuid AND "+\
             "  m.first_date >= "+startdate+" AND "+\
             "  m.first_date < "+enddate+\
             " GROUP BY up.identifier "+\
@@ -512,32 +512,32 @@ class Repositories(Metrics):
 
 
 class Companies(Metrics):
-    """ Companies participating in mailing lists """
+    """ Organizations participating in mailing lists """
 
-    id = "companies"
-    name = "Companies"
-    desc = "Companies participating in mailing lists"
+    id = "organizations"
+    name = "Organizations"
+    desc = "Organizations participating in mailing lists"
     data_source = MLS
 
     def _get_sql(self, evolutionary):
         return self.db.GetStudies(self.filters.period, self.filters.startdate, 
-                                  self.filters.enddate, ['company', ''], evolutionary, 'companies')
+                                  self.filters.enddate, ['company', ''], evolutionary, 'organizations')
 
     def get_list (self):
         filter_ = DataSource.get_filter_bots(Filter("company"))
-        filter_companies = ''
+        filter_organizations = ''
         for company in filter_:
-            filter_companies += " c.name<>'"+company+"' AND "
+            filter_organizations += " org.name<>'"+company+"' AND "
 
-        companies_tables = self.db._get_tables_query(self.db.GetTablesCompanies())
-        companies_filters = self.db._get_filters_query(self.db.GetFiltersCompanies())
-        q = "SELECT c.name as name, COUNT(DISTINCT(m.message_ID)) as sent "+\
-            "    FROM "+ companies_tables + " "+\
-            "    WHERE "+ companies_filters + " AND "+\
-            "      "+ filter_companies+ " "+\
+        organizations_tables = self.db._get_tables_query(self.db.GetTablesCompanies())
+        organizations_filters = self.db._get_filters_query(self.db.GetFiltersCompanies())
+        q = "SELECT org.name as name, COUNT(DISTINCT(m.message_ID)) as sent "+\
+            "    FROM "+ organizations_tables + " "+\
+            "    WHERE "+ organizations_filters + " AND "+\
+            "      "+ filter_organizations+ " "+\
             "      m.first_date >= "+self.filters.startdate+" AND "+\
             "      m.first_date < "+self.filters.enddate+" "+\
-            "    GROUP BY c.name "+\
+            "    GROUP BY org.name "+\
             "    ORDER BY COUNT(DISTINCT(m.message_ID)) DESC"
 
         data = self.db.ExecuteQuery(q)

@@ -248,34 +248,34 @@ def GetIRCSQLRepositoriesWhere(repository):
 
 
 def GetIRCSQLCompaniesFrom (i_db):
-    # tables necessary to companies analysis
+    # tables necessary to organizations analysis
     return(" , people_uidentities pup, "+\
-                   i_db+"companies c, "+\
-                   i_db+".upeople_companies upc")
+                   i_db+"organizations org, "+\
+                   i_db+".enrollments enr")
 
 
 def GetIRCSQLCompaniesWhere(name):
-    # filters necessary to companies analysis
+    # filters necessary to organizations analysis
     return(" i.nick = pup.people_id and "+\
-           "pup.uuid = upc.uuid and "+\
-           "upc.company_id = c.id and "+\
-           "i.submitted_on >= upc.init and "+\
-           "i.submitted_on < upc.end and "+\
-           "c.name = " + name)
+           "pup.uuid = enr.uuid and "+\
+           "enr.organization_id = org.id and "+\
+           "i.submitted_on >= enr.start and "+\
+           "i.submitted_on < enr.end and "+\
+           "org.name = " + name)
 
 
 def GetIRCSQLCountriesFrom (i_db):
     # tables necessary to countries analysis
     return(" , people_uidentities pup, "+\
            i_db+".countries c, "+\
-           i_db+".upeople_countries upc")
+           i_db+".nationalites nat")
 
 
 def GetIRCSQLCountriesWhere(name):
     # filters necessary to countries analysis
     return(" i.nick = pup.people_id and "+\
-           "pup.uuid = upc.uuid and "+\
-           "upc.country_id = c.id and "+\
+           "pup.uuid = nat.uuid and "+\
+           "nat.country_id = c.id and "+\
            "c.name = " + name)
 
 def GetIRCSQLDomainsFrom (i_db):

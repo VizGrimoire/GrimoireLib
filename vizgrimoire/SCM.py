@@ -132,21 +132,21 @@ class SCM(DataSource):
 
 
     @staticmethod
-    def get_top_data_companies (startdate, enddate, i_db, filter_, npeople):
+    def get_top_data_organizations (startdate, enddate, i_db, filter_, npeople):
         top = {}
-        mcompanies = DataSource.get_metrics("companies", SCM)
-        if mcompanies is None: return top
+        morganizations = DataSource.get_metrics("organizations", SCM)
+        if morganizations is None: return top
         period = None
         if filter_ is not None:
             if filter_.get_name() == "project":
-                # TODO missing companies_out
-                companies_out = mcompanies.filters.companies_out
+                # TODO missing organizations_out
+                organizations_out = morganizations.filters.organizations_out
                 people_out = None
-                mfilter = MetricFilters(period, startdate, enddate, filter_.get_type_analysis(), npeople, people_out, companies_out)
-                mfilter_orig = mcompanies.filters
-                mcompanies.filters = mfilter
-                top = mcompanies.get_list()
-                mcompanies.filters = mfilter_orig
+                mfilter = MetricFilters(period, startdate, enddate, filter_.get_type_analysis(), npeople, people_out, organizations_out)
+                mfilter_orig = morganizations.filters
+                morganizations.filters = mfilter
+                top = morganizations.get_list()
+                morganizations.filters = mfilter_orig
         return top
 
 
@@ -185,11 +185,11 @@ class SCM(DataSource):
         top = {}
         data = SCM.get_top_data_authors (startdate, enddate, i_db, filter_, npeople)
         top = dict(top.items() + data.items())
-        companies_on = False
+        organizations_on = False
         if Report.get_filter_automator('company') is not None:
-            companies_on = True
-        if companies_on:
-            data = SCM.get_top_data_companies (startdate, enddate, i_db, filter_, npeople)
+            organizations_on = True
+        if organizations_on:
+            data = SCM.get_top_data_organizations (startdate, enddate, i_db, filter_, npeople)
             top = dict(top.items() + data.items())
         return top
 
@@ -206,7 +206,7 @@ class SCM(DataSource):
         if (filter_name == "repository"):
             metric = DataSource.get_metrics("repositories", SCM)
         elif (filter_name == "company"):
-            metric = DataSource.get_metrics("companies", SCM)
+            metric = DataSource.get_metrics("organizations", SCM)
         elif (filter_name == "country"):
             metric = DataSource.get_metrics("countries", SCM)
         elif (filter_name == "domain"):
@@ -216,7 +216,7 @@ class SCM(DataSource):
         elif (filter_name == "people2"):
             metric = DataSource.get_metrics("people2", SCM)
         elif (filter_name == "company,country"):
-            metric = DataSource.get_metrics("companies+countries", SCM)
+            metric = DataSource.get_metrics("organizations+countries", SCM)
         else:
             logging.error("SCM " + filter_name + " not supported")
             return items

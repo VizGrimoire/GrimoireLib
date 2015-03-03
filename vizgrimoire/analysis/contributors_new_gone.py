@@ -168,7 +168,7 @@ class ContributorsNewGoneSCM(ContributorsNewGone):
         if (gone): date_field = "last";
         q = """
         SELECT revtime, nc.author_id, name, email, date, total, %s, upeople_id
-        FROM ( %s ) nc, (%s) total, people_upeople pup
+        FROM ( %s ) nc, (%s) total, people_uidentities pup
         WHERE total.author_id = nc.author_id AND pup.people_id =  nc.author_id
         GROUP BY nc.author_id ORDER BY nc.date DESC
         """ % (date_field, q, q_total_period)
@@ -431,7 +431,7 @@ class ContributorsNewGoneSCR(ContributorsNewGone):
         if (gone): date_field = "last";
         q = """
         SELECT revtime, url,  nc.submitted_by, name, email, submitted_on, status, total, %s, upeople_id
-        FROM ( %s ) nc, (%s) total, people_upeople pup
+        FROM ( %s ) nc, (%s) total, people_uidentities pup
         WHERE total.submitted_by = nc.submitted_by AND pup.people_id =  nc.submitted_by
         GROUP BY nc.submitted_by ORDER BY nc.submitted_on DESC
         """ % (date_field, q, q_total_period)

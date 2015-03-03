@@ -54,15 +54,15 @@ class QuartersData(Analyses):
         # people = self.db.GetPeopleList("'"+startdate+"'", "'"+enddate+"'", SCR.get_bots())
         people = self.db.GetPeopleList(startdate, enddate, bots)
         createJSON(people, destdir+"/scr-people-all.json", False)
-        companies = self.db.GetCompaniesName(startdate, enddate)
-        createJSON(companies, destdir+"/scr-companies-all.json", False)
+        organizations = self.db.GetCompaniesName(startdate, enddate)
+        createJSON(organizations, destdir+"/scr-organizations-all.json", False)
 
         start = datetime.strptime(startdate.replace("'",""), "%Y-%m-%d")
         start_quarter = (start.month-1)%3 + 1
         end = datetime.strptime(enddate.replace("'",""), "%Y-%m-%d")
         end_quarter = (end.month-1)%3 + 1
 
-        companies_quarters = {}
+        organizations_quarters = {}
         people_quarters = {}
 
         quarters = (end.year - start.year) * 4 + (end_quarter - start_quarter)
@@ -70,18 +70,18 @@ class QuartersData(Analyses):
         for i in range(0, quarters):
             year = start.year
             quarter = (i%4)+1
-            # logging.info("Analyzing companies and people quarter " + str(year) + " " +  str(quarter))
+            # logging.info("Analyzing organizations and people quarter " + str(year) + " " +  str(quarter))
             data = self.db.GetCompaniesQuarters(year, quarter)
-            companies_quarters[str(year)+" "+str(quarter)] = data
+            organizations_quarters[str(year)+" "+str(quarter)] = data
             data_people = self.db.GetPeopleQuarters(year, quarter, 25, bots)
             people_quarters[str(year)+" "+str(quarter)] = data_people
             start = start + relativedelta(months=3)
-        createJSON(companies_quarters, destdir+"/scr-companies-quarters.json")
+        createJSON(organizations_quarters, destdir+"/scr-organizations-quarters.json")
         createJSON(people_quarters, destdir+"/scr-people-quarters.json")
 
     def get_report_files(self, data_source = None):
         if data_source is not SCR: return []
         return ["scr-people-all.json",
-                "scr-companies-all.json",
-                "scr-companies-quarters.json",
+                "scr-organizations-all.json",
+                "scr-organizations-quarters.json",
                 "scr-people-quarters.json"]

@@ -268,13 +268,13 @@ class DSQuery(object):
         if analysis not in supported:
             raise Exception("Can't get_group_field for " +  filter_type)
         if analysis == 'people2': field = "up.identifier"
-        elif analysis == "company": field = "com.name"
+        elif analysis == "company": field = "org.name"
         elif analysis == "country": field = "cou.name"
         elif analysis == "domain": field = "d.name"
         elif analysis == "repository":
             field = "r.name"
             if type(ds_query) == ITSQuery: field = "t.url"
-        elif analysis == "company,country": field = "CONCAT(com.name,'_',cou.name)"
+        elif analysis == "company,country": field = "CONCAT(org.name,'_',cou.name)"
 
         return field
 
@@ -335,11 +335,11 @@ class SCMQuery(DSQuery):
         return fields
 
     def GetSQLCompaniesFrom (self):
-        #tables necessaries for companies
+        #tables necessaries for organizations
         tables = Set([])
         tables.add("people_uidentities pup")
-        tables.add(self.identities_db + ".upeople_companies upcom")
-        tables.add(self.identities_db + ".companies com")
+        tables.add(self.identities_db + ".enrollments enr")
+        tables.add(self.identities_db + ".organizations org")
 
         return tables
 
@@ -347,19 +347,19 @@ class SCMQuery(DSQuery):
          #fields necessaries to match info among tables
          fields = Set([])
          fields.add("s."+role+"_id = pup.people_id")
-         fields.add("pup.uuid = upcom.uuid")
-         fields.add("s.author_date >= upcom.init")
-         fields.add("s.author_date < upcom.end")
-         fields.add("upcom.company_id = com.id")
-         if company is not None: fields.add("com.name =" + company)
+         fields.add("pup.uuid = enr.uuid")
+         fields.add("s.author_date >= enr.start")
+         fields.add("s.author_date < enr.end")
+         fields.add("enr.company_id = org.id")
+         if company is not None: fields.add("org.name =" + company)
 
          return fields
 
     def GetSQLCountriesFrom (self):
-        #tables necessaries for companies
+        #tables necessaries for organizations
         tables = Set([])
         tables.add("people_uidentities pup")
-        tables.add(self.identities_db + ".upeople_countries upcou")
+        tables.add(self.identities_db + ".nationalites nat")
         tables.add(self.identities_db + ".countries cou")
 
         return tables
@@ -368,8 +368,8 @@ class SCMQuery(DSQuery):
          #fields necessaries to match info among tables
         fields = Set([])
         fields.add("s."+role+"_id = pup.people_id")
-        fields.add("pup.uuid = upcou.uuid")
-        fields.add("upcou.country_id = cou.id")
+        fields.add("pup.uuid = nat.uuid")
+        fields.add("nat.country_id = cou.id")
         if country is not None: fields.add("cou.name ="+ country)
 
         return fields
@@ -486,7 +486,7 @@ class SCMQuery(DSQuery):
         return filters
 
     def GetSQLPeopleFrom (self):
-        #tables necessaries for companies
+        #tables necessaries for organizations
         tables = Set([])
         tables.add("people_uidentities pup")
         tables.add(self.identities_db + ".uidentities up")
@@ -762,29 +762,29 @@ class ITSQuery(DSQuery):
         return filters
 
     def GetSQLCompaniesFrom (self):
-        # fields necessary for the companies analysis
+        # fields necessary for the organizations analysis
         tables = Set([])
         tables.add("people_uidentities pup")
-        tables.add(self.identities_db + ".companies com")
-        tables.add(self.identities_db + ".upeople_companies upcom")
+        tables.add(self.identities_db + ".organizations org")
+        tables.add(self.identities_db + ".enrollments enr")
 
         return tables
 
     def GetSQLCompaniesWhere (self, name):
-        # filters for the companies analysis
+        # filters for the organizations analysis
         filters = Set([])
         filters.add("i.submitted_by = pup.people_id")
-        filters.add("pup.uuid = upcom.uuid")
-        filters.add("upcom.company_id = com.id")
-        filters.add("i.submitted_on >= upcom.init")
-        filters.add("i.submitted_on < upcom.end")
+        filters.add("pup.uuid = enr.uuid")
+        filters.add("enr.company_id = com.id")
+        filters.add("i.submitted_on >= enr.init")
+        filters.add("i.submitted_on < enr.end")
         if name is not None:
             if type(name) is str:
-                filters.add("com.name = "+name)
+                filters.add("org.name = "+name)
             if type(name) is list:
                 val = ""
                 for iname in name:
-                    val += "com.name = "+ iname + " OR "
+                    val += "org.name = "+ iname + " OR "
                 val = "("+val [:-4]+")" # remove last OR and add ()
                 filters.add(val)
 
@@ -795,7 +795,7 @@ class ITSQuery(DSQuery):
         tables = Set([])
         tables.add("people_uidentities pup")
         tables.add(self.identities_db + ".countries cou")
-        tables.add(self.identities_db + ".upeople_countries upcou")
+        tables.add(self.identities_db + ".nationalites nat")
 
         return tables
 
@@ -803,8 +803,8 @@ class ITSQuery(DSQuery):
         # filters for the countries analysis
         filters = Set([])
         filters.add("i.submitted_by = pup.people_id")
-        filters.add("pup.uuid = upcou.uuid")
-        filters.add("upcou.country_id = cou.id")
+        filters.add("pup.uuid = nat.uuid")
+        filters.add("nat.country_id = cou.id")
         if name is not None: filters.add("cou.name = "+name)
 
         return filters
@@ -974,7 +974,7 @@ class ITSQuery(DSQuery):
         identities_db = self.identities_db
 
         # Generic function that counts evolution/agg number of specific studies with similar
-        # database schema such as domains, companies and countries
+        # database schema such as domains, organizations and countries
         fields = Set([])
         tables = Set([])
         filters = Set([])
@@ -1003,7 +1003,7 @@ class ITSQuery(DSQuery):
     # TODO: use this queries en GetSQLReportWhere and From
     def GetTablesOwnUniqueIds (self, table='') :
         tables = Set([])
-        # TODO: The acronym "c" is already used for companies
+        # TODO: The acronym "c" is already used for organizations
         tables.add("changes c")
         tables.add("people_uidentities pup")
         if (table == "issues"):
@@ -1026,20 +1026,20 @@ class ITSQuery(DSQuery):
     def GetTablesCompanies (self, table='') :
         tables = Set([])
         tables.union_update(self.GetTablesOwnUniqueIds(table))
-        tables.add(self.identities_db + ".upeople_companies upc")
+        tables.add(self.identities_db + ".enrollments enr")
 
         return (tables)
 
     def GetFiltersCompanies (self, table='') :
         filters = Set([])
         filters.union_update(self.GetFiltersOwnUniqueIds(table))
-        filters.add("pup.uuid = upc.uuid")
+        filters.add("pup.uuid = enr.uuid")
         if (table == 'issues') :
-            filters.add("submitted_on >= upc.init")
-            filters.add("submitted_on < upc.end")
+            filters.add("submitted_on >= enr.start")
+            filters.add("submitted_on < enr.end")
         else :
-             filters.add("changed_on >= upc.init")
-             filters.add("changed_on < upc.end")
+             filters.add("changed_on >= enr.start")
+             filters.add("changed_on < enr.end")
 
         return (filters)
 
@@ -1075,27 +1075,27 @@ class MLSQuery(DSQuery):
         return filters
 
     def GetSQLCompaniesFrom (self):
-        # fields necessary for the companies analysis
+        # fields necessary for the organizations analysis
         tables = Set([])
         tables.add("messages_people mp")
         tables.add("people_uidentities pup")
-        tables.add(self.identities_db + ".upeople_companies upc")
-        tables.add(self.identities_db + ".companies c")
+        tables.add(self.identities_db + ".enrollments enr")
+        tables.add(self.identities_db + ".organizations org")
 
         return tables
 
     def GetSQLCompaniesWhere (self, name):
-        # filters for the companies analysis
+        # filters for the organizations analysis
         filters = Set([])
         filters.add("m.message_ID = mp.message_id")
         filters.add("mp.email_address = pup.people_id")
         filters.add("mp.type_of_recipient = \'From\'")
-        filters.add("pup.uuid = upc.uuid")
-        filters.add("upc.company_id = c.id")
-        filters.add("m.first_date >= upc.init")
-        filters.add("m.first_date < upc.end")
+        filters.add("pup.uuid = enr.uuid")
+        filters.add("enr.organization_id = org.id")
+        filters.add("m.first_date >= enr.start")
+        filters.add("m.first_date < enr.end")
         if name <> "" and name is not None:
-            filters.add("c.name = "+name)
+            filters.add("org.name = "+name)
 
         return filters
 
@@ -1105,7 +1105,7 @@ class MLSQuery(DSQuery):
         tables.add("messages_people mp")
         tables.add("people_uidentities pup")
         tables.add(self.identities_db + ".countries c")
-        tables.add(self.identities_db + ".upeople_countries upc")
+        tables.add(self.identities_db + ".nationalites nat")
 
         return tables
 
@@ -1115,8 +1115,8 @@ class MLSQuery(DSQuery):
         filters.add("m.message_ID = mp.message_id")
         filters.add("mp.email_address = pup.people_id")
         filters.add("mp.type_of_recipient = \'From\'")
-        filters.add("pup.uuid = upc.uuid")
-        filters.add("upc.country_id = c.id")
+        filters.add("pup.uuid = nat.uuid")
+        filters.add("nat.country_id = c.id")
         if name <> "":
             filters.add("c.name = " + name)
 
@@ -1311,7 +1311,7 @@ class MLSQuery(DSQuery):
 
     def GetStudies (self, period, startdate, enddate, type_analysis, evolutionary, study):
         # Generic function that counts evolution/agg number of specific studies with similar
-        # database schema such as domains, companies and countries
+        # database schema such as domains, organizations and countries
 
         fields = Set([])
         tables = Set([])
@@ -1339,33 +1339,33 @@ class MLSQuery(DSQuery):
         tables = Set([])
         tables.union_update(self.GetTablesOwnUniqueIds())
         tables.add(self.identities_db + ".countries c")
-        tables.add(self.identities_db + ".upeople_countries upc")
+        tables.add(self.identities_db + ".nationalites nat")
       
         return tables
 
     def GetFiltersCountries (self):
         filters = Set([])
         filters.union_update(self.GetFiltersOwnUniqueIds())
-        filters.add("pup.uuid = upc.uuid")
-        filters.add("upc.country_id = c.id")
+        filters.add("pup.uuid = nat.uuid")
+        filters.add("nat.country_id = c.id")
         
         return filters
 
     def GetTablesCompanies (self):
         tables = Set([])
         tables.union_update(self.GetTablesOwnUniqueIds())
-        tables.add(self.identities_db + ".companies c")
-        tables.add(self.identities_db + ".upeople_companies upc")
+        tables.add(self.identities_db + ".organizations org")
+        tables.add(self.identities_db + ".enrollments enr")
 
         return tables
 
     def GetFiltersCompanies (self):
         filters = Set([])
         filters.union_update(self.GetFiltersOwnUniqueIds())
-        filters.add("pup.uuid = upc.uuid")
-        filters.add("upc.company_id = c.id")
-        filters.add("m.first_date >= upc.init")
-        filters.add("m.first_date < upc.end")
+        filters.add("pup.uuid = enr.uuid")
+        filters.add("enr.organization_id = org.id")
+        filters.add("m.first_date >= enr.start")
+        filters.add("m.first_date < enr.end")
 
         return filters
 
@@ -1411,7 +1411,7 @@ class SCRQuery(DSQuery):
         if table == "issues":
             tables.add("issues i")
         else:
-            #TODO: warning -> changes c is using the same acronym as companies
+            #TODO: warning -> changes c is using the same acronym as organizations
             tables.add("changes c")
 
         return tables
@@ -1450,11 +1450,11 @@ class SCRQuery(DSQuery):
         return filters
 
     def GetSQLCompaniesFrom (self):
-        #tables necessaries for companies
+        #tables necessaries for organizations
         tables = Set([])
         tables.add("people_uidentities pup")
-        tables.add(self.identities_db+".upeople_companies upc")
-        tables.add(self.identities_db+".companies c")
+        tables.add(self.identities_db+".enrollments enr")
+        tables.add(self.identities_db+".organizations org")
 
         return tables
 
@@ -1463,22 +1463,22 @@ class SCRQuery(DSQuery):
         filters = Set([])
 
         filters.add("i.submitted_by = pup.people_id")
-        filters.add("pup.uuid = upc.uuid")
-        filters.add("i.submitted_on >= upc.init")
-        filters.add("i.submitted_on < upc.end")
-        filters.add("upc.company_id = c.id")
+        filters.add("pup.uuid = enr.uuid")
+        filters.add("i.submitted_on >= enr.start")
+        filters.add("i.submitted_on < enr.end")
+        filters.add("enr.organization_id = org.id")
         if company is not None:
-            filters.add("c.name = '"+ company+"'")
+            filters.add("org.name = '"+ company+"'")
 
         return filters
 
     def GetSQLCountriesFrom (self):
-        #tables necessaries for companies
+        #tables necessaries for organizations
         tables = Set([])
 
         tables.add("people_uidentities pup")
-        tables.add(self.identities_db + ".upeople_countries upc")
-        #TODO: warning -> countries is using the same acronym as companies
+        tables.add(self.identities_db + ".nationalites nat")
+        #TODO: warning -> countries is using the same acronym as organizations
         tables.add(self.identities_db + ".countries c")
 
         return tables
@@ -1488,8 +1488,8 @@ class SCRQuery(DSQuery):
         filters = Set([])
         
         filters.add("i.submitted_by = pup.people_id")
-        filters.add("pup.uuid = upc.uuid")
-        filters.add("upc.country_id = c.id")
+        filters.add("pup.uuid = nat.uuid")
+        filters.add("nat.country_id = c.id")
         if country is not None:
             filters.add("c.name = '"+country+"'")
 
@@ -1676,7 +1676,7 @@ class SCRQuery(DSQuery):
         filters = Set([])
 
         fields.add("count(issue_id) as "+ type_+ "_changes")
-        # TODO: warning -> using the same acronym "c" as in companies or countries
+        # TODO: warning -> using the same acronym "c" as in organizations or countries
         tables.add("changes c")
         tables.add("issues i")
         tables.union_update(self.GetSQLReportFrom(type_analysis))
@@ -1967,14 +1967,14 @@ class SCRQuery(DSQuery):
         if (filters != ""): filters  += " AND "
         filters = ""
         q = """
-            SELECT COUNT(i.id) AS total, c.name, c.id, QUARTER(submitted_on) as quarter, YEAR(submitted_on) year
-            FROM issues i, people p , people_uidentities pup, %s.upeople_companies upc,%s.companies c
+            SELECT COUNT(i.id) AS total, org.name, org.id, QUARTER(submitted_on) as quarter, YEAR(submitted_on) year
+            FROM issues i, people p , people_uidentities pup, %s.enrollments enr,%s.organizations org
             WHERE %s i.submitted_by=p.id AND pup.people_id=p.id
-                AND pup.uuid = upc.uuid AND upc.company_id = c.id
+                AND pup.uuid = enr.uuid AND enr.organization_id = org.id
                 AND status='merged'
                 AND QUARTER(submitted_on) = %s AND YEAR(submitted_on) = %s
-              GROUP BY year, quarter, c.id
-              ORDER BY year, quarter, total DESC, c.name
+              GROUP BY year, quarter, org.id
+              ORDER BY year, quarter, total DESC, org.name
               LIMIT %s
             """ % (self.identities_db, self.identities_db, filters,  quarter, year, limit)
 
@@ -2024,18 +2024,18 @@ class SCRQuery(DSQuery):
         limit_sql=""
         if (limit > 0): limit_sql = " LIMIT " + str(limit)
 
-        q = "SELECT c.id as id, c.name as name, COUNT(DISTINCT(i.id)) AS total "+\
-                   "FROM  "+ self.identities_db +".companies c, "+\
-                           self.identities_db +".upeople_companies upc, "+\
+        q = "SELECT org.id as id, org.name as name, COUNT(DISTINCT(i.id)) AS total "+\
+                   "FROM  "+ self.identities_db +".organizations org, "+\
+                           self.identities_db +".enrollments enr, "+\
                     "     people_uidentities pup, "+\
                     "     issues i "+\
                    "WHERE i.submitted_by = pup.people_id AND "+\
-                   "  upc.uuid = pup.uuid AND "+\
-                   "  c.id = upc.company_id AND "+\
+                   "  enr.uuid = pup.uuid AND "+\
+                   "  org.id = enr.organization_id AND "+\
                    "  i.status = 'merged' AND "+\
                    "  i.submitted_on >="+  startdate+ " AND "+\
                    "  i.submitted_on < "+ enddate+ " "+\
-                   "GROUP BY c.name "+\
+                   "GROUP BY org.name "+\
                    "ORDER BY total DESC,name " + limit_sql
         return(self.ExecuteQuery(q))
 
@@ -2068,7 +2068,7 @@ class IRCQuery(DSQuery):
         # tables necessary for repositories
         fields = Set([])
         # TODO: channels c should be changed to channels ch
-        #       c is typically used for companies table
+        #       c is typically used for organizations table
         fields.add("channels c")
 
         return fields
@@ -2082,23 +2082,23 @@ class IRCQuery(DSQuery):
         return filters
 
     def GetSQLCompaniesFrom(self):
-        # tables necessary to companies analysis
+        # tables necessary to organizations analysis
         tables = Set([])
         tables.add("people_uidentities pup")
-        tables.add(self.identities_db + ".companies c")
-        tables.add(self.identities_db + ".upeople_companies upc")
+        tables.add(self.identities_db + ".organizations org")
+        tables.add(self.identities_db + ".enrollments enr")
 
         return tables
 
     def GetSQLCompaniesWhere(self, name):
-        # filters necessary to companies analysis
+        # filters necessary to organizations analysis
         filters = Set([])
         filters.add("i.nick = pup.people_id")
-        filters.add("pup.uuid = upc.uuid")
-        filters.add("upc.company_id = c.id")
-        filters.add("i.date >= upc.init")
-        filters.add("i.date < upc.end")
-        filters.add("c.name = " + name)
+        filters.add("pup.uuid = enr.uuid")
+        filters.add("enr.organization_id = org.id")
+        filters.add("i.date >= enr.start")
+        filters.add("i.date < enr.end")
+        filters.add("org.name = " + name)
 
         return filters
 
@@ -2107,7 +2107,7 @@ class IRCQuery(DSQuery):
         tables = Set([])
         tables.add("people_uidentities pup")
         tables.add(self.identities_db + ".countries c")
-        tables.add(self.identities_db + ".upeople_countries upc")
+        tables.add(self.identities_db + ".nationalites nat")
 
         return tables
 
@@ -2115,8 +2115,8 @@ class IRCQuery(DSQuery):
         # filters necessary to countries analysis
         filters = Set([])
         filters.add("i.nick = pup.people_id")
-        filters.add("pup.uuid = upc.uuid")
-        filters.add("upc.country_id = c.id")
+        filters.add("pup.uuid = nat.uuid")
+        filters.add("nat.country_id = c.id")
         filters.add("c.name = " + name)
 
         return filters
@@ -2211,7 +2211,7 @@ class IRCQuery(DSQuery):
 class MediawikiQuery(DSQuery):
 
     def GetSQLPeople2Where(self, name = None):
-        # filters necessary to companies analysis
+        # filters necessary to organizations analysis
         filters = Set([])
 
         filters.add("pup.uuid = up.uuid")
@@ -2591,23 +2591,23 @@ class PullpoQuery(DSQuery):
         return filters
 
     def GetSQLCompaniesFrom(self):
-        # tables necessary to companies analysis
+        # tables necessary to organizations analysis
         tables = Set([])
         tables.add("people_uidentities pup")
-        tables.add(self.identities_db + ".companies c")
-        tables.add(self.identities_db + ".upeople_companies upc")
+        tables.add(self.identities_db + ".organizations org")
+        tables.add(self.identities_db + ".enrollments enr")
 
         return tables
 
     def GetSQLCompaniesWhere(self, name):
-        # filters necessary to companies analysis
+        # filters necessary to organizations analysis
         filters = Set([])
         filters.add("pr.user_id = pup.people_id")
-        filters.add("pup.uuid = upc.uuid")
-        filters.add("upc.company_id = c.id")
-        filters.add("pr.created_at >= upc.init")
-        filters.add("pr.created_at < upc.end")
-        filters.add("c.name = " + name)
+        filters.add("pup.uuid = enr.uuid")
+        filters.add("enr.organization_id = org.id")
+        filters.add("pr.created_at >= enr.start")
+        filters.add("pr.created_at < enr.end")
+        filters.add("org.name = " + name)
 
         return filters
 
@@ -2616,7 +2616,7 @@ class PullpoQuery(DSQuery):
         tables = Set([])
         tables.add("people_uidentities pup")
         tables.add(self.identities_db + ".countries c")
-        tables.add(self.identities_db + ".upeople_countries upc")
+        tables.add(self.identities_db + ".nationalites nat")
 
         return tables
 
@@ -2624,8 +2624,8 @@ class PullpoQuery(DSQuery):
         # filters necessary to countries analysis
         filters = Set([])
         filters.add("pr.user_id = pup.people_id")
-        filters.add("pup.uuid = upc.uuid")
-        filters.add("upc.country_id = c.id")
+        filters.add("pup.uuid = nat.uuid")
+        filters.add("nat.country_id = c.id")
         filters.add("c.name = " + name)
 
         return filters

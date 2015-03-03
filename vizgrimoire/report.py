@@ -99,9 +99,9 @@ class Report(object):
             people_out = None
             if 'people_out' in Report._automator['r']:
                 people_out = Report._automator['r']['people_out'].split(",")
-            companies_out = None
-            if 'companies_out' in Report._automator['r']:
-                companies_out = Report._automator['r']['companies_out'].split(",")
+            organizations_out = None
+            if 'organizations_out' in Report._automator['r']:
+                organizations_out = Report._automator['r']['organizations_out'].split(",")
             type_analysis = None
             if 'start_date' not in Report._automator['r']:
                 raise Exception("Start date not configured in automator main.conf")
@@ -114,7 +114,7 @@ class Report(object):
 
             metric_filters = MetricFilters(Metrics.default_period, "'"+start_date+"'", "'"+end_date+"'",
                                            type_analysis,
-                                           npeople, people_out, companies_out)
+                                           npeople, people_out, organizations_out)
             return metric_filters
 
         # logging.info("Loading metrics modules from %s" % (metrics_path))

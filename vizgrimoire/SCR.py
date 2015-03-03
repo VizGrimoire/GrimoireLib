@@ -265,7 +265,7 @@ class SCR(DataSource):
         if (filter_name == "repository"):
             metric = DataSource.get_metrics("repositories", SCR)
         elif (filter_name == "company"):
-            metric = DataSource.get_metrics("companies", SCR)
+            metric = DataSource.get_metrics("organizations", SCR)
         elif (filter_name == "country"):
             metric = DataSource.get_metrics("countries", SCR)
         elif (filter_name == "project"):
@@ -456,34 +456,34 @@ def GetSQLProjectWhereSCR (project, identities_db):
     return (repos   + " and t.id = i.tracker_id")
 
 def GetSQLCompaniesFromSCR (identities_db):
-    #tables necessaries for companies
+    #tables necessaries for organizations
     return (" , people_uidentities pup,"+\
-            identities_db+".upeople_companies upc,"+\
-            identities_db+".companies c")
+            identities_db+".enrollments enr,"+\
+            identities_db+".organizations org")
 
 
 def GetSQLCompaniesWhereSCR (company):
     #fields necessaries to match info among tables
     filters = "and i.submitted_by = pup.people_id "+\
-              "and pup.uuid = upc.uuid "+\
-              "and i.submitted_on >= upc.init "+\
-              "and i.submitted_on < upc.end "+\
-              "and upc.company_id = c.id "
+              "and pup.uuid = enr.uuid "+\
+              "and i.submitted_on >= enr.start "+\
+              "and i.submitted_on < enr.end "+\
+              "and enr.organization_id = org.id "
     if company is not None:
-        filters += "and c.name ='"+ company+"'"
+        filters += "and org.name ='"+ company+"'"
 
 def GetSQLCountriesFromSCR (identities_db):
-    #tables necessaries for companies
+    #tables necessaries for organizations
     return (" , people_uidentities pup, "+\
-              identities_db+".upeople_countries upc, "+\
+              identities_db+".nationalites nat, "+\
               identities_db+".countries c ")
 
 
 def GetSQLCountriesWhereSCR (country):
     #fields necessaries to match info among tables
     return ("and i.submitted_by = pup.people_id "+\
-              "and pup.uuid = upc.uuid "+\
-              "and upc.country_id = c.id "+\
+              "and pup.uuid = nat.uuid "+\
+              "and nat.country_id = c.id "+\
               "and c.name ='"+country+"'")
 
 

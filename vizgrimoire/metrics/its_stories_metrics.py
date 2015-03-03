@@ -94,7 +94,7 @@ class StoriesOpeners(Metrics):
     # TODO: once stories are integrated in ITSQuery, moved this logic there
     def GetTablesOwnUniqueIds (self, table='') :
         tables = Set([])
-        # TODO: The acronym "c" is already used for companies
+        # TODO: The acronym "c" is already used for organizations
         tables.add("stories sto")
         tables.add("people peo")
         tables.add("people_uidentities pup")
