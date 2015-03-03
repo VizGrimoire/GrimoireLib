@@ -82,11 +82,11 @@ def create_reports_filters(period, startdate, enddate, destdir, npeople, identit
             else:
                 ds.create_filter_report(filter_, period, startdate, enddate, destdir, npeople, identities_db)
 
-def create_report_people(startdate, enddate, destdir, npeople, identities_db):
+def create_report_people(startdate, enddate, destdir, npeople, identities_db, people_ids=None):
     for ds in Report.get_data_sources():
         Report.connect_ds(ds)
         logging.info("Creating people for " + ds.get_name())
-        ds().create_people_report(period, startdate, enddate, destdir, npeople, identities_db)
+        ds().create_people_report(period, startdate, enddate, destdir, npeople, identities_db, people_ids)
 
 def create_reports_r(enddate, destdir):
     from rpy2.robjects.packages import importr
@@ -136,6 +136,8 @@ def create_people_identifiers(startdate, enddate, destdir, npeople, identities_d
         people_data[upeople_id] = People.GetPersonIdentifiers(identities_db, upeople_id)
 
     createJSON(people_data, destdir+"/people.json")
+
+    return people_ids
 
 def create_reports_studies(period, startdate, enddate, destdir):
     from vizgrimoire.metrics.metrics_filter import MetricFilters
@@ -287,12 +289,13 @@ if __name__ == '__main__':
         logging.info("Creating global aggregated metrics...")
         agg = create_agg_report(startdate, enddate, opts.destdir, identities_db)
         if not opts.metric:
+            people_ids = create_people_identifiers(startdate, enddate, opts.destdir, opts.npeople, identities_db)
+
             logging.info("Creating global top metrics...")
             top = create_top_report(startdate, enddate, opts.destdir, opts.npeople, identities_db)
             if (automator['r']['reports'].find('people')>-1):
-                create_report_people(startdate, enddate, opts.destdir, opts.npeople, identities_db)
+                create_report_people(startdate, enddate, opts.destdir, opts.npeople, identities_db, people_ids)
             # create_reports_r(end_date, opts.destdir)
-            create_people_identifiers(startdate, enddate, opts.destdir, opts.npeople, identities_db)
 
     if not opts.study and not opts.no_filters and not opts.metric:
         create_reports_filters(period, startdate, enddate, opts.destdir, opts.npeople, identities_db)

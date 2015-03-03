@@ -146,7 +146,8 @@ class ITS(DataSource):
         if filter_ is not None:
             type_analysis = filter_.get_type_analysis()
         mfilter = MetricFilters(period, startdate, enddate, type_analysis, npeople)
-
+        if mclosers.filters.closed_condition is not None:
+             mfilter.closed_condition = mclosers.filters.closed_condition
 
         if filter_ is None:
             top_closers_data = {}
@@ -322,8 +323,8 @@ class ITS(DataSource):
         top = top_data['closers.']["id"]
         top += top_data['closers.last year']["id"]
         top += check_array_value(top_data['closers.last month']["id"])
-        top += top_data['openers.']["id"]
-        top += top_data['openers.last year']["id"]
+        top += check_array_value(top_data['openers.']["id"])
+        top += check_array_value(top_data['openers.last year']["id"])
         top += check_array_value(top_data['openers.last month']["id"])
         if 'stories_openers' in top_data:
             top += top_data['stories_openers.']["id"]
