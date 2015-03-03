@@ -776,7 +776,7 @@ class ITSQuery(DSQuery):
         filters.add("i.submitted_by = pup.people_id")
         filters.add("pup.uuid = enr.uuid")
         filters.add("enr.company_id = com.id")
-        filters.add("i.submitted_on >= enr.init")
+        filters.add("i.submitted_on >= enr.start")
         filters.add("i.submitted_on < enr.end")
         if name is not None:
             if type(name) is str:

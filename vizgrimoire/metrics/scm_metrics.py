@@ -68,7 +68,6 @@ class Commits(Metrics):
         query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                    self.filters.enddate, " s.author_date ", fields,
                                    tables, filters, evolutionary, self.filters.type_analysis)
-        print query
         return query
 
 
@@ -812,10 +811,10 @@ class Companies(Metrics):
         fields.add("count(distinct(enr.organization_id)) as organizations")
         tables.add("scmlog s")
         tables.add("people_uidentities pup")
-        tables.add("enrollments enr")
+        tables.add(self.db.identities_db+".enrollments enr")
         filters.add("s.author_id = pup.people_id")
         filters.add("pup.uuid = enr.uuid")
-        filters.add("s.author_date >= enr.init")
+        filters.add("s.author_date >= enr.start")
         filters.add("s.author_date < enr.end")
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                self.filters.enddate, " s.author_date ", fields, 
@@ -840,8 +839,8 @@ class Companies(Metrics):
         tables.add("scmlog s")
         tables.add("people_uidentities pup")
         tables.add(self.db.identities_db + ".uidentities u")
-        tables.add("enrollments enr")
-        tables.add("organizations org")
+        tables.add(self.db.identities_db+".enrollments enr")
+        tables.add(self.db.identities_db+".organizations org")
         tables.union_update(self.db.GetSQLReportFrom(self.filters))
 
         filters.add("pup.people_id = s.author_id")

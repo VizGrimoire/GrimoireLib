@@ -167,7 +167,7 @@ class ContributorsNewGoneSCM(ContributorsNewGone):
         date_field = "first"
         if (gone): date_field = "last";
         q = """
-        SELECT revtime, nc.author_id, name, email, date, total, %s, upeople_id
+        SELECT revtime, nc.author_id, name, email, date, total, %s, uuid
         FROM ( %s ) nc, (%s) total, people_uidentities pup
         WHERE total.author_id = nc.author_id AND pup.people_id =  nc.author_id
         GROUP BY nc.author_id ORDER BY nc.date DESC
@@ -208,10 +208,10 @@ class ContributorsNewGoneSCM(ContributorsNewGone):
 
         # Total commits for new people in period
         q = """
-            SELECT total, name, email, first, people_upeople.upeople_id
-            FROM (%s) total_period, people, people_upeople
+            SELECT total, name, email, first, people_uidentities.uuid
+            FROM (%s) total_period, people, people_uidentities
             WHERE %s author_id = people.id
-              AND people.id = people_upeople.people_id
+              AND people.id = people_uidentities.people_id
               AND author_id IN (%s)
             ORDER BY total DESC
             """ % (q_total_period, filters, q_people)
@@ -232,10 +232,10 @@ class ContributorsNewGoneSCM(ContributorsNewGone):
            """
 
     #    q_leaving = """
-    #        SELECT total, name, email, date, people_upeople.upeople_id  from
-    #          (%s) t, people_upeople
+    #        SELECT total, name, email, date, people_uidentities.uuid  from
+    #          (%s) t, people_uidentities
     #        WHERE DATEDIFF(NOW(),date)>%s and DATEDIFF(NOW(),date)<=%s
-    #            AND people_upeople.people_id = author_id
+    #            AND people_uidentities.people_id = author_id
     #        ORDER BY date, total DESC
     #        """ % (q_all_people,date_leaving,date_gone)
 
@@ -243,10 +243,10 @@ class ContributorsNewGoneSCM(ContributorsNewGone):
         if (filters != ""): filters  += " AND "
 
         q_gone  = """
-            SELECT total, name, email, date, people_upeople.upeople_id from
-              (%s) t, people_upeople
+            SELECT total, name, email, date, people_uidentities.uuid from
+              (%s) t, people_uidentities
             WHERE %s DATEDIFF(NOW(),date)>%s
-                AND people_upeople.people_id = author_id
+                AND people_uidentities.people_id = author_id
             ORDER BY date, total DESC
             """ % (q_all_people, filters, date_gone)
 
@@ -283,10 +283,10 @@ class ContributorsNewGoneSCM(ContributorsNewGone):
 
         evol = {}
         evol['people'] = {}
-        for upeople_id in data['upeople_id']:
-            pdata = self.db.GetEvolPeopleSCM(upeople_id, period, startdate, enddate)
+        for uuid in data['uuid']:
+            pdata = self.db.GetEvolPeopleSCM(uuid, period, startdate, enddate)
             pdata = completePeriodIds(pdata, period, startdate, enddate)
-            evol['people'][upeople_id] = {"commits":pdata['commits']}
+            evol['people'][uuid] = {"commits":pdata['commits']}
             # Just to have the time series data
             evol = dict(evol.items() + pdata.items())
 
@@ -296,10 +296,10 @@ class ContributorsNewGoneSCM(ContributorsNewGone):
         data = self.GetGoneAuthorsActivity()
         evol = {}
         evol['people'] = {}
-        for upeople_id in data['upeople_id']:
-            pdata = self.db.GetEvolPeopleSCM(upeople_id, period, startdate, enddate)
+        for uuid in data['uuid']:
+            pdata = self.db.GetEvolPeopleSCM(uuid, period, startdate, enddate)
             pdata = completePeriodIds(pdata, period, startdate, enddate)
-            evol['people'][upeople_id] = {"commits":pdata['commits']}
+            evol['people'][uuid] = {"commits":pdata['commits']}
             # Just to have the time series data
             evol = dict(evol.items() + pdata.items())
         if 'changes' in evol:
@@ -430,7 +430,7 @@ class ContributorsNewGoneSCR(ContributorsNewGone):
         date_field = "first"
         if (gone): date_field = "last";
         q = """
-        SELECT revtime, url,  nc.submitted_by, name, email, submitted_on, status, total, %s, upeople_id
+        SELECT revtime, url,  nc.submitted_by, name, email, submitted_on, status, total, %s, uuid
         FROM ( %s ) nc, (%s) total, people_uidentities pup
         WHERE total.submitted_by = nc.submitted_by AND pup.people_id =  nc.submitted_by
         GROUP BY nc.submitted_by ORDER BY nc.submitted_on DESC
@@ -509,10 +509,10 @@ class ContributorsNewGoneSCR(ContributorsNewGone):
 
         # Total submissions for new people in period
         q = """
-            SELECT total, name, email, first, people_upeople.upeople_id
-            FROM (%s) total_period, people, people_upeople
+            SELECT total, name, email, first, people_uidentities.uuid
+            FROM (%s) total_period, people, people_uidentities
             WHERE %s submitted_by = people.id
-              AND people.id = people_upeople.people_id
+              AND people.id = people_uidentities.people_id
               AND submitted_by IN (%s)
             ORDER BY total DESC
             """ % (q_total_period, filters, q_people)
@@ -532,10 +532,10 @@ class ContributorsNewGoneSCR(ContributorsNewGone):
            """
 
     #    q_leaving = """
-    #        SELECT total, name, email, submitted_on, people_upeople.upeople_id  from
-    #          (%s) t, people_upeople
+    #        SELECT total, name, email, submitted_on, people_uidentities.uuid  from
+    #          (%s) t, people_uidentities
     #        WHERE DATEDIFF(NOW(),submitted_on)>%s and DATEDIFF(NOW(),submitted_on)<=%s
-    #            AND people_upeople.people_id = submitted_by
+    #            AND people_uidentities.people_id = submitted_by
     #        ORDER BY submitted_on, total DESC
     #        """ % (q_all_people,date_leaving,date_gone)
 
@@ -543,10 +543,10 @@ class ContributorsNewGoneSCR(ContributorsNewGone):
         if (filters != ""): filters  += " AND "
 
         q_gone  = """
-            SELECT total, name, email, submitted_on, people_upeople.upeople_id from
-              (%s) t, people_upeople
+            SELECT total, name, email, submitted_on, people_uidentities.uuid from
+              (%s) t, people_uidentities
             WHERE %s DATEDIFF(NOW(),submitted_on)>%s
-                AND people_upeople.people_id = submitted_by
+                AND people_uidentities.people_id = submitted_by
             ORDER BY submitted_on, total DESC
             """ % (q_all_people, filters, date_gone)
 
@@ -583,10 +583,10 @@ class ContributorsNewGoneSCR(ContributorsNewGone):
         data = self.GetNewSubmittersActivity()
         evol = {}
         evol['people'] = {}
-        for upeople_id in data['upeople_id']:
-            pdata = self.db.GetPeopleEvolSubmissionsSCR(upeople_id, period, startdate, enddate)
+        for uuid in data['uuid']:
+            pdata = self.db.GetPeopleEvolSubmissionsSCR(uuid, period, startdate, enddate)
             pdata = completePeriodIds(pdata, period, startdate, enddate)
-            evol['people'][upeople_id] = {"submissions":pdata['submissions']}
+            evol['people'][uuid] = {"submissions":pdata['submissions']}
             # Just to have the time series data
             evol = dict(evol.items() + pdata.items())
         if 'changes' in evol:
@@ -596,10 +596,10 @@ class ContributorsNewGoneSCR(ContributorsNewGone):
         data = self.GetGoneSubmittersActivity()
         evol = {}
         evol['people'] = {}
-        for upeople_id in data['upeople_id']:
-            pdata = self.db.GetPeopleEvolSubmissionsSCR(upeople_id, period, startdate, enddate)
+        for uuid in data['uuid']:
+            pdata = self.db.GetPeopleEvolSubmissionsSCR(uuid, period, startdate, enddate)
             pdata = completePeriodIds(pdata, period, startdate, enddate)
-            evol['people'][upeople_id] = {"submissions":pdata['submissions']}
+            evol['people'][uuid] = {"submissions":pdata['submissions']}
             # Just to have the time series data
             evol = dict(evol.items() + pdata.items())
         if 'changes' in evol:
