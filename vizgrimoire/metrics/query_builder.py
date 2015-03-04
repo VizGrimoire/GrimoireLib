@@ -350,7 +350,7 @@ class SCMQuery(DSQuery):
          fields.add("pup.uuid = enr.uuid")
          fields.add("s.author_date >= enr.start")
          fields.add("s.author_date < enr.end")
-         fields.add("enr.company_id = org.id")
+         fields.add("enr.organization_id = org.id")
          if company is not None: fields.add("org.name =" + company)
 
          return fields
@@ -775,7 +775,7 @@ class ITSQuery(DSQuery):
         filters = Set([])
         filters.add("i.submitted_by = pup.people_id")
         filters.add("pup.uuid = enr.uuid")
-        filters.add("enr.company_id = com.id")
+        filters.add("enr.organization_id = org.id")
         filters.add("i.submitted_on >= enr.start")
         filters.add("i.submitted_on < enr.end")
         if name is not None:
@@ -993,7 +993,7 @@ class ITSQuery(DSQuery):
         filters_ext = Set([])
         for i in range(0, len(filters)):
             filter_str = filters.pop()
-            if not re.match("(d|c|cou|com).name.*=", filter_str):
+            if not re.match("(d|c|cou|org).name.*=", filter_str):
                 filters_ext.add(filter_str)
 
         query = self.BuildQuery(period, startdate, enddate, " i.submitted_on ", fields, tables, filters_ext, evolutionary)
@@ -1328,7 +1328,7 @@ class MLSQuery(DSQuery):
         #filters = gsub("and\n( )+(d|c|cou|com).name =.*$", "", filters)
 
         q = self.BuildQuery(period, startdate, enddate, " m.first_date ", fields, tables, filters, evolutionary)
-        q = re.sub(r'(d|c|cou|com).name.*and', "", q)
+        q = re.sub(r'(d|c|cou|org).name.*and', "", q)
 
         return q
 
@@ -1340,7 +1340,7 @@ class MLSQuery(DSQuery):
         tables.union_update(self.GetTablesOwnUniqueIds())
         tables.add(self.identities_db + ".countries c")
         tables.add(self.identities_db + ".nationalites nat")
-      
+
         return tables
 
     def GetFiltersCountries (self):
@@ -1348,7 +1348,7 @@ class MLSQuery(DSQuery):
         filters.union_update(self.GetFiltersOwnUniqueIds())
         filters.add("pup.uuid = nat.uuid")
         filters.add("nat.country_id = c.id")
-        
+
         return filters
 
     def GetTablesCompanies (self):

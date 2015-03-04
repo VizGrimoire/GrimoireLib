@@ -936,7 +936,7 @@ class CompaniesCountries(Metrics):
             "      pup.uuid  = nat.uuid and "+\
             "      nat.country_id = cou.uuid and "+\
             "      pup.uuid  = enr.uuid and "+\
-            "      enr.company_id = org.id and "+\
+            "      enr.organization_id = org.id and "+\
             "      s.author_date >= enr.start  and s.author_date < enr.end and "+\
             "      s.author_date >="+startdate+ " and "+\
             "      s.author_date < "+enddate+ " "+\

@@ -285,7 +285,7 @@ class Closers(Metrics):
         filters.union_update(self.db.GetFiltersCompanies())
         filters.add(closed_condition)
         filters.add("pup.uuid = up.id")
-        filters.add("enr.organization_id = com.id")
+        filters.add("enr.organization_id = org.id")
         filters.add("org.name = " + company_name)
         filters.add("changed_on >= " + startdate)
         filters.add("changed_on < " + enddate)
