@@ -152,7 +152,7 @@ class Ages(Analyses):
         startdate = datetime.strptime(self.filters.startdate, "'%Y-%m-%d'")
         enddate = datetime.strptime(self.filters.enddate, "'%Y-%m-%d'")
         # Get dictionary with analysis, if any
-        analysis_dict = parse_analysis (self.filters.type_analysis)
+        self.analysis_dict = parse_analysis (self.filters.type_analysis)
         if data_source == SCM:
             logging.info("Analyzing aging for SCM")
             # Activity data (start time, end time for contributions) for
@@ -162,9 +162,9 @@ class Ages(Analyses):
             period = SCMPeriodCondition (start = startdate, end = enddate)
             nomerges = SCMNomergesCondition()
             conditions = [period, nomerges]
-            if self.filters.COMPANY in analysis_dict:
+            if self.filters.COMPANY in self.analysis_dict:
                 orgs = SCMOrgsCondition (
-                    orgs = (analysis_dict[self.filters.COMPANY],),
+                    orgs = (self.analysis_dict[self.filters.COMPANY],),
                     actors = "authors")
                 conditions.append(orgs)
             database = SCMDatabase (url = url,
@@ -259,11 +259,18 @@ class Ages(Analyses):
             logging.info("Error: data_source not supported for Aging")
             return
         demos = self.result(data_source)
-        produce_json (destdir + "/" + prefix + "-demographics-birth.json",
-                      demos["birth"])
-        produce_json (destdir + "/" + prefix + "-demographics-aging.json",
-                      demos["aging"])
-        logging.info("Producing report for study: Aging (done!)")
+        log_message = "Producing report for study: Aging (done!)"
+        if self.filters.COMPANY in self.analysis_dict:
+            org = self.analysis_dict[self.filters.COMPANY]
+            file_birth = destdir + "/" + org + "-" + prefix + "-com-demographics-birth.json"
+            file_aging = destdir + "/" + org + "-" + prefix + "-com-demographics-aging.json"
+            log_message = log_message + " Organization: " + org
+        else:
+            file_birth = destdir + "/" + prefix + "-demographics-birth.json"
+            file_aging = destdir + "/" + prefix + "-demographics-aging.json"
+        produce_json (file_birth, demos["birth"])
+        produce_json (file_aging, demos["aging"])
+        logging.info(log_message)
 
 
 if __name__ == '__main__':
