@@ -290,6 +290,7 @@ class SCM(DataSource):
             createJSON (summary, destdir+"/"+ filter_.get_summary_filename(SCM))
 
             # Ages study
+            if True: return
             studies = Report.get_studies()
             ages = None
             for study in studies:
