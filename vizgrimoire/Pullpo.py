@@ -300,7 +300,7 @@ class Pullpo(DataSource):
         fields ='COUNT(distinct(pr.id)) AS submissions'
         tables = 'pull_requests pr, people_uidentities pup'
         filters = 'pr.user_id = pup.people_id'
-        filters +=" AND pup.uuid="+str(developer_id)
+        filters +=" AND pup.uuid='"+str(developer_id)+"'"
         if (evol) :
             q = GetSQLPeriod(period,'pr.created_at', fields, tables, filters,
                     startdate, enddate)

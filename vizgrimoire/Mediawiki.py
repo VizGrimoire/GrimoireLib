@@ -238,7 +238,7 @@ def GetListPeopleMediaWiki (startdate, enddate) :
 def GetQueryPeopleMediaWiki (developer_id, period, startdate, enddate, evol) :
     fields = "COUNT(wiki_pages_revs.id) AS revisions"
     tables = GetTablesOwnUniqueIdsMediaWiki()
-    filters = GetFiltersOwnUniqueIdsMediaWiki() + " AND pup.uuid = " + str(developer_id)
+    filters = GetFiltersOwnUniqueIdsMediaWiki() + " AND pup.uuid = '" + str(developer_id) + "'"
 
     if (evol) :
         q = GetSQLPeriod(period,'date', fields, tables, filters,

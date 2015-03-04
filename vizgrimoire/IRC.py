@@ -368,7 +368,7 @@ def GetListPeopleIRC (startdate, enddate) :
 def GetQueryPeopleIRC (developer_id, period, startdate, enddate, evol):
     fields = "COUNT(irclog.id) AS sent"
     tables = GetTablesOwnUniqueIdsIRC()
-    filters = GetFiltersOwnUniqueIdsIRC() + " AND pup.uuid = " + str(developer_id)
+    filters = GetFiltersOwnUniqueIdsIRC() + " AND pup.uuid = '" + str(developer_id) + "'"
     filters += " AND irclog.type='COMMENT'"
 
     if (evol) :
