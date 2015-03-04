@@ -50,7 +50,7 @@ class DB (GrimoireDatabase):
 
         return Query
 
-    def _create_tables(self):
+    def _create_tables(self, tables = None, tables_id = None):
         """Create all SQLAlchemy tables.
 
         Builds a SQLAlchemy class per SQL table, by using _table().
@@ -152,20 +152,21 @@ class DB (GrimoireDatabase):
             tablename = 'upeople',
             schemaname = self.schema_id)
 
-        DB.Companies = GrimoireDatabase._table (
-            bases = (self.Base,), name = 'Companies',
-            tablename = 'companies',
-            schemaname = self.schema_id,
-            columns = dict (
-                id = Column(Integer, primary_key = True)
+        if "companies" in tables_id:
+            DB.Companies = GrimoireDatabase._table (
+                bases = (self.Base,), name = 'Companies',
+                tablename = 'companies',
+                schemaname = self.schema_id,
+                columns = dict (
+                    id = Column(Integer, primary_key = True)
+                    )
                 )
-            )
-
-        DB.UPeopleCompanies = GrimoireDatabase._table (
-            bases = (self.Base,), name = 'UPeopleCompanies',
-            tablename = 'upeople_companies',
-            schemaname = self.schema_id,
-            )
+        if "upeople_companies" in tables_id:
+            DB.UPeopleCompanies = GrimoireDatabase._table (
+                bases = (self.Base,), name = 'UPeopleCompanies',
+                tablename = 'upeople_companies',
+                schemaname = self.schema_id,
+                )
 
 class Query (GrimoireQuery):
     """Class for dealing with SCM queries"""
@@ -393,6 +394,37 @@ class Query (GrimoireQuery):
             raise Exception ("select_personsdata_uid: " + \
                                  "Unknown table to join to")
         return query
+
+    def select_people_fields(self, kind, fields = ["id"]):
+        """Adds fields from the people or upeople table to a query.
+
+        Parameters
+        ----------
+
+        kind: {"people" | "upeople"}
+           Kind of table to select from.
+        fields: list of str
+           List of strings with the names of the fields to select
+           ("id": people.id or upeople.id, "name": people.name or
+           upeople.identifier, "email": upeople.email).
+           Default: "id".
+
+        """
+
+        if kind == "people":
+            if "id" in fields:
+                query = self.add_columns (label("person_id", DB.People.id))
+            if "name" in fields:
+                query = self.add_columns (label("name", DB.People.name))
+        elif kind == "upeople":
+            if "id" in fields:
+                query = self.add_columns (label("person_id", DB.UPeople.id))
+            if "name" in fields:
+                query = self.add_columns (label("name", DB.UPeople.identifier))
+            if "email" in fields:
+                query = self.add_columns (label("email", DB.UPeople.email))
+        else:
+            raise Exception ("select_people_fields: Unknown kind %s." % kind)
 
 
     def select_commitsperiod(self):
@@ -676,6 +708,52 @@ class Query (GrimoireQuery):
         else:
             query = query.filter(DB.Actions.file_id == DB.FileLinks.file_id)
         query = query.filter(or_(*conditions))
+        return query
+
+    def filter_person_names (self, list_in = None, list_out = None,
+                             kind = "name"):
+        """Filter for lists of person names from a people or upeople table.
+
+        It assumes people or upeople tables are already joined.
+
+        Parameters
+        ----------
+
+        list_in: list of str
+           List of people to include (only this will be included).
+           Default: None, all are included.
+        list_out: list of str
+           List of people to exclude (these will not be included).
+           Default: None, no one is included.
+        kind: {"name" | "uname" }
+           Kind of person names to filter in or out (name in people table,
+           or identifier in upeople table).
+           Default: "name"
+
+        Returns
+        -------
+        
+        Query object.
+
+        """
+
+        query = self
+        if kind == "name":
+            if DB.People not in self.joined:
+                raise Exception ("filter_person_names: " \
+                                     + "people table not joined")
+            person_field = DB.People.name
+        elif kind == "uname":
+            if DB.UPeople not in self.joined:
+                raise Exception ("filter_person_names: " \
+                                     + "upeople table not joined")
+            person_field = DB.UPeople.identifier
+        else:
+            raise Exception ("filter_person_names: Unknown kind %s." % kind)
+        if list_in is not None:
+            query = query.filter (person_field.in_(list_in))
+        if list_out is not None:
+            query = query.filter (~person_field.in_(list_out))
         return query
 
     def filter_orgs (self, orgs):
