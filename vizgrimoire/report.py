@@ -117,25 +117,43 @@ class Report(object):
                                            npeople, people_out, companies_out)
             return metric_filters
 
-        logging.info("Loading metrics modules from %s" % (metrics_path))
-        sys.path.insert(1,metrics_path) # Prepend the metrics path
+        # logging.info("Loading metrics modules from %s" % (metrics_path))
+        # sys.path.insert(1,metrics_path) # Prepend the metrics path
 
         from os import listdir
-        from os.path import isfile, join
+        from os.path import isfile, join, dirname
         import imp, inspect
 
         db_identities = Report._automator['generic']['db_identities']
         dbuser = Report._automator['generic']['db_user']
         dbpass = Report._automator['generic']['db_password']
-        metrics_mod = [ f for f in listdir(metrics_path)
-                       if isfile(join(metrics_path,f)) and f.endswith("_metrics.py")]
+
+        # Read all available metrics installed in GrimoireLib egg
+        metrics_pkg = "vizgrimoire.metrics"
+        import vizgrimoire.metrics
+        mfile = inspect.getfile(vizgrimoire.metrics)
+        if ".egg" in mfile:
+            # Load list of metrics from files zipped inside lib installed egg
+            mfile = mfile.split(".egg")[0] + ".egg"
+
+            import zipfile
+            zip = zipfile.ZipFile(mfile)
+            metrics_mod = [f.replace("vizgrimoire/metrics/","") for f in zip.namelist()
+                           if "vizgrimoire/metrics/" in f and f.endswith(".py")]
+            zip.close()
+        else:
+            # Load list of metrics from metrics directory
+            metrics_path = dirname(mfile)
+            metrics_mod = [f for f in listdir(metrics_path)
+                           if isfile(join(metrics_path,f)) and f.endswith("_metrics.py")]
 
         for metric_mod in metrics_mod:
             mod_name = metric_mod.split(".py")[0]
-            mod = __import__(mod_name)
+            mod = __import__(metrics_pkg+"."+mod_name)
             # Support for having more than one metric per module
-            metrics_classes = [c for c in mod.__dict__.values()
+            metrics_classes = [c for name, c in inspect.getmembers(sys.modules[metrics_pkg+"."+mod_name])
                                if inspect.isclass(c) and issubclass(c, Metrics)]
+
             for metrics_class in metrics_classes:
                 ds = metrics_class.data_source
                 if ds is None: continue
@@ -164,11 +182,11 @@ class Report(object):
     @staticmethod
     def _init_studies(studies_path):
         """Register all available studies"""
-        logging.info("Loading studies modules from %s" % (studies_path))
-        sys.path.insert(1,studies_path) # Prepend the studies path
+        # logging.info("Loading studies modules from %s" % (studies_path))
+        # sys.path.insert(1,studies_path) # Prepend the studies path
 
         from os import listdir
-        from os.path import isfile, join
+        from os.path import isfile, join, dirname
         import imp, inspect
 
         db_identities = Report._automator['generic']['db_identities']
@@ -179,14 +197,30 @@ class Report(object):
             return
         studies_on = Report._automator['r']['studies'].split(",")
 
-        studies_mod = [ f for f in listdir(studies_path)
-                       if isfile(join(studies_path,f)) and f.endswith(".py")]
+        # Read all available studies installed in GrimoireLib egg
+        studies_pkg = "vizgrimoire.analysis"
+        import vizgrimoire.analysis
+        mfile = inspect.getfile(vizgrimoire.analysis)
+
+        if ".egg" in mfile:
+            # Load list of analysis from files zipped inside lib installed egg
+            mfile = mfile.split(".egg")[0] + ".egg"
+            import zipfile
+            zip = zipfile.ZipFile(mfile)
+            studies_mod = [f.replace("vizgrimoire/analysis/","") for f in zip.namelist()
+                           if "vizgrimoire/analysis/" in f and f.endswith(".py")]
+            zip.close()
+        else:
+            # Load list of analysis from analysis directory
+            studies_path = dirname(mfile)
+            studies_mod = [f for f in listdir(studies_path)
+                           if isfile(join(studies_path,f)) and f.endswith(".py")]
 
         for study_mod in studies_mod:
             mod_name = study_mod.split(".py")[0]
-            mod = __import__(mod_name)
+            mod = __import__(studies_pkg+"."+mod_name)
             # Support for having more than one study per module
-            studies_classes = [c for c in mod.__dict__.values()
+            studies_classes = [c for name, c in inspect.getmembers(sys.modules[studies_pkg+"."+mod_name])
                                if inspect.isclass(c) and issubclass(c, Analyses)]
             for study_class in studies_classes:
                 if study_class == Analyses: continue
