@@ -359,18 +359,18 @@ if __name__ == '__main__':
 
     init_env()
 
-    from metrics import Metrics
-    from query_builder import DSQuery, SCMQuery, MLSQuery, SCRQuery, ITSQuery
-    from metrics_filter import MetricFilters
-    import scm_metrics as scm
-    import mls_metrics as mls
-    import scr_metrics as scr
-    import its_metrics as its
-    from GrimoireUtils import createJSON
-    from GrimoireSQL import SetDBChannel
+    from vizgrimoire.metrics.metrics import Metrics
+    from vizgrimoire.metrics.query_builder import DSQuery, SCMQuery, MLSQuery, SCRQuery, ITSQuery
+    from vizgrimoire.metrics.metrics_filter import MetricFilters
+    import vizgrimoire.metrics.scm_metrics as scm
+    import vizgrimoire.metrics.mls_metrics as mls
+    import vizgrimoire.metrics.scr_metrics as scr
+    import vizgrimoire.metrics.its_metrics as its
+    from vizgrimoire.GrimoireUtils import createJSON
+    from vizgrimoire.GrimoireSQL import SetDBChannel
     from rpy2.robjects.packages import importr
-    from ITS import ITS
-    from data_handler import DHESA
+    from vizgrimoire.ITS import ITS
+    from vizgrimoire.datahandlers.data_handler import DHESA
 
     # parse options
     opts = read_options()    
