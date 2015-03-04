@@ -517,7 +517,7 @@ def GetITSSQLCompaniesFrom (i_db):
 
     return(" , people_uidentities pup, "+\
            i_db+".organizations org, "+\
-           i_db+".enrolments enr")
+           i_db+".enrollments enr")
 
 def GetITSSQLCompaniesWhere (name):
     # filters for the organizations analysis
