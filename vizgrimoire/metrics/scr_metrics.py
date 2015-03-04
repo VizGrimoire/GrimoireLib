@@ -859,7 +859,7 @@ class Countries(Metrics):
         fields.add("count(distinct(nat.country_id)) as countries")
         tables.add("issues i")
         tables.add("people_uidentities pup")
-        tables.add(self.db.identities_db + ".nationalites nat")
+        tables.add(self.db.identities_db + ".nationalities nat")
         filters.add("i.submitted_by = pup.people_id")
         filters.add("pup.uuid = nat.uuid")
 
@@ -871,7 +871,7 @@ class Countries(Metrics):
     def get_list  (self):
         q = "SELECT c.name as name, COUNT(DISTINCT(i.id)) AS issues "+\
                "FROM  "+self.db.identities_db+".countries c, "+\
-                       self.db.identities_db+".nationalites nat, "+\
+                       self.db.identities_db+".nationalities nat, "+\
                 "    people_uidentities pup, "+\
                 "    issues i "+\
                "WHERE i.submitted_by = pup.people_id AND "+\

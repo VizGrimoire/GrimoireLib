@@ -534,8 +534,8 @@ def GetITSSQLCountriesFrom (i_db):
     # fields necessary for the countries analysis
 
     return(" , people_uidentities pup, "+\
-           i_db+".organizations org, "+\
-           i_db+".enrollments enr")
+           i_db+".countries cou, "+\
+           i_db+".nationalities nat")
 
 def GetITSSQLCountriesWhere (name):
     # filters for the countries analysis

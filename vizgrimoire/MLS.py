@@ -406,7 +406,7 @@ def GetMLSSQLCountriesFrom (i_db):
     return(" , messages_people mp, "+\
                "people_uidentities pup, "+\
                i_db+".countries c, "+\
-               i_db+".nationalites nat ")
+               i_db+".nationalities nat ")
 
 
 def GetMLSSQLCountriesWhere (name):

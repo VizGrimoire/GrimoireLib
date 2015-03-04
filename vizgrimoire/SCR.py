@@ -475,7 +475,7 @@ def GetSQLCompaniesWhereSCR (company):
 def GetSQLCountriesFromSCR (identities_db):
     #tables necessaries for organizations
     return (" , people_uidentities pup, "+\
-              identities_db+".nationalites nat, "+\
+              identities_db+".nationalities nat, "+\
               identities_db+".countries c ")
 
 

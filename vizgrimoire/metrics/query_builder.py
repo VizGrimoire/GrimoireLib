@@ -359,7 +359,7 @@ class SCMQuery(DSQuery):
         #tables necessaries for organizations
         tables = Set([])
         tables.add("people_uidentities pup")
-        tables.add(self.identities_db + ".nationalites nat")
+        tables.add(self.identities_db + ".nationalities nat")
         tables.add(self.identities_db + ".countries cou")
 
         return tables
@@ -795,7 +795,7 @@ class ITSQuery(DSQuery):
         tables = Set([])
         tables.add("people_uidentities pup")
         tables.add(self.identities_db + ".countries cou")
-        tables.add(self.identities_db + ".nationalites nat")
+        tables.add(self.identities_db + ".nationalities nat")
 
         return tables
 
@@ -1105,7 +1105,7 @@ class MLSQuery(DSQuery):
         tables.add("messages_people mp")
         tables.add("people_uidentities pup")
         tables.add(self.identities_db + ".countries c")
-        tables.add(self.identities_db + ".nationalites nat")
+        tables.add(self.identities_db + ".nationalities nat")
 
         return tables
 
@@ -1339,7 +1339,7 @@ class MLSQuery(DSQuery):
         tables = Set([])
         tables.union_update(self.GetTablesOwnUniqueIds())
         tables.add(self.identities_db + ".countries c")
-        tables.add(self.identities_db + ".nationalites nat")
+        tables.add(self.identities_db + ".nationalities nat")
 
         return tables
 
@@ -1477,7 +1477,7 @@ class SCRQuery(DSQuery):
         tables = Set([])
 
         tables.add("people_uidentities pup")
-        tables.add(self.identities_db + ".nationalites nat")
+        tables.add(self.identities_db + ".nationalities nat")
         #TODO: warning -> countries is using the same acronym as organizations
         tables.add(self.identities_db + ".countries c")
 
@@ -2107,7 +2107,7 @@ class IRCQuery(DSQuery):
         tables = Set([])
         tables.add("people_uidentities pup")
         tables.add(self.identities_db + ".countries c")
-        tables.add(self.identities_db + ".nationalites nat")
+        tables.add(self.identities_db + ".nationalities nat")
 
         return tables
 
@@ -2616,7 +2616,7 @@ class PullpoQuery(DSQuery):
         tables = Set([])
         tables.add("people_uidentities pup")
         tables.add(self.identities_db + ".countries c")
-        tables.add(self.identities_db + ".nationalites nat")
+        tables.add(self.identities_db + ".nationalities nat")
 
         return tables
 

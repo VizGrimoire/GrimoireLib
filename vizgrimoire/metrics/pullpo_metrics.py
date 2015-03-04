@@ -662,7 +662,7 @@ class Countries(Metrics):
         fields.add("count(distinct(nat.country_id)) as countries")
         tables.add("pull_requests pr")
         tables.add("people_uidentities pup")
-        tables.add(self.db.identities_db + ".nationalites nat")
+        tables.add(self.db.identities_db + ".nationalities nat")
         filters.add("pr.user_id = pup.people_id")
         filters.add("pup.uuid = nat.uuid")
 
@@ -674,7 +674,7 @@ class Countries(Metrics):
     def get_list  (self):
         q = "SELECT c.name as name, COUNT(DISTINCT(pr.id)) AS submitted "+\
                "FROM  "+self.db.identities_db+".countries c, "+\
-                       self.db.identities_db+".nationalites nat, "+\
+                       self.db.identities_db+".nationalities nat, "+\
                 "    people_uidentities pup, "+\
                 "    pull_requests pr "+\
                "WHERE  pr.user_id = pup.people_id AND "+\

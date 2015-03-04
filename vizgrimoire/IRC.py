@@ -268,7 +268,7 @@ def GetIRCSQLCountriesFrom (i_db):
     # tables necessary to countries analysis
     return(" , people_uidentities pup, "+\
            i_db+".countries c, "+\
-           i_db+".nationalites nat")
+           i_db+".nationalities nat")
 
 
 def GetIRCSQLCountriesWhere(name):
