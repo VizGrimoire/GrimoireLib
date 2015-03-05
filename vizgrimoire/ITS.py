@@ -52,13 +52,39 @@ class ITS(DataSource):
     @staticmethod
     def get_date_init(startdate, enddate, identities_db, type_analysis):
         """Get the date of the first activity in the data source"""
-        return GetInitDate (startdate, enddate, identities_db, type_analysis)
+        from vizgrimoire.metrics.its_metrics import InitialActivity
+        from vizgrimoire.report import Report
+        from vizgrimoire.metrics.query_builder import ITSQuery
+
+        db_identities = Report.get_config()['generic']['db_identities']
+        dbuser = Report.get_config()['generic']['db_user']
+        dbpass = Report.get_config()['generic']['db_password']
+        dbbicho = Report.get_config()['generic']['db_bicho']
+
+        dbcon = ITSQuery(dbuser, dbpass, dbbicho, db_identities)
+        filters = MetricFilters("", startdate, enddate, type_analysis)
+        init_date = InitialActivity(dbcon, filters)
+
+        return init_date.get_agg()
 
     @staticmethod
     def get_date_end(startdate, enddate, identities_db, type_analysis):
         """Get the date of the last activity in the data source"""
-        return GetEndDate (startdate, enddate, identities_db, type_analysis)
+        from vizgrimoire.metrics.its_metrics import EndOfActivity
+        from vizgrimoire.report import Report
+        from vizgrimoire.metrics.query_builder import ITSQuery
 
+        db_identities = Report.get_config()['generic']['db_identities']
+        dbuser = Report.get_config()['generic']['db_user']
+        dbpass = Report.get_config()['generic']['db_password']
+        dbbicho = Report.get_config()['generic']['db_bicho']
+
+        dbcon = ITSQuery(dbuser, dbpass, dbbicho, db_identities)
+        filters = MetricFilters("", startdate, enddate, type_analysis)
+        final_date = EndOfActivity(dbcon, filters)
+
+        return final_date.get_agg()
+ 
     @staticmethod
     def get_url():
         """Get the URL from which the data source was gathered"""
@@ -474,164 +500,6 @@ class ITS(DataSource):
         m = ['closed','closers','changed','changers',"opened",'openers']
         m += ['bmitickets']
         return m
-
-
-##############
-# Specific FROM and WHERE clauses per type of report
-##############
-
-def GetITSSQLRepositoriesFrom ():
-    # tables necessary for repositories 
-    return (", trackers t")
-
-def GetITSSQLRepositoriesWhere (repository):
-    # fields necessary to match info among tables
-    filters = " i.tracker_id = t.id "
-    if repository is not None:
-        filters += "and t.url = "+repository+" "
-    return filters
-
-def GetITSSQLProjectsFrom ():
-    # tables necessary for repositories
-    return (", trackers t")
-
-def GetITSSQLProjectsWhere (project, identities_db):
-    # include all repositories for a project and its subprojects
-    # Remove '' from project name
-    if (project[0] == "'" and project[-1] == "'"):
-        project = project[1:-1]
-
-    repos = """ t.url IN (
-           SELECT repository_name
-           FROM   %s.projects p, %s.project_repositories pr
-           WHERE  p.project_id = pr.project_id AND p.project_id IN (%s)
-               AND pr.data_source='its'
-    )""" % (identities_db, identities_db, get_subprojects(project, identities_db))
-
-    return (repos   + " and t.id = i.tracker_id")
-
-
-
-def GetITSSQLCompaniesFrom (i_db):
-    # fields necessary for the companies analysis
-
-    return(" , people_upeople pup, "+\
-           i_db+".companies c, "+\
-           i_db+".upeople_companies upc")
-
-def GetITSSQLCompaniesWhere (name):
-    # filters for the companies analysis
-    filters = " i.submitted_by = pup.people_id and "+\
-           "pup.upeople_id = upc.upeople_id and "+\
-           "upc.company_id = c.id and "+\
-           "i.submitted_on >= upc.init and "+\
-           "i.submitted_on < upc.end"
-    if name is not None:
-           filters += " and c.name = "+name
-    return filters
-
-def GetITSSQLCountriesFrom (i_db):
-    # fields necessary for the countries analysis
-
-    return(" , people_upeople pup, "+\
-           i_db+".countries c, "+\
-           i_db+".upeople_countries upc")
-
-def GetITSSQLCountriesWhere (name):
-    # filters for the countries analysis
-    filters = " i.submitted_by = pup.people_id and "+\
-           "pup.upeople_id = upc.upeople_id and "+\
-           "upc.country_id = c.id "
-    if name is not None:
-           filters += " and c.name = "+name
-    return filters
-
-
-def GetITSSQLDomainsFrom (i_db):
-    # fields necessary for the domains analysis
-
-    return(" , people_upeople pup, "+\
-           i_db+".domains d, "+\
-           i_db+".upeople_domains upd")
-
-
-def GetITSSQLDomainsWhere (name):
-    # filters for the domains analysis
-    filters = " i.submitted_by = pup.people_id and "+\
-           "pup.upeople_id = upd.upeople_id and "+\
-           "upd.domain_id = d.id "
-
-    if name is not None:
-            filters += " and d.name = "+name
-    return filters
-
-##########
-#Generic functions to obtain FROM and WHERE clauses per type of report
-##########
-
-def GetITSSQLReportFrom (identities_db, type_analysis):
-    #generic function to generate 'from' clauses
-    #"type" is a list of two values: type of analysis and value of 
-    #such analysis
-
-    From = ""
-
-    if (type_analysis is None or len(type_analysis) != 2): return From
-
-    analysis = type_analysis[0]
-    value = type_analysis[1]
-
-    if analysis == 'repository': From = GetITSSQLRepositoriesFrom()
-    elif analysis == 'company': From = GetITSSQLCompaniesFrom(identities_db)
-    elif analysis == 'country': From = GetITSSQLCountriesFrom(identities_db)
-    elif analysis == 'domain': From = GetITSSQLDomainsFrom(identities_db)
-    elif analysis == 'project': From = GetITSSQLProjectsFrom()
-
-    return (From)
-
-def GetITSSQLReportWhere (type_analysis, identities_db = None):
-    #generic function to generate 'where' clauses
-
-    #"type" is a list of two values: type of analysis and value of 
-    #such analysis
-    where = ""
-
-    if (type_analysis is None or len(type_analysis) != 2): return where
-
-    analysis = type_analysis[0]
-    value = type_analysis[1]
-
-    if analysis == 'repository': where = GetITSSQLRepositoriesWhere(value)
-    elif analysis == 'company': where = GetITSSQLCompaniesWhere(value)
-    elif analysis == 'country': where = GetITSSQLCountriesWhere(value)
-    elif analysis == 'domain': where = GetITSSQLDomainsWhere(value)
-    elif analysis == 'project': where = GetITSSQLProjectsWhere(value, identities_db)
-
-    return (where)
-
-
-def GetDate (startdate, enddate, identities_db, type_analysis, type):
-    # date of submmitted issues (type= max or min)
-    if (type=="max"):
-        fields = " DATE_FORMAT (max(submitted_on), '%Y-%m-%d') as last_date"
-    else :
-        fields = " DATE_FORMAT (min(submitted_on), '%Y-%m-%d') as first_date"
-
-    tables = " issues i " + GetITSSQLReportFrom(identities_db, type_analysis)
-    filters = GetITSSQLReportWhere(type_analysis, identities_db)
-
-    q = BuildQuery(None, startdate, enddate, " i.submitted_on ", fields, tables, filters, False)
-
-    data = ExecuteQuery(q)
-    return(data)
-
-def GetInitDate (startdate, enddate, identities_db, type_analysis):
-    #Initial date of submitted issues
-    return(GetDate(startdate, enddate, identities_db, type_analysis, "min"))
-
-def GetEndDate (startdate, enddate, identities_db, type_analysis):
-    #End date of submitted issues
-    return(GetDate(startdate, enddate, identities_db, type_analysis, "max"))
 
 
 ###############
