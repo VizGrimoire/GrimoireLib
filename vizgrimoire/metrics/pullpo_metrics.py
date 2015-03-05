@@ -159,30 +159,21 @@ class Pending(Metrics):
         # We need to fix the same filter for all metrics
         metrics_for_pendig = {}
 
-        metric = Pullpo.get_metrics("submitted", Pullpo)
-        if metric is None:
-            metric = Submitted(self.db, self.filters)
-        metric.filters = self.filters
+        metric = Submitted(self.db, self.filters)
         metrics_for_pendig['submitted'] = metric
 
-        metric = Pullpo.get_metrics("merged", Pullpo)
-        if metric is None:
-            metric = Merged(self.db, self.filters)
-        metric.filters = self.filters
+        metric = Merged(self.db, self.filters)
         metrics_for_pendig['merged'] = metric
 
-        metric = Pullpo.get_metrics("abandoned", Pullpo)
-        if metric is None:
-            metric = Abandoned(self.db, self.filters)
-        metric.filters = self.filters
+        metric = Abandoned(self.db, self.filters)
         metrics_for_pendig['abandoned'] = metric
 
         return metrics_for_pendig
 
-    def _get_metrics_for_pending_all(self, evol):
+    def _get_metrics_for_pending_all(self, isevol):
         """ Return the metric for all items normalized """
         metrics = self._get_metrics_for_pending()
-        if evol is True:
+        if isevol:
             submitted = metrics['submitted'].get_ts()
             merged = metrics['merged'].get_ts()
             abandoned = metrics['abandoned'].get_ts()
@@ -205,13 +196,13 @@ class Pending(Metrics):
         abandoned = check_array_values(abandoned)
 
         submitted = fill_and_order_items(items, submitted, id_field,
-                                         evol, self.filters.period,
+                                         isevol, self.filters.period,
                                          self.filters.startdate, self.filters.enddate)
         merged = fill_and_order_items(items, merged, id_field,
-                                         evol, self.filters.period,
+                                         isevol, self.filters.period,
                                          self.filters.startdate, self.filters.enddate)
         abandoned = fill_and_order_items(items, abandoned, id_field,
-                                         evol, self.filters.period,
+                                         isevol, self.filters.period,
                                          self.filters.startdate, self.filters.enddate)
         metrics_for_pendig_all = {
           id_field: submitted[id_field],
@@ -219,7 +210,7 @@ class Pending(Metrics):
           "merged": merged["merged"],
           "abandoned": abandoned["abandoned"]
         }
-        if evol:
+        if isevol:
             metrics_for_pendig_all[self.filters.period] = submitted[self.filters.period]
 
         return metrics_for_pendig_all
