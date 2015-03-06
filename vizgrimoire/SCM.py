@@ -310,10 +310,9 @@ class SCM(DataSource):
                 dsquery = ds.get_query_builder()
                 dbcon = dsquery(dbuser, dbpass, dbname, db_identities)
 
-                metric_filters = MetricFilters(period, startdate, enddate, filter_item.get_type_analysis())
-
                 for item in items :
                     filter_item = Filter(filter_name, item)
+                    metric_filters = MetricFilters(period, startdate, enddate, filter_item.get_type_analysis())
                     obj = ages(dbcon, metric_filters)
                     res = obj.create_report(ds, destdir)
 
