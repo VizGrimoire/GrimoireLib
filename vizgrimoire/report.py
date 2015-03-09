@@ -121,7 +121,7 @@ class Report(object):
         # sys.path.insert(1,metrics_path) # Prepend the metrics path
 
         from os import listdir
-        from os.path import isfile, join, dirname
+        from os.path import isfile, isdir, join, dirname
         import imp, inspect
 
         db_identities = Report._automator['generic']['db_identities']
@@ -133,9 +133,9 @@ class Report(object):
         import vizgrimoire.metrics
         mfile = inspect.getfile(vizgrimoire.metrics)
         if ".egg" in mfile:
-            # Load list of metrics from files zipped inside lib installed egg
             mfile = mfile.split(".egg")[0] + ".egg"
-
+        if isfile(mfile):
+            # Load list of metrics from files zipped inside lib installed egg
             import zipfile
             zip = zipfile.ZipFile(mfile)
             metrics_mod = [f.replace("vizgrimoire/metrics/","") for f in zip.namelist()
@@ -143,6 +143,7 @@ class Report(object):
             zip.close()
         else:
             # Load list of metrics from metrics directory
+            if ".egg" in mfile: mfile += "/vizgrimoire/metrics/"
             metrics_path = dirname(mfile)
             metrics_mod = [f for f in listdir(metrics_path)
                            if isfile(join(metrics_path,f)) and f.endswith("_metrics.py")]
@@ -203,6 +204,8 @@ class Report(object):
         mfile = inspect.getfile(vizgrimoire.analysis)
 
         if ".egg" in mfile:
+            mfile = mfile.split(".egg")[0] + ".egg"
+        if isfile(mfile):
             # Load list of analysis from files zipped inside lib installed egg
             mfile = mfile.split(".egg")[0] + ".egg"
             import zipfile
@@ -212,6 +215,7 @@ class Report(object):
             zip.close()
         else:
             # Load list of analysis from analysis directory
+            if ".egg" in mfile: mfile += "/vizgrimoire/analysis/"
             studies_path = dirname(mfile)
             studies_mod = [f for f in listdir(studies_path)
                            if isfile(join(studies_path,f)) and f.endswith(".py")]
