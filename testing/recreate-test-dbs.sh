@@ -17,17 +17,17 @@ echo "drop database cp_sortinghat_GrimoireLibTests" | mysql -u root
 
 
 echo Creating testing dbs
-mysqladmin -u root create  cp_cvsanaly_GrimoireLibTests
-mysqladmin -u root create  cp_bicho_GrimoireLibTests
-mysqladmin -u root create  cp_gerrit_GrimoireLibTests
-mysqladmin -u root create  cp_mlstats_GrimoireLibTests
-mysqladmin -u root create  cp_irc_GrimoireLibTests
-mysqladmin -u root create  cp_mediawiki_GrimoireLibTests
-mysqladmin -u root create  cp_downloads_GrimoireLibTests
-mysqladmin -u root create  cp_releases_GrimoireLibTests
-mysqladmin -u root create  cp_sibyl_GrimoireLibTests
-mysqladmin -u root create  cp_pullpo_GrimoireLibTests
-mysqladmin -u root create  cp_sortinghat_GrimoireLibTests
+echo "CREATE DATABASE cp_cvsanaly_GrimoireLibTests CHARACTER SET utf8" |  mysql -u root
+echo "CREATE DATABASE cp_bicho_GrimoireLibTests CHARACTER SET utf8" |  mysql -u root
+echo "CREATE DATABASE cp_gerrit_GrimoireLibTests CHARACTER SET utf8" |  mysql -u root
+echo "CREATE DATABASE cp_mlstats_GrimoireLibTests CHARACTER SET utf8" |  mysql -u root
+echo "CREATE DATABASE cp_irc_GrimoireLibTests CHARACTER SET utf8" |  mysql -u root
+echo "CREATE DATABASE cp_mediawiki_GrimoireLibTests CHARACTER SET utf8" |  mysql -u root
+echo "CREATE DATABASE cp_downloads_GrimoireLibTests CHARACTER SET utf8" |  mysql -u root
+echo "CREATE DATABASE cp_releases_GrimoireLibTests CHARACTER SET utf8" |  mysql -u root
+echo "CREATE DATABASE cp_sibyl_GrimoireLibTests CHARACTER SET utf8" |  mysql -u root
+echo "CREATE DATABASE cp_pullpo_GrimoireLibTests CHARACTER SET utf8" |  mysql -u root
+echo "CREATE DATABASE cp_sortinghat_GrimoireLibTests CHARACTER SET utf8" |  mysql -u root
 
 echo Uncompressing testing dbs dumps
 7zr -y x irc.mysql.7z

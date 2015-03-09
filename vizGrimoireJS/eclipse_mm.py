@@ -339,25 +339,9 @@ def mls_report(dbcon, filters, sloc):
     return dataset
 
 
-def init_env():
-    grimoirelib = path.join("..","vizgrimoire")
-    metricslib = path.join("..","vizgrimoire","metrics")
-    studieslib = path.join("..","vizgrimoire","analysis")
-    datahandler = path.join("..","vizgrimoire","datahandlers")
-    alchemy = path.join("..")
-    for dir in [grimoirelib,metricslib,studieslib,alchemy, datahandler]:
-        sys.path.append(dir)
-
-    # env vars for R
-    environ["LANG"] = ""
-    environ["R_LIBS"] = "../r-lib"
-
-
 if __name__ == '__main__':
 
     locale.setlocale(locale.LC_ALL, 'en_US.utf8')
-
-    init_env()
 
     from vizgrimoire.metrics.metrics import Metrics
     from vizgrimoire.metrics.query_builder import DSQuery, SCMQuery, MLSQuery, SCRQuery, ITSQuery
