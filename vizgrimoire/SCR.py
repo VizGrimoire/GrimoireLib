@@ -40,8 +40,6 @@ from vizgrimoire.metrics.query_builder import DSQuery, SCRQuery
 from vizgrimoire.data_source import DataSource
 from vizgrimoire.filter import Filter
 
->>>>>>> master
-
 class SCR(DataSource):
     _metrics_set = []
 

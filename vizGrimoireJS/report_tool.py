@@ -178,6 +178,7 @@ def create_people_identifiers(startdate, enddate, destdir, npeople, identities_d
 
     from vizgrimoire.SCM import GetPeopleListSCM
     import vizgrimoire.People as People
+    from vizgrimoire.GrimoireSQL import SetDBChannel
 
     # TODO: Identities db is the same than SCM
     Report.connect_ds(ds_scm)
@@ -185,11 +186,11 @@ def create_people_identifiers(startdate, enddate, destdir, npeople, identities_d
     for upeople_id in people_ids:
         people_data[upeople_id] = People.GetPersonIdentifiers(upeople_id)
 
-    all_top_min_ds = get_top_people(startdate, enddate, idb)
-    print(all_top_min_ds)
+    all_top_min_ds = get_top_people(startdate, enddate, identities_db)
+    # print(all_top_min_ds)
 
     db = automator['generic']['db_cvsanaly']
-    vizgrimoire.GrimoireSQL.SetDBChannel (database=db, user=opts.dbuser, password=opts.dbpassword)
+    SetDBChannel (database=db, user=opts.dbuser, password=opts.dbpassword)
 
     for upeople_id in all_top_min_ds:
         people_data[upeople_id] = People.GetPersonIdentifiers(upeople_id)

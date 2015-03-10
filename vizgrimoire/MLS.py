@@ -144,7 +144,7 @@ class MLS(DataSource):
         return ["senders"]
 
     @staticmethod
-    def get_top_data (startdate, enddate, identities_db, filter_, npeople, threads_top = True):
+    def get_top_data (startdate, enddate, identities_db, filter_, npeople, threads_top = False):
         msenders = DataSource.get_metrics("senders", MLS)
         period = None
         type_analysis = None
