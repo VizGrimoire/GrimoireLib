@@ -106,6 +106,9 @@ class MetricFilters(object):
        filtered by a specific status of a ticket."""
     ITS_TICKET_TYPE = "ticket_type"
 
+    """ Delimiter to be used in type_analysis for multivalues filters """
+    DELIMITER = ",,"
+
     def __init__(self, period, startdate, enddate, type_analysis=None, npeople=10,
                  people_out = None, companies_out = None, global_filter = None):
         self.period = period

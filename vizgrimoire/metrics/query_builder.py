@@ -539,7 +539,7 @@ class SCMQuery(DSQuery):
         # the type_analysis length !=2 error should be raised in the MetricFilter instance
         if type_analysis is not None:
             # To be improved... not a very smart way of doing this
-            list_analysis = type_analysis[0].split(",")
+            list_analysis = type_analysis[0].split(MetricFilters.DELIMITER)
 
             analysis = type_analysis[0]
 
@@ -581,8 +581,8 @@ class SCMQuery(DSQuery):
     # TODO: share between all data sources
     def _get_where_global_filter_set(self, global_filter):
         if len(global_filter) == 2:
-            fields = global_filter[0].split(",")
-            values = global_filter[1].split(",")
+            fields = global_filter[0].split(MetricFilters.DELIMITER)
+            values = global_filter[1].split(MetricFilters.DELIMITER)
             if len(fields) > 1:
                 if fields.count(fields[0]) == len(fields):
                     # Same fields, different values, use OR
@@ -606,7 +606,7 @@ class SCMQuery(DSQuery):
             if values is not None:
                 if type(values) is str:
                     # To be improved... not a very smart way of doing this...
-                    list_values = values.split(",")
+                    list_values = values.split(MetricFilters.DELIMITER)
                 elif type(values) is list:
                     # On item or list of lists. Unify to list of lists
                     list_values = values
@@ -615,7 +615,7 @@ class SCMQuery(DSQuery):
             else:
                 list_values = None
 
-            list_analysis = type_analysis[0].split(",")
+            list_analysis = type_analysis[0].split(MetricFilters.DELIMITER)
 
             pos = 0
             for analysis in list_analysis:
@@ -873,7 +873,7 @@ class ITSQuery(DSQuery):
 
         if type_analysis is not None and len(type_analysis)>1:
             # To be improved... not a very smart way of doing this
-            list_analysis = type_analysis[0].split(",")
+            list_analysis = type_analysis[0].split(MetricFilters.DELIMITER)
 
             # Retrieving tables based on the required type of analysis.
             for analysis in list_analysis:
@@ -903,8 +903,8 @@ class ITSQuery(DSQuery):
 
     def _get_where_global_filter_set(self, global_filter):
         if len(global_filter) == 2:
-            fields = global_filter[0].split(",")
-            values = global_filter[1].split(",")
+            fields = global_filter[0].split(MetricFilters.DELIMITER)
+            values = global_filter[1].split(MetricFilters.DELIMITER)
             if len(fields) > 1:
                 if fields.count(fields[0]) == len(fields):
                     # Same fields, different values, use OR
@@ -927,7 +927,7 @@ class ITSQuery(DSQuery):
             if values is not None:
                 if type(values) is str:
                     # To be improved... not a very smart way of doing this...
-                    list_values = values.split(",")
+                    list_values = values.split(MetricFilters.DELIMITER)
                 elif type(values) is list:
                     # On item or list of lists. Unify to list of lists
                     list_values = values
@@ -936,7 +936,7 @@ class ITSQuery(DSQuery):
             else:
                 list_values = None
 
-            list_analysis = type_analysis[0].split(",")
+            list_analysis = type_analysis[0].split(MetricFilters.DELIMITER)
 
             pos = 0
             for analysis in list_analysis:
@@ -1234,7 +1234,7 @@ class MLSQuery(DSQuery):
         type_analysis = filters.type_analysis
         #if (type_analysis is None or len(type_analysis) != 2): return From
         if type_analysis is not None:
-            list_analysis = type_analysis[0].split(",") 
+            list_analysis = type_analysis[0].split(MetricFilters.DELIMITER)
             #analysis = type_analysis[0]
 
             for analysis in list_analysis:
@@ -1281,10 +1281,10 @@ class MLSQuery(DSQuery):
 
             # To be improved... not a very smart way of doing this...
             if type_analysis[1] is not None:
-                list_values = type_analysis[1].split(",")
+                list_values = type_analysis[1].split(MetricFilters.DELIMITER)
             else:
                 list_values = None
-            list_analysis = type_analysis[0].split(",")
+            list_analysis = type_analysis[0].split(MetricFilters.DELIMITER)
 
             for analysis in list_analysis:
                 if list_values is not None:
@@ -1563,7 +1563,7 @@ class SCRQuery(DSQuery):
 
         if type_analysis is not None:
 
-            list_analysis = type_analysis[0].split(",")
+            list_analysis = type_analysis[0].split(MetricFilters.DELIMITER)
 
             for analysis in list_analysis:
                 if analysis == 'repository': From.union_update(self.GetSQLRepositoriesFrom())
@@ -1591,7 +1591,7 @@ class SCRQuery(DSQuery):
             if values is not None:
                 if type(values) is str:
                     # To be improved... not a very smart way of doing this...
-                    list_values = values.split(",")
+                    list_values = values.split(MetricFilters.DELIMITER)
                 elif type(values) is list:
                     # On item or list of lists. Unify to list of lists
                     list_values = values
@@ -1600,7 +1600,7 @@ class SCRQuery(DSQuery):
             else:
                 list_values = None
 
-            list_analysis = type_analysis[0].split(",")
+            list_analysis = type_analysis[0].split(MetricFilters.DELIMITER)
 
             pos = 0
             for analysis in list_analysis:
