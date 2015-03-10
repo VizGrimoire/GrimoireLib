@@ -282,7 +282,7 @@ def GetIRCSQLDomainsFrom (i_db):
     # tables necessary to domains analysis
     return(" , people_uidentities pup, "+\
            i_db+".domains d, "+\
-           i_db+".upeople_domains upd")
+           i_db+".uidentities_domains upd")
 
 def GetIRCSQLDomainsWhere (name):
     # filters necessary to domains analysis

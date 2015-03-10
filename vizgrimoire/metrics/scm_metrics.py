@@ -956,7 +956,7 @@ class Domains(Metrics):
 
     def _get_sql(self, evol):
         fields = "COUNT(DISTINCT(upd.domain_id)) AS domains"
-        tables = "scmlog s, people_uidentities pup, upeople_domains upd"
+        tables = "scmlog s, people_uidentities pup, uidentities_domains upd"
         filters = "s.author_id = pup.people_id and pup.uuid = upd.uuid "
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                self.filters.enddate, " s.author_date ", fields,
@@ -973,7 +973,7 @@ class Domains(Metrics):
             "FROM scmlog s, "+\
             "  people_uidentities pup, "+\
             "  "+identities_db+".domains d, "+\
-            "  "+identities_db+".upeople_domains upd "+\
+            "  "+identities_db+".uidentities_domains upd "+\
             "WHERE pup.people_id = s."+rol+"_id AND "+\
             "  pup.uuid  = upd.uuid and "+\
             "  upd.domain_id = d.id and "+\

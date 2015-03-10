@@ -378,7 +378,7 @@ class SCMQuery(DSQuery):
         #tables necessaries for domains
         tables = Set([])
         tables.add("people_uidentities pup")
-        tables.add(self.identities_db + ".upeople_domains upd")
+        tables.add(self.identities_db + ".uidentities_domains upd")
         tables.add(self.identities_db + ".domains d")
 
         return tables
@@ -814,7 +814,7 @@ class ITSQuery(DSQuery):
         tables = Set([])
         tables.add("people_uidentities pup")
         tables.add(self.identities_db + ".domains d")
-        tables.add(self.identities_db + ".upeople_domains upd")
+        tables.add(self.identities_db + ".uidentities_domains upd")
 
         return tables
 
@@ -1047,7 +1047,7 @@ class ITSQuery(DSQuery):
         tables = Set([])
 
         tables.union_update(self.GetTablesOwnUniqueIds(table))
-        tables.add(self.identities_db + ".upeople_domains upd")
+        tables.add(self.identities_db + ".uidentities_domains upd")
 
         return(tables)
 
@@ -1127,7 +1127,7 @@ class MLSQuery(DSQuery):
         tables.add("messages_people mp")
         tables.add("people_uidentities pup")
         tables.add(self.identities_db + ".domains d")
-        tables.add(self.identities_db + ".upeople_domains upd")
+        tables.add(self.identities_db + ".uidentities_domains upd")
 
         return tables
 
@@ -1373,7 +1373,7 @@ class MLSQuery(DSQuery):
         tables = Set([])
         tables.union_update(self.GetTablesOwnUniqueIds())
         tables.add(self.identities_db + ".domains d")
-        tables.add(self.identities_db + ".upeople_domains upd")
+        tables.add(self.identities_db + ".uidentities_domains upd")
 
         return tables
 
@@ -2126,7 +2126,7 @@ class IRCQuery(DSQuery):
         tables = Set([])
         tables.add("people_uidentities pup")
         tables.add(self.identities_db + ".domains d")
-        tables.add(self.identities_db + ".upeople_domains upd")
+        tables.add(self.identities_db + ".uidentities_domains upd")
 
         return tables
 
@@ -2635,7 +2635,7 @@ class PullpoQuery(DSQuery):
         tables = Set([])
         tables.add("people_uidentities pup")
         tables.add(self.identities_db + ".domains d")
-        tables.add(self.identities_db + ".upeople_domains upd")
+        tables.add(self.identities_db + ".uidentities_domains upd")
 
         return tables
 

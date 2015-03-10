@@ -423,7 +423,7 @@ def GetMLSSQLDomainsFrom (i_db) :
     return (" , messages_people mp, "+\
                "people_uidentities pup, "+\
               i_db+".domains d, "+\
-              i_db+".upeople_domains upd")
+              i_db+".uidentities_domains upd")
 
 
 def GetMLSSQLDomainsWhere (name) :
