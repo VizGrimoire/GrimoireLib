@@ -121,7 +121,7 @@ class Report(object):
         # sys.path.insert(1,metrics_path) # Prepend the metrics path
 
         from os import listdir
-        from os.path import isfile, join, dirname
+        from os.path import isfile, isdir, join, dirname
         import imp, inspect
 
         db_identities = Report._automator['generic']['db_identities']
@@ -133,19 +133,22 @@ class Report(object):
         import vizgrimoire.metrics
         mfile = inspect.getfile(vizgrimoire.metrics)
         if ".egg" in mfile:
-            # Load list of metrics from files zipped inside lib installed egg
-            mfile = mfile.split(".egg")[0] + ".egg"
+            mdir = mfile.split(".egg")[0] + ".egg"
+        else:
+            mdir = dirname(mfile)
 
+        if isfile(mdir):
+            # Load list of metrics from files zipped inside lib installed egg
             import zipfile
-            zip = zipfile.ZipFile(mfile)
+            zip = zipfile.ZipFile(mdir)
             metrics_mod = [f.replace("vizgrimoire/metrics/","") for f in zip.namelist()
                            if "vizgrimoire/metrics/" in f and f.endswith(".py")]
             zip.close()
         else:
             # Load list of metrics from metrics directory
-            metrics_path = dirname(mfile)
-            metrics_mod = [f for f in listdir(metrics_path)
-                           if isfile(join(metrics_path,f)) and f.endswith("_metrics.py")]
+            if ".egg" in mdir: mdir += "/vizgrimoire/metrics/"
+            metrics_mod = [f for f in listdir(mdir)
+                           if isfile(join(mdir,f)) and f.endswith("_metrics.py")]
 
         for metric_mod in metrics_mod:
             mod_name = metric_mod.split(".py")[0]
@@ -203,17 +206,21 @@ class Report(object):
         mfile = inspect.getfile(vizgrimoire.analysis)
 
         if ".egg" in mfile:
+            mdir = mfile.split(".egg")[0] + ".egg"
+        else:
+            mdir = dirname(mfile)
+        if isfile(mdir):
             # Load list of analysis from files zipped inside lib installed egg
             mfile = mfile.split(".egg")[0] + ".egg"
             import zipfile
-            zip = zipfile.ZipFile(mfile)
+            zip = zipfile.ZipFile(mdir)
             studies_mod = [f.replace("vizgrimoire/analysis/","") for f in zip.namelist()
                            if "vizgrimoire/analysis/" in f and f.endswith(".py")]
             zip.close()
         else:
             # Load list of analysis from analysis directory
-            studies_path = dirname(mfile)
-            studies_mod = [f for f in listdir(studies_path)
+            if ".egg" in mdir: mdir += "/vizgrimoire/analysis/"
+            studies_mod = [f for f in listdir(mdir)
                            if isfile(join(studies_path,f)) and f.endswith(".py")]
 
         for study_mod in studies_mod:
