@@ -325,7 +325,7 @@ class TimeToFirstReply(Metrics):
 
         # If the TZ is positive that means that we need to substract that date to the original date (eg - (+3600))
         # And  if the TZ is negative, we need to substract that date from the original date (eg - (-3600))
-        fields.add("(UNIX_TIMESTAMP(t.first_date) - t.first_date_tz) - (UNIX_TIMESTAMP(m.first_date) - m.first_date_tz) as diffdate")
+        fields.add("(UNIX_TIMESTAMP(t.first_date) - IFNULL(t.first_date_tz, 0)) - (UNIX_TIMESTAMP(m.first_date) - IFNULL(m.first_date_tz, 0)) as diffdate")
 
         tables.add("messages m")
         subquery = """(select distinct message_id,
