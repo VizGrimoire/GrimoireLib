@@ -148,10 +148,14 @@ class TimeToReviewPendingSCR(Metrics):
 
             tables = "issues i, people, issues_ext_gerrit ie "
             if (uploaded): tables += ", changes ch, ("+sql_max_patchset+") last_patch "
-            tables = tables + self.db.GetSQLReportFrom(type_analysis)
+            gtables = self.db._get_tables_query(self.db.GetSQLReportFrom(type_analysis))
+            if gtables is not None and gtables != "":
+                tables += ", " + gtables
 
             filters = " people.id = i.submitted_by "
-            filters += self.db.GetSQLReportWhere(type_analysis)
+            gfilters = self.db._get_filters_query(self.db.GetSQLReportWhere(type_analysis))
+            if gfilters is not None and gfilters != "":
+                filters += " AND " + gfilters
             filters += " AND ie.issue_id  = i.id "
             filters += " AND i.id NOT IN ("+ sql_reviews_closed +")"
             if (uploaded):
