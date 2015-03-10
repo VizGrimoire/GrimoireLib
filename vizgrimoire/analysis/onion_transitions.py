@@ -33,9 +33,9 @@
 
 
 import logging
-from analyses import Analyses
-from query_builder import DSQuery
-from metrics_filter import MetricFilters
+from vizgrimoire.analysis.analyses import Analyses
+from vizgrimoire.metrics.query_builder import DSQuery
+from vizgrimoire.metrics.metrics_filter import MetricFilters
 
 class OnionTransitions(Analyses):
     # TODO:
@@ -86,8 +86,8 @@ class OnionTransitions(Analyses):
                 " from scmlog s, "+\
                 "      people_upeople pup, "+\
                 "      people p "+\
-                " where s.date>="+ from_date+" and "+\
-                "       s.date<="+ to_date+" and "+\
+                " where s.author_date>="+ from_date+" and "+\
+                "       s.author_date<"+ to_date+" and "+\
                 "       s.author_id = pup.people_id and "+\
                 "       s.author_id = p.id and "+\
                 "       p.email <> '%gerrit@%' and "+\
@@ -122,7 +122,7 @@ class OnionTransitions(Analyses):
                 "(select p.identifier as identifier, p.username, c.submitted_on as date"+\
                 "  from comments c, people p"+\
                 "  where c.user_identifier=p.identifier)) t "+\
-                "WHERE date>="+ from_date +" AND date<=" + to_date +" "+\
+                "WHERE date>="+ from_date +" AND date<" + to_date +" "+\
                 " AND identifier = "+ str(upeople_id) + " "+\
                 "group by identifier"
             aux = self.db.ExecuteQuery(q0)
@@ -259,11 +259,11 @@ class OnionTransitions(Analyses):
     def _get_total_messages_query(self, from_date, to_date):
         q = "SELECT "+\
         "(select COUNT(*) from questions WHERE "+\
-        " added_at>="+ from_date +" AND added_at<=" + to_date + ") + "+\
+        " added_at>="+ from_date +" AND added_at<" + to_date + ") + "+\
         "(select COUNT(*) from comments WHERE "+\
-        " submitted_on>="+ from_date +" AND submitted_on<=" + to_date + ") + "+\
+        " submitted_on>="+ from_date +" AND submitted_on<" + to_date + ") + "+\
         "(SELECT COUNT(*) FROM answers WHERE "+\
-        " submitted_on>="+ from_date +" AND submitted_on<=" + to_date + ")"+\
+        " submitted_on>="+ from_date +" AND submitted_on<" + to_date + ")"+\
         "as total;"
         return(q)
         
@@ -280,7 +280,7 @@ class OnionTransitions(Analyses):
         "(select p.identifier as identifier, c.submitted_on as date"+\
         "  from comments c, people p"+\
         "  where c.user_identifier=p.identifier)) t "+\
-        "WHERE date>="+ from_date +" AND date<=" + to_date +" "+\
+        "WHERE date>="+ from_date +" AND date<" + to_date +" "+\
         "group by identifier order by messages desc"
         return(q)
     
@@ -300,8 +300,8 @@ class OnionTransitions(Analyses):
              "where s.author_id = p.id and "+\
              "      p.email <> '%gerrit@%' and "+\
              "      p.email <> '%jenkins@%' and "+\
-             "      s.date>="+ from_date +" and "+\
-             "      s.date<="+ to_date+";"
+             "      s.author_date>="+ from_date +" and "+\
+             "      s.author_date<"+ to_date+";"
         return(q)
 
     def _get_personal_commits_query(self, from_date, to_date):
@@ -328,8 +328,8 @@ class OnionTransitions(Analyses):
             " from scmlog s, "+\
             "      people_upeople pup, "+\
             "      people p "+\
-            " where s.date>="+ from_date+" and "+\
-            "       s.date<="+ to_date+" and "+\
+            " where s.author_date>="+ from_date+" and "+\
+            "       s.author_date<"+ to_date+" and "+\
             "       s.author_id = pup.people_id and "+\
             "       s.author_id = p.id and "+\
             "       p.email <> '%gerrit@%' and "+\

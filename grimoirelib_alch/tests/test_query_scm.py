@@ -64,7 +64,7 @@ class TestSCMQuery (unittest.TestCase):
         """Test select_ncsmlog"""
 
         self._test_select_nscmlog (["commits",],
-                                   [[(4465L,)], [(4206L,)]])
+                                   [[(3646L,)], [(3405L,)]])
         self._test_select_nscmlog (["authors",],
                                    [[(14L,)], [(14L,)]])
         self._test_select_nscmlog (["committers",],
@@ -197,6 +197,49 @@ class TestSCMQuery (unittest.TestCase):
         res = res.group_by_period().timeseries()
         self.assertEqual (res, correct[2])
 
+    def test_select_nfiles (self):
+        """Test select_nfiles"""
+
+        correct = [[(37519L,)],
+                   [(3541L,)],
+                   TimeSeries ("months",
+                               start=datetime(2013,11,13),
+                               end=datetime(2014,01,01),
+                               data=[(datetime(2013,11,13), (96L,)),
+                                     (datetime(2013,12,13), (2197L,)),
+                                     (datetime(2014,01,13), (1350L,))]
+                               )]
+        res = self.session.query().select_nfiles()
+        self.assertEqual (res.all(), correct[0])
+        res = res.join(DB.SCMLog) \
+            .filter_period(start=start, end=end)
+        self.assertEqual (res.all(), correct[1])
+        res = res.group_by_period().timeseries()
+        self.assertEqual (res, correct[2])
+
+    def test_select_repos (self):
+        """Test select_nfiles"""
+
+        correct = [[(1L, u'vizgrimoire.github.com.git'),
+                    (2L, u'VizGrimoireJS.git'),
+                    (3L, u'VizGrimoireJS-lib.git'),
+                    (4L, u'VizGrimoireR.git'),
+                    (5L, u'VizGrimoireUtils.git')],
+                   [(2L, u'VizGrimoireJS.git'),
+                    (3L, u'VizGrimoireJS-lib.git'),
+                    (4L, u'VizGrimoireR.git'),
+                    (5L, u'VizGrimoireUtils.git')],
+                   [(5L, )]
+                   ]
+        res = self.session.query().select_repos(names = True, distinct = True)
+        self.assertEqual (res.all(), correct[0])
+        res = res.join(DB.SCMLog) \
+            .filter_period(start=start, end=end)
+        self.assertEqual (res.all(), correct[1])
+        res = self.session.query().select_repos(distinct = True,
+                                                count = True)
+        self.assertEqual (res.all(), correct[2])
+
     def test_select_listbranches (self):
         """Test select_listbranches"""
 
@@ -224,11 +267,11 @@ class TestSCMQuery (unittest.TestCase):
         res = self.session.query().select_nscmlog(["commits"]) \
             .filter_persons ([2,3]) \
             .all()
-        self.assertEqual (res, [(1898L,)])
+        self.assertEqual (res, [(1303L,)])
         res = self.session.query().select_nscmlog(["commits"]) \
             .filter_persons ([1,2], "committers") \
             .all()
-        self.assertEqual (res, [(3307L,)])
+        self.assertEqual (res, [(2515L,)])
 
     def test_filter_paths (self):
         """Test filter_paths"""
@@ -236,11 +279,11 @@ class TestSCMQuery (unittest.TestCase):
         res = self.session.query().select_nscmlog(["commits"]) \
             .filter_paths (("examples",)) \
             .all()
-        self.assertEqual (res, [(996L,)])
+        self.assertEqual (res, [(708L,)])
         res = self.session.query().select_nscmlog(["commits"]) \
             .filter_paths (("src", "examples",)) \
             .all()
-        self.assertEqual (res, [(2411L,)])
+        self.assertEqual (res, [(1787L,)])
 
 
     def test_group_by_repo (self):

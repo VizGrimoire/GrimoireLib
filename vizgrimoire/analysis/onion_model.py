@@ -31,11 +31,11 @@
 # http://firstmonday.org/ojs/index.php/fm/rt/printerFriendly/1207/1127
 
 
-from analyses import Analyses
+from vizgrimoire.analysis.analyses import Analyses
 
-from query_builder import DSQuery
+from vizgrimoire.metrics.query_builder import DSQuery
 
-from metrics_filter import MetricFilters
+from vizgrimoire.metrics.metrics_filter import MetricFilters
 
 class CommunityStructure(Analyses):
     # TODO:
@@ -70,8 +70,8 @@ class CommunityStructure(Analyses):
              "      p.email <> '%gerrit@%' and "+\
              "      p.email <> '%jenkins@%' and "+\
              "      s.id = a.commit_id and "+\
-             "      s.date>="+self.filters.startdate+" and "+\
-             "      s.date<="+self.filters.enddate+";"
+             "      s.author_date>="+self.filters.startdate+" and "+\
+             "      s.author_date<"+self.filters.enddate+";"
 
         total = self.db.ExecuteQuery(q)
         total_commits = float(total['total'])
@@ -84,8 +84,8 @@ class CommunityStructure(Analyses):
             "      people_upeople pup, "+\
             "      people p "+\
             " where s.id = a.commit_id and "+\
-            "       s.date>="+self.filters.startdate+" and "+\
-            "       s.date<="+self.filters.enddate+" and "+\
+            "       s.author_date>="+self.filters.startdate+" and "+\
+            "       s.author_date<"+self.filters.enddate+" and "+\
             "       s.author_id = pup.people_id and "+\
             "       s.author_id = p.id and "+\
             "       p.email <> '%gerrit@%' and "+\

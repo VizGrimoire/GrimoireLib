@@ -25,7 +25,89 @@
 class MetricFilters(object):
 
     """ Specific filters for each analysis """
-    def __init__(self, period, startdate, enddate, type_analysis, npeople=10, people_out = None, companies_out = None):
+
+    # Generic supported periods
+
+    """Allows to have per year time series analysis"""
+    PERIOD_YEAR = "year"
+
+    """Allows to have per month time series analysis"""
+    PERIOD_MONTH = "month"
+
+    """Allows to have per week time series analysis"""
+    PERIOD_WEEK = "week"
+
+    """Allows to have per day time series analysis"""
+    PERIOD_DAY = "day"
+
+
+    # Generic type of analysis to any data source
+
+    """Allows per repository type of analysis.
+       A repository is a specific data source such as
+       a git repository, tracker in Bugzilla or an IRC channel.
+       This type of analysis helps to produce metrics for a specific
+       repository."""
+    REPOSITORY = "repository"
+
+    """Allows per company type of analysis.
+       People of the community may have an affiliation. That affiliation
+       can be registered. This type of analysis helps to produce 
+       metrics for a specific company."""
+    COMPANY = "company"
+
+    """Allows per domain type of analysis.
+       People of the community are related to an email address. That email address
+       has a domain, that can be registered. This type of analysis helps to
+       produce metrics for a specific domain."""
+    DOMAIN = "domain"
+
+    """Allows per project type of analysis.
+       A project consists of a list of repositories. This type of analysis helps
+       to aggregate all of the information for a given project."""
+    PROJECT = "project"
+
+    """Allows per person type of analysis.
+       This type of analysis helps to produce metrics for a specific member of 
+       the community."""
+    PEOPLE = "people"
+
+    # Specific source code systems type of analysis 
+
+    """Allows per branch type of analysis in source code systems.
+       Branches are typically used in software development. This type of analysis
+       helps to produce metrics for a specific branch."""
+    SCM_BRANCH = "branch"
+
+    """Allows per module type of analysis in source code systems.
+       Modules are also directories in the project tree. This type of analysis
+       helps to produce metrics for a specific module."""
+    SCM_MODULE = "module"
+
+    """Allows per type of file analysis in source code systems.
+       The type of a file is determined by the extension of such file and 
+       this depends on the results provided by the CVSAnalY tool.
+       The supported type of files are: 'unknown', 'devel-doc', 'build',
+       'code', 'i18n', 'documentation', 'image', 'ui' and 'package'.
+       This type of analysis helps to produce metrics for a specific type
+       of file."""
+    SCM_FILETYPE = "filetype"
+
+    """Allows log word filtering analysis in source code systems.
+       A change in the source code goes always with a log message left by
+       a developer. This type of analysis helps to produce metrics filtered
+       by a specific log message."""
+    SCM_LOGMESSAGE = "logmessage"
+
+    # Specific ticketing type of analysis
+
+    """Allows per ticket type analysis in ticketing systems.
+       Issues go through states. This type of analysis helps to produce metrics
+       filtered by a specific status of a ticket."""
+    ITS_TICKET_TYPE = "ticket_type"
+
+    def __init__(self, period, startdate, enddate, type_analysis=None, npeople=10,
+                 people_out = None, companies_out = None, global_filter = None):
         self.period = period
         self.startdate = startdate
         self.enddate = enddate
@@ -33,4 +115,44 @@ class MetricFilters(object):
         self.npeople = npeople
         self.people_out = people_out
         self.companies_out = companies_out
+        self.global_filter = global_filter
+        self.closed_condition = None
+
+    def add_filter(self, typeof_analysis, value):
+        """This function adds a new type of analysis to the type_analysis
+           variable"""
+
+        # TODO: fix type of analysis hack. We need to remove the list of 
+        # strings and go for a smarter way of doing this.
+        # TODO: need to check all constants to check that user is
+        # selecting a supported type of analysis.
+        
+        if not isinstance(value, str):
+            raise TypeError("String expected")
+
+        if value[0] <> "'" and value[len(value) - 1] <> "'":
+            value = "'" + value + "'"
+
+        if self.type_analysis is None or self.type_analysis == []:
+            self.type_analysis = [typeof_analysis, value]
+        else:
+            self.type_analysis[0] = self.type_analysis[0] + "," + typeof_analysis
+            self.type_analysis[1] = self.type_analysis[1] + "," + value
+
+
+    def add_period(self, typeof_period):
+        """This function set the period type of analysis."""
+
+        if (typeof_period <> MetricFilters.PERIOD_YEAR and
+           typeof_period <> MetricFilters.PERIOD_MONTH and
+           typeof_period <> MetricFilters.PERIOD_WEEK and
+           typeof_period <> MetricFilters.PERIOD_DAY):
+            raise NameError("Period not supported")
+
+        self.period = typeof_period
+
+
+    def set_global_filter(self, value): self.global_filter = value
+
+    def set_closed_condition(self, value): self.closed_condition = value
 

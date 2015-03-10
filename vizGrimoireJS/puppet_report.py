@@ -129,8 +129,8 @@ def scm_report(dbcon, filters):
     createJSON(authors.get_agg(), "./release/scm_authors.json")
     print(authors.get_agg())
 
-    from contributors_new_gone import ContributorsNewGoneSCM
-    from SCM import SCM
+    from vizgrimoire.analysis.contributors_new_gone import ContributorsNewGoneSCM
+    from vizgrimoire.SCM import SCM
     newcommers_leavers = ContributorsNewGoneSCM(dbcon, filters)
     newcommers_leavers_dict = newcommers_leavers.result(SCM, "./release/")
     # createJSON(newcommers_leavers_dict, "./release/scm_newcommers_leavers.json")
@@ -146,7 +146,7 @@ def scm_report(dbcon, filters):
     createJSON(top_repos, "./release/scm_top_repositories.json")
     createCSV(top_repos, "./release/scm_top_repositories.csv")
 
-    from onion_transitions import OnionTransitions
+    from vizgrimoire.analysis.onion_transitions import OnionTransitions
     scm_ds = SCM()
     ot = OnionTransitions(scm_dbcon, filters)
     ot_data = ot.result(scm_ds)
@@ -186,7 +186,7 @@ def qaforums_report(dbcon, filters):
     createJSON(people_replying.get_agg(), "./release/qaforums_people_posting_answers.json")
     print(people_replying.get_agg())
 
-    from top_questions_qaforums import TopQuestions
+    from vizgrimoire.analysis.top_questions_qaforums import TopQuestions
     top_questions = TopQuestions(dbcon, filters)
 
     top_visited_questions = top_questions.top_visited()
@@ -205,8 +205,8 @@ def qaforums_report(dbcon, filters):
     createCSV(top_tags_questions, "./release/qaforums_top_tags_questions.csv")
     createJSON(top_tags_questions, "./release/qaforums_top_tags_questions.json")
 
-    from onion_transitions import OnionTransitions
-    from QAForums import QAForums
+    from vizgrimoire.analysis.onion_transitions import OnionTransitions
+    from vizgrimoire.QAForums import QAForums
     qa_ds = QAForums()
     ot = OnionTransitions(dbcon, filters)
     ot_data = ot.result(qa_ds, 365)
@@ -261,13 +261,13 @@ def mls_report(dbcon, filters):
     print(emails_senders.get_agg())
 
     top = {}
-    from MLS import MLS
+    from vizgrimoire.MLS import MLS
     msenders = mls.EmailsSenders(dbcon, filters)
     top["EmailSenders"] =  msenders.get_list(filters, 90)
     createJSON(top, "./release/mls_top_email_senders.json")
     createCSV(top["EmailSenders"], "./release/mls_top_email_senders.csv", ['id'])
 
-    from threads import Threads
+    from vizgrimoire.analysis.threads import Threads
     SetDBChannel(dbcon.user, dbcon.password, dbcon.database)
     top_threads = {}
     top_threads['threads'] = MLS.getLongestThreads(filters.startdate, filters.enddate, dbcon.identities_db, str(filters.npeople))
@@ -341,14 +341,14 @@ if __name__ == '__main__':
 
     init_env()
 
-    from metrics import Metrics
-    from query_builder import DSQuery, SCMQuery, QAForumsQuery, MLSQuery
-    from metrics_filter import MetricFilters
-    import scm_metrics as scm
-    import qaforums_metrics as qa
-    import mls_metrics as mls
-    from GrimoireUtils import createJSON
-    from GrimoireSQL import SetDBChannel
+    from vizgrimoire.metrics.metrics import Metrics
+    from vizgrimoire.metrics.query_builder import DSQuery, SCMQuery, QAForumsQuery, MLSQuery
+    from vizgrimoire.metrics.metrics_filter import MetricFilters
+    import vizgrimoire.metrics.scm_metrics as scm
+    import vizgrimoire.metrics.qaforums_metrics as qa
+    import vizgrimoire.metrics.mls_metrics as mls
+    from vizgrimoire.GrimoireUtils import createJSON
+    from vizgrimoire.GrimoireSQL import SetDBChannel
 
     # parse options
     opts = read_options()

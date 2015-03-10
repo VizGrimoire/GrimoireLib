@@ -24,10 +24,10 @@
 
 """ People and Companies evolution per quarters """
 
-from analyses import Analyses
-from GrimoireUtils import completePeriodIds, medianAndAvgByPeriod, get_median, get_avg
-from query_builder import DSQuery
-from metrics_filter import MetricFilters
+from vizgrimoire.analysis.analyses import Analyses
+from vizgrimoire.GrimoireUtils import completePeriodIds, medianAndAvgByPeriod, get_median, get_avg
+from vizgrimoire.metrics.query_builder import DSQuery
+from vizgrimoire.metrics.metrics_filter import MetricFilters
 
 class TimesTickets(Analyses):
     id = "times_tickets"
@@ -365,13 +365,13 @@ class TimesTickets(Analyses):
         return self.result(data_source)
 
     def result(self, data_source = None):
-        from ITS import ITS
+        from vizgrimoire.ITS import ITS
         if data_source is not None and data_source != ITS: return None
         period = self.filters.period
         startdate = self.filters.startdate
         enddate = self.filters.enddate
         idb = self.db.identities_db
-        from ITS import ITS
+        from vizgrimoire.ITS import ITS
         backend = ITS._get_backend()
 
         self.CreateViews()

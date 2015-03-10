@@ -27,7 +27,12 @@
 
 import json, os, sys, time, traceback, unittest
 import logging
-from optparse import OptionParser
+import argparse
+
+description = """
+Driver for GrimoireLib tests.
+
+"""
 
 class DataSourceTest(unittest.TestCase):
     @staticmethod
@@ -217,7 +222,7 @@ class DataSourceTest(unittest.TestCase):
 #                    if ds.get_name() not in ["irc","scr"]:
 #                        item_name = "'"+item+"'"
                     item_file = item
-                    if ds.get_name() in ["its","scr"] :
+                    if ds.get_name() in ["its","scr","pullpo"] :
                         item_file = item.replace("/","_")
 
                     elif ds.get_name() == "mls":
@@ -249,7 +254,7 @@ class DataSourceTest(unittest.TestCase):
                 if (isinstance(items, dict)): items = items['name']
                 if not isinstance(items, (list)): items = [items]
 
-                if ds.get_name() in ["scr"] :
+                if ds.get_name() in ["scr","pullpo"] :
                     items = [item.replace("/","_") for item in items]
 
                 elif ds.get_name() == "mls":
@@ -261,8 +266,8 @@ class DataSourceTest(unittest.TestCase):
                 test_json = os.path.join("json",fn)
                 new_json = opts.destdir+"/"+ fn
 
-                if ds.get_name() not in ["scr"] :
-                    # scr repos format is more complex and 
+                if ds.get_name() not in ["scr","pullpo"] :
+                    # scr, pullpo repos format is more complex and
                     # is checked already in test_get_agg_evol_filters_data 
                     self.assertTrue(self.compareJSON(test_json, new_json))
 
@@ -384,7 +389,7 @@ class DataSourceTest(unittest.TestCase):
         destdir = os.path.join("data","json")
 
 
-        from metrics_filter import MetricFilters
+        from vizgrimoire.metrics.metrics_filter import MetricFilters
 
         db_identities= Report.get_config()['generic']['db_identities']
         dbuser = Report.get_config()['generic']['db_user']
@@ -427,61 +432,33 @@ class DataSourceTest(unittest.TestCase):
                     continue
 
 def read_options():
-    parser = OptionParser(usage="usage: %prog [options]",
-                          version="%prog 0.1")
-    parser.add_option("-s", "--start",
-                      action="store",
-                      dest="startdate",
-                      default="1900-01-01",
-                      help="Start date for the report")
-    parser.add_option("-e", "--end",
-                      action="store",
-                      dest="enddate",
-                      default="2100-01-01",
-                      help="End date for the report")
-    parser.add_option("-c", "--config-file",
-                      action="store",
-                      dest="config_file",
-                      default = "automator.conf",
-                      help="Automator config file")
-    parser.add_option("--npeople",
-                      action="store",
-                      dest="npeople",
-                      default="10",
-                      help="Limit for people analysis")
-    parser.add_option("-g", "--granularity",
-                      action="store",
-                      dest="granularity",
-                      default="months",
-                      help="year,months,weeks granularity")
-    parser.add_option("-o", "--destination",
-                      action="store",
-                      dest="destdir",
-                      default="data/json",
-                      help="Destination directory for JSON files")
-    parser.add_option("-m", "--metrics",
-                  action="store",
-                  dest="metrics_path",
-                  default = "../vizgrimoire/metrics",
-                  help="Path to the metrics modules to be loaded")
-
-    (opts, args) = parser.parse_args()
-
-    if len(args) != 0:
-        parser.error("Wrong number of arguments")
-
-    if opts.config_file is None or opts.metrics_path is None:
-        parser.error("Automator config file and metrics path are needed.")
-    return opts
+    parser = argparse.ArgumentParser(description = description)
+    parser.add_argument("--start", default="1900-01-01",
+                        dest="start_date",
+                        help="Start date for the report (default: 1900-01-01)")
+    parser.add_argument("--end", default="2100-01-01",
+                        dest="end_date",
+                        help="End date for the report (default: 2100-01-01)")
+    parser.add_argument("--config-file", default="automator.conf",
+                        dest="config_file",
+                        help="Automator config file (default: automator.conf)")
+    parser.add_argument("--npeople", default="10",
+                        help="Limit for people analysis (default: 10)")
+    parser.add_argument("--granularity", default="months",
+                        help="Granularity: year | months | weeks " \
+                            + "(default: months)")
+    parser.add_argument("--destination",
+                        dest="destdir", default="data/json",
+                        help="Destination directory for JSON files " \
+                            + "(default: data/json")
+    parser.add_argument("--metrics", dest="metrics_path",
+                        default = "../vizgrimoire/metrics",
+                        help="Path to the metrics modules to be loaded " \
+                            + "(default: ../vizgrimoire/metrics)")
+    args = parser.parse_args()
+    return args
 
 def init_env():
-    grimoirelib = os.path.join("..","vizgrimoire")
-    metricslib = os.path.join("..","vizgrimoire","metrics")
-    studieslib = os.path.join("..","vizgrimoire","analysis")
-    alchemy = os.path.join("..","grimoirelib_alch")
-    for dir in [grimoirelib,metricslib,studieslib,alchemy]:
-        sys.path.append(dir)
-
     # env vars for R
     os.environ["LANG"] = ""
     os.environ["R_LIBS"] = "../../r-lib"
@@ -492,12 +469,12 @@ if __name__ == '__main__':
 
     init_env()
 
-    from filter import Filter
-    from GrimoireUtils import getPeriod, read_main_conf
-    from GrimoireUtils import compare_json_data, completePeriodIds
+    from vizgrimoire.filter import Filter
+    from vizgrimoire.GrimoireUtils import getPeriod, read_main_conf
+    from vizgrimoire.GrimoireUtils import compare_json_data, completePeriodIds
     # from GrimoireUtils import createJSON, compareJSON
-    from GrimoireUtils import createJSON
-    from report import Report
+    from vizgrimoire.GrimoireUtils import createJSON
+    from vizgrimoire.report import Report
 
     opts = read_options()
 
@@ -528,6 +505,6 @@ if __name__ == '__main__':
 
     DataSourceTest.init()
     suite = unittest.TestLoader().loadTestsFromTestCase(DataSourceTest)
-    unittest.TextTestRunner(verbosity=2).run(suite)
-
+    result = unittest.TextTestRunner(verbosity=2).run(suite)
     DataSourceTest.close()
+    sys.exit(not result.wasSuccessful())

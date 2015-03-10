@@ -28,10 +28,10 @@ import logging
 import MySQLdb
 from numpy import median, average
 
-from GrimoireUtils import completePeriodIds, checkListArray, medianAndAvgByPeriod, removeDecimals
-from metrics import Metrics
-from metrics_filter import MetricFilters
-from SCR import SCR
+from vizgrimoire.GrimoireUtils import completePeriodIds, checkListArray, medianAndAvgByPeriod, removeDecimals
+from vizgrimoire.metrics.metrics import Metrics
+from vizgrimoire.metrics.metrics_filter import MetricFilters
+from vizgrimoire.SCR import SCR
 
 class TimeToReviewPendingSCR(Metrics):
     """
@@ -148,10 +148,10 @@ class TimeToReviewPendingSCR(Metrics):
 
             tables = "issues i, people, issues_ext_gerrit ie "
             if (uploaded): tables += ", changes ch, ("+sql_max_patchset+") last_patch "
-            tables = tables + self.db.GetSQLReportFrom(identities_db, type_analysis)
+            tables = tables + self.db.GetSQLReportFrom(type_analysis)
 
             filters = " people.id = i.submitted_by "
-            filters += self.db.GetSQLReportWhere(type_analysis, self.db.identities_db)
+            filters += self.db.GetSQLReportWhere(type_analysis)
             filters += " AND ie.issue_id  = i.id "
             filters += " AND i.id NOT IN ("+ sql_reviews_closed +")"
             if (uploaded):

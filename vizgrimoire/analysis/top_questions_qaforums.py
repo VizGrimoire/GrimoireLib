@@ -23,9 +23,9 @@
 #     Santiago Dueñas <sduenas@bitergia.com>
 #
 
-from query_builder import DSQuery
+from vizgrimoire.metrics.query_builder import DSQuery
 
-from metrics_filter import MetricFilters
+from vizgrimoire.metrics.metrics_filter import MetricFilters
 
 
 class TopQuestions(object):

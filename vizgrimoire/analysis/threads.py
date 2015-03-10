@@ -22,9 +22,9 @@
 
 # Mailing lists main topics study
 
-import GrimoireUtils
-import GrimoireSQL
-from GrimoireSQL import ExecuteQuery
+import vizgrimoire.GrimoireUtils
+import vizgrimoire.GrimoireSQL
+from vizgrimoire.GrimoireSQL import ExecuteQuery
 
 class Email(object):
     """This class contains the main attributes of an email
@@ -128,7 +128,7 @@ class Threads(object):
         query = """
                 select DISTINCT message_ID, is_response_of 
                 from messages 
-                where first_date > %s and first_date <= %s
+                where first_date >= %s and first_date < %s
                 """ % (self.initdate, self.enddate)
         list_messages = ExecuteQuery(query)
         self.list_message_id = list_messages["message_ID"]

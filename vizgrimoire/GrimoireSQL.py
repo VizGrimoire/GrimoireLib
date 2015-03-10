@@ -31,51 +31,6 @@ cursor = None
 # one connection per database
 dbpool = {}
 
-##########
-#Generic functions to obtain FROM and WHERE clauses per type of report
-##########
-
-def GetSQLReportFrom (identities_db, type_analysis):
-    #generic function to generate 'from' clauses
-    #"type" is a list of two values: type of analysis and value of 
-    #such analysis
-
-
-    if (type_analysis is None or len(type_analysis) != 2): return ""
-
-    analysis = type_analysis[0]
-    # value = type_analysis[1]
-
-    tables = ""
-
-    if (analysis):
-        if (analysis == 'repository'): tables  = GetSQLRepositoriesFrom()
-        elif (analysis == 'company'): tables = GetSQLCompaniesFrom(identities_db)
-        elif (analysis == 'country'): tables = GetSQLCountriesFrom(identities_db)
-        elif (analysis == 'domain'): tables = GetSQLDomainsFrom(identities_db)
-
-    return (tables)
-
-
-def GetSQLReportWhere (type_analysis, role):
-    #generic function to generate 'where' clauses
-
-    #"type" is a list of two values: type of analysis and value of 
-    #such analysis
-
-    if (type_analysis is None or len(type_analysis) != 2): return ""
-
-    analysis = type_analysis[0]
-    value = type_analysis[1]
-    where = ""
-
-    if (analysis):
-        if (analysis == 'repository'): where  = GetSQLRepositoriesWhere(value)
-        elif (analysis == 'company'): where = GetSQLCompaniesWhere(value, role)
-        elif (analysis == 'country'): where = GetSQLCountriesWhere(value, role)
-        elif (analysis == 'domain'): where = GetSQLDomainsWhere(value, role)
-    return (where)
-
 ##
 ## METAQUERIES
 ##
@@ -135,66 +90,6 @@ def GetSQLPeriod(period, date, fields, tables, filters, start, end):
         sys.exit(1)
     return(sql)
 
-##########
-# Specific FROM and WHERE clauses per type of report
-##########
-def GetSQLRepositoriesFrom():
-    #tables necessaries for repositories
-    return (" , repositories r")
-
-def GetSQLRepositoriesWhere(repository):
-    #fields necessaries to match info among tables
-    filter_ = " and r.name ="+ repository + \
-             " and r.id = s.repository_id"
-    return (filter_)
-
-def GetSQLCompaniesFrom(identities_db):
-    #tables necessaries for companies
-    filter_ = " , "+identities_db+".people_upeople pup,"+\
-                  identities_db+".upeople_companies upc,"+ \
-                  identities_db+".companies c"
-    return (filter_)
-
-def GetSQLCompaniesWhere (company, role):
-    #fields necessaries to match info among tables
-    filter_ = "and s."+role+"_id = pup.people_id "+\
-             "and pup.upeople_id = upc.upeople_id "+\
-             "and s.date >= upc.init "+\
-             "and s.date < upc.end "+\
-             "and upc.company_id = c.id "+\
-             "and c.name ="+ company
-    return(filter_)
-
-def GetSQLCountriesFrom (identities_db):
-    #tables necessaries for companies
-    filter_ = " , "+identities_db+".people_upeople pup," +\
-                  identities_db+"upeople_countries upc",+\
-                  identities_db+".countries c"
-    return(filter_)
-
-
-def GetSQLCountriesWhere (country, role):
-    #fields necessaries to match info among tables
-    filter_ = "and s."+role+"_id = pup.people_id "+\
-             "and pup.upeople_id = upc.upeople_id "+\
-             "and upc.country_id = c.id "+\
-             "and c.name ="+country
-    return(filter_)
-
-def GetSQLDomainsFrom (identities_db):
-    #tables necessaries for domains
-    filter_ = " , "+identities_db+".people_upeople pup, "+\
-                   identities_db+".upeople_domains upd "+\
-                   identities_db+".domains d"
-    return(filter_)
-
-def GetSQLDomainsWhere (domain, role):
-    #fields necessaries to match info among tables
-    filter_ = "and s."+role+"_id = pup.people_id " +\
-             " and pup.upeople_id = upd.upeople_id "+\
-             " and upd.domain_id = d.id "+\
-             " and d.name ="+ domain
-    return(filter_)
 ############
 #Generic functions to check evolutionary or static info and for the execution of the final query
 ###########

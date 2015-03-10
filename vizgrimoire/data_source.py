@@ -25,12 +25,14 @@
     support for Grimoire supported data sources """ 
 
 import logging, os
-from GrimoireUtils import createJSON
-from metrics_filter import MetricFilters
+from vizgrimoire.metrics.query_builder import DSQuery
+from vizgrimoire.GrimoireUtils import createJSON
+from vizgrimoire.metrics.metrics_filter import MetricFilters
 
 class DataSource(object):
     _bots = []
     _metrics_set = []
+    _global_filter = None
 
     @staticmethod
     def get_name():
@@ -46,6 +48,27 @@ class DataSource(object):
     def set_bots(ds_bots):
         """Set the bots to be filtered"""
         DataSource._bots = ds_bots
+
+
+    @staticmethod
+    def get_global_filter(ds):
+        """Get the global filter to be applied to all metrics"""
+        return ds._global_filter
+
+    @staticmethod
+    def set_global_filter(ds, global_filter):
+        """
+            Set the global filter to be applied to all metrics
+            Format: its_global_filter = ['ticket_type,ticket_type','"Bug","New Feature"','OR']
+        """
+        # We need to parse filter string to convert to type_analysis
+        global_filter = global_filter.replace("[","").replace("]","")
+        type_analysis = global_filter.split("','")
+        last = len(type_analysis)
+        type_analysis[0] = type_analysis[0][1:]
+        type_analysis[last-1] = type_analysis[last-1][0:-1]
+
+        ds._global_filter = type_analysis
 
     @staticmethod
     def get_db_name():
@@ -105,6 +128,11 @@ class DataSource(object):
         """Create the aggregated report"""
         raise NotImplementedError
 
+    @staticmethod
+    def get_events():
+        """Get the alerts detected"""
+        raise NotImplementedError
+
     def get_top_filename (self, filter_ = None):
         """Get the filename used to store top data"""
         name = None
@@ -113,6 +141,11 @@ class DataSource(object):
         else:
             name = filter_.get_top_filename(self)
         return name
+
+    @staticmethod
+    def get_top_metrics ():
+        """Get the top metric names"""
+        raise NotImplementedError
 
     @staticmethod
     def get_top_data (startdate, enddate, identities_db, filter_, npeople):
@@ -131,7 +164,7 @@ class DataSource(object):
 
     @staticmethod
     def get_filter_bots(filter_):
-        from report import Report
+        from vizgrimoire.report import Report
         bots = []
 
         # If not using Report (automator) bots are not supported.
@@ -153,6 +186,11 @@ class DataSource(object):
     @staticmethod
     def create_filter_report(filter_, period, startdate, enddate, destdir, npeople, identities_db):
         """Create all files related to all filters in all data sources"""
+        raise NotImplementedError
+
+    @staticmethod
+    def create_filter_report_all(filter_, period, startdate, enddate, destdir, npeople, identities_db):
+        """Create all files related to all filters in all data sources using GROUP BY queries"""
         raise NotImplementedError
 
     @staticmethod
@@ -187,11 +225,15 @@ class DataSource(object):
         """Get aggregated data for a person activity"""
         raise NotImplementedError
 
-    def create_people_report(self, period, startdate, enddate, destdir, npeople, identities_db):
+    def create_people_report(self, period, startdate, enddate, destdir, npeople, identities_db, people_ids=None):
         """Create all files related to people activity (aggregated, evolutionary)"""
         fpeople = os.path.join(destdir,self.get_top_people_file(self.get_name()))
-        people = self.get_top_people(startdate, enddate, identities_db, npeople)
-        if people is None: return
+        if not people_ids:
+            people = self.get_top_people(startdate, enddate, identities_db, npeople)
+            if people is None: return
+        else:
+            people = people_ids
+
         createJSON(people, fpeople)
 
         for upeople_id in people :
@@ -256,7 +298,7 @@ class DataSource(object):
     @staticmethod
     def get_studies_data(ds, period, startdate, enddate, evol):
         """ Get data from studies to be included in agg and evol global JSONs  """
-        from report import Report
+        from vizgrimoire.report import Report
         data = {}
 
         db_identities = Report.get_config()['generic']['db_identities']
@@ -294,11 +336,13 @@ class DataSource(object):
         return data
 
     @staticmethod
-    def get_metrics_data(DS, period, startdate, enddate, identities_db, filter_ = None, evol = False):
+    def get_metrics_data(DS, period, startdate, enddate, identities_db, 
+                         filter_ = None, evol = False):
         """ Get basic data from all core metrics """
+        from vizgrimoire.GrimoireUtils import fill_and_order_items
         data = {}
 
-        from report import Report
+        from vizgrimoire.report import Report
         automator = Report.get_config()
 
         if evol:
@@ -311,32 +355,62 @@ class DataSource(object):
         if automator_metrics in automator['r']:
             metrics_on = automator['r'][automator_metrics].split(",")
 
+        people_out = []
+        if "people_out" in Report.get_config()['r']:
+            people_out = Report.get_config()['r']["people_out"]
+            people_out = people_out.split(",")
+
+
         type_analysis = None
         if filter_ is not None:
             type_analysis = filter_.get_type_analysis()
+
+        if type_analysis and type_analysis[1] is None:
+            # We need the items for filling later values in group by queries
+            items = DS.get_filter_items(filter_, startdate, enddate, identities_db)
+            if items is None: return data
+            items = items.pop('name')
 
         if DS.get_name()+"_startdate" in Report.get_config()['r']:
             startdate = Report.get_config()['r'][DS.get_name()+"_startdate"]
         if DS.get_name()+"_enddate" in Report.get_config()['r']:
             enddate = Report.get_config()['r'][DS.get_name()+"_enddate"]
-        mfilter = MetricFilters(period, startdate, enddate, type_analysis)
+        # TODO: the hardcoded 10 should be removed, and use instead the npeople provided
+        #       in the config file.
+        mfilter = MetricFilters(period, startdate, enddate, type_analysis, 10, people_out, None)
         metrics_reports = DS.get_metrics_core_reports()
         all_metrics = DS.get_metrics_set(DS)
 
-        # Reports = filters not available inside filters
+        # Reports = filters metrics not available inside filters
         if type_analysis is None:
-            from report import Report
+            from vizgrimoire.report import Report
             reports_on = Report.get_config()['r']['reports'].split(",")
             for r in metrics_reports:
                 if r in reports_on: metrics_on += [r]
 
         for item in all_metrics:
+            # print item
             if item.id not in metrics_on: continue
             mfilter_orig = item.filters
+            mfilter.global_filter = mfilter_orig.global_filter
+            mfilter.set_closed_condition(mfilter_orig.closed_condition)
             item.filters = mfilter
             if evol: mvalue = item.get_ts()
             else:    mvalue = item.get_agg()
 
+            if type_analysis and type_analysis[1] is None:
+                logging.info(item.id)
+                id_field = None
+                # Support for combined filters
+                for idf in mvalue.keys():
+                    if "CONCAT(" in idf:
+                        id_field = idf
+                        break
+                if id_field is None:
+                    id_field = DSQuery.get_group_field(type_analysis[0])
+                    id_field = id_field.split('.')[1] # remove table name
+                mvalue = fill_and_order_items(items, mvalue, id_field,
+                                              evol, period, startdate, enddate)
             data = dict(data.items() + mvalue.items())
 
             item.filters = mfilter_orig
@@ -345,6 +419,7 @@ class DataSource(object):
             init_date = DS.get_date_init(startdate, enddate, identities_db, type_analysis)
             end_date = DS.get_date_end(startdate, enddate, identities_db, type_analysis)
 
+            # TODO: grouped items metrics support
             data = dict(data.items() + init_date.items() + end_date.items())
 
             # Tendencies
@@ -359,8 +434,15 @@ class DataSource(object):
                     if item.id not in metrics_trends: continue
                     mfilter_orig = item.filters
                     item.filters = mfilter
-                    period_data = item.get_agg_diff_days(enddate, i)
+                    period_data = item.get_trends(enddate, i)
                     item.filters = mfilter_orig
+
+                    if type_analysis and type_analysis[1] is None:
+                        group_field = DSQuery.get_group_field(type_analysis[0])
+                        if 'CONCAT' not in group_field:
+                            group_field = group_field.split('.')[1] # remove table name
+                        period_data = fill_and_order_items(items, period_data, group_field)
+
                     data = dict(data.items() + period_data.items())
 
         return data

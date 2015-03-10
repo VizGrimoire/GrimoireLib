@@ -29,15 +29,17 @@ import MySQLdb
 
 import re, sys
 
-from GrimoireUtils import completePeriodIds, GetDates, GetPercentageDiff
+from vizgrimoire.GrimoireUtils import completePeriodIds, GetDates, GetPercentageDiff, check_array_values
 
-from metrics import Metrics
+from vizgrimoire.metrics.metrics import Metrics
 
-from metrics_filter import MetricFilters
+from vizgrimoire.metrics.metrics_filter import MetricFilters
 
-from query_builder import SCMQuery
+from vizgrimoire.metrics.query_builder import SCMQuery
 
-from SCM import SCM
+from vizgrimoire.SCM import SCM
+
+from sets import Set
 
 
 class Commits(Metrics):
@@ -51,25 +53,77 @@ class Commits(Metrics):
     data_source = SCM
 
     def _get_sql(self, evolutionary):
-        q_actions = " AND s.id IN (select distinct(a.commit_id) from actions a)"
+        fields = Set([])
+        tables = Set([])
+        filters = Set([])
 
-        fields = " count(distinct(s.id)) as commits "
-        tables = " scmlog s " + self.db.GetSQLReportFrom(self.filters.type_analysis)
-        filters = self.db.GetSQLReportWhere(self.filters.type_analysis, "author") + q_actions
-        query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
-                                   self.filters.enddate, " s.date ", fields,
-                                   tables, filters, evolutionary)
-        return query
+        fields.add("count(distinct(s.rev)) as commits")
 
-    def _get_sqlslow(self, evolutionary):
-        fields = " count(distinct(s.id)) as commits "
-        tables = " scmlog s, actions a " + self.db.GetSQLReportFrom(self.filters.type_analysis)
-        filters = self.db.GetSQLReportWhere(self.filters.type_analysis, "author") + " and s.id=a.commit_id "
+        tables.add("scmlog s")
+        tables.union_update(self.db.GetSQLReportFrom(self.filters))
+ 
+        filters.add("s.id IN (select distinct(a.commit_id) from actions a)")
+        filters.union_update(self.db.GetSQLReportWhere(self.filters, "author"))
 
         query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
-                                   self.filters.enddate, " s.date ", fields,
-                                   tables, filters, evolutionary)
+                                   self.filters.enddate, " s.author_date ", fields,
+                                   tables, filters, evolutionary, self.filters.type_analysis)
         return query
+
+
+class NewAuthors(Metrics):
+    """ A new author comes to the community when her first commit is detected
+
+        By definition a new author joins the Git community when her first patchset
+        has landed into the code. This is calculated as the minimum date found in 
+        the database for her actions.
+    """
+
+    id = "newauthors"
+    name = "New Authors"
+    desc = "New authors joining the community"
+    data_source = SCM
+
+    def _get_sql_generic(self, evolutionary, islist = False):
+
+        fields = Set([])
+        tables = Set([])
+        filters = Set([])
+
+        if not islist:
+            fields.add("count(distinct(t.upeople_id)) as newauthors")
+        else:
+            fields.add("t.upeople_id as uid, p.name, p.email, t.date")
+        tables.add("scmlog s")
+        tables.add("people_upeople pup")
+        tables.add("people p")
+        tables.add("""(select pup.upeople_id as upeople_id, min(s.author_date) as date
+                       from people_upeople pup, scmlog s
+                       where s.author_id=pup.people_id
+                       group by pup.upeople_id) t
+                   """)
+        tables.union_update(self.db.GetSQLReportFrom(self.filters))
+        filters.add("s.author_id = pup.people_id")
+        filters.add("pup.upeople_id=t.upeople_id")
+        filters.add("pup.people_id=p.id")
+        filters.union_update(self.db.GetSQLReportWhere(self.filters, "author"))
+
+        q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
+                               self.filters.enddate, " t.date ", fields,
+                               tables, filters, evolutionary, self.filters.type_analysis)
+        if islist:
+            q += " GROUP BY t.upeople_id "
+            if not evolutionary: q += " ORDER BY t.date DESC"
+
+        return q
+
+    def _get_sql(self, evolutionary):
+        return self._get_sql_generic(evolutionary)
+
+    def get_list(self):
+        q = self._get_sql_generic(None, True)
+        data = self.db.ExecuteQuery(q)
+        return data
 
 
 class Authors(Metrics):
@@ -85,153 +139,129 @@ class Authors(Metrics):
     def _get_sql (self, evolutionary):
         # This function contains basic parts of the query to count authors
         # That query is later built and executed
+        fields = Set([])
+        tables = Set([])
+        filters = Set([])
 
-        fields = " count(distinct(pup.upeople_id)) AS authors "
-        tables = " scmlog s "
-        filters = self.db.GetSQLReportWhere(self.filters.type_analysis, "author")
+        fields.add("count(distinct(pup.upeople_id)) as authors")
+        tables.add("scmlog s")
+        filters.union_update(self.db.GetSQLReportWhere(self.filters, "author"))
 
         #specific parts of the query depending on the report needed
-        tables += self.db.GetSQLReportFrom(self.filters.type_analysis)
+        tables.union_update(self.db.GetSQLReportFrom(self.filters))
 
-        # Hack to cover SCMQuery probs
-        if (self.filters.type_analysis is None or len (self.filters.type_analysis) != 2):
-            #Specific case for the basic option where people_upeople table is needed
-            #and not taken into account in the initial part of the query
-            tables += ",  people_upeople pup"
-            filters += " and s.author_id = pup.people_id"
-
-        elif (self.filters.type_analysis[0] == "repository" or self.filters.type_analysis[0] == "project"):
-            tables += ",  people_upeople pup"
-            filters += " and s.author_id = pup.people_id "
+        # This may be redundant code. However this is needed for specific analysis
+        # such as repositories or projects. Given that we're using sets, this is not 
+        # an issue. Not repeated tables or filters will appear in the final query.
+        tables.add("people_upeople pup")
+        filters.add("s.author_id = pup.people_id")
 
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
-                               self.filters.enddate, " s.date ", fields,
-                               tables, filters, evolutionary)
+                               self.filters.enddate, " s.author_date ", fields,
+                               tables, filters, evolutionary, self.filters.type_analysis)
         return q
 
 
-    def _get_top_repository (self, metric_filters = None):
-        if metric_filters == None:
-            metric_filters = self.filters
-        startdate = metric_filters.startdate
-        enddate = metric_filters.enddate
-        repo = metric_filters.type_analysis[1]
-        limit = metric_filters.npeople
-        filter_bots = self.get_bots_filter_sql(metric_filters)
+    def get_list (self, metric_filters = None, days = 0):
 
-        repos_from = self.db.GetSQLRepositoriesFrom()
-        # Remove first and
-        repos_where = " WHERE  " + self.db.GetSQLRepositoriesWhere(repo)[4:]
+        fields = Set([])
+        tables = Set([])
+        filters = Set([])
 
-        fields =  "SELECT COUNT(DISTINCT(s.id)) as commits, u.id, u.identifier as authors "
-        fields += "FROM actions a, scmlog s, people_upeople pup, upeople u "
-        q = fields + repos_from + repos_where
-        if filter_bots != "": q += " AND "+ filter_bots
-        q += " AND pup.people_id = s.author_id AND u.id = pup.upeople_id "
-        q += " and s.id = a.commit_id "
-        q += " AND s.date >= " + startdate + " and s.date < " + enddate
-        q += " GROUP by u.id ORDER BY commits DESC, authors"
-        q += " limit " + str(self.filters.npeople)
+        #TODO: Code to be removed after report tool properly works
+        new_filters = False
+        old_filters = None
+        if metric_filters is not None:
+            old_filters = self.filters
+            self.filters = metric_filters
+            self.filters.people_out = old_filters.people_out
+            new_filters = True
+        #TODO: End of the code to be removed
 
-        res = self.db.ExecuteQuery(q)
-
-        return res
-
-    def _get_top_company (self, metric_filters = None):
-        if metric_filters == None:
-            metric_filters = self.filters
-        startdate = metric_filters.startdate
-        enddate = metric_filters.enddate
-        company = metric_filters.type_analysis[1]
-        limit = metric_filters.npeople
-        filter_bots = self.get_bots_filter_sql(metric_filters)
-        if filter_bots != '': filter_bots += " AND "
-
-        q = """
-        SELECT id, authors, count(logid) AS commits FROM (
-        SELECT DISTINCT u.id AS id, u.identifier AS authors, s.id as logid
-        FROM people p,  scmlog s,  actions a, people_upeople pup, upeople u,
-             upeople_companies upc,  companies c
-        WHERE  %s s.id = a.commit_id AND p.id = s.author_id AND s.author_id = pup.people_id  AND
-          pup.upeople_id = upc.upeople_id AND pup.upeople_id = u.id AND  s.date >= upc.init AND
-          s.date < upc.end AND upc.company_id = c.id AND
-          s.date >=%s AND s.date < %s AND c.name =%s) t
-        GROUP BY id
-        ORDER BY commits DESC, authors
-        LIMIT %s
-        """ % (filter_bots, startdate, enddate, company, limit)
-
-        data = self.db.ExecuteQuery(q)
-        return (data)
-
-    def _get_top_project(self, metric_filters = None):
-        if metric_filters == None:
-            metric_filters = self.filters
-        startdate = metric_filters.startdate
-        enddate = metric_filters.enddate
-        project = metric_filters.type_analysis[1]
-        limit = metric_filters.npeople
-        filter_bots = self.get_bots_filter_sql(metric_filters)
-
-        projects_from = self.db.GetSQLProjectFrom()
-
-        # Remove first and
-        projects_where = " WHERE  " + self.db.GetSQLProjectWhere(project)[3:]
-
-        fields =  "SELECT COUNT(DISTINCT(s.id)) as commits, u.id, u.identifier as authors "
-        fields += "FROM actions a, scmlog s, people_upeople pup, upeople u "
-        q = fields + projects_from + projects_where
-        if filter_bots != "": q += " AND "+ filter_bots
-        q += " AND pup.people_id = s.author_id AND u.id = pup.upeople_id "
-        q += " and a.commit_id = s.id "
-        q += " AND s.date >= " + startdate + " and s.date < " + enddate
-        q += " GROUP by u.id ORDER BY commits DESC, authors"
-        q += " limit " + str(self.filters.npeople)
-
-        res = self.db.ExecuteQuery(q)
-
-        return res
-
-    def _get_top_global (self, days = 0, metric_filters = None, role = "author") :
-        # This function returns the top people participating in the source code.
-        # In addition, the number of days allows to limit the study to the last
-        # X days specified in that parameter
-
-        if metric_filters == None:
-            metric_filters = self.filters
-        startdate = metric_filters.startdate
-        enddate = metric_filters.enddate
-        limit = metric_filters.npeople
-        filter_bots = self.get_bots_filter_sql(metric_filters)
-        if filter_bots != "": filter_bots = "WHERE " + filter_bots
-
-        dtables = dfilters = ""
+        #Building parts of the query to control timeframe of study
         if (days > 0):
-            dtables = ", (SELECT MAX(date) as last_date from scmlog) dt"
-            dfilters = " DATEDIFF (last_date, date) < %s AND " % (days)
+            tables.add("(SELECT MAX(date) as last_date from scmlog) dt")
+            filters.add("DATEDIFF (last_date, date) < %s " % (days))
 
-        q = """
-        SELECT u.id, u.identifier as %ss, SUM(total) AS commits FROM
-        (
-         SELECT s.%s_id, COUNT(DISTINCT(s.id)) as total
-         FROM scmlog s, actions a %s
-         WHERE %s s.id = a.commit_id AND
-            s.date >= %s AND  s.date < %s
-         GROUP BY  s.%s_id ORDER by total DESC, s.%s_id
-        ) t
-        JOIN people_upeople pup ON pup.people_id = %s_id
-        JOIN upeople u ON pup.upeople_id = u.id
-        %s
-        GROUP BY u.identifier ORDER BY commits desc, %ss  limit %s
-        """ % (role, role, dtables, dfilters, startdate, enddate, role, role, role, filter_bots, role, limit)
+        #Building core part of the query.
+        fields.add("u.id as id")
+        fields.add("u.identifier as authors")
+        fields.add("count(distinct(s.id)) as commits")
 
-        data = self.db.ExecuteQuery(q)
+        tables.add("scmlog s")
+        filters.union_update(self.db.GetSQLReportWhere(self.filters, "author"))
+
+        #specific parts of the query depending on the report needed
+        tables.union_update(self.db.GetSQLReportFrom(self.filters))
+
+        # This may be redundant code. However this is needed for specific analysis
+        # such as repositories or projects. Given that we're using sets, this is not 
+        # an issue. Not repeated tables or filters will appear in the final query.
+        tables.add("people_upeople pup")
+        tables.add(self.db.identities_db + ".upeople u")
+        filters.add("s.author_id = pup.people_id")
+        filters.add("pup.upeople_id = u.id")
+
+        query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
+                                   self.filters.enddate, " s.author_date ", fields,
+                                   tables, filters, False, self.filters.type_analysis)
+
+        query = query + " group by u.id "
+        query = query + " order by count(distinct(s.id)) desc, u.identifier "
+        query = query + " limit " + str(self.filters.npeople)
+
+        data = self.db.ExecuteQuery(query)
         for id in data:
             if not isinstance(data[id], (list)): data[id] = [data[id]]
-        return (data)
+
+        #TODO: Code to be removed after report tool properly works
+        if new_filters:
+            self.filters = old_filters
+        #TODO: End of code to be removed
+
+        return data
 
     def _get_top_supported_filters(self):
         return ['repository','company','project']
+
+
+class People(Metrics):
+    """ People filter metric class for source code management systems """
+
+    id = "people2" # people is used yet for all partial filter
+    name = "People"
+    desc = "People authoring commits (changes to source code)"
+    envision = {"gtype" : "whiskers"}
+    action = "commits"
+    data_source = SCM
+
+    def _get_sql (self, evolutionary):
+        """ Implemented using Authors """
+        authors = SCM.get_metrics("authors", SCM)
+        if authors is None:
+            authors = Authors(self.db, self.filters)
+            q = authors._get_sql(evolutionary)
+        else:
+            afilters = authors.filters
+            authors.filters = self.filters
+            q = authors._get_sql(evolutionary)
+            authors.filters = afilters
+        return q
+
+    def _get_top_global (self, days = 0, metric_filters = None):
+        """ Implemented using Authors """
+        top = None
+        authors = SCM.get_metrics("authors", SCM)
+        if authors is None:
+            authors = Authors(self.db, self.filters)
+            top = authors._get_top_global(days, metric_filters)
+        else:
+            afilters = authors.filters
+            authors.filters = self.filters
+            top = authors._get_top_global(days, metric_filters)
+            authors.filters = afilters
+        top['name'] = top.pop('authors')
+        return top
 
 class Committers(Metrics):
     """ Committers metric class for source code management system """
@@ -245,27 +275,34 @@ class Committers(Metrics):
 
     def _get_sql(self, evolutionary):
         # This function contains basic parts of the query to count committers
-        fields = 'count(distinct(pup.upeople_id)) AS committers '
-        tables = "scmlog s "
-        filters = self.db.GetSQLReportWhere(self.filters.type_analysis, "committer")
+
+        fields = Set([])
+        tables = Set([])
+        filters = Set([])
+
+        fields.add("count(distinct(pup.upeople_id)) as committers")
+        tables.add("scmlog s")
+        filters.union_update(self.db.GetSQLReportWhere(self.filters, "committer"))
 
         #specific parts of the query depending on the report needed
-        tables += self.db.GetSQLReportFrom(self.filters.type_analysis)
+        tables.union_update(self.db.GetSQLReportFrom(self.filters))
 
         if (self.filters.type_analysis is None or len (self.filters.type_analysis) != 2) :
             #Specific case for the basic option where people_upeople table is needed
             #and not taken into account in the initial part of the query
-            tables += " ,  "+self.db.identities_db+".people_upeople pup "
-            filters += " and s.committer_id = pup.people_id"
+            if "people_upeople pup" not in tables:
+                tables.add("people_upeople pup")
+                filters.add("s.committer_id = pup.people_id")
 
         elif (self.filters.type_analysis[0] == "repository" or self.filters.type_analysis[0] == "project"):
             #Adding people_upeople table
-            tables += ",  "+self.db.identities_db+".people_upeople pup"
-            filters += " and s.committer_id = pup.people_id "
+            if "people_upeople pup" not in tables:
+                tables.add("people_upeople pup")
+                filters.add("s.committer_id = pup.people_id")
 
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate, 
-                               self.filters.enddate, " s.date ", fields, 
-                               tables, filters, evolutionary)
+                               self.filters.enddate, " s.author_date ", fields,
+                               tables, filters, evolutionary, self.filters.type_analysis)
 
         return q
 
@@ -279,20 +316,23 @@ class Files(Metrics):
     data_source = SCM
 
     def _get_sql(self, evolutionary):
-        # This function contains basic parts of the query to count files
-        fields = " count(distinct(a.file_id)) as files "
-        tables = " scmlog s, actions a "
-        filters = " a.commit_id = s.id "
+        fields = Set([])
+        tables = Set([])
+        filters = Set([])
 
-        #specific parts of the query depending on the report needed
-        tables += self.db.GetSQLReportFrom(self.filters.type_analysis)
-        #TODO: left "author" as generic option coming from parameters (this should be specified by command line)
-        filters += self.db.GetSQLReportWhere(self.filters.type_analysis, "author")
+        fields.add("count(distinct(a.file_id)) as files")
+        tables.add("scmlog s")
+        tables.add("actions a")
+        filters.add("a.commit_id = s.id")
+
+        tables.union_update(self.db.GetSQLReportFrom(self.filters))
+        # TODO: left "author" as generic option coming from parameters 
+        # (this should be specified by command line)
+        filters.union_update(self.db.GetSQLReportWhere(self.filters, "author"))
 
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
-                               self.filters.enddate, " s.date ", fields,
-                               tables, filters, evolutionary)       
- 
+                               self.filters.enddate, " s.author_date ", fields,
+                               tables, filters, evolutionary, self.filters.type_analysis)
         return q
 
 
@@ -306,19 +346,26 @@ class Lines(Metrics):
 
     def _get_sql(self, evolutionary):
         # This function contains basic parts of the query to count added and removed lines
-        fields = "sum(cl.added) as added_lines, sum(cl.removed) as removed_lines"
-        tables = "scmlog s, commits_lines cl "
-        filters = "cl.commit_id = s.id "
+        fields = Set([])
+        tables = Set([])
+        filters = Set([])
 
-        # specific parts of the query depending on the report needed
-        tables += self.db.GetSQLReportFrom(self.filters.type_analysis)
+        fields.add("sum(cl.added) as added_lines")
+        fields.add("sum(cl.removed) as removed_lines")
+        tables.add("scmlog s")
+        tables.add("commits_lines cl")
+        filters.add("cl.commit_id = s.id")
+
+        # Eclipse specific
+        filters.add("s.message not like '%cvs2svn%'")
+
+        tables.union_update(self.db.GetSQLReportFrom(self.filters))
         #TODO: left "author" as generic option coming from parameters (this should be specified by command line)
-        filters += self.db.GetSQLReportWhere(self.filters.type_analysis, "author")
+        filters.union_update(self.db.GetSQLReportWhere(self.filters, "author"))
 
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
-                               self.filters.enddate, " s.date ", fields,
-                               tables, filters, evolutionary)
-
+                               self.filters.enddate, " s.author_date ", fields,
+                               tables, filters, evolutionary, self.filters.type_analysis)
         return q
 
     def get_ts(self):
@@ -335,22 +382,26 @@ class Lines(Metrics):
         return completePeriodIds(data, self.filters.period,
                                  self.filters.startdate, self.filters.enddate)
 
-    def get_agg_diff_days(self, date, days):
+    def get_trends(self, date, days):
         #Specific needs for Added and Removed lines not considered in meta class Metrics
         filters = self.filters
 
         chardates = GetDates(date, days)
 
         self.filters = MetricFilters(Metrics.default_period,
-                                     chardates[1], chardates[0], None)        
+                                     chardates[1], chardates[0], None)
         last = self.get_agg()
+        if last['added_lines'] is None: last['added_lines'] = 0
         last_added = int(last['added_lines'])
+        if last['removed_lines'] is None: last['removed_lines'] = 0
         last_removed = int(last['removed_lines'])
 
         self.filters = MetricFilters(Metrics.default_period,
                                      chardates[2], chardates[1], None)
         prev = self.get_agg()
+        if prev['added_lines'] is None: prev['added_lines'] = 0
         prev_added = int(prev['added_lines'])
+        if prev['removed_lines'] is None: prev['removed_lines'] = 0
         prev_removed = int(prev['removed_lines'])
 
         data = {}
@@ -365,6 +416,61 @@ class Lines(Metrics):
         self.filters = filters
         return (data) 
 
+class AddedLines(Metrics):
+    """ Added lines for source code management system """
+
+    id = "added_lines"
+    name = "Added Lines"
+    desc = "Number of added lines"
+    data_source = SCM
+
+    def _get_sql(self, evolutionary):
+        # This function contains basic parts of the query to count added and removed lines
+        fields = Set([])
+        tables = Set([])
+        filters = Set([])
+
+        fields.add("sum(cl.added) as added_lines")
+        tables.add("scmlog s")
+        tables.add("commits_lines cl")
+        filters.add("cl.commit_id = s.id")
+
+        tables.union_update(self.db.GetSQLReportFrom(self.filters))
+        #TODO: left "author" as generic option coming from parameters (this should be specified by command line)
+        filters.union_update(self.db.GetSQLReportWhere(self.filters, "author"))
+
+        q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
+                               self.filters.enddate, " s.author_date ", fields,
+                               tables, filters, evolutionary, self.filters.type_analysis)
+        return q
+
+class RemovedLines(Metrics):
+    """ Added and Removed lines for source code management system """
+
+    id = "removed_lines"
+    name = "Removed Lines"
+    desc = "Number of removed lines"
+    data_source = SCM
+
+    def _get_sql(self, evolutionary):
+        # This function contains basic parts of the query to count added and removed lines
+        fields = Set([])
+        tables = Set([])
+        filters = Set([])
+
+        fields.add("sum(cl.removed) as removed_lines")
+        tables.add("scmlog s")
+        tables.add("commits_lines cl")
+        filters.add("cl.commit_id = s.id")
+
+        tables.union_update(self.db.GetSQLReportFrom(self.filters))
+        #TODO: left "author" as generic option coming from parameters (this should be specified by command line)
+        filters.union_update(self.db.GetSQLReportWhere(self.filters, "author"))
+
+        q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
+                               self.filters.enddate, " s.author_date ", fields,
+                               tables, filters, evolutionary, self.filters.type_analysis)
+        return q
 
 class Branches(Metrics):
     """ Branches metric class for source code management system """
@@ -376,18 +482,23 @@ class Branches(Metrics):
 
     def _get_sql(self, evolutionary):
         # Basic parts of the query needed when calculating branches
-        fields = "count(distinct(a.branch_id)) as branches "
-        tables = " scmlog s, actions a "
-        filters = " a.commit_id = s.id "
+        fields = Set([])
+        tables = Set([])
+        filters = Set([])
+
+        fields.add("count(distinct(a.branch_id)) as branches")
+        tables.add("scmlog s")
+        tables.add("actions a")
+        filters.add("a.commit_id = s.id")
 
         # specific parts of the query depending on the report needed
-        tables += self.db.GetSQLReportFrom(self.filters.type_analysis)
+        tables.union_update(self.db.GetSQLReportFrom(self.filters))
         #TODO: left "author" as generic option coming from parameters (this should be specified by command line)
-        filters += self.db.GetSQLReportWhere(self.filters.type_analysis, "author")
+        filters.union_update(self.db.GetSQLReportWhere(self.filters, "author"))
 
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
-                               self.filters.enddate, " s.date ", fields,
-                               tables, filters, evolutionary)
+                               self.filters.enddate, " s.author_date ", fields,
+                               tables, filters, evolutionary, self.filters.type_analysis)
         return q
 
 
@@ -401,17 +512,23 @@ class Actions(Metrics):
 
     def _get_sql (self, evolutionary):
         # Basic parts of the query needed when calculating actions
-        fields = " count(distinct(a.id)) as actions "
-        tables = " scmlog s, actions a "
-        filters = " a.commit_id = s.id "
+        fields = Set([])
+        tables = Set([])
+        filters = Set([])
 
-        tables += self.db.GetSQLReportFrom(self.filters.type_analysis)
-        filters += self.db.GetSQLReportWhere(self.filters.type_analysis, "author")
+        fields.add("count(distinct(a.id)) as actions")
+        tables.add("scmlog s")
+        tables.add("actions a")
+        filters.add("a.commit_id = s.id")
+
+        tables.union_update(self.db.GetSQLReportFrom(self.filters))
+        filters.union_update(self.db.GetSQLReportWhere(self.filters, "author"))
 
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
-                               self.filters.enddate, " s.date ", fields,
-                               tables, filters, evolutionary)
+                               self.filters.enddate, " s.author_date ", fields,
+                               tables, filters, evolutionary, self.filters.type_analysis)
         return q
+
 
 class CommitsPeriod(Metrics):
     """ Commits per period class for source code management system """
@@ -423,17 +540,20 @@ class CommitsPeriod(Metrics):
 
     def _get_sql(self, evolutionary):
         # Basic parts of the query needed when calculating commits per period
+        fields = Set([])
+        tables = Set([])
+        filters = Set([])        
 
-        fields = " count(distinct(s.id))/timestampdiff("+self.filters.period+",min(s.date),max(s.date)) as avg_commits_"+self.filters.period
-        tables = " scmlog s "
-        filters = " s.id IN (SELECT DISTINCT(a.commit_id) from actions a) "
+        fields.add("count(distinct(s.id))/timestampdiff("+self.filters.period+",min(s.author_date),max(s.author_date)) as avg_commits_"+self.filters.period)
+        tables.add("scmlog s")
+        filters.add("s.id IN (SELECT DISTINCT(a.commit_id) from actions a)")
 
-        tables += self.db.GetSQLReportFrom(self.filters.type_analysis)
-        filters += self.db.GetSQLReportWhere(self.filters.type_analysis, "author")
+        tables.union_update(self.db.GetSQLReportFrom(self.filters))
+        filters.union_update(self.db.GetSQLReportWhere(self.filters, "author"))
 
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
-                               self.filters.enddate, " s.date ", fields,
-                               tables, filters, evolutionary)
+                               self.filters.enddate, " s.author_date ", fields,
+                               tables, filters, evolutionary, self.filters.type_analysis)
         return q
 
     def get_ts(self):
@@ -451,17 +571,21 @@ class FilesPeriod(Metrics):
 
     def _get_sql(self, evolutionary):
         # Basic parts of the query needed when calculating commits per period
+        fields = Set([])
+        tables = Set([])
+        filters = Set([])
 
-        fields = " count(distinct(a.file_id))/timestampdiff("+self.filters.period+",min(s.date),max(s.date)) as avg_files_"+self.filters.period
-        tables = " scmlog s, actions a "
-        filters = " s.id = a.commit_id "
+        fields.add("count(distinct(a.file_id))/timestampdiff("+self.filters.period+",min(s.author_date),max(s.author_date)) as avg_files_"+self.filters.period)
+        tables.add("scmlog s")
+        tables.add("actions a")
+        filters.add("s.id = a.commit_id")
 
-        tables += self.db.GetSQLReportFrom(self.filters.type_analysis)
-        filters += self.db.GetSQLReportWhere(self.filters.type_analysis, "author")
+        tables.union_update(self.db.GetSQLReportFrom(self.filters))
+        filters.union_update(self.db.GetSQLReportWhere(self.filters, "author"))
 
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
-                               self.filters.enddate, " s.date ", fields,
-                               tables, filters, evolutionary)
+                               self.filters.enddate, " s.author_date ", fields,
+                               tables, filters, evolutionary, self.filters.type_analysis)
         return q
 
     def get_ts(self):
@@ -479,30 +603,28 @@ class CommitsAuthor(Metrics):
 
     def _get_sql(self, evolutionary):
         # Basic parts of the query needed when calculating commits per author
+        fields = Set([])
+        tables = Set([])
+        filters = Set([])
   
-        fields = " count(distinct(s.id))/count(distinct(pup.upeople_id)) as avg_commits_author "
-        tables = " scmlog s, actions a "
-        filters = " s.id = a.commit_id "
+        fields.add("count(distinct(s.id))/count(distinct(pup.upeople_id)) as avg_commits_author ")
+        tables.add("scmlog s")
+        tables.add("actions a")
+        filters.add("s.id = a.commit_id")
 
-        filters += self.db.GetSQLReportWhere(self.filters.type_analysis, "author")
+        filters.union_update(self.db.GetSQLReportWhere(self.filters, "author"))
 
         #specific parts of the query depending on the report needed
-        tables += self.db.GetSQLReportFrom(self.filters.type_analysis)
+        tables.union_update(self.db.GetSQLReportFrom(self.filters))
  
-        if (self.filters.type_analysis is None or len (self.filters.type_analysis) != 2) :
-            #Specific case for the basic option where people_upeople table is needed
-            #and not taken into account in the initial part of the query
-            tables += ",  "+self.db.identities_db+".people_upeople pup"
-            filters += " and s.author_id = pup.people_id"
-
-        elif (self.filters.type_analysis[0] == "repository" or self.filters.type_analysis[0] == "project"):
-            #Adding people_upeople table
-            tables += ",  "+self.db.identities_db+".people_upeople pup"
-            filters += " and s.author_id = pup.people_id "
+        # Needed code for specific analysis such as repositories or projects
+        # Given that we're using sets, this does not add extra tables or filters.
+        tables.add("people_upeople pup")
+        filters.add("s.author_id = pup.people_id")
 
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
-                               self.filters.enddate, " s.date ", fields,
-                               tables, filters, evolutionary)
+                               self.filters.enddate, " s.author_date ", fields,
+                               tables, filters, evolutionary, self.filters.type_analysis)
         return q
 
 
@@ -516,30 +638,27 @@ class AuthorsPeriod(Metrics):
 
     def _get_sql(self, evolutionary):
         # Basic parts of the query needed when calculating commits per period
+        fields = Set([])
+        tables = Set([])
+        filters = Set([])
 
-        fields = " count(distinct(pup.upeople_id))/timestampdiff("+self.filters.period+",min(s.date),max(s.date)) as avg_authors_"+self.filters.period
-        tables = " scmlog s "
+        fields.add("count(distinct(pup.upeople_id))/timestampdiff("+self.filters.period+",min(s.author_date),max(s.author_date)) as avg_authors_"+self.filters.period)
+        tables.add("scmlog s")
         # filters = ""
 
-        filters = self.db.GetSQLReportWhere(self.filters.type_analysis, "author")
+        filters.union_update(self.db.GetSQLReportWhere(self.filters, "author"))
 
         #specific parts of the query depending on the report needed
-        tables += self.db.GetSQLReportFrom(self.filters.type_analysis)
+        tables.union_update(self.db.GetSQLReportFrom(self.filters))
 
-        if (self.filters.type_analysis is None or len (self.filters.type_analysis) != 2) :
-            #Specific case for the basic option where people_upeople table is needed
-            #and not taken into account in the initial part of the query
-            tables += ",  "+self.db.identities_db+".people_upeople pup"
-            filters += " and s.author_id = pup.people_id"
-
-        elif (self.filters.type_analysis[0] == "repository" or self.filters.type_analysis[0] == "project"):
-            #Adding people_upeople table
-            tables += ",  "+self.db.identities_db+".people_upeople pup"
-            filters += " and s.author_id = pup.people_id "
+        # Needed code for specific analysis such as repositories or projects
+        # Given that we're using sets, this does not add extra tables or filters.
+        tables.add("people_upeople pup")
+        filters.add("s.author_id = pup.people_id")
 
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
-                               self.filters.enddate, " s.date ", fields,
-                               tables, filters, evolutionary)
+                               self.filters.enddate, " s.author_date ", fields,
+                               tables, filters, evolutionary, self.filters.type_analysis)
         return q
 
 
@@ -558,34 +677,40 @@ class CommittersPeriod(Metrics):
 
     def _get_sql(self, evolutionary):
         # Basic parts of the query needed when calculating commits per period
+        fields = Set([])
+        tables = Set([])
+        filters = Set([])
 
         #TODO: the following three lines should be initialize in a __init__ method.
         self.id = "avg_committers_" + self.filters.period
         self.name = "Average Committers per " + self.filters.period
         self.desc = "Average number of committers per " + self.filters.period
 
-        fields = " count(distinct(pup.upeople_id))/timestampdiff("+self.filters.period+",min(s.date),max(s.date)) as avg_committers_"+self.filters.period
-        tables = " scmlog s "
+        fields.add("count(distinct(pup.upeople_id))/timestampdiff("+self.filters.period+",min(s.author_date),max(s.author_date)) as avg_committers_"+self.filters.period)
+        tables.add("scmlog s")
         # filters = ""
 
-        filters = self.db.GetSQLReportWhere(self.filters.type_analysis, "committer")
+        filters.union_update(self.db.GetSQLReportWhere(self.filters, "committer"))
 
         #specific parts of the query depending on the report needed
-        tables += self.db.GetSQLReportFrom(self.filters.type_analysis)
+        tables.union_update(self.db.GetSQLReportFrom(self.filters))
 
         if (self.filters.type_analysis is None or len (self.filters.type_analysis) != 2) :
             #Specific case for the basic option where people_upeople table is needed
             #and not taken into account in the initial part of the query
-            tables += ",  "+self.db.identities_db+".people_upeople pup"
-            filters += " and s.committer_id = pup.people_id"
+            if "people_upeople pup" not in tables:
+                tables.add("people_upeople pup")
+                filters.add("s.committer_id = pup.people_id")
 
         elif (self.filters.type_analysis[0] == "repository" or self.filters.type_analysis[0] == "project"):
             #Adding people_upeople table
-            tables += ",  "+self.db.identities_db+".people_upeople pup"
-            filters += " and s.committer_id = pup.people_id "
+            if "people_upeople pup" not in tables:
+                tables.add("people_upeople pup")
+                filters.add("s.committer_id = pup.people_id")
+
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
-                               self.filters.enddate, " s.date ", fields,
-                               tables, filters, evolutionary)
+                               self.filters.enddate, " s.author_date ", fields,
+                               tables, filters, evolutionary, self.filters.type_analysis)
         return q
 
     def get_ts(self):
@@ -603,30 +728,28 @@ class FilesAuthor(Metrics):
 
     def _get_sql(self, evolutionary):
         # Basic parts of the query needed when calculating files per author
+        fields = Set([])
+        tables = Set([])
+        filters = Set([])
 
-        fields = " count(distinct(a.file_id))/count(distinct(pup.upeople_id)) as avg_files_author "
-        tables = " scmlog s, actions a "
-        filters = " s.id = a.commit_id "
+        fields.add("count(distinct(a.file_id))/count(distinct(pup.upeople_id)) as avg_files_author")
+        tables.add("scmlog s")
+        tables.add("actions a")
+        filters.add("s.id = a.commit_id")
 
-        filters += self.db.GetSQLReportWhere(self.filters.type_analysis, "author")
+        filters.union_update(self.db.GetSQLReportWhere(self.filters, "author"))
 
         #specific parts of the query depending on the report needed
-        tables += self.db.GetSQLReportFrom(self.filters.type_analysis)
+        tables.union_update(self.db.GetSQLReportFrom(self.filters))
 
-        if (self.filters.type_analysis is None or len (self.filters.type_analysis) != 2) :
-            #Specific case for the basic option where people_upeople table is needed
-            #and not taken into account in the initial part of the query
-            tables += ",  "+self.db.identities_db+".people_upeople pup"
-            filters += " and s.author_id = pup.people_id"
-
-        elif (self.filters.type_analysis[0] == "repository" or self.filters.type_analysis[0] == "project"):
-            #Adding people_upeople table
-            tables += ",  "+self.db.identities_db+".people_upeople pup"
-            filters += " and s.author_id = pup.people_id "
+        # Needed code for specific analysis such as repositories or projects
+        # Given that we're using sets, this does not add extra tables or filters.
+        tables.add("people_upeople pup")
+        filters.add("s.author_id = pup.people_id")
 
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
-                               self.filters.enddate, " s.date ", fields,
-                               tables, filters, evolutionary)
+                               self.filters.enddate, " s.author_date ", fields,
+                               tables, filters, evolutionary, self.filters.type_analysis)
         return q
 
 class Repositories(Metrics):
@@ -640,17 +763,21 @@ class Repositories(Metrics):
     data_source = SCM
 
     def _get_sql(self, evolutionary):
-        fields = "count(distinct(s.repository_id)) AS repositories "
-        tables = "scmlog s "
+        fields = Set([])
+        tables = Set([])
+        filters = Set([])
+
+        fields.add("count(distinct(s.repository_id)) AS repositories")
+        tables.add("scmlog s")
 
         # specific parts of the query depending on the report needed
-        tables += self.db.GetSQLReportFrom(self.filters.type_analysis)
+        tables.union_update(self.db.GetSQLReportFrom(self.filters))
         #TODO: left "author" as generic option coming from parameters (this should be specified by command line)
-        filters = self.db.GetSQLReportWhere(self.filters.type_analysis, "author")
+        filters.union_update(self.db.GetSQLReportWhere(self.filters, "author"))
 
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
-                               self.filters.enddate, " s.date ", fields,
-                               tables, filters, evolutionary)
+                               self.filters.enddate, " s.author_date ", fields,
+                               tables, filters, evolutionary, self.filters.type_analysis)
         return q
 
     def get_list(self):
@@ -659,7 +786,7 @@ class Repositories(Metrics):
             select count(distinct(sid)) as total, name
             from repositories r, (
               select distinct(s.id) as sid, repository_id from actions a, scmlog s
-              where s.id = a.commit_id  and s.date >%s and s.date <= %s) t
+              where s.id = a.commit_id  and s.author_date >=%s and s.author_date < %s) t
             WHERE repository_id = r.id
             group by repository_id   
             order by total desc,name
@@ -677,86 +804,68 @@ class Companies(Metrics):
     data_source = SCM
 
     def _get_sql(self, evol):
-        fields = "count(distinct(upc.company_id)) as companies"
-        tables = " scmlog s, people_upeople pup, upeople_companies upc"
-        filters = "s.author_id = pup.people_id and "+\
-               "pup.upeople_id = upc.upeople_id and "+\
-               "s.date >= upc.init and  "+\
-               "s.date < upc.end"
+        fields = Set([])
+        tables = Set([])
+        filters = Set([])
+
+        fields.add("count(distinct(upc.company_id)) as companies")
+        tables.add("scmlog s")
+        tables.add("people_upeople pup")
+        tables.add("upeople_companies upc")
+        filters.add("s.author_id = pup.people_id")
+        filters.add("pup.upeople_id = upc.upeople_id")
+        filters.add("s.author_date >= upc.init")
+        filters.add("s.author_date < upc.end")
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
-                               self.filters.enddate, " s.date ", fields, 
-                               tables, filters, evol)
+                               self.filters.enddate, " s.author_date ", fields, 
+                               tables, filters, evol, self.filters.type_analysis)
         return q
 
-    def _get_top_project(self, fbots = None):
-        if fbots is not None and fbots != '': fbots += " AND "
+    def get_list(self, metric_filters = None, days = 0):
+        #TODO: metric_filters parameter is deprecated and should be removed
 
-        startdate = self.filters.startdate
-        enddate = self.filters.enddate
-        project = self.filters.type_analysis[1]
-        limit = self.filters.npeople
+        fields = Set([])
+        tables = Set([])
+        filters = Set([])
 
-        projects_from = self.db.GetSQLProjectFrom()
-        # Remove first and
-        projects_where = " WHERE  " + self.db.GetSQLProjectWhere(project)[3:]
+        #Building parts of the query to control timeframe of study
+        if (days > 0):
+            tables.add("(SELECT MAX(date) as last_date from scmlog) dt")
+            filters.add("DATEDIFF (last_date, date) < %s " % (days))
 
-        fields =  "SELECT COUNT(DISTINCT(s.id)) as company_commits, c.name as companies "
-        fields += "FROM scmlog s, people_upeople pup, upeople u, upeople_companies upc, companies c "
-        q = fields + projects_from + projects_where
-        q += " AND " + fbots + " pup.people_id = s.author_id AND u.id = pup.upeople_id "
-        q += " AND u.id = upc.upeople_id AND c.id = upc.company_id "
-        q += " AND s.date >= " + startdate + " and s.date < " + enddate
-        q += " AND s.date >= upc.init AND s.date < upc.end "
-        q += " GROUP by c.name ORDER BY company_commits DESC, c.name"
-        q += " limit " + str(self.filters.npeople)
+        fields.add("c.name as name")
+        fields.add("count(distinct(s.id)) as company_commits")
 
-        return q
+        tables.add("scmlog s")
+        tables.add("people_upeople pup")
+        tables.add(self.db.identities_db + ".upeople u")
+        tables.add("upeople_companies upc")
+        tables.add("companies c")
+        tables.union_update(self.db.GetSQLReportFrom(self.filters))
 
-    def _get_top(self, fbots = None):
-        if fbots is not None and fbots !='': fbots += " AND "
-        q = """
-            select c.name, count(distinct(t.s_id)) as total
-            from companies c,  (
-              select distinct(s.id) as s_id, company_id
-              from companies c, people_upeople pup, upeople_companies upc,
-                   scmlog s,  actions a
-              where c.id = upc.company_id and  upc.upeople_id = pup.upeople_id
-                and  s.date >= upc.init and s.date < upc.end
-                and pup.people_id = s.author_id
-                and s.id = a.commit_id and
-                %s s.date >=%s and s.date < %s) t
-            where c.id = t.company_id
-            group by c.name
-            order by count(distinct(t.s_id)) desc
-        """ % (fbots, self.filters.startdate, self.filters.enddate)
+        filters.add("pup.people_id = s.author_id")
+        filters.add("u.id = pup.upeople_id")
+        filters.add("u.id = upc.upeople_id")
+        filters.add("c.id = upc.company_id")
+        filters.add("s.author_date >= " + self.filters.startdate)
+        filters.add("s.author_date < " + self.filters.enddate)
+        filters.add("s.author_date >= upc.init")
+        filters.add("s.author_date < upc.end")
+        filters.union_update(self.db.GetSQLReportWhere(self.filters))
+        
+        query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
+                                   self.filters.enddate, " s.author_date ", fields,
+                                   tables, filters, False, self.filters.type_analysis)
 
-        return q
+        #TODO: to be included as another filter
+        if self.filters.companies_out is not None:
+            for company in self.filters.companies_out:
+                query = query + " and c.name <> '" + company + "' "
 
-    def get_list(self, metric_filters = None):
-        from data_source import DataSource
-        from filter import Filter
-        # bots = DataSource.get_filter_bots(Filter("company"))
+        query = query + " GROUP by c.name ORDER BY company_commits DESC, c.name"
+        query = query + " limit " + str(self.filters.npeople)
 
-        if metric_filters == None:
-            metric_filters = self.filters
-
-        # Store current filter to restore it
-        metric_filters_orig = self.filters
-        items_out = self.get_items_out_filter_sql("company", metric_filters)
-
-        if metric_filters is not None and metric_filters.type_analysis is not None:
-            self.filters = metric_filters
-
-            if metric_filters.type_analysis[0] == "project":
-                q = self._get_top_project(items_out)
-
-        else:
-            q = self._get_top(items_out)
-
-        # Restore original filter for the metric
-        self.filters = metric_filters_orig
-
-        return self.db.ExecuteQuery(q)
+        return self.db.ExecuteQuery(query)
 
 class Countries(Metrics):
     """ Countries participating in the source code management system """
@@ -768,12 +877,20 @@ class Countries(Metrics):
     data_source = SCM
 
     def _get_sql(self, evol):
-        fields = "count(distinct(upc.country_id)) as countries"
-        tables = "scmlog s, people_upeople pup, upeople_countries upc"
-        filters = "s.author_id = pup.people_id and pup.upeople_id = upc.upeople_id"
+        fields = Set([])
+        tables = Set([])
+        filters = Set([])
+
+        fields.add("count(distinct(upc.country_id)) as countries")
+        tables.add("scmlog s")
+        tables.add("people_upeople pup")
+        tables.add("upeople_countries upc")
+        filters.add("s.author_id = pup.people_id")
+        filters.add("pup.upeople_id = upc.upeople_id")
+
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
-                               self.filters.enddate, " s.date ", fields,
-                               tables, filters, evol)
+                               self.filters.enddate, " s.author_date ", fields,
+                               tables, filters, evol, self.filters.type_analysis)
         return q
 
     def get_list(self): 
@@ -790,12 +907,43 @@ class Countries(Metrics):
             "WHERE pup.people_id = s."+rol+"_id AND "+\
             "      pup.upeople_id  = upc.upeople_id and "+\
             "      upc.country_id = c.id and "+\
-            "      s.date >="+startdate+ " and "+\
-            "      s.date < "+enddate+ " "+\
+            "      s.author_date >="+startdate+ " and "+\
+            "      s.author_date < "+enddate+ " "+\
             "group by c.name "+\
             "order by commits desc"
 
         return self.db.ExecuteQuery(q)
+
+class CompaniesCountries(Metrics):
+    """ Countries in Companies participating in the source code management system """
+
+    id = "companies+countries"
+    name = "Countries"
+    desc = "Countries in Companies participating in the source code management system"
+    data_source = SCM
+
+    def get_list(self):
+        rol = "author" #committer
+        identities_db = self.db.identities_db
+        startdate = self.filters.startdate
+        enddate = self.filters.enddate
+
+        q = "SELECT count(s.id) as commits, CONCAT(c.name, '_', cou.name) as name "+\
+            "FROM scmlog s, people_upeople pup, "+\
+            identities_db+".countries cou, "+identities_db+".upeople_countries upcou, "+\
+            identities_db+".companies c, "+identities_db+".upeople_companies upc "+\
+            "WHERE pup.people_id = s."+rol+"_id AND "+\
+            "      pup.upeople_id  = upcou.upeople_id and "+\
+            "      upcou.country_id = cou.id and "+\
+            "      pup.upeople_id  = upc.upeople_id and "+\
+            "      upc.company_id = c.id and "+\
+            "      s.author_date >= upc.init  and s.author_date < upc.end and "+\
+            "      s.author_date >="+startdate+ " and "+\
+            "      s.author_date < "+enddate+ " "+\
+            "group by c.name, cou.name "+\
+            "order by commits desc, c.name, cou.name"
+        clist = self.db.ExecuteQuery(q)
+        return clist
 
 class Domains(Metrics):
     """ Domains participating in the source code management system """
@@ -811,8 +959,8 @@ class Domains(Metrics):
         tables = "scmlog s, people_upeople pup, upeople_domains upd"
         filters = "s.author_id = pup.people_id and pup.upeople_id = upd.upeople_id "
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
-                               self.filters.enddate, " s.date ", fields,
-                               tables, filters, evol)
+                               self.filters.enddate, " s.author_date ", fields,
+                               tables, filters, evol, self.filters.type_analysis)
         return q
 
     def get_list(self):
@@ -829,8 +977,8 @@ class Domains(Metrics):
             "WHERE pup.people_id = s."+rol+"_id AND "+\
             "  pup.upeople_id  = upd.upeople_id and "+\
             "  upd.domain_id = d.id and "+\
-            "  s.date >="+ startdate+ " and "+\
-            "  s.date < "+ enddate+ " "+\
+            "  s.author_date >="+ startdate+ " and "+\
+            "  s.author_date < "+ enddate+ " "+\
             "GROUP BY d.name "+\
             "ORDER BY commits desc  LIMIT " + str(Metrics.domains_limit)
 
@@ -846,9 +994,6 @@ class Projects(Metrics):
     data_source = SCM
 
     def get_list(self):
-        from data_source import DataSource
-        from metrics_filter import MetricFilters
-
         identities_db = self.db.identities_db
         startdate = self.filters.startdate
         enddate = self.filters.enddate
@@ -863,7 +1008,7 @@ class Projects(Metrics):
             type_analysis = ['project', project]
             period = None
             evol = False
-            mcommits = DataSource.get_metrics("commits", SCM)
+            mcommits = Commits(self.db, self.filters)
             mfilter = MetricFilters(period, startdate, enddate, type_analysis)
             mfilter_orig = mcommits.filters
             mcommits.filters = mfilter
@@ -879,3 +1024,23 @@ class Projects(Metrics):
         names = [name[1] for name in data_sort]
 
         return({"name":names})
+
+
+if __name__ == '__main__':
+    filters1 = MetricFilters("month", "'2014-04-01'", "'2014-07-01'", ["repository,company", "'nova.git','Red Hat'"])
+    filters2 = MetricFilters("week", "'2014-04-01'", "'2014-07-01'", ["repository,company", "'nova.git','Red Hat'"], 10, "OpenStack Jenkins")
+    filters3 = MetricFilters("week", "'2014-04-01'", "'2014-07-01'", None, 10, "OpenStack Jenkins,Jenkins")
+    filters4 = MetricFilters("week", "'2014-04-01'", "'2014-07-01'", None, 10)
+    dbcon = SCMQuery("root", "", "dic_cvsanaly_openstack_2259_tm", "dic_cvsanaly_openstack_2259_tm",)
+    os_sw = Commits(dbcon, filters1)
+    print os_sw.get_ts()
+
+    os_sw = Commits(dbcon, filters2)
+    print os_sw.get_ts()
+
+    os_sw = Commits(dbcon, filters3)
+    print os_sw.get_ts()
+
+    os_sw = Commits(dbcon, filters4)
+    print os_sw.get_ts()
+

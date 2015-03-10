@@ -55,11 +55,6 @@ def read_options():
                       dest="destdir",
                       default="../../../json",
                       help="Destination directory for JSON files")
-    parser.add_option("-r", "--reports",
-                      action="store",
-                      dest="reports",
-                      default="",
-                      help="Reports to be generated (repositories, companies, countries, people)")
     parser.add_option("-s", "--start",
                       action="store",
                       dest="startdate",
@@ -100,6 +95,10 @@ def read_options():
                       action="store_true",
                       dest="no_filters",
                       help="don't generate filters metrics")
+    parser.add_option("--item",
+                      action="store",
+                      dest="item",
+                      help="Select an item filter from data source to be generated.")
     parser.add_option("-m", "--metrics",
                       action="store",
                       dest="metrics_path",
@@ -114,6 +113,11 @@ def read_options():
                       action="store",
                       dest="metric",
                       help="Select metric from data source to be generated.")
+    parser.add_option("--events",
+                      action="store_true",
+                      dest="events",
+                      help="Generate events.")
+
     (opts, args) = parser.parse_args()
 
     if len(args) != 0:
@@ -126,4 +130,6 @@ def read_options():
         parser.error("--metrics path is needed.")
     if opts.metric and opts.data_source is None:
         parser.error("--metric need also --data-source.")
+    if opts.item and opts.filter is None:
+        parser.error("--item need also --filter.")
     return opts

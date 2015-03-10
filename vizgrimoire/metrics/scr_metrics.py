@@ -20,21 +20,28 @@
 ##
 ## Authors:
 ##   Alvaro del Castillo <acs@bitergia.com>
+##   Daniel Izquierdo <dizquierdo@bitergia.com>
 
 """ Metrics for the source code review system """
 
 import logging
 import MySQLdb
+import numpy
 
-from GrimoireUtils import completePeriodIds, checkListArray, medianAndAvgByPeriod
+from vizgrimoire.GrimoireUtils import completePeriodIds, checkListArray, medianAndAvgByPeriod, check_array_values
+from vizgrimoire.metrics.query_builder import DSQuery
 
-from metrics import Metrics
+from vizgrimoire.metrics.metrics import Metrics
 
-from metrics_filter import MetricFilters
+from vizgrimoire.metrics.metrics_filter import MetricFilters
 
-from query_builder import ITSQuery
+from vizgrimoire.metrics.query_builder import SCRQuery
 
-from SCR import SCR
+from vizgrimoire.metrics.query_builder import ITSQuery
+
+from vizgrimoire.SCR import SCR
+
+from sets import Set
 
 class Submitted(Metrics):
     id = "submitted"
@@ -45,7 +52,7 @@ class Submitted(Metrics):
     def _get_sql(self, evolutionary):
         q = self.db.GetReviewsSQL(self.filters.period, self.filters.startdate,
                                   self.filters.enddate, "submitted",
-                                  self.filters.type_analysis, evolutionary, self.db.identities_db)
+                                  self.filters.type_analysis, evolutionary)
         return q
 
 class Merged(Metrics):
@@ -57,13 +64,13 @@ class Merged(Metrics):
     def _get_sql(self, evolutionary):
         q = self.db.GetReviewsSQL(self.filters.period, self.filters.startdate,
                                   self.filters.enddate, "merged",
-                                  self.filters.type_analysis, evolutionary, self.db.identities_db)
+                                  self.filters.type_analysis, evolutionary)
         return q
 
     def _get_sqlchanges (self, evolutionary):
         q = self.db.GetReviewsChangesSQL(self.filters.period, self.filters.startdate,
                                          self.filters.enddate, "merged",
-                                         self.filters.type_analysis, evolutionary, self.db.identities_db)
+                                         self.filters.type_analysis, evolutionary)
         return q
 
     def get_ts_changes(self):
@@ -91,13 +98,13 @@ class Abandoned(Metrics):
     def _get_sql(self, evolutionary):
         q = self.db.GetReviewsSQL(self.filters.period, self.filters.startdate,
                                   self.filters.enddate, "abandoned",
-                                  self.filters.type_analysis, evolutionary, self.db.identities_db)
+                                  self.filters.type_analysis, evolutionary)
         return q
 
     def _get_sqlchanges (self, evolutionary):
         q = self.db.GetReviewsChangesSQL(self.filters.period, self.filters.startdate,
                                          self.filters.enddate, "abandoned",
-                                         self.filters.type_analysis, evolutionary, self.db.identities_db)
+                                         self.filters.type_analysis, evolutionary)
         return q
 
     def get_ts_changes(self):
@@ -106,31 +113,174 @@ class Abandoned(Metrics):
         return completePeriodIds(ts, self.filters.period,
                                  self.filters.startdate, self.filters.enddate)
 
+class BMISCR(Metrics):
+    """This class calculates the efficiency closing reviews
+
+    This class is based on the Backlog Management Index that in issues, it is
+    calculated as the number of closed issues out of the total number of opened
+    ones in a period. (The other way around also provides an interesting view). 
+    
+    In terms of the code review system, this values is measured as the number
+    of merged+abandoned reviews out of the total number of submitted ones.
+    """
+
+    id = "bmiscr"
+    name = "BMI SCR"
+    desc = "Efficiency reviewing: (merged+abandoned reviews)/(submitted reviews)"
+    data_source = SCR
+
+    def get_ts(self):
+        abandoned_reviews = Abandoned(self.db, self.filters)
+        merged_reviews = Merged(self.db, self.filters)
+        submitted_reviews = Submitted(self.db, self.filters)
+
+        abandoned = abandoned_reviews.get_ts()
+        abandoned = completePeriodIds(abandoned, self.filters.period, self.filters.startdate,
+                                      self.filters.enddate)
+        # casting the type of the variable in order to use numpy
+        # faster way to deal with datasets...
+        abandoned_array = numpy.array(abandoned["abandoned"])
+
+        merged = merged_reviews.get_ts()
+        merged = completePeriodIds(merged, self.filters.period, self.filters.startdate,
+                                      self.filters.enddate)
+        merged_array = numpy.array(merged["merged"])
+
+        submitted = submitted_reviews.get_ts()
+        submitted = completePeriodIds(submitted, self.filters.period, self.filters.startdate,
+                                      self.filters.enddate)
+        submitted_array = numpy.array(submitted["submitted"])
+
+        bmi_array = (abandoned_array.astype(float) + merged_array.astype(float)) / submitted_array.astype(float)
+
+        bmi = abandoned
+        bmi.pop("abandoned")
+        bmi["bmiscr"] = list(bmi_array)
+
+        return bmi
+
+    def get_agg(self):
+        abandoned_reviews = Abandoned(self.db, self.filters)
+        merged_reviews = Merged(self.db, self.filters)
+        submitted_reviews = Submitted(self.db, self.filters)
+
+        abandoned = abandoned_reviews.get_agg()
+        abandoned_data = abandoned["abandoned"]
+        merged = merged_reviews.get_agg()
+        merged_data = merged["merged"]
+        submitted = submitted_reviews.get_agg()
+        submitted_data = submitted["submitted"]
+        
+        if submitted_data == 0:
+            # We should probably add a NaN value.
+            bmi_data= 0
+        else:
+            bmi_data = float(merged_data + abandoned_data) / float(submitted_data)
+        bmi = {"bmiscr":bmi_data}
+
+        return bmi
+
+
+
 class Pending(Metrics):
     id = "pending"
     name = "Pending reviews"
     desc = "Number of pending review processes"
     data_source = SCR
 
-
     def _get_metrics_for_pending(self):
         # We need to fix the same filter for all metrics
         metrics_for_pendig = {}
 
         metric = SCR.get_metrics("submitted", SCR)
+        if metric is None:
+            metric = Submitted(self.db, self.filters)
         metric.filters = self.filters
         metrics_for_pendig['submitted'] = metric
 
         metric = SCR.get_metrics("merged", SCR)
+        if metric is None:
+            metric = Merged(self.db, self.filters)
         metric.filters = self.filters
         metrics_for_pendig['merged'] = metric
 
         metric = SCR.get_metrics("abandoned", SCR)
+        if metric is None:
+            metric = Abandoned(self.db, self.filters)
         metric.filters = self.filters
         metrics_for_pendig['abandoned'] = metric
 
         return metrics_for_pendig
 
+    def _get_metrics_for_pending_all(self, evol):
+        """ Return the metric for all items normalized """
+        metrics = self._get_metrics_for_pending()
+        if evol is True:
+            submitted = metrics['submitted'].get_ts()
+            merged = metrics['merged'].get_ts()
+            abandoned = metrics['abandoned'].get_ts()
+        else:
+            submitted = metrics['submitted'].get_agg()
+            merged = metrics['merged'].get_agg()
+            abandoned = metrics['abandoned'].get_agg()
+
+        from vizgrimoire.report import Report
+        filter = Report.get_filter(self.filters.type_analysis[0])
+        items = SCR.get_filter_items(filter, self.filters.startdate,
+                                     self.filters.enddate, self.db.identities_db)
+        items = items.pop('name')
+
+        from vizgrimoire.GrimoireUtils import fill_and_order_items
+        id_field = DSQuery.get_group_field(self.filters.type_analysis[0])
+        id_field = id_field.split('.')[1] # remove table name
+        submitted = check_array_values(submitted)
+        merged = check_array_values(merged)
+        abandoned = check_array_values(abandoned)
+
+        submitted = fill_and_order_items(items, submitted, id_field,
+                                         evol, self.filters.period,
+                                         self.filters.startdate, self.filters.enddate)
+        merged = fill_and_order_items(items, merged, id_field,
+                                         evol, self.filters.period,
+                                         self.filters.startdate, self.filters.enddate)
+        abandoned = fill_and_order_items(items, abandoned, id_field,
+                                         evol, self.filters.period,
+                                         self.filters.startdate, self.filters.enddate)
+        metrics_for_pendig_all = {
+          id_field: submitted[id_field],
+          "submitted": submitted["submitted"],
+          "merged": merged["merged"],
+          "abandoned": abandoned["abandoned"]
+        }
+        if evol:
+            metrics_for_pendig_all[self.filters.period] = submitted[self.filters.period]
+
+        return metrics_for_pendig_all
+
+    def get_agg_all(self):
+        evol = False
+        metrics = self._get_metrics_for_pending_all(evol)
+        id_field = DSQuery.get_group_field(self.filters.type_analysis[0])
+        id_field = id_field.split('.')[1] # remove table name
+        data= \
+            [metrics['submitted'][i]-metrics['merged'][i]-metrics['abandoned'][i] \
+             for i in range(0, len(metrics['submitted']))]
+        return {id_field:metrics[id_field], "pending":data}
+
+    def get_ts_all(self):
+        evol = True
+        metrics = self._get_metrics_for_pending_all(evol)
+        id_field = DSQuery.get_group_field(self.filters.type_analysis[0])
+        id_field = id_field.split('.')[1] # remove table name
+        pending = {"pending":[]}
+        for i in range(0, len(metrics['submitted'])):
+            pending["pending"].append([])
+            for j in range(0, len(metrics['submitted'][i])):
+                pending_val = metrics["submitted"][i][j] - metrics["merged"][i][j] - metrics["abandoned"][i][j]
+                pending["pending"][i].append(pending_val)
+        pending[self.filters.period] = metrics[self.filters.period]
+        pending[id_field] = metrics[id_field]
+        return pending
 
     def get_agg(self):
         metrics = self._get_metrics_for_pending()
@@ -138,8 +288,13 @@ class Pending(Metrics):
         merged = metrics['merged'].get_agg()
         abandoned = metrics['abandoned'].get_agg()
 
-        pending = submitted['submitted']-merged['merged']-abandoned['abandoned']
-        return ({"pending":pending})
+        # GROUP BY queries
+        if self.filters.type_analysis is not None and self.filters.type_analysis[1] is None:
+            pending = self.get_agg_all()
+        else:
+            pending = submitted['submitted']-merged['merged']-abandoned['abandoned']
+            pending = {"pending":pending}
+        return pending
 
     def get_ts(self):
         metrics = self._get_metrics_for_pending()
@@ -148,10 +303,14 @@ class Pending(Metrics):
         abandoned = metrics["abandoned"].get_ts()
         evol = dict(submitted.items() + merged.items() + abandoned.items())
         pending = {"pending":[]}
-        for i in range(0, len(evol['submitted'])):
-            pending_val = evol["submitted"][i] - evol["merged"][i] - evol["abandoned"][i]
-            pending["pending"].append(pending_val)
-        pending[self.filters.period] = evol[self.filters.period]
+            # GROUP BY queries
+        if self.filters.type_analysis is not None and self.filters.type_analysis[1] is None:
+            pending = self.get_ts_all()
+        else:
+            for i in range(0, len(evol['submitted'])):
+                pending_val = evol["submitted"][i] - evol["merged"][i] - evol["abandoned"][i]
+                pending["pending"].append(pending_val)
+            pending[self.filters.period] = evol[self.filters.period]
         return pending
 
 class Opened(Metrics):
@@ -163,7 +322,7 @@ class Opened(Metrics):
     def _get_sql(self, evolutionary):
         q = self.db.GetReviewsSQL(self.filters.period, self.filters.startdate,
                                   self.filters.enddate, "opened",
-                                  self.filters.type_analysis, evolutionary, self.db.identities_db)
+                                  self.filters.type_analysis, evolutionary)
         return q
 
 class Closed(Metrics):
@@ -175,7 +334,7 @@ class Closed(Metrics):
     def _get_sql(self, evolutionary):
         q = self.db.GetReviewsSQL(self.filters.period, self.filters.startdate,
                                   self.filters.enddate, "closed",
-                                  self.filters.type_analysis, evolutionary, self.db.identities_db)
+                                  self.filters.type_analysis, evolutionary)
         return q
 
 class InProgress(Metrics):
@@ -187,7 +346,7 @@ class InProgress(Metrics):
     def _get_sql(self, evolutionary):
         q = self.db.GetReviewsSQL(self.filters.period, self.filters.startdate,
                                   self.filters.enddate, "inprogress",
-                                  self.filters.type_analysis, evolutionary, self.db.identities_db)
+                                  self.filters.type_analysis, evolutionary)
         return q
 
 
@@ -200,13 +359,13 @@ class New(Metrics):
     def _get_sql(self, evolutionary):
         q = self.db.GetReviewsSQL(self.filters.period, self.filters.startdate,
                                   self.filters.enddate, "new",
-                                  self.filters.type_analysis, evolutionary, self.db.identities_db)
+                                  self.filters.type_analysis, evolutionary)
         return q
 
     def _get_sqlchanges (self, evolutionary):
         q = self.db.GetReviewsChangesSQL(self.filters.period, self.filters.startdate,
                                          self.filters.enddate, "new",
-                                         self.filters.type_analysis, evolutionary, self.db.identities_db)
+                                         self.filters.type_analysis, evolutionary)
         return q
 
     def get_ts_changes(self):
@@ -224,7 +383,7 @@ class PatchesVerified(Metrics):
     def _get_sql(self, evolutionary):
         q = self.db.GetEvaluationsSQL (self.filters.period, self.filters.startdate,
                                        self.filters.enddate, "verified",
-                                       self.filters.type_analysis, evolutionary, self.db.identities_db)
+                                       self.filters.type_analysis, evolutionary)
         return q
 
 class PatchesApproved(Metrics):
@@ -236,7 +395,7 @@ class PatchesApproved(Metrics):
     def _get_sql(self, evolutionary):
         q = self.db.GetEvaluationsSQL (self.filters.period, self.filters.startdate,
                                        self.filters.enddate, "approved",
-                                       self.filters.type_analysis, evolutionary, self.db.identities_db)
+                                       self.filters.type_analysis, evolutionary)
         return q
 
 class PatchesCodeReview(Metrics):
@@ -248,7 +407,7 @@ class PatchesCodeReview(Metrics):
     def _get_sql(self, evolutionary):
         q = self.db.GetEvaluationsSQL (self.filters.period, self.filters.startdate,
                                        self.filters.enddate, "codereview",
-                                       self.filters.type_analysis, evolutionary, self.db.identities_db)
+                                       self.filters.type_analysis, evolutionary)
         return q
 
 class PatchesSent(Metrics):
@@ -260,8 +419,236 @@ class PatchesSent(Metrics):
     def _get_sql(self, evolutionary):
         q = self.db.GetEvaluationsSQL (self.filters.period, self.filters.startdate,
                                        self.filters.enddate, "sent",
-                                       self.filters.type_analysis, evolutionary, self.db.identities_db)
+                                       self.filters.type_analysis, evolutionary)
         return q
+
+class PatchesPerReview(Metrics):
+    """Class that returns the mean and median of patches per review
+
+    The Submitted class or the PatchesSent class do not provide information about
+    the mean and median number of iterations (patches) per review.
+    Indeed, such information is not even available given that numbers
+    are returned in each of those classes.
+
+    Thus, this class returns two values per analyzed period: mean and median
+    of patches per review.
+
+    Finally, a review and its patches are part of a period, if such review
+    has some activity during the period of analysis. Thus, if a patch
+    was submitted before the period, but activity is registered (for instance
+    a +1 review), the whole review with all of its iterations is counted.
+
+    Having another approach would force to analyze only submitted reviews in
+    a period, but if the period is too small, iterations may not appear
+    as many as they are sometimes.
+
+    """
+
+    id = "iterations_per_review"
+    name = "Number of patches per changeset"
+    desc = "Number of patches (iterations till a patch is closed) per changeset (a whole review process)"
+    data_source = SCR
+
+    def get_agg(self):
+        fields = Set([])
+        tables = Set([])
+        filters = Set([])
+
+        fields.add("count(distinct(ch.old_value)) as patches")
+        tables.union_update(self.db.GetSQLReportFrom(self.filters.type_analysis))
+        filters.union_update(self.db.GetSQLReportWhere(self.filters.type_analysis))
+
+  
+        tables.add("changes ch")
+        tables.add("issues i")
+        tables.add("(select distinct(issue_id) as issue_id " +\
+                   "  from changes " + \
+                   "  where changed_on >= "+self.filters.startdate+" and " +\
+                    "        changed_on < "+self.filters.enddate+" ) t")
+
+        filters.add("ch.issue_id = t.issue_id")
+        filters.add("ch.issue_id = i.id")
+        filters.add("ch.old_value <> ''")
+
+        query = "select " + self.db._get_fields_query(fields) 
+        query = query + " from " + self.db._get_tables_query(tables)
+        query = query + " where " + self.db._get_filters_query(filters)
+        query = query + " group by i.id "
+
+        patches_per_review = self.db.ExecuteQuery(query)
+
+        agg_data={}
+        agg_data["mean"] = round(numpy.mean(patches_per_review["patches"]), 2)
+        agg_data["median"] = round(numpy.median(patches_per_review["patches"]), 2)
+
+        return agg_data
+
+    def get_ts(self):
+        #Not implemented
+        return None
+
+class Participants(Metrics):
+    """ A participant in SCR is a person with any trace in the system
+
+    A trace is defined in the case of scr as a comment, a change or a new
+    changeset/patchset.
+    """
+
+    id = "ParticipantsSCR"
+    name = "Participants in SCR"
+    desc = "A participant is defined as any person with any type of activity in SCR"
+    data_source = SCR
+
+    def _get_sql(self, evolutionary):
+        fields = Set([])
+        tables = Set([])
+        filters = Set([])
+
+        
+        fields.add("count(distinct(u.id)) as participants")
+
+        # It does not make sense to link to the table issues.
+        # Thus it does not make sense some filters to be applied here
+        # For example the 'autoreviews'
+        #tables.add("issues i")
+        tables.add("people_upeople pup")
+        tables.add(self.db.identities_db + ".upeople u")
+
+        filters.add("t.submitted_by = pup.people_id")
+        filters.add("pup.upeople_id = u.id")
+
+        
+        # Comments people
+        fields_c = Set([])
+        tables_c = Set([])
+        filters_c = Set([])
+
+        fields_c.add("comments.submitted_by as submitted_by")
+        fields_c.add("comments.submitted_on as submitted_on")
+        tables_c.add("comments")
+
+        # Changes people
+        fields_ch = Set([])
+        tables_ch = Set([])
+        filters_ch = Set([])
+
+        fields_ch.add("ch.changed_by as submitted_by")
+        fields_ch.add("ch.changed_on as submitted_on")
+        tables_ch.add("changes ch")
+
+        # Issues people
+        fields_i = Set([])
+        tables_i = Set([])
+        filters_i = Set([])
+
+        fields_i.add("i.submitted_by as submitted_by")
+        fields_i.add("i.submitted_on as submitted_on")
+        tables_i.add("issues i")
+
+        #Building queries
+        period = self.filters.period
+        startdate = self.filters.startdate
+        enddate = self.filters.enddate
+        evol = False
+    
+        comments_query = self.db.BuildQuery(period, startdate, enddate,
+                                            "comments.submitted_on",
+                                            fields_c, tables_c, filters_c,
+                                            evol)
+        changes_query = self.db.BuildQuery(period, startdate, enddate,
+                                            "ch.changed_on",
+                                            fields_ch, tables_ch, filters_ch,
+                                            evol)
+        issues_query = self.db.BuildQuery(period, startdate, enddate,
+                                            "i.submitted_on",
+                                            fields_i, tables_i, filters_i,
+                                            evol)
+
+        tables_query = "(" + comments_query + ") union (" + changes_query + ") union (" + issues_query + ")"
+        tables.add("(" + tables_query + ") t")
+        tables.union_update(self.db.GetSQLReportFrom(self.filters.type_analysis))
+        filters.union_update(self.db.GetSQLReportWhere(self.filters.type_analysis))
+
+        query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
+                                   self.filters.enddate, "t.submitted_on",
+                                   fields, tables, filters, evolutionary)
+        return query
+ 
+
+    def get_list(self):
+        fields = Set([])
+        tables = Set([])
+        filters = Set([])
+
+        fields.add("u.identifier")
+        fields.add("count(*) as events")
+
+        tables.add("people_upeople pup")
+        tables.add(self.db.identities_db + ".upeople u")
+
+        filters.add("t.submitted_by = pup.people_id")
+        filters.add("pup.upeople_id = u.id")
+
+        # Comments people
+        fields_c = Set([])
+        tables_c = Set([])
+        filters_c = Set([])
+
+        fields_c.add("comments.submitted_by as submitted_by")
+        fields_c.add("comments.submitted_on as submitted_on")
+        tables_c.add("comments")
+
+        # Changes people
+        fields_ch = Set([])
+        tables_ch = Set([])
+        filters_ch = Set([])
+
+        fields_ch.add("ch.changed_by as submitted_by")
+        fields_ch.add("ch.changed_on as submitted_on")
+        tables_ch.add("changes ch")
+
+        # Issues people
+        fields_i = Set([])
+        tables_i = Set([])
+        filters_i = Set([])
+
+        fields_i.add("i.submitted_by as submitted_by")
+        fields_i.add("i.submitted_on as submitted_on")
+        tables_i.add("issues i")
+
+        #Building queries
+        period = self.filters.period
+        startdate = self.filters.startdate
+        enddate = self.filters.enddate
+        evol = False
+
+        comments_query = self.db.BuildQuery(period, startdate, enddate,
+                                            "comments.submitted_on",
+                                            fields_c, tables_c, filters_c,
+                                            evol)
+        changes_query = self.db.BuildQuery(period, startdate, enddate,
+                                            "ch.changed_on",
+                                            fields_ch, tables_ch, filters_ch,
+                                            evol)
+        issues_query = self.db.BuildQuery(period, startdate, enddate,
+                                            "i.submitted_on",
+                                            fields_i, tables_i, filters_i,
+                                            evol)
+
+        tables_query = "(" + comments_query + ") union (" + changes_query + ") union (" + issues_query + ")"
+        tables.add("(" + tables_query + ") t")
+        tables.union_update(self.db.GetSQLReportFrom(self.filters.type_analysis))
+        filters.union_update(self.db.GetSQLReportWhere(self.filters.type_analysis))
+
+        query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
+                                   self.filters.enddate, "t.submitted_on",
+                                   fields, tables, filters, False)
+
+        query = query + " group by u.identifier "
+        query = query + " order by count(*) desc "
+
+        return self.db.ExecuteQuery(query)
+
 
 class PatchesWaitingForReviewer(Metrics):
     id = "WaitingForReviewer"
@@ -272,7 +659,7 @@ class PatchesWaitingForReviewer(Metrics):
 
     def _get_sql(self, evolutionary):
         q = self.db.GetWaiting4ReviewerSQL(self.filters.period, self.filters.startdate,
-                                           self.filters.enddate, self.db.identities_db,
+                                           self.filters.enddate,
                                            self.filters.type_analysis, evolutionary)
         return q
 
@@ -284,7 +671,7 @@ class PatchesWaitingForSubmitter(Metrics):
 
     def _get_sql(self, evolutionary):
         q = self.db.GetWaiting4SubmitterSQL(self.filters.period, self.filters.startdate,
-                                            self.filters.enddate, self.db.identities_db,
+                                            self.filters.enddate,
                                             self.filters.type_analysis, evolutionary)
         return q
 
@@ -318,11 +705,11 @@ class ReviewsWaitingForReviewerTS(Metrics):
             fields = "COUNT(DISTINCT(i.id)) as pending"
 
             tables = " issues i "
-            tables = tables + self.db.GetSQLReportFrom(identities_db, type_analysis)
+            tables = tables + self.db._get_tables_query(self.db.GetSQLReportFrom(type_analysis))
 
             # Pending (NEW = submitted-merged-abandoned) REVIEWS
-            filters = " i.submitted_on <= '"+current+"'"
-            filters += self.db.GetSQLReportWhere(type_analysis, self.db.identities_db)
+            filters = " i.submitted_on <= '"+current+"' "
+            filters += self.db._get_filters_query(self.db.GetSQLReportWhere(type_analysis))
             # remove closed reviews
             filters += " AND i.id NOT IN ("+ sql_reviews_closed +")"
 
@@ -381,15 +768,15 @@ class ReviewsWaitingForReviewer(Metrics):
 
         fields = "COUNT(DISTINCT(i.id)) as ReviewsWaitingForReviewer"
         tables = "issues i "
-        tables += self.db.GetSQLReportFrom(self.db.identities_db, self.filters.type_analysis)
+        tables += self.db._get_tables_query(self.db.GetSQLReportFrom(self.filters.type_analysis))
         filters = " i.status = 'NEW' AND i.id NOT IN (%s) " % (sql_reviews_reviewed)
         filters += " AND i.summary not like '%WIP%' "
 
-        filters = filters + self.db.GetSQLReportWhere(self.filters.type_analysis, self.db.identities_db)
+        filters = filters + self.db._get_filters_query(self.db.GetSQLReportWhere(self.filters.type_analysis))
 
         q = self.db.BuildQuery (self.filters.period, self.filters.startdate,
-                                self.filters.enddate, " i.submitted_on",
-                                fields, tables, filters, evolutionary)
+                                self.filters.enddate, "i.submitted_on",
+                                fields, tables, filters, evolutionary, self.filters.type_analysis)
         return(q)
 
 # Review this metrics according to ReviewsWaitingForReviewer
@@ -404,18 +791,18 @@ class ReviewsWaitingForSubmitter(Metrics):
         q_last_change = self.db.get_sql_last_change_for_reviews()
 
         fields = "COUNT(DISTINCT(i.id)) as ReviewsWaitingForSubmitter"
-        tables = "changes c, issues i, (%s) t1" % q_last_change
-        tables += self.db.GetSQLReportFrom(self.db.identities_db, self.filters.type_analysis)
+        tables = "changes c, issues i, (%s) t1 " % q_last_change
+        tables += self.db._get_tables_query(self.db.GetSQLReportFrom(self.filters.type_analysis))
         filters = """
             i.id = c.issue_id  AND t1.id = c.id
             AND (c.field='CRVW' or c.field='Code-Review' or c.field='Verified' or c.field='VRIF')
             AND (c.new_value=-1 or c.new_value=-2)
         """
-        filters = filters + self.db.GetSQLReportWhere(self.filters.type_analysis, self.db.identities_db)
+        filters = filters + self.db._get_filters_query(self.db.GetSQLReportWhere(self.filters.type_analysis))
 
         q = self.db.BuildQuery (self.filters.period, self.filters.startdate,
                                 self.filters.enddate, " c.changed_on",
-                                fields, tables, filters, evolutionary)
+                                fields, tables, filters, evolutionary, self.filters.type_analysis)
         return q
 
 class Companies(Metrics):
@@ -425,13 +812,21 @@ class Companies(Metrics):
     data_source = SCR
 
     def _get_sql(self, evolutionary):
-        fields = "count(distinct(upc.company_id)) as companies"
-        tables = "issues i, people_upeople pup, %s.upeople_companies upc" % (self.db.identities_db)
-        filters = "i.submitted_by = pup.people_id and pup.upeople_id = upc.upeople_id"
+        fields = Set([])
+        tables = Set([])
+        filters = Set([])
+
+        #TODO: warning -> not using GetSQLReportFrom/Where to build queries
+        fields.add("count(distinct(upc.company_id)) as companies")
+        tables.add("issues i")
+        tables.add("people_upeople pup")
+        tables.add(self.db.identities_db + ".upeople_companies upc")
+        filters.add("i.submitted_by = pup.people_id")
+        filters.add("pup.upeople_id = upc.upeople_id")
 
         q = self.db.BuildQuery (self.filters.period, self.filters.startdate,
                                 self.filters.enddate, " i.submitted_on",
-                                fields, tables, filters, evolutionary)
+                                fields, tables, filters, evolutionary, self.filters.type_analysis)
         return q
 
     def get_list (self):
@@ -447,7 +842,7 @@ class Companies(Metrics):
                    "  i.submitted_on >="+  self.filters.startdate+ " AND "+\
                    "  i.submitted_on < "+ self.filters.enddate+ " "+\
                    "GROUP BY c.name "+\
-                   "ORDER BY total DESC "
+                   "ORDER BY total DESC, c.name "
         return(self.db.ExecuteQuery(q))
 
 class Countries(Metrics):
@@ -457,13 +852,21 @@ class Countries(Metrics):
     data_source = SCR
 
     def _get_sql(self, evolutionary):
-        fields = "count(distinct(upc.country_id)) as countries"
-        tables = "issues i, people_upeople pup, %s.upeople_countries upc" % (self.db.identities_db)
-        filters = "i.submitted_by = pup.people_id and pup.upeople_id = upc.upeople_id"
+        fields = Set([])
+        tables = Set([])
+        filters = Set([])
+
+        #TODO: warning -> not using GetSQLReportFrom/Where to build queries
+        fields.add("count(distinct(upc.country_id)) as countries")
+        tables.add("issues i")
+        tables.add("people_upeople pup")
+        tables.add(self.db.identities_db + ".upeople_countries upc")
+        filters.add("i.submitted_by = pup.people_id")
+        filters.add("pup.upeople_id = upc.upeople_id")
 
         q = self.db.BuildQuery (self.filters.period, self.filters.startdate,
                                 self.filters.enddate, " i.submitted_on",
-                                fields, tables, filters, evolutionary)
+                                fields, tables, filters, evolutionary, self.filters.type_analysis)
         return q
 
     def get_list  (self):
@@ -512,9 +915,13 @@ class Projects(Metrics):
         # Loop all projects getting reviews
         for project in projects['name']:
             type_analysis = ['project', project]
-            period = None
-            evol = False
-            reviews = SCR.get_metrics("submitted", SCR).get_agg()
+
+            metric = SCR.get_metrics("submitted", SCR)
+            type_analysis_orig = metric.filters.type_analysis
+            metric.filters.type_analysis = type_analysis
+            reviews = metric.get_agg()
+            metric.filters.type_analysis = type_analysis_orig
+
             reviews = reviews['submitted']
             if (reviews > 0):
                 data.append([reviews,project])
@@ -533,15 +940,23 @@ class Repositories(Metrics):
     data_source = SCR
 
     def _get_sql(self, evolutionary):
-        fields = "count(distinct(t.id)) as repositories"
-        tables = "issues i, trackers t"
-        filters = "i.tracker_id = t.id"
+        fields = Set([])
+        tables = Set([])
+        filters = Set([])
+
+        fields.add("count(distinct(t.id)) as repositories")
+        tables.add("issues i")
+        tables.add("trackers t")
+        tables.union_update(self.db.GetSQLReportFrom(self.filters.type_analysis))
+        filters.add("i.tracker_id = t.id")
+        filters.union_update(self.db.GetSQLReportWhere(self.filters.type_analysis))
         q = self.db.BuildQuery (self.filters.period, self.filters.startdate,
                                 self.filters.enddate, " i.submitted_on",
-                                fields, tables, filters, evolutionary)
+                                fields, tables, filters, evolutionary, self.filters.type_analysis)
         return q
 
     def get_list  (self):
+        #TODO: warning -> not using GetSQLReportFrom/Where
         q = "SELECT t.url as name, COUNT(DISTINCT(i.id)) AS issues "+\
                " FROM  issues i, trackers t "+\
                " WHERE i.tracker_id = t.id AND "+\
@@ -555,13 +970,30 @@ class Repositories(Metrics):
 
 
 class People(Metrics):
-    id = "people"
+    id = "people2"
     name = "People"
-    desc = "Number of persons active in code review activities"
+    desc = "Number of people active in code review activities"
     data_source = SCR
 
     def _get_sql(self, evolutionary):
         pass
+
+    def _get_top_global (self, days = 0, metric_filters = None):
+        """ Implemented using Submitters """
+        top = None
+        submitters = SCR.get_metrics("submitters", SCR)
+        if submitters is None:
+            #TODO: absolutely wrong: EmailsSenders???
+            submitters = EmailsSenders(self.db, self.filters)
+            top = submitters._get_top_global(days, metric_filters)
+        else:
+            afilters = submitters.filters
+            submitters.filters = self.filters
+            top = submitters._get_top_global(days, metric_filters)
+            submitters.filters = afilters
+
+        top['name'] = top.pop('openers')
+        return top
 
 class Reviewers(Metrics):
     id = "reviewers"
@@ -578,26 +1010,26 @@ class Reviewers(Metrics):
         startdate = metric_filters.startdate
         enddate = metric_filters.enddate
         limit = metric_filters.npeople
-        filter_bots = self.get_bots_filter_sql(metric_filters)
+        filter_bots = self.db.get_bots_filter_sql(self.data_source, metric_filters)
         if filter_bots != "": filter_bots += " AND "
         date_limit = ""
 
-
+        #TODO: warning -> not using GetSQLReportFrom/Where
         if (days != 0 ):
             q = "SELECT @maxdate:=max(changed_on) from changes limit 1"
             self.db.ExecuteQuery(q)
             date_limit = " AND DATEDIFF(@maxdate, changed_on)<" + str(days)
 
-        q = "SELECT u.id as id, u.identifier as reviewers, "+\
+        q = "SELECT up.id as id, up.identifier as reviewers, "+\
             "               count(distinct(c.id)) as reviewed "+\
-            "        FROM people_upeople pup, changes c, "+ self.db.identities_db+".upeople u "+\
+            "        FROM people_upeople pup, changes c, "+ self.db.identities_db+".upeople up "+\
             "        WHERE "+ filter_bots+ " "+\
             "            c.changed_by = pup.people_id and "+\
-            "            pup.upeople_id = u.id and "+\
+            "            pup.upeople_id = up.id and "+\
             "            c.changed_on >= "+ startdate + " and "+\
             "            c.changed_on < "+ enddate + " "+\
             "            "+ date_limit + " "+\
-            "        GROUP BY u.identifier "+\
+            "        GROUP BY up.identifier "+\
             "        ORDER BY reviewed desc, reviewers "+\
             "        LIMIT " + str(limit)
 
@@ -606,26 +1038,119 @@ class Reviewers(Metrics):
 
 
     def _get_sql(self, evolutionary):
-        fields = " count(distinct(changed_by)) as reviewers "
-        tables = " changes ch, issues i " + self.db.GetSQLReportFrom(self.db.identities_db, self.filters.type_analysis)
-        filters  = "ch.issue_id = i.id "
-        filters += self.db.GetSQLReportWhere(self.filters.type_analysis, self.db.identities_db)
+        fields = Set([])
+        tables = Set([])
+        filters = Set([])
 
-        if (self.filters.type_analysis is None or len (self.filters.type_analysis) != 2) :
-            #Specific case for the basic option where people_upeople table is needed
-            #and not taken into account in the initial part of the query
-            tables += ", people_upeople pup"
-            filters += " and ch.changed_by  = pup.people_id"
-        elif (self.filters.type_analysis[0] == "repository" or self.filters.type_analysis[0] == "project"):
-            #Adding people_upeople table
-            tables += ", people_upeople pup"
-            filters += " and ch.changed_by = pup.people_id "
+        fields.add("count(distinct(changed_by)) as reviewers")
+        tables.add("changes ch")
+        tables.add("issues i")
+        tables.union_update(self.db.GetSQLReportFrom(self.filters.type_analysis))
+        filters.add("ch.issue_id = i.id")
+        filters.union_update(self.db.GetSQLReportWhere(self.filters.type_analysis))
 
+        #Specific case for the basic option where people_upeople table is needed
+        #and not taken into account in the initial part of the query
+        tables.add("people_upeople pup")
+        filters.add("ch.changed_by  = pup.people_id")
 
         q = self.db.BuildQuery (self.filters.period, self.filters.startdate,
                                 self.filters.enddate, " ch.changed_on",
-                                fields, tables, filters, evolutionary)
+                                fields, tables, filters, evolutionary, self.filters.type_analysis)
         return q
+
+
+class ActiveCoreReviewers(Metrics):
+    """Returns a list of core reviewers in Gerrit systems.
+    
+    A core reviewer is defined as a reviewer that can use the 
+    +2 or -2 in the review system. However, given that there is not
+    a public list of core reviewers per project, this class assumes
+    that a developer is a(n active)  core reviewer the point in time when she
+    uses a +2 or a -2.
+
+    """
+
+    id = "active_core_reviewers"
+    name = "Active Core Reviewers"
+    desc = "Number of developers reviewing code review activities that are allowed to use a +2 or -2"
+    data_source = SCR
+
+    def _get_sql(self, evolutionary):
+
+        fields = Set([])
+        tables = Set([])
+        filters = Set([])
+
+        fields.add("count(distinct(changed_by)) as core_reviewers")
+        tables.add("changes ch")
+        tables.add("issues_ext_gerrit ieg")
+        tables.add("issues i")
+        tables.union_update(self.db.GetSQLReportFrom(self.filters.type_analysis))
+        filters.add("ch.issue_id = i.id")
+        #TODO: warning -> at some point the filter for branches should be at
+        #                 the GetSQLReportFrom/Where method.
+        filters.add("ieg.branch like '%master%'")
+        filters.add("ieg.issue_id = i.id")
+        filters.union_update(self.db.GetSQLReportWhere(self.filters.type_analysis))
+
+        #Specific case for the basic option where people_upeople table is needed
+        #and not taken into account in the initial part of the query
+        tables.add("people_upeople pup")
+        filters.add("ch.changed_by  = pup.people_id")
+        filters.add("(ch.new_value = -2 or ch.new_value = 2)")
+        filters.add("field = 'Code-Review'")
+
+        q = self.db.BuildQuery (self.filters.period, self.filters.startdate,
+                                self.filters.enddate, " ch.changed_on",
+                                fields, tables, filters, evolutionary, self.filters.type_analysis)
+        return q
+
+    def get_list(self):
+        # TODO: missing calculation of last x days in the query
+
+        fields = Set([])
+        tables = Set([])
+        filters = Set([])
+
+        fields.add("up.id as id")
+        fields.add("up.identifier as identifier")
+        fields.add("count(distinct(ch.id)) as reviews")
+
+        tables.add("changes ch")
+        tables.add("issues_ext_gerrit ieg")
+        tables.add("issues i")
+        tables.union_update(self.db.GetSQLReportFrom(self.filters.type_analysis))
+
+        filters.add("ch.issue_id = i.id")
+        #TODO: warning -> at some point the filter for branches should be at
+        #                 the GetSQLReportFrom/Where method.
+        filters.add("ieg.branch like '%master%'")
+        filters.add("ieg.issue_id = i.id")
+        filters.union_update(self.db.GetSQLReportWhere(self.filters.type_analysis))
+
+        #Specific case for the basic option where people_upeople table is needed
+        #and not taken into account in the initial part of the query
+        tables.add(self.db.identities_db + ".upeople up")
+        tables.add("people_upeople pup")
+        filters.add("ch.changed_by  = pup.people_id")
+        filters.add("pup.upeople_id = up.id")
+        filters.add("(ch.new_value = -2 or ch.new_value = 2)")
+        filters.add("field = 'Code-Review'")
+        #dates
+        filters.add("changed_on >= " + self.filters.startdate)
+        filters.add("changed_on < " + self.filters.enddate)
+
+        select = self.db._get_fields_query(fields)
+        from_ = self.db._get_tables_query(tables)
+        filters = self.db._get_filters_query(filters)
+
+        query = "select " + select + " from " + from_ + " where " + filters
+        query = query + " group by up.id, up.identifier"
+        query = query + " order by count(distinct(ch.id)) desc "
+
+        return self.db.ExecuteQuery(query)
+
 
 class Closers(Metrics):
     id = "closers"
@@ -642,7 +1167,7 @@ class Closers(Metrics):
         startdate = metric_filters.startdate
         enddate = metric_filters.enddate
         limit = metric_filters.npeople
-        filter_bots = self.get_bots_filter_sql(metric_filters)
+        filter_bots = self.db.get_bots_filter_sql(self.data_source, metric_filters)
         if filter_bots != "": filter_bots += " AND "
         date_limit = ""
 
@@ -651,21 +1176,21 @@ class Closers(Metrics):
             self.db.ExecuteQuery(q)
             date_limit = " AND DATEDIFF(@maxdate, submitted_on)<"+str(days)
 
-
+        # TODO: warning-> not using GetSQLReportFrom/Where
         merged_sql = " AND status='MERGED' "
         rol = "mergers"
         action = "merged"
 
-        q = "SELECT u.id as id, u.identifier as "+rol+", "+\
+        q = "SELECT up.id as id, up.identifier as "+rol+", "+\
             "            count(distinct(i.id)) as "+action+" "+\
-            "        FROM people_upeople pup, issues i, "+self.db.identities_db+".upeople u "+\
+            "        FROM people_upeople pup, issues i, "+self.db.identities_db+".upeople up "+\
             "        WHERE "+ filter_bots+ " "+\
             "            i.submitted_by = pup.people_id and "+\
-            "            pup.upeople_id = u.id and "+\
+            "            pup.upeople_id = up.id and "+\
             "            i.submitted_on >= "+ startdate+ " and "+\
             "            i.submitted_on < "+ enddate+ " "+\
             "            "+date_limit+ merged_sql+ " "+\
-            "        GROUP BY u.identifier "+\
+            "        GROUP BY up.identifier "+\
             "        ORDER BY "+action+" desc, id "+\
             "        LIMIT "+ str(limit)
         return(self.db.ExecuteQuery(q))
@@ -684,44 +1209,47 @@ class Submitters(Metrics):
 
     def __get_sql_trk_prj__(self, evolutionary):
         """ First we get the submitters then join with unique identities """
+
         tpeople_sql  = "SELECT  distinct(submitted_by) as submitted_by, submitted_on  "
-        tpeople_sql += " FROM issues i " + self.db.GetSQLReportFrom(self.db.identities_db, self.filters.type_analysis)
-        filters_ext = self.db.GetSQLReportWhere(self.filters.type_analysis, self.db.identities_db) 
+        tpeople_sql += " FROM issues i, " + self.db._get_tables_query(self.db.GetSQLReportFrom(self.filters.type_analysis))
+        filters_ext = self.db._get_filters_query(self.db.GetSQLReportWhere(self.filters.type_analysis))
         if (filters_ext != ""):
-            # Hack: remove "and "
-            filters_ext = filters_ext[4:]
             tpeople_sql += " WHERE " + filters_ext
 
+        fields = Set([])
+        tables = Set([])
+        filters = Set([])
 
-        fields = " count(distinct(upeople_id)) as submitters "
-        tables = " people_upeople pup, (%s) tpeople " % (tpeople_sql)
-        filters = " tpeople.submitted_by = pup.people_id "
+        fields.add("count(distinct(upeople_id)) as submitters")
+        tables.add("people_upeople pup")
+        tables.add("(%s) tpeople" % (tpeople_sql))
+        filters.add("tpeople.submitted_by = pup.people_id")
 
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                self.filters.enddate, " tpeople.submitted_on ",
-                               fields, tables, filters, evolutionary)
+                               fields, tables, filters, evolutionary, self.filters.type_analysis)
         return q
 
 
     def __get_sql_default__(self, evolutionary):
         """ This function returns the evolution or agg number of people opening issues """
-        fields = " count(distinct(pup.upeople_id)) as submitters "
-        tables = " issues i " + self.db.GetSQLReportFrom(self.db.identities_db, self.filters.type_analysis)
-        filters = self.db.GetSQLReportWhere(self.filters.type_analysis, self.db.identities_db)
+        fields = Set([])
+        tables = Set([])
+        filters = Set([])
 
-        if (self.filters.type_analysis is None or len (self.filters.type_analysis) != 2) :
-            #Specific case for the basic option where people_upeople table is needed
-            #and not taken into account in the initial part of the query
-            tables += ", people_upeople pup"
-            filters += " and i.submitted_by = pup.people_id"
-        elif (self.filters.type_analysis[0] == "repository" or self.filters.type_analysis[0] == "project"):
-            #Adding people_upeople table
-            tables += ", people_upeople pup"
-            filters += " and i.submitted_by = pup.people_id "
+        fields.add("count(distinct(pup.upeople_id)) as submitters")
+        tables.add("issues i")
+        tables.union_update(self.db.GetSQLReportFrom(self.filters.type_analysis))
+        filters.union_update(self.db.GetSQLReportWhere(self.filters.type_analysis))
+
+        #Specific case for the basic option where people_upeople table is needed
+        #and not taken into account in the initial part of the query
+        tables.add("people_upeople pup")
+        filters.add("i.submitted_by = pup.people_id")
 
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                self.filters.enddate, " submitted_on ",
-                               fields, tables, filters, evolutionary)
+                               fields, tables, filters, evolutionary, self.filters.type_analysis)
         return q
 
     def _get_sql(self, evolutionary):
@@ -736,28 +1264,29 @@ class Submitters(Metrics):
         startdate = metric_filters.startdate
         enddate = metric_filters.enddate
         limit = metric_filters.npeople
-        filter_bots = self.get_bots_filter_sql(metric_filters)
+        filter_bots = self.db.get_bots_filter_sql(self.data_source, metric_filters)
         if filter_bots != "": filter_bots += " AND "
 
         date_limit = ""
         rol = "openers"
         action = "opened"
 
+        #TODO: warning -> not using GetSQLReportFrom/Where
         if (days != 0 ):
             q = "SELECT @maxdate:=max(submitted_on) from issues limit 1"
             self.db.ExecuteQuery(q)
             date_limit = " AND DATEDIFF(@maxdate, submitted_on)<"+str(days)
 
-        q = "SELECT u.id as id, u.identifier as "+rol+", "+\
+        q = "SELECT up.id as id, up.identifier as "+rol+", "+\
             "            count(distinct(i.id)) as "+action+" "+\
-            "        FROM people_upeople pup, issues i, "+self.db.identities_db+".upeople u "+\
+            "        FROM people_upeople pup, issues i, "+self.db.identities_db+".upeople up "+\
             "        WHERE "+ filter_bots+ " "+\
             "            i.submitted_by = pup.people_id and "+\
-            "            pup.upeople_id = u.id and "+\
+            "            pup.upeople_id = up.id and "+\
             "            i.submitted_on >= "+ startdate+ " and "+\
             "            i.submitted_on < "+ enddate+ " "+\
             "            "+date_limit +  " "+\
-            "        GROUP BY u.identifier "+\
+            "        GROUP BY up.identifier "+\
             "        ORDER BY "+action+" desc, id "+\
             "        LIMIT "+ str(limit)
         return(self.db.ExecuteQuery(q))
@@ -772,12 +1301,12 @@ class TimeToReview(Metrics):
         if self.filters.period != "month": return None
         bots = []
         q = self.db.GetTimeToReviewQuerySQL (self.filters.startdate, self.filters.enddate,
-                                             self.db.identities_db, self.filters.type_analysis, bots)
+                                             self.filters.type_analysis, bots)
         return q
 
     def get_agg(self):
         from numpy import median, average
-        from GrimoireUtils import removeDecimals
+        from vizgrimoire.GrimoireUtils import removeDecimals
 
         q = self._get_sql()
         if q is None: return {}
@@ -815,3 +1344,269 @@ class TimeToReview(Metrics):
                           self.filters.startdate, self.filters.enddate)
 
         return metrics_list
+
+
+class TimeToReviewPatch(Metrics):
+    """ This class returns the time that a submitter or a reviewer has been waiting
+
+    This class considers that a review process is a three states machine:
+    - Waiting for a submitter action
+    - Waiting for a reviewer action
+    - End of review process
+
+    A patch is considered as waiting for a submitter action in the
+    following conditions:
+    - A Code-Review action is detected, being this a -1 or -2
+    - A Verified action is detected, being this a -1 or -2
+    - A Workflow -1 is detected, after the started. An initial patchset with 
+      Workflow -1 would not be considered in the machine states.
+
+    A patch is considered as waiting for a reviewer action in the
+    following conditions:
+    - A new Patch upload is detected (eg: new patch, rebase or restore action)
+
+    Existing limitations:
+    - There are cases where the time of the review found in the db took place before
+    the last upload. This takes places when trivial changes are requested to the
+    patch submitter. Given this, those negative time-waiting-for-a-submitter-action
+    are simply ignored from the final dataset. This takes place when using +2 or
+    when using -2.
+    - This analysis is based on the Changes table. There may appear issues whose part of their life
+    is out of the timeframe limits provided in the self.filters variable. In this case,
+    those changesets, would be included and added to the analysis.
+
+    """
+
+    id = "timewaiting_reviewer_n_submitter"
+    name = "Time waiting for reviewer and submitter"
+    desc = "Time waiting for reviewer and submitter"
+    data_source = SCR
+
+    def get_agg(self):
+        # Building query
+        fields = Set([])
+        tables = Set([])
+        filters = Set([])
+
+        fields.add("ch.issue_id")
+        fields.add("ch.field")
+        fields.add("ch.old_value")
+        fields.add("ch.new_value")
+        fields.add("UNIX_TIMESTAMP(ch.changed_on) as changed_on")
+        fields.add("ch.changed_on as date")
+
+        tables.add("changes ch")
+        tables.add("issues i")
+        subquery = "(select distinct(i.id) from changes ch, issues i "
+        subquery = subquery + " where ch.changed_on >= " + self.filters.startdate + " and "
+        subquery = subquery + " ch.changed_on < " + self.filters.enddate + " and "
+        subquery = subquery + " ch.issue_id = i.id) ch2"
+        tables.add(subquery)
+
+        filters.add("""(field='Upload' or
+                   (field='Verified' and (new_value=-1 or new_value=-2)) or
+                   (field='Code-Review' and (new_value=-1 or new_value=-2 or new_value=2)) or
+                   (field='Workflow' and new_value=-1))""")
+        filters.add("ch.issue_id = i.id")
+        filters.add("i.id = ch2.id")
+        filters.add("ch.changed_on < " + self.filters.enddate)
+
+        # Migrating those sets to strings
+        fields_str = self.db._get_fields_query(fields)
+        tables_str = self.db._get_tables_query(tables)
+        filters_str = self.db._get_filters_query(filters)
+
+        # Adding extra filters
+        tables_str = tables_str + ", " + self.db._get_tables_query(self.db.GetSQLReportFrom(self.filters.type_analysis))
+        filters_str = filters_str + " and " + self.db._get_filters_query(self.db.GetSQLReportWhere(self.filters.type_analysis))
+        filters_str = filters_str + " order by issue_id, cast(old_value as DECIMAL) asc"
+
+        query = "select " + fields_str + " from " + tables_str + " where " + filters_str
+        changes = self.db.ExecuteQuery(query)
+
+        # Starting the analysis of time waiting for reviewer or for submitter
+        waiting4reviewer = []
+        waiting4submitter = []
+
+        query = """select UNIX_TIMESTAMP(min(changed_on)) as first_date,
+                          min(changed_on) as first_date_str,
+                          UNIX_TIMESTAMP(max(changed_on)) as end_date,
+                          max(changed_on) as end_date_str
+                   from changes
+                   where changed_on >= %s and
+                         changed_on < %s""" % (self.filters.startdate, self.filters.enddate)
+        dates = self.db.ExecuteQuery(query)
+        min_date = int(dates["first_date"])
+        max_date = int(dates["end_date"])
+
+        count = 0
+        old_issue = 1 # assuming we always start with the first issue_id
+        old_patchset = 1 # assuming we always start with the first patchset
+
+        # This analysis is based on a two states machine.
+        # A patch is either waiting for a reviewer action or by a submitter action.
+        # In any of the two states there is an exit: this could be the end time of the
+        # analysis or that the review was closed.
+        # In any case, the initial state is always waiting for the reviewer.
+        old_issue_id = -1
+        old_field = ""
+        old_patchset = -1
+        old_new_value = ""
+        old_changed_on = -1
+        is_new_review = True
+        current_state = 1
+        for issue_id in changes["issue_id"]:
+            field = changes["field"][count]
+            patchset = int(changes["old_value"][count])
+            new_value = changes["new_value"][count]
+            if new_value <> '':
+                new_value = int(new_value)
+            changed_on = int(changes["changed_on"][count])
+            date = changes["date"][count]
+
+            if issue_id <> old_issue_id and old_issue_id > 0:
+                is_new_review = True
+
+            # The process always starts with a new upload. This finite
+            # states machine assume that all of the reviews calculated
+            # are full ones. Only in some cases, when a new changeset arrives
+            # we should deal with those reviews
+            #print "    \n\n    field: " + str(field)
+            #print "    patchset: " + str(patchset)
+            #print "    new_value: " + str(new_value)
+            #print "    issue_id: " + str(issue_id)
+            #print "    changed_on: " + str(changed_on)
+            #print "    current_status: " + str(current_state)
+
+            if current_state == 1:
+                # Waiting for a reviewer action
+                if is_new_review:
+                    current_state = 1
+                    is_new_review = False
+                    if old_changed_on <> -1:
+                        # first case
+                        # we need to count the last time waiting for a reviewer action
+                        waiting4reviewer.append(max_date - old_changed_on)
+                    old_changed_on = changed_on
+
+                elif (field == "Verified" and (new_value == -1 or new_value == -2)):
+                    current_state = 2
+                    # Automatic validation of the code, no time waiting for a reviewer
+                    # action
+                    old_changed_on = changed_on
+
+                elif (field == "Code-Review" and (new_value == -1 or new_value == -2)):
+                    current_state = 2
+                    # we have to count time waiting for a reviewer action
+                    waiting4reviewer.append(changed_on - old_changed_on)
+                    old_changed_on = changed_on
+
+                elif field == "Workflow" and new_value == -1:
+                    current_state = 2
+                    # we shouldn't count time waiting for a reviewer action
+                    # Typically, developers upload a new patchset and after a while they 
+                    # update the flag Workflow to -1. Thus, we may consider 
+                    # TODO: an improvement to this state would be to take into account
+                    # if the modification to Workflow=-1 was made by a reviewer
+                    # or the developer
+                    old_changed_on = changed_on
+
+                elif field == "Code-Review" and new_value == 2:
+                    current_state = 3
+                    # we have to count time waiting for a reviewer action
+                    waiting4reviewer.append(changed_on - old_changed_on)
+                    old_changed_on = changed_on
+
+            elif current_state == 2:
+                # Waiting for a submitter action
+                if is_new_review:
+                    current_state = 1
+                    is_new_review = False
+                    # we need to count the last time waiting for a submitter action
+                    waiting4submitter.append(max_date - old_changed_on)
+                    old_changed_on = changed_on
+
+                elif field == "Upload":
+                    current_state = 1
+                    # we have to count time waiting for a submitter action
+                    waiting4submitter.append(changed_on - old_changed_on)
+                    old_changed_on = changed_on
+
+                elif field == "Code-Review" and new_value == 2:
+                    current_state = 3
+                    # we shouldn't count time waiting for a submitter action
+                    old_changed_on = changed_on
+
+            elif current_state == 3:
+                # Final state
+                if is_new_review:
+                    is_new_review = False
+                    current_state = 1
+                    old_changed_on = changed_on
+
+            else:
+                print "ERROR, not existing state"
+
+            old_field = field
+            old_patchset = patchset
+            old_issue_id = issue_id
+            count = count + 1
+
+
+        dataset = {}
+        dataset["waitingtime4reviewer"] = waiting4reviewer
+        dataset["waitingtime4submitter"] = waiting4submitter
+        return dataset
+
+if __name__ == '__main__':
+
+    filters = MetricFilters("month", "'2014-09-01'", "'2014-10-01'", ["repository", "review.openstack.org_openstack/nova"])
+    dbcon = SCRQuery("root", "", "dic_bicho_gerrit_openstack_3359_bis3", "dic_cvsanaly_openstack_4114")
+
+    pending = Pending(dbcon, filters)
+    print pending.get_agg()
+
+    timewaiting = TimeToReviewPatch(dbcon, filters)
+    from vizgrimoire.datahandlers.data_handler import DHESA
+    values = timewaiting.get_agg()
+    dhesa = DHESA(values["waitingtime4submitter"])
+    print values["waitingtime4submitter"]
+    print dhesa.data["median"]
+    print dhesa.data["mean"]
+
+    print "Submitted info:"
+    submitted = Submitted(dbcon, filters)
+    print submitted.get_ts()
+    print submitted.get_agg()
+    
+    print "Merged info:"
+    merged = Merged(dbcon, filters)
+    print merged.get_ts()
+    print merged.get_agg()
+
+    print "Abandoned info:"
+    abandoned = Abandoned(dbcon, filters)
+    print abandoned.get_ts()
+    print abandoned.get_agg()
+
+    print "BMI"
+    bmi = BMISCR(dbcon, filters)
+    print bmi.get_ts()
+    print bmi.get_agg()
+
+    print "Patches per review"
+    patches = PatchesPerReview(dbcon, filters)
+    print patches.get_agg()
+
+    patches.filters.type_analysis=["repository", "review.openstack.org_openstack/nova"]
+    print patches.get_agg()
+
+    patches.filters.type_analysis=["project", "integrated"]
+    print patches.get_agg()
+
+    patches.filters.type_analysis=["project", "Infrastructure"]
+    print patches.get_agg()
+
+    patches.filters.startdate = "'2014-01-01'"
+    patches.filters.type_analysis=["project", "Infrastructure"]
+    print patches.get_agg()

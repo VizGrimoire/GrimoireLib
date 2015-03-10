@@ -136,6 +136,8 @@ def completePeriodIdsMonths(ts_data, start, end):
         timestamp = calendar.timegm(current.timetuple())
         new_ts_data['unixtime'].append(unicode(timestamp))
         new_ts_data['id'].append(i)
+        import locale
+        locale.setlocale(locale.LC_ALL, "en_US.UTF-8")
         new_ts_data['date'].append(datetime.strftime(current, "%b %Y"))
 
     return new_ts_data
@@ -191,6 +193,11 @@ def completePeriodIds(ts_data, period, startdate, enddate):
     enddate = enddate.replace("'", "")
     start = datetime.strptime(startdate, "%Y-%m-%d")
     end = datetime.strptime(enddate, "%Y-%m-%d")
+    # In order to use the same approach in the whole GrimoireLib, the last day
+    # specified when retrieving datasets is always ignored. What means that
+    # GrimoireLib is using date >= startdate and date < enddate.
+    # For this reason, a day is substracted from the end date
+    end = end - timedelta(days=1)
 
     if period == "week":
         new_ts_data = completePeriodIdsWeeks(ts_data, start, end)
@@ -243,6 +250,7 @@ def getPeriod(granularity, number = None):
 
 
 def removeDecimals(data):
+    """ Convert Decimal type to float """
     from decimal import Decimal
     if (isinstance(data, dict)):
         for key in data:
@@ -256,7 +264,29 @@ def removeDecimals(data):
         for i in range(0,len(data)):
             if (isinstance(data[i], Decimal)):
                 data[i] = float(data[i])
+            if (isinstance(data[i], list)):
+                data[i] = removeDecimals(data[i])
     return data
+
+def roundDecimals(data):
+    """ Limit the max number of decimals in floats """
+    from vizgrimoire.metrics.metrics import Metrics
+    if (isinstance(data, dict)):
+        for key in data:
+            if (isinstance(data[key], float)):
+                data[key] = round(data[key], Metrics.max_decimals)
+            elif (isinstance(data[key], list)):
+                data[key] = roundDecimals(data[key])
+            elif (isinstance(data[key], dict)):
+                data[key] = roundDecimals(data[key])
+    if (isinstance(data, list)):
+        for i in range(0,len(data)):
+            if (isinstance(data[i], float)):
+                data[i] = round(data[i], Metrics.max_decimals)
+            if (isinstance(data[i], list)):
+                data[i] = roundDecimals(data[i])
+    return data
+
 
 def convertDatetime(data):
     if (isinstance(data, dict)):
@@ -273,6 +303,19 @@ def convertDatetime(data):
                 data[i] = str(data[i])
     return data
 
+# Rename "CONCAT(com.name,'_',cou.name)" to "filter"
+# Create filter_type="CONCAT(com.name,'_',cou.name)"
+def convertCombinedFiltersName(data):
+    import re
+    if not isinstance(data, dict): return data
+    for key in data:
+        if not isinstance(key, str): continue
+        if re.match("CONCAT\(.*_.*\)",key):
+            data['filter_type'] = key
+            data['filter'] = data.pop(key)
+            break
+    return data
+
 # Until we use VizPy we will create JSON python files with _py
 def createJSON(data, filepath, check=False, skip_fields = []):
     check = False # for production mode
@@ -280,7 +323,9 @@ def createJSON(data, filepath, check=False, skip_fields = []):
     filepath_py = filepath_tokens[0]+"_py.json"
     filepath_r = filepath_tokens[0]+"_r.json"
 
-    json_data = json.dumps(convertDatetime(removeDecimals(data)), sort_keys=True)
+    checked_data = convertDatetime(roundDecimals(removeDecimals(data)))
+    checked_data = convertCombinedFiltersName(checked_data)
+    json_data = json.dumps(checked_data, sort_keys=True)
     json_data = json_data.replace('NaN','"NA"')
     if check == False: #forget about R JSON checking
         jsonfile = open(filepath, 'w')
@@ -434,7 +479,7 @@ def read_main_conf(config_file):
     sec = parser.sections()
     # we'll read "generic" for db information and "r" for start_date and "bicho" for backend
     for s in sec:
-        if not((s == "generic") or (s == "r") or (s == "bicho")):
+        if not(s in ["generic","r","bicho","bicho_1"]):
             continue
         options[s] = {}
         opti = parser.options(s)
@@ -446,7 +491,7 @@ def read_main_conf(config_file):
 def get_subprojects(project, identities_db, dsquery = None):
     """ Return all subprojects ids for a project in a string join by comma """
 
-    from GrimoireSQL import ExecuteQuery
+    from vizgrimoire.GrimoireSQL import ExecuteQuery
     query = ExecuteQuery
     if dsquery is not None: query = dsquery.ExecuteQuery
 
@@ -464,6 +509,8 @@ def get_subprojects(project, identities_db, dsquery = None):
 
     project_with_children = subprojects['subproject_id'] + [project_id]
     project_with_children_str = ','.join(str(x) for x in project_with_children)
+
+    if (project_with_children_str == "[]"): project_with_children_str = "NULL"
 
     return  project_with_children_str
 
@@ -549,3 +596,79 @@ def medianAndAvgByPeriod(period, dates, values):
             result['median'].append(get_median(period_values))
             result['avg'].append(get_avg(period_values))                        # Accumulated values
     return result
+
+def check_array_value(data):
+        if not isinstance(data, list): data = [data]
+        return data
+
+def check_array_values(data):
+    for item in data:
+        data[item] = check_array_value(data[item])
+    return data
+
+def fill_items(items, data, id_field, evol = False,
+               period = None, startdate = None, enddate = None):
+    """ Complete data dict items filling with 0 not existing items """
+    from vizgrimoire.GrimoireUtils import completePeriodIds
+
+    # This fields should not be modified
+    ts_fields = [period, 'unixtime', 'date']
+
+    if evol:
+        zero_ts = completePeriodIds({id_field:[],period:[]},
+                                    period, startdate, enddate)[id_field]
+    fields = data.keys()
+    if id_field not in fields:
+        logging.info("[fill_items] " + id_field + " not found in " + ",".join(data))
+        return data
+    fields.remove(id_field)
+    for id in items:
+        if id not in data[id_field]:
+            data[id_field].append(id)
+            for field in fields:
+                if field in ts_fields: continue
+                if not evol:
+                    data[field].append(0)
+                if evol:
+                    data[field].append(zero_ts)
+    return data
+
+
+def order_items(items, data, id_field, evol = False, period = None):
+    """ Reorder data identities using items ordering """
+    fields = data.keys()
+    if id_field not in fields: return data
+    data_ordered = {}
+    for field in fields:
+        data_ordered[field] = []
+
+    fields.remove(id_field)
+
+    if evol:
+        evol_fields = [period, 'id', 'unixtime','date']
+        for evol_field in evol_fields:
+            if evol_field in fields:
+                fields.remove(evol_field)
+                data_ordered[evol_field] = data[evol_field]
+
+    for id in items:
+        data_ordered[id_field].append(id)
+        try:
+            pos = data[id_field].index(id)
+        except:
+            print items
+            print data[id_field]
+            raise
+        for field in fields:
+            data_ordered[field].append(data[field][pos])
+
+    return data_ordered
+
+def fill_and_order_items(items, data, id_field, evol = False,
+                         period = None, startdate = None, enddate = None):
+    # Only items will appear for a filter
+    if not evol: # evol is already filled (complete data) for a company, but not all companies
+        data = fill_items(items, data, id_field)
+    if evol: data = fill_items(items, data, id_field,
+                               evol, period, startdate, enddate)
+    return order_items(items, data, id_field, evol, period)

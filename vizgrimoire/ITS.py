@@ -26,21 +26,22 @@
 
 import logging, os, re
 
-from GrimoireSQL import GetSQLGlobal, GetSQLPeriod
-from GrimoireSQL import ExecuteQuery, BuildQuery
-from GrimoireUtils import GetPercentageDiff, GetDates, completePeriodIds, getPeriod
-from GrimoireUtils import createJSON, get_subprojects
-from metrics_filter import MetricFilters
+from vizgrimoire.GrimoireSQL import GetSQLGlobal, GetSQLPeriod
+from vizgrimoire.GrimoireSQL import ExecuteQuery, BuildQuery
+from vizgrimoire.GrimoireUtils import GetPercentageDiff, GetDates, completePeriodIds, getPeriod, check_array_value
+from vizgrimoire.GrimoireUtils import createJSON, get_subprojects
+from vizgrimoire.metrics.metrics_filter import MetricFilters
 
-from data_source import DataSource
-from filter import Filter
-from query_builder import ITSQuery
-import report
+from vizgrimoire.metrics.query_builder import ITSQuery
+import vizgrimoire.report
+from vizgrimoire.data_source import DataSource
+from vizgrimoire.filter import Filter
 
 
 class ITS(DataSource):
     _metrics_set = []
     _backend = None
+    _global_filter = []
     debug = False
 
 
@@ -54,13 +55,39 @@ class ITS(DataSource):
     @staticmethod
     def get_date_init(startdate, enddate, identities_db, type_analysis):
         """Get the date of the first activity in the data source"""
-        return GetInitDate (startdate, enddate, identities_db, type_analysis)
+        from vizgrimoire.metrics.its_metrics import InitialActivity
+        from vizgrimoire.report import Report
+        from vizgrimoire.metrics.query_builder import ITSQuery
+
+        db_identities = Report.get_config()['generic']['db_identities']
+        dbuser = Report.get_config()['generic']['db_user']
+        dbpass = Report.get_config()['generic']['db_password']
+        dbbicho = Report.get_config()['generic']['db_bicho']
+
+        dbcon = ITSQuery(dbuser, dbpass, dbbicho, db_identities)
+        filters = MetricFilters("", startdate, enddate, type_analysis)
+        init_date = InitialActivity(dbcon, filters)
+
+        return init_date.get_agg()
 
     @staticmethod
     def get_date_end(startdate, enddate, identities_db, type_analysis):
         """Get the date of the last activity in the data source"""
-        return GetEndDate (startdate, enddate, identities_db, type_analysis)
+        from vizgrimoire.metrics.its_metrics import EndOfActivity
+        from vizgrimoire.report import Report
+        from vizgrimoire.metrics.query_builder import ITSQuery
 
+        db_identities = Report.get_config()['generic']['db_identities']
+        dbuser = Report.get_config()['generic']['db_user']
+        dbpass = Report.get_config()['generic']['db_password']
+        dbbicho = Report.get_config()['generic']['db_bicho']
+
+        dbcon = ITSQuery(dbuser, dbpass, dbbicho, db_identities)
+        filters = MetricFilters("", startdate, enddate, type_analysis)
+        final_date = EndOfActivity(dbcon, filters)
+
+        return final_date.get_agg()
+ 
     @staticmethod
     def get_url():
         """Get the URL from which the data source was gathered"""
@@ -70,76 +97,86 @@ class ITS(DataSource):
 
         return(ExecuteQuery(q))
 
-    @staticmethod
-    def set_backend(its_name):
+    @classmethod
+    def set_backend(cls, its_name):
         backend = Backend(its_name)
-        ITS._backend = backend
+        cls._backend = backend
 
     @staticmethod
     def _get_backend():
+        import vizgrimoire.report
         if ITS._backend == None:
-            automator = report.Report.get_config()
+            automator = vizgrimoire.report.Report.get_config()
             its_backend = automator['bicho']['backend']
             backend = Backend(its_backend)
         else:
             backend = ITS._backend
         return backend
 
-    @staticmethod
-    def _get_closed_condition():
-        return ITS._get_backend().closed_condition
+    @classmethod
+    def _get_closed_condition(cls):
+        # print cls
+        return cls._get_backend().closed_condition
 
-    @staticmethod
-    def get_evolutionary_data (period, startdate, enddate, identities_db, filter_ = None):
-        closed_condition = ITS._get_closed_condition()
+    @classmethod
+    def get_evolutionary_data (cls, period, startdate, enddate, identities_db, filter_ = None):
+        closed_condition = cls._get_closed_condition()
 
-        metrics = DataSource.get_metrics_data(ITS, period, startdate, enddate, identities_db, filter_, True)
+        metrics = DataSource.get_metrics_data(cls, period, startdate, enddate, identities_db, filter_, True)
         if filter_ is not None: studies = {}
         else:
-            studies = DataSource.get_studies_data(ITS, period, startdate, enddate, True)
+            studies = DataSource.get_studies_data(cls, period, startdate, enddate, True)
         return dict(metrics.items()+studies.items())
 
-    @staticmethod
-    def create_evolutionary_report (period, startdate, enddate, destdir, i_db, filter_ = None):
-        data =  ITS.get_evolutionary_data (period, startdate, enddate, i_db, filter_)
-        filename = ITS().get_evolutionary_filename()
+    @classmethod
+    def create_evolutionary_report (cls, period, startdate, enddate, destdir, i_db, filter_ = None):
+        data =  cls.get_evolutionary_data (period, startdate, enddate, i_db, filter_)
+        filename = cls().get_evolutionary_filename()
         createJSON (data, os.path.join(destdir, filename))
 
-    @staticmethod
-    def get_agg_data (period, startdate, enddate, identities_db, filter_ = None):
-        closed_condition = ITS._get_closed_condition()
+    @classmethod
+    def get_agg_data (cls, period, startdate, enddate, identities_db, filter_ = None):
+        closed_condition = cls._get_closed_condition()
 
-        metrics = DataSource.get_metrics_data(ITS, period, startdate, enddate, identities_db, filter_, False)
+        metrics = DataSource.get_metrics_data(cls, period, startdate, enddate, identities_db, filter_, False)
         if filter_ is not None: studies = {}
         else:
-            studies = DataSource.get_studies_data(ITS, period, startdate, enddate, False)
+            studies = DataSource.get_studies_data(cls, period, startdate, enddate, False)
         agg =  dict(metrics.items()+studies.items())
 
         if filter_ is None:
-            data = ITS.get_url()
+            data = cls.get_url()
             agg = dict(agg.items() +  data.items())
 
         return agg
 
-    @staticmethod
-    def create_agg_report (period, startdate, enddate, destdir, i_db, filter_ = None):
-        data = ITS.get_agg_data (period, startdate, enddate, i_db, filter_)
-        filename = ITS().get_agg_filename()
+    @classmethod
+    def create_agg_report (cls, period, startdate, enddate, destdir, i_db, filter_ = None):
+        data = cls.get_agg_data (period, startdate, enddate, i_db, filter_)
+        filename = cls().get_agg_filename()
         createJSON (data, os.path.join(destdir, filename))
 
     @staticmethod
-    def get_top_data (startdate, enddate, identities_db, filter_, npeople):
-        bots = ITS.get_bots()
-        closed_condition =  ITS._get_closed_condition()
+    def get_top_metrics ():
+        return ["openers","closers"]
+
+    @classmethod
+    def get_top_data (cls, startdate, enddate, identities_db, filter_, npeople):
+        bots = cls.get_bots()
+        closed_condition =  cls._get_closed_condition()
         top = None
-        mopeners = DataSource.get_metrics("openers", ITS)
-        mclosers = DataSource.get_metrics("closers", ITS)
+        mopeners = DataSource.get_metrics("openers", cls)
+        mclosers = DataSource.get_metrics("closers", cls)
+        # We should check this metric is ON
+        stories_openers = DataSource.get_metrics("stories_openers", cls)
+        if mopeners is None or mclosers is None: return None
         period = None
         type_analysis = None
         if filter_ is not None:
             type_analysis = filter_.get_type_analysis()
         mfilter = MetricFilters(period, startdate, enddate, type_analysis, npeople)
-
+        if mclosers.filters.closed_condition is not None:
+             mfilter.closed_condition = mclosers.filters.closed_condition
 
         if filter_ is None:
             top_closers_data = {}
@@ -154,8 +191,7 @@ class ITS(DataSource):
 
             top = dict(top_closers_data.items() + top_openers_data.items())
 
-            from top_issues import TopIssues
-            from report import Report
+            from vizgrimoire.analysis.top_issues import TopIssues
             db_identities= Report.get_config()['generic']['db_identities']
             dbuser = Report.get_config()['generic']['db_user']
             dbpass = Report.get_config()['generic']['db_password']
@@ -165,64 +201,88 @@ class ITS(DataSource):
             top_issues_data = TopIssues(dbcon, metric_filters).result()
 
             top = dict(top.items() + top_issues_data.items())
+            
+            if False and stories_openers is not None:
+                top_sopeners_data = {}
+                top_sopeners_data['stories_openers.'] = stories_openers.get_list(mfilter, 0)
+                top_sopeners_data['stories_openers.last month'] = stories_openers.get_list(mfilter, 31)
+                top_sopeners_data['stories_openers.last year'] = stories_openers.get_list(mfilter, 365)
 
+                top = dict(top.items() + top_sopeners_data.items())
         else:
             filter_name = filter_.get_name()
             if filter_name in ["company","domain","repository"]:
-                top = mclosers.get_list(mfilter)
+                if filter_name in ["company","domain","repository"]:
+                    top = {}
+                    top['closers.'] =  mclosers.get_list(mfilter, 0)
+                    top['closers.last month']= mclosers.get_list(mfilter, 31)
+                    top['closers.last year']= mclosers.get_list(mfilter, 365)
+                else:
+                    # Remove filters above if there are performance issues
+                    top = mclosers.get_list(mfilter)
             else:
                 top = None
 
         return top
 
-    @staticmethod
-    def create_top_report (startdate, enddate, destdir, npeople, i_db):
-        data = ITS.get_top_data (startdate, enddate, i_db, None, npeople)
-        createJSON (data, destdir+"/"+ITS().get_top_filename())
+    @classmethod
+    def create_top_report (cls, startdate, enddate, destdir, npeople, i_db):
+        data = cls.get_top_data (startdate, enddate, i_db, None, npeople)
+        createJSON (data, destdir+"/"+cls().get_top_filename())
 
-    @staticmethod
-    def get_filter_items(filter_, startdate, enddate, identities_db):
+    @classmethod
+    def get_filter_items(cls, filter_, startdate, enddate, identities_db):
         items = None
         filter_name = filter_.get_name()
 
         if (filter_name == "repository"):
-            metric = DataSource.get_metrics("trackers", ITS)
+            metric = DataSource.get_metrics("trackers", cls)
         elif (filter_name == "company"):
-            metric = DataSource.get_metrics("companies", ITS)
+            metric = DataSource.get_metrics("companies",  cls)
         elif (filter_name == "country"):
-            metric = DataSource.get_metrics("countries", ITS)
+            metric = DataSource.get_metrics("countries", cls)
         elif (filter_name == "domain"):
-            metric = DataSource.get_metrics("domains", ITS)
+            metric = DataSource.get_metrics("domains", cls)
         elif (filter_name == "project"):
-            metric = DataSource.get_metrics("projects", ITS)
+            metric = DataSource.get_metrics("projects", cls)
+        elif (filter_name == "people2"):
+            metric = DataSource.get_metrics("people2", cls)
+        elif (filter_name == "company,country"):
+            metric = DataSource.get_metrics("companies+countries", cls)
         else:
             logging.error(filter_name + " not supported")
+            return items
 
         items = metric.get_list()
         return items
 
-    @staticmethod
-    def get_filter_summary(filter_, period, startdate, enddate, identities_db, limit):
+    @classmethod
+    def get_filter_summary(cls,filter_, period, startdate, enddate, identities_db, limit):
         summary = None
         filter_name = filter_.get_name()
-        closed_condition =  ITS._get_closed_condition()
+        closed_condition =  cls._get_closed_condition()
 
         if (filter_name == "company"):
+            from vizgrimoire.analysis.summaries import GetClosedSummaryCompanies
+
             summary =  GetClosedSummaryCompanies(period, startdate, enddate, identities_db, closed_condition, limit)
         return summary
 
-    @staticmethod
-    def create_filter_report(filter_, period, startdate, enddate, destdir, npeople, identities_db):
-        items = ITS.get_filter_items(filter_, startdate, enddate, identities_db)
-        if (items == None): return
-        items = items['name']
+    @classmethod
+    def create_filter_report(cls, filter_, period, startdate, enddate, destdir, npeople, identities_db):
+        from vizgrimoire.report import Report
+        items = Report.get_items()
+        if items is None:
+            items = cls.get_filter_items(filter_, startdate, enddate, identities_db)
+            if (items == None): return
+            items = items['name']
 
         filter_name = filter_.get_name()
 
         if not isinstance(items, (list)):
             items = [items]
 
-        fn = os.path.join(destdir, filter_.get_filename(ITS()))
+        fn = os.path.join(destdir, filter_.get_filename(cls()))
         createJSON(items, fn)
 
         if filter_name in ("domain", "company", "repository"):
@@ -235,12 +295,12 @@ class ITS(DataSource):
             logging.info (item_name)
             filter_item = Filter(filter_name, item)
 
-            evol_data = ITS.get_evolutionary_data(period, startdate, enddate, identities_db, filter_item)
-            fn = os.path.join(destdir, filter_item.get_evolutionary_filename(ITS()))
+            evol_data = cls.get_evolutionary_data(period, startdate, enddate, identities_db, filter_item)
+            fn = os.path.join(destdir, filter_item.get_evolutionary_filename(cls()))
             createJSON(evol_data, fn)
 
-            agg = ITS.get_agg_data(period, startdate, enddate, identities_db, filter_item)
-            fn = os.path.join(destdir, filter_item.get_static_filename(ITS()))
+            agg = cls.get_agg_data(period, startdate, enddate, identities_db, filter_item)
+            fn = os.path.join(destdir, filter_item.get_static_filename(cls()))
             createJSON(agg, fn)
 
             if filter_name in ["domain", "company", "repository"]:
@@ -249,56 +309,96 @@ class ITS(DataSource):
                 items_list['closers_365'].append(agg['closers_365'])
 
             if filter_name in ["company","domain","repository"]:
-                top = ITS.get_top_data(startdate, enddate, identities_db, filter_item, npeople)
-                fn = os.path.join(destdir, filter_item.get_top_filename(ITS()))
+                top = cls.get_top_data(startdate, enddate, identities_db, filter_item, npeople)
+                fn = os.path.join(destdir, filter_item.get_top_filename(cls()))
                 createJSON(top, fn)
 
-        fn = os.path.join(destdir, filter_.get_filename(ITS()))
+        fn = os.path.join(destdir, filter_.get_filename(cls()))
         createJSON(items_list, fn)
 
         if (filter_name == "company"):
-            closed = ITS.get_filter_summary(filter_, period, startdate, enddate, identities_db, 10)
-            createJSON (closed, destdir+"/"+ filter_.get_summary_filename(ITS))
+            closed = cls.get_filter_summary(filter_, period, startdate, enddate, identities_db, 10)
+            createJSON (closed, destdir+"/"+ filter_.get_summary_filename(cls))
 
     @staticmethod
-    def get_top_people(startdate, enddate, identities_db, npeople):
-        top_data = ITS.get_top_data (startdate, enddate, identities_db, None, npeople)
+    def _check_report_all_data(data, filter_, startdate, enddate, idb,
+                               evol = False, period = None):
+        pass
+
+    @classmethod
+    def create_filter_report_all(cls, filter_, period, startdate, enddate, destdir, npeople, identities_db):
+        check = False # activate to debug issues
+        filter_name = filter_.get_name()
+
+        # Change filter to GrimoireLib notation
+        filter_name = filter_name.replace("+",",")
+
+        if filter_name in ["people2","company","company,country","country","repository","domain"] :
+            filter_all = Filter(filter_name, None)
+            agg_all = cls.get_agg_data(period, startdate, enddate,
+                                       identities_db, filter_all)
+            fn = os.path.join(destdir, filter_.get_static_filename_all(cls()))
+            createJSON(agg_all, fn)
+
+            evol_all = cls.get_evolutionary_data(period, startdate, enddate,
+                                                 identities_db, filter_all)
+            fn = os.path.join(destdir, filter_.get_evolutionary_filename_all(cls()))
+            createJSON(evol_all, fn)
+
+            if check:
+                cls._check_report_all_data(evol_all, filter_, startdate, enddate,
+                                           identities_db, True, period)
+                cls._check_report_all_data(agg_all, filter_, startdate, enddate,
+                                           identities_db, False, period)
+        else:
+            logging.error(filter_name +" does not support yet group by items sql queries")
+
+    @classmethod
+    def get_top_people(cls, startdate, enddate, identities_db, npeople):
+        top_data = cls.get_top_data (startdate, enddate, identities_db, None, npeople)
+        if top_data is None: return None
 
         top = top_data['closers.']["id"]
         top += top_data['closers.last year']["id"]
-        top += top_data['closers.last month']["id"]
-        top += top_data['openers.']["id"]
-        top += top_data['openers.last year']["id"]
-        top += top_data['openers.last month']["id"]
+        top += check_array_value(top_data['closers.last month']["id"])
+        top += check_array_value(top_data['openers.']["id"])
+        top += check_array_value(top_data['openers.last year']["id"])
+        top += check_array_value(top_data['openers.last month']["id"])
+        if 'stories_openers' in top_data:
+            top += top_data['stories_openers.']["id"]
+            top += top_data['stories_openers.last year']["id"]
+            top += top_data['stories_openers.last month']["id"]
+
         # remove duplicates
         people = list(set(top))
 
         return people
 
-    @staticmethod
-    def get_person_evol(upeople_id, period, startdate, enddate, identities_db, type_analysis):
-        closed_condition =  ITS._get_closed_condition()
+    @classmethod
+    def get_person_evol(cls, upeople_id, period, startdate, enddate, identities_db, type_analysis):
+        closed_condition =  cls._get_closed_condition()
 
         evol = GetPeopleEvolITS(upeople_id, period, startdate, enddate, closed_condition)
         evol = completePeriodIds(evol, period, startdate, enddate)
         return evol
 
-    @staticmethod
-    def get_person_agg(upeople_id, startdate, enddate, identities_db, type_analysis):
-        closed_condition =  ITS._get_closed_condition()
+    @classmethod
+    def get_person_agg(cls, upeople_id, startdate, enddate, identities_db, type_analysis):
+        closed_condition =  cls._get_closed_condition()
         return GetPeopleStaticITS(upeople_id, startdate, enddate, closed_condition)
 
-    @staticmethod
-    def create_r_reports(vizr, enddate, destdir):
-        backend = ITS._get_backend().its_type
+    @classmethod
+    def create_r_reports(cls, vizr, enddate, destdir):
+        backend = cls._get_backend().its_type
         # Change name for R code
         if (backend == "bg"): backend = "bugzilla"
+        if (backend == "lp"): backend = "launchpad"
         vizr.ReportTimeToCloseITS(backend, destdir)
         unique_ids = True
 
-        # Demographics
-        vizr.ReportDemographicsAgingITS(enddate, destdir, unique_ids)
-        vizr.ReportDemographicsBirthITS(enddate, destdir, unique_ids)
+        # Demographics - created now with age study in Python
+        # vizr.ReportDemographicsAgingITS(enddate, destdir, unique_ids)
+        # vizr.ReportDemographicsBirthITS(enddate, destdir, unique_ids)
 
         # Markov
         vizr.ReportMarkovChain(destdir)
@@ -311,10 +411,10 @@ class ITS(DataSource):
         q = "DELETE FROM people WHERE id='%s'" % (people_id)
         ExecuteQuery(q)
 
-    @staticmethod
-    def _remove_issue(issue_id):
+    @classmethod
+    def _remove_issue(cls, issue_id):
         # Backend name
-        its_type = ITS._get_backend().its_type
+        its_type = cls._get_backend().its_type
         db_ext = its_type
         if its_type == "lp": db_ext = "launchpad"
         elif its_type == "bg": db_ext = "bugzilla"
@@ -392,170 +492,26 @@ class ITS(DataSource):
 
     @staticmethod
     def get_query_builder():
-        from query_builder import ITSQuery
+        from vizgrimoire.metrics.query_builder import ITSQuery
         return ITSQuery
 
     @staticmethod
     def get_metrics_core_agg():
         m = ['closed','closers','changed','changers',"opened",'openers','trackers']
-        m += ['allhistory_participants']
+        m += ['allhistory_participants','bmitickets']
         return m
 
     @staticmethod
     def get_metrics_core_ts():
         m = ['closed','closers','changed','changers',"opened",'openers','trackers']
+        m += ['bmitickets']
         return m
 
     @staticmethod
     def get_metrics_core_trends():
-        return ['closed','closers','changed','changers',"opened",'openers']
-
-
-##############
-# Specific FROM and WHERE clauses per type of report
-##############
-
-def GetITSSQLRepositoriesFrom ():
-    # tables necessary for repositories 
-    return (", trackers t")
-
-def GetITSSQLRepositoriesWhere (repository):
-    # fields necessary to match info among tables
-    return (" i.tracker_id = t.id and t.url = "+repository+" ")
-
-def GetITSSQLProjectsFrom ():
-    # tables necessary for repositories
-    return (", trackers t")
-
-def GetITSSQLProjectsWhere (project, identities_db):
-    # include all repositories for a project and its subprojects
-    # Remove '' from project name
-    if (project[0] == "'" and project[-1] == "'"):
-        project = project[1:-1]
-
-    repos = """ t.url IN (
-           SELECT repository_name
-           FROM   %s.projects p, %s.project_repositories pr
-           WHERE  p.project_id = pr.project_id AND p.project_id IN (%s)
-               AND pr.data_source='its'
-    )""" % (identities_db, identities_db, get_subprojects(project, identities_db))
-
-    return (repos   + " and t.id = i.tracker_id")
-
-
-
-def GetITSSQLCompaniesFrom (i_db):
-    # fields necessary for the companies analysis
-
-    return(" , people_upeople pup, "+\
-           i_db+".companies c, "+\
-           i_db+".upeople_companies upc")
-
-def GetITSSQLCompaniesWhere (name):
-    # filters for the companies analysis
-    return(" i.submitted_by = pup.people_id and "+\
-           "pup.upeople_id = upc.upeople_id and "+\
-           "upc.company_id = c.id and "+\
-           "i.submitted_on >= upc.init and "+\
-           "i.submitted_on < upc.end and "+\
-           "c.name = "+name)
-
-def GetITSSQLCountriesFrom (i_db):
-    # fields necessary for the countries analysis
-
-    return(" , people_upeople pup, "+\
-           i_db+".countries c, "+\
-           i_db+".upeople_countries upc")
-
-def GetITSSQLCountriesWhere (name):
-    # filters for the countries analysis
-    return(" i.submitted_by = pup.people_id and "+\
-           "pup.upeople_id = upc.upeople_id and "+\
-           "upc.country_id = c.id and "+\
-           "c.name = "+name)
-
-
-def GetITSSQLDomainsFrom (i_db):
-    # fields necessary for the domains analysis
-
-    return(" , people_upeople pup, "+\
-           i_db+".domains d, "+\
-           i_db+".upeople_domains upd")
-
-
-def GetITSSQLDomainsWhere (name):
-    # filters for the domains analysis
-    return(" i.submitted_by = pup.people_id and "+\
-           "pup.upeople_id = upd.upeople_id and "+\
-           "upd.domain_id = d.id and "+\
-           "d.name = "+name)
-
-##########
-#Generic functions to obtain FROM and WHERE clauses per type of report
-##########
-
-def GetITSSQLReportFrom (identities_db, type_analysis):
-    #generic function to generate 'from' clauses
-    #"type" is a list of two values: type of analysis and value of 
-    #such analysis
-
-    From = ""
-
-    if (type_analysis is None or len(type_analysis) != 2): return From
-
-    analysis = type_analysis[0]
-    value = type_analysis[1]
-
-    if analysis == 'repository': From = GetITSSQLRepositoriesFrom()
-    elif analysis == 'company': From = GetITSSQLCompaniesFrom(identities_db)
-    elif analysis == 'country': From = GetITSSQLCountriesFrom(identities_db)
-    elif analysis == 'domain': From = GetITSSQLDomainsFrom(identities_db)
-    elif analysis == 'project': From = GetITSSQLProjectsFrom()
-
-    return (From)
-
-def GetITSSQLReportWhere (type_analysis, identities_db = None):
-    #generic function to generate 'where' clauses
-
-    #"type" is a list of two values: type of analysis and value of 
-    #such analysis
-    where = ""
-
-    if (type_analysis is None or len(type_analysis) != 2): return where
-
-    analysis = type_analysis[0]
-    value = type_analysis[1]
-
-    if analysis == 'repository': where = GetITSSQLRepositoriesWhere(value)
-    elif analysis == 'company': where = GetITSSQLCompaniesWhere(value)
-    elif analysis == 'country': where = GetITSSQLCountriesWhere(value)
-    elif analysis == 'domain': where = GetITSSQLDomainsWhere(value)
-    elif analysis == 'project': where = GetITSSQLProjectsWhere(value, identities_db)
-
-    return (where)
-
-def GetDate (startdate, enddate, identities_db, type_analysis, type):
-    # date of submmitted issues (type= max or min)
-    if (type=="max"):
-        fields = " DATE_FORMAT (max(submitted_on), '%Y-%m-%d') as last_date"
-    else :
-        fields = " DATE_FORMAT (min(submitted_on), '%Y-%m-%d') as first_date"
-
-    tables = " issues i " + GetITSSQLReportFrom(identities_db, type_analysis)
-    filters = GetITSSQLReportWhere(type_analysis, identities_db)
-
-    q = BuildQuery(None, startdate, enddate, " i.submitted_on ", fields, tables, filters, False)
-    data = ExecuteQuery(q)
-    return(data)
-
-def GetInitDate (startdate, enddate, identities_db, type_analysis):
-    #Initial date of submitted issues
-    return(GetDate(startdate, enddate, identities_db, type_analysis, "min"))
-
-def GetEndDate (startdate, enddate, identities_db, type_analysis):
-    #End date of submitted issues
-    return(GetDate(startdate, enddate, identities_db, type_analysis, "max"))
-
+        m = ['closed','closers','changed','changers',"opened",'openers']
+        m += ['bmitickets']
+        return m
 
 ###############
 # Others
@@ -566,48 +522,6 @@ def AggAllParticipants (startdate, enddate):
     q = "SELECT count(distinct(pup.upeople_id)) as allhistory_participants from people_upeople pup"
 
     return(ExecuteQuery(q))
-
-
-def GetActiveChangersITS(days, enddate):
-    # FIXME parameters should be: startdate and enddate
-    q0 = "SELECT distinct(pup.upeople_id) as active_changers"+\
-        " FROM changes, people_upeople pup "+\
-        " WHERE pup.people_id = changes.changed_by and "+\
-        " changed_on >= ( %s - INTERVAL %s day)"
-    q1 = q0 % (enddate, days)
-    data = ExecuteQuery(q1)
-    return(data)
-
-def GetActiveCommentersITS(days, enddate):
-    # FIXME parameters should be: startdate and enddate
-    q0 = "SELECT DISTINCT(pup.upeople_id) AS active_commenters"+\
-        " FROM comments c, people_upeople pup"+\
-        " WHERE pup.people_id = c.submitted_by AND"+\
-        " submitted_on >= (%s - INTERVAL %s day)"
-    q1 = q0 % (enddate, days)
-    data = ExecuteQuery(q1)
-    return(data)
-
-def GetActiveSubmittersITS(days, enddate):
-    # FIXME parameters should be: startdate and enddate
-    q0 = "SELECT DISTINCT(pup.upeople_id) AS active_submitters"+\
-      " FROM issues i, people_upeople pup"+\
-      " WHERE pup.people_id = i.submitted_by AND"+\
-      " submitted_on >= ( %s - INTERVAL %s day)"
-    q1 = q0 % (enddate, days)
-    data = ExecuteQuery(q1)
-    return(data)
-
-def GetActivePeopleITS(days, enddate):
-    #Gets the IDs of the active people during the last days (until enddate)
-    # for comments, issue creation and changes
-    submitters = GetActiveSubmittersITS(days, enddate)
-    changers = GetActiveChangersITS(days, enddate)
-    commenters = GetActiveCommentersITS(days, enddate)
-    people_its = submitters['active_submitters'] + changers['active_changers'] +\
-        commenters['active_commenters']
-    people_its = list(set(people_its))
-    return(people_its)
 
 
 ################
@@ -714,66 +628,6 @@ def GetPeopleStaticITS (developer_id, startdate, enddate, closed_condition) :
     data = ExecuteQuery(q)
     return (data)
 
-#################
-# Micro studies
-#################
-
-def EvolBMIIndex(period, startdate, enddate, identities_db, type_analysis, closed_condition):
-    # Metric based on chapter 4.3.1 from
-    # "Metrics and Models in Software Quality Engineering"
-    # by Stephen H. Kan
-    closed = EvolIssuesClosed(period, startdate, enddate, identities_db, type_analysis, closed_condition)
-    closed = completePeriodIds(closed, period, startdate, enddate)
-    opened = EvolIssuesOpened(period, startdate, enddate, identities_db, type_analysis)
-    opened = completePeriodIds(opened, period, startdate, enddate)
-
-    evol_bmi = []
-    for i in closed["closed"]:
-
-        index = closed["closed"].index(i)
-        if opened["opened"][index] == 0:
-            #div by 0
-            evol_bmi.append(100) # some "neutral" value, although this should be infinite
-        else:
-            evol_bmi.append((float(i) / float(opened['opened'][index])) * 100)
-
-    return {'closed' : closed['closed'],
-            'opened' : opened['opened'],
-            'bmi' : evol_bmi}
-
-def GetClosedSummaryCompanies (period, startdate, enddate, identities_db, closed_condition, num_companies):
-    count = 1
-    first_companies = {}
-
-    metric = DataSource.get_metrics("companies", ITS)
-    companies = metric.get_list()
-    companies = companies['name']
-
-    for company in companies:
-        type_analysis = ["company", "'"+company+"'"]
-        filter_com = MetricFilters(period, startdate, enddate, type_analysis)
-        mclosed = ITS.get_metrics("closed", ITS)
-        mclosed.filters = filter_com
-        closed = mclosed.get_ts()
-        # Rename field closed to company name
-        closed[company] = closed["closed"]
-        del closed['closed']
-
-        if (count <= num_companies):
-            #Case of companies with entity in the dataset
-            first_companies = dict(first_companies.items() + closed.items())
-        else :
-            #Case of companies that are aggregated in the field Others
-            if 'Others' not in first_companies:
-                first_companies['Others'] = closed[company]
-            else:
-                first_companies['Others'] = [a+b for a, b in zip(first_companies['Others'],closed[company])]
-        count = count + 1
-    first_companies = completePeriodIds(first_companies, period, startdate, enddate)
-
-    return(first_companies)
-
-
 class Backend(object):
 
     its_type = ""
@@ -802,6 +656,9 @@ class Backend(object):
 
         elif (its_type == 'github'):
             self.closed_condition = "field='closed'"
+
+        elif (its_type == 'storyboard'):
+            self.closed_condition = "(new_value='merged' or new_value='invalid')"
 
         elif (its_type == 'jira'):
             self.closed_condition = "(new_value='Closed')"

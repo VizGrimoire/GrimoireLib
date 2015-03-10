@@ -24,9 +24,9 @@
 
 """ Top issues by age  for different criteria """
 
-from analyses import Analyses
-from metrics_filter import MetricFilters
-from GrimoireUtils import completeTops
+from vizgrimoire.analysis.analyses import Analyses
+from vizgrimoire.metrics.metrics_filter import MetricFilters
+from vizgrimoire.GrimoireUtils import completeTops
 
 class TopIssues(Analyses):
     id = "top_issues"
@@ -148,8 +148,8 @@ class TopIssues(Analyses):
 
     def result(self, data_source = None):
         """ Returns a JSON to be included in top file """
-        from ITS import ITS
-        if data_source is not None and data_source != ITS: return None
+        from vizgrimoire.ITS import ITS
+        if  data_source is not None and data_source != ITS: return None
 
         # Closed condition for MediaWiki
         top_close_condition_mediawiki = """

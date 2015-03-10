@@ -25,15 +25,15 @@
 
 import os, logging
 
-from GrimoireSQL import GetSQLGlobal, GetSQLPeriod
+from vizgrimoire.GrimoireSQL import GetSQLGlobal, GetSQLPeriod
 # TODO integrate: from GrimoireSQL import  GetSQLReportFrom 
-from GrimoireSQL import ExecuteQuery, BuildQuery
-from GrimoireUtils import GetPercentageDiff, GetDates, completePeriodIds
-from GrimoireUtils import createJSON, getPeriod, get_subprojects
-from data_source import DataSource
-from filter import Filter
-from metrics_filter import MetricFilters
-from query_builder import DSQuery
+from vizgrimoire.GrimoireSQL import ExecuteQuery, BuildQuery
+from vizgrimoire.GrimoireUtils import GetPercentageDiff, GetDates, completePeriodIds
+from vizgrimoire.GrimoireUtils import createJSON, getPeriod, get_subprojects
+from vizgrimoire.data_source import DataSource
+from vizgrimoire.filter import Filter
+from vizgrimoire.metrics.metrics_filter import MetricFilters
+from vizgrimoire.metrics.query_builder import DSQuery
 
 class SCM(DataSource):
     _metrics_set = []
@@ -48,18 +48,18 @@ class SCM(DataSource):
 
     @staticmethod
     def get_date_init(startdate, enddate, identities_db = None, type_analysis = None):
-        fields = "DATE_FORMAT (min(s.date), '%Y-%m-%d') as first_date"
+        fields = "DATE_FORMAT (min(s.author_date), '%Y-%m-%d') as first_date"
         tables = "scmlog s"
         filters = ""
-        q = GetSQLGlobal('s.date',fields, tables, filters, startdate, enddate)
+        q = GetSQLGlobal('s.author_date',fields, tables, filters, startdate, enddate)
         return ExecuteQuery(q)
 
     @staticmethod
     def get_date_end(startdate, enddate, identities_db = None, type_analysis = None):
-        fields = "DATE_FORMAT (max(s.date), '%Y-%m-%d') as last_date"
+        fields = "DATE_FORMAT (max(s.author_date), '%Y-%m-%d') as last_date"
         tables = "scmlog s"
         filters = ""
-        q = GetSQLGlobal('s.date',fields, tables, filters, startdate, enddate)
+        q = GetSQLGlobal('s.author_date',fields, tables, filters, startdate, enddate)
         return ExecuteQuery(q)
 
     @staticmethod
@@ -85,7 +85,8 @@ class SCM(DataSource):
 
     @staticmethod
     def get_agg_data (period, startdate, enddate, identities_db, filter_= None):
-        metrics = DataSource.get_metrics_data(SCM, period, startdate, enddate, identities_db, filter_, False)
+        metrics = DataSource.get_metrics_data(SCM, period, startdate, enddate, 
+                                              identities_db, filter_, False)
         if filter_ is not None: studies = {}
         else:
             studies = DataSource.get_studies_data(SCM, period, startdate, enddate, False)
@@ -104,11 +105,16 @@ class SCM(DataSource):
         createJSON (data, os.path.join(destdir, filename))
 
     @staticmethod
-    def get_project_top_companies (project, startdate, enddate, limit):
-        # Hack to get a SCMQuery
-        dbcon = SCM.get_metrics_set(SCM)[0].db
-        top_companies = dbcon.get_project_top_companies (project, startdate, enddate, limit)
-        return top_companies
+    def get_events():
+        events = {}
+        newcomers = DataSource.get_metrics("newauthors", SCM)
+        if newcomers is None: return events
+        events['newcomers'] = newcomers.get_list()
+        return events
+
+    @staticmethod
+    def get_top_metrics ():
+        return ["authors"]
 
     @staticmethod
     def get_project_top_authors (project, startdate, enddate, npeople):
@@ -129,6 +135,7 @@ class SCM(DataSource):
     def get_top_data_companies (startdate, enddate, i_db, filter_, npeople):
         top = {}
         mcompanies = DataSource.get_metrics("companies", SCM)
+        if mcompanies is None: return top
         period = None
         if filter_ is not None:
             if filter_.get_name() == "project":
@@ -136,7 +143,10 @@ class SCM(DataSource):
                 companies_out = mcompanies.filters.companies_out
                 people_out = None
                 mfilter = MetricFilters(period, startdate, enddate, filter_.get_type_analysis(), npeople, people_out, companies_out)
-                top = mcompanies.get_list(mfilter)
+                mfilter_orig = mcompanies.filters
+                mcompanies.filters = mfilter
+                top = mcompanies.get_list()
+                mcompanies.filters = mfilter_orig
         return top
 
 
@@ -144,29 +154,43 @@ class SCM(DataSource):
     def get_top_data_authors (startdate, enddate, i_db, filter_, npeople):
         top = {}
         mauthors = DataSource.get_metrics("authors", SCM)
+        if mauthors is None: return top
         period = None
         type_analysis = None
         if filter_ is not None:
             type_analysis = filter_.get_type_analysis()
         mfilter = MetricFilters(period, startdate, enddate, type_analysis, npeople)
+        mfilter.global_filter = mauthors.filters.global_filter
 
         if filter_ is None:
             top['authors.'] = mauthors.get_list(mfilter, 0)
             top['authors.last month'] = mauthors.get_list(mfilter, 31)
             top['authors.last year'] = mauthors.get_list(mfilter, 365)
         elif filter_.get_name() in ["company","repository","project"]:
-            top = mauthors.get_list(mfilter) 
+            if filter_.get_name() in ["company","repository","project"]:
+                top['authors.'] = mauthors.get_list(mfilter, 0)
+                top['authors.last month'] = mauthors.get_list(mfilter, 31)
+                top['authors.last year'] = mauthors.get_list(mfilter, 365)
+            else:
+                # If we have performance issues with tops, remove filters above
+                # to avoid computing trends for tops
+                top = mauthors.get_list(mfilter) 
         else:
             logging.info("Top authors not support for " + filter_.get_name())
         return top
 
     @staticmethod
     def get_top_data (startdate, enddate, i_db, filter_, npeople):
+        from vizgrimoire.report import Report
         top = {}
         data = SCM.get_top_data_authors (startdate, enddate, i_db, filter_, npeople)
         top = dict(top.items() + data.items())
-        data = SCM.get_top_data_companies (startdate, enddate, i_db, filter_, npeople)
-        top = dict(top.items() + data.items())
+        companies_on = False
+        if Report.get_filter_automator('company') is not None:
+            companies_on = True
+        if companies_on:
+            data = SCM.get_top_data_companies (startdate, enddate, i_db, filter_, npeople)
+            top = dict(top.items() + data.items())
         return top
 
     @staticmethod
@@ -189,14 +213,22 @@ class SCM(DataSource):
             metric = DataSource.get_metrics("domains", SCM)
         elif (filter_name == "project"):
             metric = DataSource.get_metrics("projects", SCM)
+        elif (filter_name == "people2"):
+            metric = DataSource.get_metrics("people2", SCM)
+        elif (filter_name == "company,country"):
+            metric = DataSource.get_metrics("companies+countries", SCM)
         else:
-            logging.error(filter_name + " not supported")
+            logging.error("SCM " + filter_name + " not supported")
+            return items
 
-        items = metric.get_list()
+        if metric is not None: items = metric.get_list()
+
         return items
 
     @staticmethod
     def get_filter_summary(filter_, period, startdate, enddate, identities_db, limit):
+        from vizgrimoire.analysis.summaries import GetCommitsSummaryCompanies
+
         summary = None
         filter_name = filter_.get_name()
 
@@ -206,9 +238,12 @@ class SCM(DataSource):
 
     @staticmethod
     def create_filter_report(filter_, period, startdate, enddate, destdir, npeople, identities_db):
-        items = SCM.get_filter_items(filter_, startdate, enddate, identities_db)
-        if (items == None): return
-        items = items['name']
+        from vizgrimoire.report import Report
+        items = Report.get_items()
+        if items is None:
+            items = SCM.get_filter_items(filter_, startdate, enddate, identities_db)
+            if (items == None): return
+            items = items['name']
 
         filter_name = filter_.get_name()
 
@@ -250,12 +285,108 @@ class SCM(DataSource):
         createJSON(items_list, fn)
 
         if (filter_name == "company"):
+            ds = SCM
             summary =  SCM.get_filter_summary(filter_, period, startdate, enddate, identities_db, 10)
             createJSON (summary, destdir+"/"+ filter_.get_summary_filename(SCM))
+
+            # Ages study
+            studies = Report.get_studies()
+            ages = None
+            for study in studies:
+                if study.id == "ages":
+                    ages = study
+
+            if ages is not None:
+                db_identities = Report.get_config()['generic']['db_identities']
+                dbuser = Report.get_config()['generic']['db_user']
+                dbpass = Report.get_config()['generic']['db_password']
+
+                if ds.get_name()+"_start_date" in Report.get_config()['r']:
+                    startdate = "'"+Report.get_config()['r'][ds.get_name()+"_start_date"]+"'"
+                if ds.get_name()+"_end_date" in Report.get_config()['r']:
+                    enddate = "'"+Report.get_config()['r'][ds.get_name()+"_end_date"]+"'"
+                ds_dbname = ds.get_db_name()
+                dbname = Report.get_config()['generic'][ds_dbname]
+                dsquery = ds.get_query_builder()
+                dbcon = dsquery(dbuser, dbpass, dbname, db_identities)
+
+                for item in items :
+                    filter_item = Filter(filter_name, item)
+                    metric_filters = MetricFilters(period, startdate, enddate, filter_item.get_type_analysis())
+                    obj = ages(dbcon, metric_filters)
+                    res = obj.create_report(ds, destdir)
+
+    @staticmethod
+    def _check_report_all_data(data, filter_, startdate, enddate, idb,
+                               evol = False, period = None):
+        # Check per item data with group by people data
+        items = SCM.get_filter_items(filter_, startdate, enddate, idb)
+        id_field = DSQuery.get_group_field(filter_.get_name())
+        id_field = id_field.split('.')[1] # remove table name
+        for i in range(0,len(items['name'])):
+            name = items['name'][i]
+            logging.info("Checking " + name + " " + str(i) + "/" + str(len(items['name'])))
+            if filter_.get_name() == "people2":
+                upeople_id = items['id'][i]
+                item = upeople_id
+            else:
+                item = name
+            pos = data[id_field].index(name)
+
+            type_analysis = [filter_.get_name(), item]
+            filter_item = Filter(filter_.get_name(), item)
+
+            if not evol:
+                if filter_.get_name() == "people2":
+                    agg = SCM.get_person_agg(upeople_id, startdate, enddate,
+                                             idb, type_analysis)
+                else:
+                    agg = SCM.get_agg_data(period, startdate, enddate,
+                                           idb, filter_item)
+                assert agg['commits' ] == data['commits'][pos]
+            else:
+                if filter_.get_name() == "people2":
+                    ts = SCM.get_person_evol(upeople_id, period,
+                                             startdate, enddate, idb, type_analysis)
+                else:
+                    ts = SCM.get_evolutionary_data(period, startdate, enddate,
+                                                   idb , filter_item)
+                assert ts['commits'] == data['commits'][pos]
+
+    @staticmethod
+    def create_filter_report_all(filter_, period, startdate, enddate, destdir, npeople, identities_db):
+        # New API for getting all metrics with one query
+        check = False # activate to debug issues
+        filter_name = filter_.get_name()
+
+        # Change filter to GrimoireLib notation
+        filter_name = filter_name.replace("+",",")
+
+        if filter_name in ["people2","company","company,country","country","repository","domain"] :
+            filter_all = Filter(filter_name, None)
+            agg_all = SCM.get_agg_data(period, startdate, enddate,
+                                       identities_db, filter_all)
+            fn = os.path.join(destdir, filter_.get_static_filename_all(SCM()))
+            createJSON(agg_all, fn)
+
+            evol_all = SCM.get_evolutionary_data(period, startdate, enddate,
+                                                 identities_db, filter_all)
+            fn = os.path.join(destdir, filter_.get_evolutionary_filename_all(SCM()))
+            createJSON(evol_all, fn)
+
+            # check is only done fpr basic filters. Composed should work if basic does.
+            if check and not "," in filter_name:
+                SCM._check_report_all_data(evol_all, filter_, startdate, enddate,
+                                           identities_db, True, period)
+                SCM._check_report_all_data(agg_all, filter_, startdate, enddate,
+                                           identities_db, False, period)
+        else:
+            logging.error(filter_name +" does not support yet group by items sql queries")
 
     @staticmethod
     def get_top_people(startdate, enddate, identities_db, npeople):
         top_authors_data = SCM.get_top_data (startdate, enddate, identities_db, None, npeople)
+        if "authors." not in top_authors_data.keys(): return None
         top = top_authors_data['authors.']["id"]
         top += top_authors_data['authors.last year']["id"]
         top += top_authors_data['authors.last month']["id"]
@@ -279,9 +410,10 @@ class SCM(DataSource):
     @staticmethod
     def create_r_reports(vizr, enddate, destdir):
         unique_ids = True
+        # Demographics - created now with age study in Python
         # Demographics
-        vizr.ReportDemographicsAgingSCM(enddate, destdir, unique_ids)
-        vizr.ReportDemographicsBirthSCM(enddate, destdir, unique_ids)
+        # vizr.ReportDemographicsAgingSCM(enddate, destdir, unique_ids)
+        # vizr.ReportDemographicsBirthSCM(enddate, destdir, unique_ids)
 
     @staticmethod
     def _remove_people(people_id):
@@ -373,57 +505,59 @@ class SCM(DataSource):
 
     @staticmethod
     def get_query_builder():
-        from query_builder import SCMQuery
+        from vizgrimoire.metrics.query_builder import SCMQuery
         return SCMQuery
 
     @staticmethod
     def get_metrics_core_agg():
-        m  = ['commits','authors','committers','branches','files','actions','lines','repositories']
+        m  = ['commits','authors','committers','branches','files','actions']
+        m += ['added_lines','removed_lines', 'repositories','newauthors']
         m += ['avg_commits', 'avg_files', 'avg_commits_author', 'avg_files_author']
         return m
 
     @staticmethod
     def get_metrics_core_ts():
-        m  = ['commits','authors','committers','branches','files','lines','repositories']
+        m  = ['commits','authors','committers','branches','files']
+        m += ['added_lines','removed_lines','repositories','newauthors']
         return m
 
     @staticmethod
     def get_metrics_core_trends():
-        return ['commits','authors','files','lines']
+        return ['commits','authors','files','lines','newauthors']
 
 #
 # People
 #
 
 def GetTablesOwnUniqueIdsSCM () :
-    return ('scmlog s, people_upeople pup')
+    return (' actions a, scmlog s, people_upeople pup')
 
 
 def GetFiltersOwnUniqueIdsSCM () :
-    return ('pup.people_id = s.author_id') 
+    return ('pup.people_id = s.author_id and s.id = a.commit_id ') 
 
 def GetPeopleListSCM (startdate, enddate) :
-    fields = "DISTINCT(pup.upeople_id) as pid, COUNT(s.id) as total"
+    fields = "DISTINCT(pup.upeople_id) as pid, COUNT(distinct(s.id)) as total"
     tables = GetTablesOwnUniqueIdsSCM()
     filters = GetFiltersOwnUniqueIdsSCM()
     filters +=" GROUP BY pid ORDER BY total desc, pid"
-    q = GetSQLGlobal('s.date',fields,tables, filters, startdate, enddate)
+    q = GetSQLGlobal('s.author_date',fields,tables, filters, startdate, enddate)
 
     data = ExecuteQuery(q)
     return (data)
 
 def GetPeopleQuerySCM (developer_id, period, startdate, enddate, evol) :
-    fields ='COUNT(s.id) AS commits'
+    fields ='COUNT(distinct(s.id)) AS commits'
     tables = GetTablesOwnUniqueIdsSCM()
     filters = GetFiltersOwnUniqueIdsSCM()
     filters +=" AND pup.upeople_id="+str(developer_id)
     if (evol) :
-        q = GetSQLPeriod(period,'s.date', fields, tables, filters,
+        q = GetSQLPeriod(period,'s.author_date', fields, tables, filters,
                 startdate, enddate)
     else :
-        fields += ",DATE_FORMAT (min(s.date),'%Y-%m-%d') as first_date, "+\
-                  "DATE_FORMAT (max(s.date),'%Y-%m-%d') as last_date"
-        q = GetSQLGlobal('s.date', fields, tables, filters, 
+        fields += ",DATE_FORMAT (min(s.author_date),'%Y-%m-%d') as first_date, "+\
+                  "DATE_FORMAT (max(s.author_date),'%Y-%m-%d') as last_date"
+        q = GetSQLGlobal('s.author_date', fields, tables, filters, 
                 startdate, enddate)
 
     return (q)
@@ -442,35 +576,6 @@ def GetStaticPeopleSCM (developer_id, startdate, enddate) :
     data = ExecuteQuery(q)
     return (data)
 
-def GetActiveAuthorsSCM(days, enddate):
-    #return unique ids of active authors during "days" day
-    # FIXME parameters should be: startdate and enddate
-    q0 = "SELECT distinct(pup.upeople_id) as active_authors "+\
-        "FROM scmlog s, people_upeople pup " +\
-        "WHERE pup.people_id = s.author_id and " +\
-        "s.date >= (%s - INTERVAL %s day)"
-    q1 = q0 % (enddate, days)
-    data = ExecuteQuery(q1)
-    return(data)
-
-def GetActiveCommittersSCM(days, enddate):
-    #return unique ids of active committers during "days" day
-    # FIXME parameters should be: startdate and enddate
-    q0 = "SELECT distinct(pup.upeople_id) as active_committers "+\
-         "FROM scmlog s, people_upeople pup " +\
-         "WHERE pup.people_id = s.committer_id and " + \
-         "s.date >= (%s - INTERVAL %s day)"
-    q1 = q0 % (enddate, days)
-    data = ExecuteQuery(q1)
-    return(data)
-
-def GetActivePeopleSCM(days, enddate):
-    #Gets IDs of active people on the repository during last x days
-    authors = GetActiveAuthorsSCM(days, enddate)
-    committers = GetActiveCommittersSCM(days, enddate)
-    people_scm = authors['active_authors'] + committers['active_committers']
-    people_scm = list(set(people_scm))
-    return(people_scm)
 
 def GetCommunityMembers():
     #Gets IDs of all community members with no filter
@@ -490,25 +595,6 @@ def top_files_modified () :
     data = ExecuteQuery(q)
     return (data)	
 
-def top_authors_year (year, limit) :
-    # Given a year, this functions provides the top 10 authors 
-    # of such year
-    q = "SELECT u.id as id, u.identifier as authors, "+\
-        "       count(distinct(s.id)) as commits "+\
-        "FROM scmlog s, actions a, "+\
-        "     people_upeople pup, "+\
-        "     upeople u "+\
-        "where s.id = a.commit_id and " +\
-        "      s.author_id = pup.people_id and "+\
-        "      pup.upeople_id = u.id and "+\
-        "      year(s.date) = "+year+" "+\
-        "group by u.identifier "+\
-        "order by commits desc "+\
-        "LIMIT " + limit
-
-    data = ExecuteQuery(q)
-    return (data)
-
 
 def people () :
     # List of people participating in the source code development
@@ -516,81 +602,6 @@ def people () :
     q = "select id,identifier from upeople"
 
     data = ExecuteQuery(q)
-    return (data);
-
-# Companies / Countries support
-
-def scm_companies_countries_evol (identities_db, company, country, period, startdate, enddate) :
-
-    rol = "author" #committer
-
-    q = "SELECT ((to_days(s.date) - to_days("+startdate+")) div "+str(period)+") as id, "+\
-        "count(s.id) AS commits, "+\
-        "COUNT(DISTINCT(s."+rol+"_id)) as "+rol+"s "+\
-        "FROM scmlog s,  "+\
-        "     people_upeople pup, "+\
-        "     "+identities_db+".countries ct, "+\
-        "     "+identities_db+".upeople_countries upct, "+\
-        "     "+identities_db+".companies com, "+\
-        "     "+identities_db+".upeople_companies upcom "+\
-        "WHERE pup.people_id = s."+rol+"_id AND "+\
-        "      pup.upeople_id  = upct.upeople_id and "+\
-        "      pup.upeople_id = upcom.upeople_id AND "+\
-        "      upcom.company_id = com.id AND "+\
-        "      upct.country_id = ct.id and "+\
-        "      s.date >="+ startdate+ " and "+\
-        "      s.date < "+ enddate+ " and "+\
-        "      ct.name = '"+ country+ "' AND "+\
-        "      com.name ='"+company+"' "+\
-        "GROUP BY ((to_days(s.date) - to_days("+startdate+")) div "+str(period)+")"
-
-    data = ExecuteQuery(q)	
     return (data)
 
-##############
-# Micro Studies
-##############
 
-def GetCommitsSummaryCompanies (period, startdate, enddate, identities_db, num_companies):
-    # This function returns the following dataframe structrure
-    # unixtime, date, week/month/..., company1, company2, ... company[num_companies -1], others
-    # The 3 first fields are used for data and ordering purposes
-    # The "companyX" fields are those that provide info about that company
-    # The "Others" field is the aggregated value of the rest of the companies
-    # Companies above num_companies will be aggregated in Others
-
-    metric = DataSource.get_metrics("companies", SCM)
-    companies = metric.get_list()
-    companies = companies['name']
-
-    first_companies = {}
-    count = 1
-    for company in companies:
-        company_name = "'"+company+"'"
-        type_analysis = ['company', company_name]
-        mcommits = DataSource.get_metrics("commits", SCM)
-        mfilter = MetricFilters(period, startdate, enddate, type_analysis)
-        mfilter_orig = mcommits.filters
-        mcommits.filters = mfilter
-        commits = mcommits.get_ts()
-        mcommits.filters = mfilter_orig
-        # commits = EvolCommits(period, startdate, enddate, identities_db, ["company", company_name])
-        # commits = completePeriodIds(commits, period, startdate, enddate)
-        # Rename field commits to company name
-        commits[company] = commits["commits"]
-        del commits['commits']
-
-        if (count <= num_companies):
-            #Case of companies with entity in the dataset
-            first_companies = dict(first_companies.items() + commits.items())
-        else :
-            #Case of companies that are aggregated in the field Others
-            if 'Others' not in first_companies:
-                first_companies['Others'] = commits[company]
-            else:
-                first_companies['Others'] = [a+b for a, b in zip(first_companies['Others'],commits[company])]
-        count = count + 1
-
-    #TODO: remove global variables...
-    first_companies = completePeriodIds(first_companies, period, startdate, enddate)
-    return(first_companies)

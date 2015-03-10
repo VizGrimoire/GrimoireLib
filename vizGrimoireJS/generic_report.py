@@ -197,7 +197,7 @@ def scm_report(dbcon, filters, output_dir):
 
     dataset = {}
 
-    from onion_model import CommunityStructure
+    from vizgrimoire.analysis.onion_model import CommunityStructure
     onion = CommunityStructure(dbcon, filters)
     result = onion.result()
 
@@ -231,7 +231,7 @@ def its_report(dbcon, filters):
 
     dataset = {}
 
-    from ITS import ITS
+    from vizgrimoire.ITS import ITS
     ITS.set_backend("launchpad")
 
     opened = its.Opened(dbcon, filters)
@@ -310,7 +310,7 @@ def mls_report(dbcon, filters, output_dir):
     senders_init = mls.SendersInit(dbcon, filters)
     dataset["mls_senders_init"] = senders_init.get_agg()["senders_init"]
 
-    from threads import Threads
+    from vizgrimoire.analysis.threads import Threads
     SetDBChannel(dbcon.user, dbcon.password, dbcon.database)
     threads = Threads(filters.startdate, filters.enddate, dbcon.identities_db)
     top_longest_threads = threads.topLongestThread(10)
@@ -352,7 +352,7 @@ def qaforums_report(dbcon, filters, output_dir):
     q_senders = qa.QuestionSenders(dbcon, filters)
     dataset["qa_qsenders"] = q_senders.get_agg()["qsenders"]
 
-    import top_questions_qaforums as top
+    import vizgrimoire.analysis.top_questions_qaforums as top
     tops = top.TopQuestions(dbcon, filters)
     commented = tops.top_commented()
     commented["qid"] = commented.pop("question_identifier")
@@ -466,17 +466,17 @@ if __name__ == '__main__':
 
     init_env()
 
-    from metrics import Metrics
-    from query_builder import DSQuery, SCMQuery, QAForumsQuery, MLSQuery, SCRQuery, ITSQuery, IRCQuery
-    from metrics_filter import MetricFilters
-    import scm_metrics as scm
-    import qaforums_metrics as qa
-    import mls_metrics as mls
-    import scr_metrics as scr
-    import its_metrics as its
-    import irc_metrics as irc
-    from GrimoireUtils import createJSON
-    from GrimoireSQL import SetDBChannel
+    from vizgrimoire.metrics.metrics import Metrics
+    from vizgrimoire.metrics.query_builder import DSQuery, SCMQuery, QAForumsQuery, MLSQuery, SCRQuery, ITSQuery, IRCQuery
+    from vizgrimoire.metrics.metrics_filter import MetricFilters
+    import vizgrimoire.metrics.scm_metrics as scm
+    import vizgrimoire.metrics.qaforums_metrics as qa
+    import vizgrimoire.metrics.mls_metrics as mls
+    import vizgrimoire.metrics.scr_metrics as scr
+    import vizgrimoire.metrics.its_metrics as its
+    import vizgrimoire.metrics.irc_metrics as irc
+    from vizgrimoire.GrimoireUtils import createJSON
+    from vizgrimoire.GrimoireSQL import SetDBChannel
 
     # parse options
     opts = read_options()    

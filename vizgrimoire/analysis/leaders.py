@@ -24,13 +24,13 @@
 
 import numpy as np
 
-from analyses import Analyses
+from vizgrimoire.analysis.analyses import Analyses
 
-from query_builder import SCMQuery
+from vizgrimoire.metrics.query_builder import SCMQuery
 
-from metrics_filter import MetricFilters
+from vizgrimoire.metrics.metrics_filter import MetricFilters
 
-from scm_metrics import Commits
+from vizgrimoire.metrics.scm_metrics import Commits
 
 class Leaders(Analyses):
     # This class aims at being a meta-class that contains several analyses
@@ -90,8 +90,8 @@ class SCMLeaders(Leaders):
                 where a.commit_id = s.id and 
                       s.author_id = pup.people_id and 
                       pup.upeople_id = u.id and
-                      s.date >= %s and
-                      s.date < %s
+                      s.author_date >= %s and
+                      s.author_date < %s
                 """ % (self.filters.startdate, self.filters.enddate)
         group = " group by u.id order by count(distinct(s.id)) desc limit " + str(self.filters.npeople)
 
@@ -121,10 +121,10 @@ class SCMLeaders(Leaders):
                       s.author_id=pup.people_id and 
                       pup.upeople_id = upc.upeople_id and 
                       upc.company_id=c.id and 
-                      s.date>=upc.init and 
-                      s.date<upc.end and
-                      s.date >= %s and
-                      s.date < %s
+                      s.author_date>=upc.init and 
+                      s.author_date<upc.end and
+                      s.author_date >= %s and
+                      s.author_date < %s
                 """ % (self.filters.startdate, self.filters.enddate)
         group = " group by c.name order by count(distinct(s.id)) desc limit " + str(self.filters.npeople)
 

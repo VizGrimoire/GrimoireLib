@@ -23,19 +23,19 @@
 
 import logging
 
-import os
+import os, re
 
 import datetime
 
-from GrimoireSQL import GetSQLGlobal, GetSQLPeriod, ExecuteQuery, BuildQuery
+from vizgrimoire.GrimoireSQL import GetSQLGlobal, GetSQLPeriod, ExecuteQuery, BuildQuery
 
-from GrimoireUtils import GetPercentageDiff, GetDates, getPeriod, createJSON, completePeriodIds
+from vizgrimoire.GrimoireUtils import GetPercentageDiff, GetDates, getPeriod, createJSON, completePeriodIds
 
-from data_source import DataSource
+from vizgrimoire.data_source import DataSource
 
-from filter import Filter
+from vizgrimoire.filter import Filter
 
-from metrics_filter import MetricFilters
+from vizgrimoire.metrics.metrics_filter import MetricFilters
 
 
 class QAForums(DataSource):
@@ -43,7 +43,8 @@ class QAForums(DataSource):
 
     @staticmethod
     def get_db_name():
-        return "db_qaforums"
+        # return "db_qaforums"
+        return "db_sibyl"
 
     @staticmethod
     def get_name():
@@ -91,6 +92,10 @@ class QAForums(DataSource):
         data = QAForums.get_agg_data(period, startdate, enddate, i_db, filter_)
         filename = QAForums().get_agg_filename()
         createJSON(data, os.path.join(destdir, filename))
+
+    @staticmethod
+    def get_top_metrics ():
+        return ["csenders","asenders","qsenders","participants"]
 
     @staticmethod
     def get_top_data(startdate, enddate, identities_db, filter_, npeople):
@@ -143,6 +148,9 @@ class QAForums(DataSource):
             metric = DataSource.get_metrics("tags", QAForums)
             # items = QAForums.tags_name(startdate, enddate)
             items = metric.get_list()
+        if (filter_name == "people2"):
+            metric = DataSource.get_metrics("participants", QAForums)
+            items = metric.get_list()
         else:
             logging.error("QAForums " + filter_name + " not supported")
 
@@ -158,18 +166,26 @@ class QAForums(DataSource):
 
     @staticmethod
     def create_filter_report(filter_, period, startdate, enddate, destdir, npeople, identities_db):
-        items =  QAForums.get_filter_items(filter_, startdate, enddate, identities_db)
-        if items == None:
-            return
-        items = items['name']
+        from vizgrimoire.report import Report
+        items = Report.get_items()
+        if items is None:
+            items =  QAForums.get_filter_items(filter_, startdate, enddate, identities_db)
+            if items == None:
+                return
+            items = items['name']
   
         filter_name = filter_.get_name()
 
         if not isinstance(items, list):
             items = [items]
 
+        file_items = []
+        for item in items:
+            if re.compile("^\..*").match(item) is not None: item = "_"+item
+            file_items.append(item)
+
         fn = os.path.join(destdir, filter_.get_filename(QAForums()))
-        createJSON(items, fn)
+        createJSON(file_items, fn)
         for item in items:
             logging.info(item)
             filter_item = Filter(filter_.get_name(), item)
@@ -183,8 +199,26 @@ class QAForums(DataSource):
             createJSON(agg, fn)
 
     @staticmethod
+    def create_filter_report_all(filter_, period, startdate, enddate, destdir, npeople, identities_db):
+        filter_name = filter_.get_name()
+        if filter_name == "people2" or filter_name == "company_off":
+            filter_all = Filter(filter_name, None)
+            agg_all = QAForums.get_agg_data(period, startdate, enddate,
+                                            identities_db, filter_all)
+            fn = os.path.join(destdir, filter_.get_static_filename_all(QAForums()))
+            createJSON(agg_all, fn)
+
+            evol_all = QAForums.get_evolutionary_data(period, startdate, enddate,
+                                                 identities_db, filter_all)
+            fn = os.path.join(destdir, filter_.get_evolutionary_filename_all(QAForums()))
+            createJSON(evol_all, fn)
+        else:
+            logging.error(QAForums.get_name()+ " " + filter_name +" does not support yet group by items sql queries")
+
+
+    @staticmethod
     def get_query_builder ():
-        from query_builder import QAForumsQuery
+        from vizgrimoire.metrics.query_builder import QAForumsQuery
         return QAForumsQuery
 
     @staticmethod
@@ -193,8 +227,16 @@ class QAForums(DataSource):
 
     @staticmethod
     def get_metrics_core_ts():
-        return ['qsent','asent','csent','qsenders','asenders','csenders','participants']
+        return ['qsent','asent','csent', 'unanswered', 'qsenders','asenders','csenders','participants']
 
     @staticmethod
     def get_metrics_core_trends():
         return ['qsent','asent','csent','qsenders','asenders','csenders','participants']
+
+    @staticmethod
+    def get_person_evol(upeople_id, period, startdate, enddate, identities_db, type_analysis):
+        pass
+
+    @staticmethod
+    def get_person_agg(upeople_id, startdate, enddate, identities_db, type_analysis):
+        pass

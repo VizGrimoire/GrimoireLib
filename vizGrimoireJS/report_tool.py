@@ -52,12 +52,12 @@ def create_agg_report(startdate, enddate, destdir, identities_db):
         Report.connect_ds(ds)
         ds.create_agg_report (period, startdate, enddate, destdir, identities_db)
 
-def get_top_report(startdate, enddate, identities_db, npeople):
+def get_top_report(startdate, enddate, npeople, identities_db):
     all_ds_top = {}
 
     for ds in Report.get_data_sources():
         Report.connect_ds(ds)
-        top = ds.get_top_data (startdate, enddate, identities_db, npeople)
+        top = ds.get_top_data (startdate, enddate, identities_db, None, npeople)
         all_ds_top[ds.get_name()] = top 
     return all_ds_top
 
@@ -73,24 +73,31 @@ def create_reports_filters(period, startdate, enddate, destdir, npeople, identit
         logging.info("Creating filter reports for " + ds.get_name())
         for filter_ in Report.get_filters():
             logging.info("-> " + filter_.get_name())
-            ds.create_filter_report(filter_, period, startdate, enddate, destdir, npeople, identities_db)
+            # Tested in all this filters the group by
+            # if filter_.get_name() in ["people2","company","company+country","country","repository","domain"]:
+            if filter_.get_name() in ["people2","company+country"]:
+                logging.info("---> Using new filter API")
+                ds.create_filter_report_all(filter_, period, startdate, enddate, 
+                                            destdir, npeople, identities_db)
+            else:
+                ds.create_filter_report(filter_, period, startdate, enddate, destdir, npeople, identities_db)
 
-def create_report_people(startdate, enddate, destdir, npeople, identities_db):
+def create_report_people(startdate, enddate, destdir, npeople, identities_db, people_ids=None):
     for ds in Report.get_data_sources():
         Report.connect_ds(ds)
         logging.info("Creating people for " + ds.get_name())
-        ds().create_people_report(period, startdate, enddate, destdir, npeople, identities_db)
+        ds().create_people_report(period, startdate, enddate, destdir, npeople, identities_db, people_ids)
 
 def get_top_people (startdate, enddate, idb):
     """Top people for all data sources."""
-    import GrimoireSQL
-    from SCR import SCR
-    from MLS import MLS
-    from ITS import ITS
-    from IRC import IRC
-    from Mediawiki import Mediawiki
-    from metrics_filter import MetricFilters
-    from data_source import DataSource
+    import vizgrimoire.GrimoireSQL
+    from vizgrimoire.SCR import SCR
+    from vizgrimoire.MLS import MLS
+    from vizgrimoire.ITS import ITS
+    from vizgrimoire.IRC import IRC
+    from vizgrimoire.Mediawiki import Mediawiki
+    from vizgrimoire.metrics.metrics_filter import MetricFilters
+    from vizgrimoire.data_source import DataSource
     npeople = "10000" # max limit, all people included
     min_data_sources = 4 # min data sources to be in the list
     tops = {}
@@ -138,6 +145,7 @@ def create_reports_r(enddate, destdir):
     vizr = importr("vizgrimoire")
 
     for ds in Report.get_data_sources():
+	if ds.get_name() != "its": continue
         automator = Report.get_config()
         db = automator['generic'][ds.get_db_name()]
         dbuser = Report._automator['generic']['db_user']
@@ -146,44 +154,52 @@ def create_reports_r(enddate, destdir):
         logging.info("Creating R reports for " + ds.get_name())
         ds.create_r_reports(vizr, enddate, destdir)
 
-def create_people_identifiers(startdate, enddate, destdir, idb):
+def create_people_identifiers(startdate, enddate, destdir, npeople, identities_db):
+    from vizgrimoire.GrimoireUtils import check_array_values
     logging.info("Generating people identifiers")
 
-    from SCM import GetPeopleListSCM
-    import People, GrimoireSQL
+    people = get_top_report(startdate, enddate, npeople, identities_db);
+    people_ids = [] # upeople_ids which need identifiers
+    people_data = {} # identifiers for upeople_ids
+    ds_scm = Report.get_data_source("scm")
+    if ds_scm is None:
+        # Without SCM (identities) data source can not continue
+        return
 
-    scm = None
     for ds in Report.get_data_sources():
-        if ds.get_name() == "scm":
-            scm = ds
-            break
-    if scm == None: return
+        periods = [".",".last year",".last month"]
+        top_names = ds.get_top_metrics();
+        for period in periods:
+            for top_name in top_names:
+                if top_name+period in people[ds.get_name()]:
+                    if 'id' in people[ds.get_name()][top_name+period]:
+                        people_ids += check_array_values(people[ds.get_name()][top_name+period])['id']
+    people_ids = list(set(people_ids))
 
-    Report.connect_ds(scm)
+    from vizgrimoire.SCM import GetPeopleListSCM
+    import vizgrimoire.People as People
 
-    people_data = {}
-    people = GetPeopleListSCM(startdate, enddate)
-    people = people['pid']
-    limit = 100
-    if (len(people)<limit): limit = len(people);
-    people = people[0:limit]
+    # TODO: Identities db is the same than SCM
+    Report.connect_ds(ds_scm)
 
-    for upeople_id in people:
+    for upeople_id in people_ids:
         people_data[upeople_id] = People.GetPersonIdentifiers(upeople_id)
 
     all_top_min_ds = get_top_people(startdate, enddate, idb)
     print(all_top_min_ds)
 
     db = automator['generic']['db_cvsanaly']
-    GrimoireSQL.SetDBChannel (database=db, user=opts.dbuser, password=opts.dbpassword)
+    vizgrimoire.GrimoireSQL.SetDBChannel (database=db, user=opts.dbuser, password=opts.dbpassword)
 
     for upeople_id in all_top_min_ds:
         people_data[upeople_id] = People.GetPersonIdentifiers(upeople_id)
 
     createJSON(people_data, destdir+"/people.json")
 
+    return people_ids
+
 def create_reports_studies(period, startdate, enddate, destdir):
-    from metrics_filter import MetricFilters
+    from vizgrimoire.metrics.metrics_filter import MetricFilters
 
     db_identities= Report.get_config()['generic']['db_identities']
     dbuser = Report.get_config()['generic']['db_user']
@@ -198,7 +214,7 @@ def create_reports_studies(period, startdate, enddate, destdir):
         dbname = Report.get_config()['generic'][ds_dbname]
         dsquery = ds.get_query_builder()
         dbcon = dsquery(dbuser, dbpass, dbname, db_identities)
-        logging.info("Studies active " + str(studies))
+        # logging.info(ds.get_name() + " studies active " + str(studies))
         for study in studies:
             # logging.info("Creating report for " + study.id + " for " + ds.get_name())
             try:
@@ -209,6 +225,13 @@ def create_reports_studies(period, startdate, enddate, destdir):
                 logging.info(study.id + " does no support standard API. Not used.")
                 traceback.print_exc(file=sys.stdout)
                 continue
+
+def create_events(startdate, enddate, destdir):
+    for ds in Report.get_data_sources():
+        if ds.get_name() != "scm": continue
+        logging.info("EVENTS for " + ds.get_name())
+        events = ds.get_events()
+        createJSON(events, destdir+"/"+ds.get_name()+"-events.json")
 
 def set_data_source(ds_name):
     ds_ok = False
@@ -224,13 +247,14 @@ def set_data_source(ds_name):
         sys.exit(1)
     return DS
 
-def set_filter(filter_name):
+def set_filter(filter_name, item = None):
     filter_ok = False
     filters_active = Report.get_filters()
     for filter_ in filters_active:
         if filter_.get_name() == opts.filter:
             filter_ok = True
             Report.set_filters([filter_])
+            if item is not None: Report.set_items([item])
     if not filter_ok:
         logging.error(opts.filter + " filter not available")
         sys.exit(1)
@@ -244,6 +268,7 @@ def set_metric(metric_name, ds_name):
         if metric.id == metric_name:
             metric_ok = True
             DS.set_metrics_set(DS, [metric])
+            logging.info("[metric] " + metric.name + " configured")
     if not metric_ok:
         logging.error(metric_name + " metric not available in " + DS.get_name())
         sys.exit(1)
@@ -261,13 +286,6 @@ def set_study(study_id):
         sys.exit(1)
 
 def init_env():
-    grimoirelib = os.path.join("..","vizgrimoire")
-    metricslib = os.path.join("..","vizgrimoire","metrics")
-    studieslib = os.path.join("..","vizgrimoire","analysis")
-    alchemy = os.path.join("..")
-    for dir in [grimoirelib,metricslib,studieslib,alchemy]:
-        sys.path.append(dir)
-
     # env vars for R
     os.environ["LANG"] = ""
     os.environ["R_LIBS"] = "../../r-lib"
@@ -275,13 +293,12 @@ def init_env():
 if __name__ == '__main__':
 
     init_env()
-    from GrimoireUtils import getPeriod, read_main_conf, createJSON
-    from report import Report
+    from vizgrimoire.GrimoireUtils import getPeriod, read_main_conf, createJSON
+    from vizgrimoire.report import Report
 
     logging.basicConfig(level=logging.INFO,format='%(asctime)s %(message)s')
     logging.info("Starting Report analysis")
     opts = read_options()
-    reports = opts.reports.split(",")
 
     Report.init(opts.config_file, opts.metrics_path)
 
@@ -315,35 +332,33 @@ if __name__ == '__main__':
     if (opts.data_source):
         set_data_source(opts.data_source)
     if (opts.filter):
-        set_filter(opts.filter)
+        set_filter(opts.filter, opts.item)
     if (opts.metric):
         set_metric(opts.metric, opts.data_source)
     if (opts.study):
         set_study(opts.study)
+    if (opts.events):
+        create_events(startdate, enddate, opts.destdir)
+        logging.info("Events generated OK")
+        sys.exit(0)
 
     if not opts.filter and not opts.study:
         logging.info("Creating global evolution metrics...")
         evol = create_evol_report(startdate, enddate, opts.destdir, identities_db)
         logging.info("Creating global aggregated metrics...")
         agg = create_agg_report(startdate, enddate, opts.destdir, identities_db)
-        logging.info("Creating global top metrics...")
-        top = create_top_report(startdate, enddate, opts.destdir, opts.npeople, identities_db)
-        if (automator['r']['reports'].find('people')>-1):
-            create_report_people(startdate, enddate, opts.destdir, opts.npeople, identities_db)
-        create_reports_r(end_date, opts.destdir)
-        create_people_identifiers(startdate, enddate, opts.destdir, identities_db)
+        if not opts.metric:
+            people_ids = create_people_identifiers(startdate, enddate, opts.destdir, opts.npeople, identities_db)
 
-    if not opts.study and not opts.no_filters:
-        create_reports_filters(period, startdate, enddate, opts.destdir, opts.npeople, identities_db)
-    if not opts.filter:
-        create_reports_studies(period, startdate, enddate, opts.destdir)
-    create_top_people_report(startdate, enddate, opts.destdir, identities_db)
-    create_people_identifiers(startdate, enddate, opts.destdir, identities_db)
+            logging.info("Creating global top metrics...")
+            top = create_top_report(startdate, enddate, opts.destdir, opts.npeople, identities_db)
+            if (automator['r']['reports'].find('people')>-1):
+                create_report_people(startdate, enddate, opts.destdir, opts.npeople, identities_db, people_ids)
+            # create_reports_r(end_date, opts.destdir)
 
-    if not opts.study and not opts.no_filters:
+    if not opts.study and not opts.no_filters and not opts.metric:
         create_reports_filters(period, startdate, enddate, opts.destdir, opts.npeople, identities_db)
-    if not opts.filter:
+    if not opts.filter and not opts.metric and not opts.item:
         create_reports_studies(period, startdate, enddate, opts.destdir)
-    create_people_identifiers(startdate, enddate, opts.destdir, identities_db)
 
     logging.info("Report data source analysis OK")

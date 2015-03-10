@@ -27,11 +27,11 @@ from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
 
 
-from analyses import Analyses
-from query_builder import DSQuery
-from metrics_filter import MetricFilters
-from GrimoireUtils import createJSON
-from SCR import SCR
+from vizgrimoire.analysis.analyses import Analyses
+from vizgrimoire.metrics.query_builder import DSQuery
+from vizgrimoire.metrics.metrics_filter import MetricFilters
+from vizgrimoire.GrimoireUtils import createJSON
+from vizgrimoire.SCR import SCR
 
 class QuartersData(Analyses):
     id = "quarters_data"
@@ -54,7 +54,7 @@ class QuartersData(Analyses):
         # people = self.db.GetPeopleList("'"+startdate+"'", "'"+enddate+"'", SCR.get_bots())
         people = self.db.GetPeopleList(startdate, enddate, bots)
         createJSON(people, destdir+"/scr-people-all.json", False)
-        companies = self.db.GetCompaniesName(startdate, enddate, self.db.identities_db)
+        companies = self.db.GetCompaniesName(startdate, enddate)
         createJSON(companies, destdir+"/scr-companies-all.json", False)
 
         start = datetime.strptime(startdate.replace("'",""), "%Y-%m-%d")
@@ -71,9 +71,9 @@ class QuartersData(Analyses):
             year = start.year
             quarter = (i%4)+1
             # logging.info("Analyzing companies and people quarter " + str(year) + " " +  str(quarter))
-            data = self.db.GetCompaniesQuarters(year, quarter, idb)
+            data = self.db.GetCompaniesQuarters(year, quarter)
             companies_quarters[str(year)+" "+str(quarter)] = data
-            data_people = self.db.GetPeopleQuarters(year, quarter, idb, 25, bots)
+            data_people = self.db.GetPeopleQuarters(year, quarter, 25, bots)
             people_quarters[str(year)+" "+str(quarter)] = data_people
             start = start + relativedelta(months=3)
         createJSON(companies_quarters, destdir+"/scr-companies-quarters.json")

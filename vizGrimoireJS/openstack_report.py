@@ -22,8 +22,8 @@
 ##   Daniel Izquierdo-Cortazar <dizquierdo@bitergia.com>
 ##   Luis Cañas-Díaz <lcanas@bitergia.com>
 ##
-## python openstack_report.py -a dic_cvsanaly_openstack_2259 -d dic_bicho_openstack_gerrit_3392_bis -i dic_cvsanaly_openstack_2259 -r 2013-07-01,2013-10-01,2014-01-01,2014-04-01,2014-07-01 -c lcanas_bicho_openstack_1376 -b lcanas_mlstats_openstack_1376 -f dic_sibyl_openstack_3194_new -e dic_irc_openstack_3277
-
+## python openstack_report.py -a dic_cvsanaly_openstack_4114 -d dic_bicho_gerrit_openstack_3359_bis4 -i dic_cvsanaly_openstack_4114 -r 2013-01-01,2013-04-01,2013-07-01,2013-10-01,2014-01-01,2014-04-01,2014-07-01,2014-10-01,2015-01-01 -c lcanas_bicho_openstack_1376_bis -b lcanas_mlstats_openstack_1376 -f dic_sibyl_openstack_3194_new -e dic_irc_openstack_3277
+## python openstack_report.py -a openstack_2014q4_git -d openstack_2014q4_gerrit -i openstack_2014q4_git -r 2013-01-01,2013-04-01,2013-07-01,2013-10-01,2014-01-01,2014-04-01,2014-07-01,2014-10-01,2015-01-01 -c openstack_2014q4_tickets -b openstack_2014q4_mailinglists -f openstack_2014q4_qaforums -e openstack_2014q4_irc
 
 import imp, inspect
 from optparse import OptionParser
@@ -40,6 +40,31 @@ import prettyplotlib as ppl
 from prettyplotlib import brewer2mpl
 import numpy as np
 from datetime import datetime
+#from data_handler import DHESA
+
+
+def bar3_chart(title, labels, data1, file_name, data2, data3, legend=["", ""]):
+
+    colors = ["orange", "grey"]
+
+    fig, ax = plt.subplots(1)
+    xpos = np.arange(len(data1))
+    width = 0.28
+
+    plt.title(title)
+    y_pos = np.arange(len(data1))
+
+    ppl.bar(xpos+width+width, data3, color="orange", width=0.28, annotate=True)
+    ppl.bar(xpos+width, data1, color='grey', width=0.28, annotate=True)
+    ppl.bar(xpos, data2, grid='y', width = 0.28, annotate=True)
+    plt.xticks(xpos+width, labels)
+    plt.legend(legend, loc=2)
+
+
+    plt.savefig(file_name + ".eps")
+    plt.close()
+
+
 
 def bar_chart(title, labels, data1, file_name, data2 = None, legend=["", ""]):
 
@@ -56,7 +81,7 @@ def bar_chart(title, labels, data1, file_name, data2 = None, legend=["", ""]):
         ppl.bar(xpos+width, data1, color="orange", width=0.35, annotate=True)
         ppl.bar(xpos, data2, grid='y', width = 0.35, annotate=True)
         plt.xticks(xpos+width, labels)
-        plt.legend(legend)
+        plt.legend(legend, loc=2)
 
     else:
         ppl.bar(xpos, data1, grid='y', annotate=True)
@@ -79,22 +104,6 @@ def ts_chart(title, unixtime_dates, data, file_name):
     ppl.plot(dates, data)
     fig.autofmt_xdate()
     fig.savefig(file_name + ".eps")
-
-
-def barh_chart(title, yvalues, xvalues, file_name):
-
-    fig, ax = plt.subplots(1)
-    x_pos = np.arange(len(xvalues))
-
-    plt.title(title)
-    y_pos = np.arange(len(yvalues))
-
-    #plt.barh(y_pos, xvalues)
-    ppl.barh(y_pos, xvalues, grid='x')
-    ppl.barh(y_pos, xvalues, grid='x')
-    plt.yticks(y_pos, yvalues)
-    plt.savefig(file_name + ".eps")
-    plt.close()
 
 
 def read_options():
@@ -186,7 +195,9 @@ def build_releases(releases_dates):
     return releases
 
 def scm_general(dbcon, filters):
-    from onion_model import CommunityStructure
+    # Aggregated information for SCM data source
+
+    from vizgrimoire.analysis.onion_model import CommunityStructure
     onion = CommunityStructure(dbcon, filters)
     result = onion.result()
 
@@ -205,6 +216,7 @@ def scm_general(dbcon, filters):
     return dataset
 
 def scm_report(dbcon, filters):
+    # Per release aggregated information
 
     project_name = filters.type_analysis[1]
     project_name = project_name.replace(" ", "")
@@ -220,29 +232,38 @@ def scm_report(dbcon, filters):
     dataset["authors"] = authors.get_agg()["authors"]
 
     # tops authors activity
-    #from top_authors_projects import TopAuthorsProjects
-    #top_authors = TopAuthorsProjects(dbcon, filters)
     top_authors = authors.get_list()
+    if not isinstance(top_authors["commits"], list):
+        top_authors["commits"] = [top_authors["commits"]]
+        top_authors["id"] = [top_authors["id"]]
+        top_authors["authors"] = [top_authors["authors"]]
     createJSON(top_authors, "./release/scm_top_authors_project_"+project_name+".json")
     createCSV(top_authors, "./release/scm_top_authors_project_"+project_name+".csv", ["id"])
 
     # top companies activity
-    from top_companies_projects import TopCompaniesProjects
-    #top_companies = TopCompaniesProjects(dbcon, filters)
-    #top_companies = top_companies.result()
     companies = scm.Companies(dbcon, filters)
     top_companies = companies.get_list(filters)
+    if not isinstance(top_companies["company_commits"], list):
+        top_companies["company_commits"] = [top_companies["company_commits"]]
+        top_companies["companies"] = [top_companies["companies"]]
     createJSON(top_companies, "./release/scm_top_companies_project_"+project_name+".json")
     createCSV(top_companies, "./release/scm_top_companies_project_"+project_name+".csv")
 
     return dataset
 
 def its_report(dbcon, filters):
-    from ITS import ITS
+    # Per release its information
+
+    from vizgrimoire.ITS import ITS
     ITS.set_backend("launchpad")
 
     project_name = filters.type_analysis[1]
     project_name = project_name.replace(" ", "")
+    if project_name == 'Documentation':
+        ITS._get_backend().closed_condition = "(new_value='Fix Committed' or new_value='Fix Released')"
+    else:
+        ITS.closed_condition = "(new_value='Fix Committed')"
+
     opened = its.Opened(dbcon, filters)
     createJSON(opened.get_agg(), "./release/its_opened_"+project_name+".json")
     closed = its.Closed(dbcon, filters)
@@ -256,7 +277,7 @@ def its_report(dbcon, filters):
 
 
 def scr_report(dbcon, filters):
-
+    # Per release code review information
     project_name = filters.type_analysis[1]
     project_name = project_name.replace(" ", "")
 
@@ -270,28 +291,68 @@ def scr_report(dbcon, filters):
     abandoned = scr.Abandoned(dbcon, filters)
     createJSON(abandoned.get_agg(), "./release/scr_abandoned_"+project_name+".json")
 
-    waiting4reviewer = scr.ReviewsWaitingForReviewer(dbcon, filters)
-    createJSON(waiting4reviewer.get_agg(), "./release/scr_waiting4reviewer_"+project_name+".json")
+    bmi = scr.BMISCR(dbcon, filters)
+    createJSON(bmi.get_agg(), "./release_scr_bmi_"+project_name+".json")
 
-    waiting4submitter = scr.ReviewsWaitingForSubmitter(dbcon, filters)
-    createJSON(waiting4submitter.get_agg(), "./release/scr_waiting4submitter_"+project_name+".json")
+    active_core = scr.ActiveCoreReviewers(dbcon, filters)
+    createJSON(active_core.get_agg(), "./release/scr_activecore_"+project_name+".json")
+
+    iterations = scr.PatchesPerReview(dbcon, filters)
+    createJSON(iterations.get_agg()["median"], "./release/scr_iterations_"+project_name+".json")
+
+    #waiting4reviewer = scr.ReviewsWaitingForReviewer(dbcon, filters)
+    #createJSON(waiting4reviewer.get_agg(), "./release/scr_waiting4reviewer_"+project_name+".json")
+
+    #waiting4submitter = scr.ReviewsWaitingForSubmitter(dbcon, filters)
+    #createJSON(waiting4submitter.get_agg(), "./release/scr_waiting4submitter_"+project_name+".json")
 
     filters.period = "month"
     time2review = scr.TimeToReview(dbcon, filters)
+
+    time2reviewpatch = scr.TimeToReviewPatch(dbcon, filters)
+    time2 = time2reviewpatch.get_agg()
+
+    time_list = time2["waitingtime4reviewer"]
+    waiting4reviewer_times = []
+    for time in time_list:
+        if time >= 0:
+            waiting4reviewer_times.append(time)
+    data = DHESA(waiting4reviewer_times)
+    waiting4reviewer_mean = float(data.data["mean"]) / 86400.0 # seconds in a day
+    waiting4reviewer_median = float(data.data["median"]) / 86400.0
+
+    
+    time_list = time2["waitingtime4submitter"]
+    waiting4submitter_times = []
+    for time in time_list:
+        if time >=0:
+            waiting4submitter_times.append(time)
+    data = DHESA(waiting4submitter_times)
+    waiting4submitter_mean = float(data.data["mean"]) / 86400.0
+    waiting4submitter_median = float(data.data["median"]) / 86400.0
 
     dataset = {}
     dataset["submitted"] = submitted.get_agg()["submitted"]
     dataset["merged"] = merged.get_agg()["merged"]
     dataset["abandoned"] = abandoned.get_agg()["abandoned"]
-    dataset["waiting4reviewer"] = waiting4reviewer.get_agg()["ReviewsWaitingForReviewer"]
-    dataset["waiting4submitter"] = waiting4submitter.get_agg()["ReviewsWaitingForSubmitter"]
-    dataset["review_time_days_median"] = time2review.get_agg()["review_time_days_median"]
-    dataset["review_time_days_avg"] = time2review.get_agg()["review_time_days_avg"]
+    dataset["bmiscr"] = round(bmi.get_agg()["bmiscr"], 2)
+    dataset["active_core"] = active_core.get_agg()["core_reviewers"]
+    #dataset["waiting4reviewer"] = round(waiting4reviewer.get_agg()["ReviewsWaitingForReviewer"], 2)
+    #dataset["waiting4submitter"] = round(waiting4submitter.get_agg()["ReviewsWaitingForSubmitter"], 2)
+    dataset["review_time_days_median"] = round(time2review.get_agg()["review_time_days_median"], 2)
+    dataset["review_time_days_avg"] = round(time2review.get_agg()["review_time_days_avg"], 2)
+    dataset["iterations_mean"] = round(iterations.get_agg()["mean"], 2)
+    dataset["iterations_median"] = round(iterations.get_agg()["median"], 2)
+    dataset["waiting4submitter_mean"] = round(waiting4submitter_mean, 2)
+    dataset["waiting4submitter_median"] = round(waiting4submitter_median, 2)
+    dataset["waiting4reviewer_mean"] = round(waiting4reviewer_mean, 2)
+    dataset["waiting4reviewer_median"] = round(waiting4reviewer_median, 2)
 
     return dataset
 
 def serialize_threads(threads, crowded, threads_object):
-
+    # Function needed to reorder information coming from the
+    # Threads class
     l_threads = {}
     if crowded:
         l_threads['people'] = []
@@ -318,7 +379,7 @@ def serialize_threads(threads, crowded, threads_object):
     return l_threads
 
 def mls_report(dbcon, filters):
-    
+    # Per release MLS information
     emails = mls.EmailsSent(dbcon, filters)
     createJSON(emails.get_agg(), "./release/mls_emailssent.json")
 
@@ -333,7 +394,7 @@ def mls_report(dbcon, filters):
     dataset["senders"] = senders.get_agg()["senders"]
     dataset["senders_init"] = senders_init.get_agg()["senders_init"]
 
-    from threads import Threads
+    from vizgrimoire.analysis.threads import Threads
     SetDBChannel(dbcon.user, dbcon.password, dbcon.database)
     threads = Threads(filters.startdate, filters.enddate, dbcon.identities_db)
     top_longest_threads = threads.topLongestThread(10)
@@ -350,15 +411,35 @@ def mls_report(dbcon, filters):
 
 
 def parse_urls(urls):
+    # Funtion needed to remove "odd" characters
     qs_aux = []
     for url in urls:
-        url = url.replace("https://ask.openstack.org/en/question/", "")
+        #url = url.replace("https://ask.openstack.org/en/question/", "")
         url = url.replace("_", "\_")
         qs_aux.append(url)
     return qs_aux
 
+def get_qa_subjects(sites):
+    subjects = []
+    for site in sites:
+        url_parts = site.split("/")
+        parts = url_parts[6].split("-")
+        count = 0
+        # some random number to take just the first four
+        # words of the url in order to build some sentence
+        # for the link
+        sentence = ""
+        while count < 6:
+            if len(parts) > count:
+                sentence = sentence + " " + parts[count]
+            count = count + 1
+
+        subjects.append(sentence)
+
+    return subjects
 
 def qaforums_report(dbcon, filters):
+    # Aggregated information per release 
     questions = qa.Questions(dbcon, filters)
     createJSON(questions.get_agg(), "./release/qaforums_questions.json")
 
@@ -377,18 +458,20 @@ def qaforums_report(dbcon, filters):
     dataset["comments"] = comments.get_agg()["csent"]
     dataset["qsenders"] = q_senders.get_agg()["qsenders"]
 
-    import top_questions_qaforums as top
+    import vizgrimoire.analysis.top_questions_qaforums as top
     tops = top.TopQuestions(dbcon, filters)
     commented = tops.top_commented()
     commented["qid"] = commented.pop("question_identifier")
     # Taking the last part of the URL
     commented["site"] = parse_urls(commented.pop("url"))
+    commented["subject"] = get_qa_subjects(commented["site"])
     createJSON(commented, "./release/qa_top_questions_commented.json")
     createCSV(commented, "./release/qa_top_questions_commented.csv")
 
     visited = tops.top_visited()
     visited["qid"] = visited.pop("question_identifier")
     visited["site"] = parse_urls(visited.pop("url"))
+    visited["subject"] = get_qa_subjects(visited["site"])
     #commented["site"] = commented.pop("url").split("/")[-2:][1:]
     
     createJSON(visited, "./release/qa_top_questions_visited.json")
@@ -397,6 +480,7 @@ def qaforums_report(dbcon, filters):
     crowded = tops.top_crowded()
     crowded["qid"] = crowded.pop("question_identifier")
     crowded["site"] = parse_urls(crowded.pop("url"))
+    crowded["subject"] = get_qa_subjects(crowded["site"])
     createJSON(crowded, "./release/qa_top_questions_crowded.json")
     createCSV(crowded, "./release/qa_top_questions_crowded.csv")
 
@@ -407,6 +491,8 @@ def qaforums_report(dbcon, filters):
     return dataset
 
 def irc_report(dbcon, filters):
+    # per release information for IRC
+    pass
     sent = irc.Sent(dbcon, filters)
     createJSON(sent.get_agg(), "./release/irc_sent.json")
 
@@ -453,11 +539,13 @@ def createCSV(data, filepath, skip_fields = []):
     fd.close()
 
 def init_env():
+    # Init environment
     grimoirelib = path.join("..","vizgrimoire")
     metricslib = path.join("..","vizgrimoire","metrics")
     studieslib = path.join("..","vizgrimoire","analysis")
-    alchemy = path.join("..","grimoirelib_alch")
-    for dir in [grimoirelib,metricslib,studieslib,alchemy]:
+    datahandler = path.join("..","vizgrimoire","datahandlers")
+    alchemy = path.join("..")
+    for dir in [grimoirelib,metricslib,studieslib,datahandler,alchemy]:
         sys.path.append(dir)
 
     # env vars for R
@@ -466,14 +554,254 @@ def init_env():
 
 
 def projects(user, password, database):
+    # List projects to be analyzed
     dbcon = DSQuery(user, password, database, None)
     query = "select id from projects"
     return dbcon.ExecuteQuery(query)["id"]
 
+def data_source_increment_activity(opts, people_out, affs_out):
+    # Per data source, the increment or decrement of the activity is displayed
+    dataset = {}
+
+    data_sources = ["Gits", "Tickets", "Mailing Lists", "Gerrit", "Askbot", "IRC"]
+    action = ["commits", "closed tickets", "sent emails", "submitted reviews", "posted questions", "messages"]
+    net_values = []
+    rel_values = [] #percentage wrt the previous 365 days
+
+    scm_dbcon = SCMQuery(opts.dbuser, opts.dbpassword, opts.dbcvsanaly, opts.dbidentities) 
+    its_dbcon = ITSQuery(opts.dbuser, opts.dbpassword, opts.dbbicho, opts.dbidentities)
+    mls_dbcon = MLSQuery(opts.dbuser, opts.dbpassword, opts.dbmlstats, opts.dbidentities)
+    scr_dbcon = SCRQuery(opts.dbuser, opts.dbpassword, opts.dbreview, opts.dbidentities)
+    qaforums_dbcon = QAForumsQuery(opts.dbuser, opts.dbpassword, opts.dbqaforums, opts.dbidentities)
+    irc_dbcon = IRCQuery(opts.dbuser, opts.dbpassword, opts.dbirc, opts.dbidentities)
+
+    period = "month"
+    type_analysis = None
+    releases = opts.releases.split(",")[-2:]
+    startdate = "'"+releases[0]+"'"
+    enddate = "'"+releases[1]+"'"
+    filters = MetricFilters(period, startdate, enddate, None, 10, people_out, affs_out)
+
+    commits = scm.Commits(scm_dbcon, filters)
+    closed = its.Closed(its_dbcon, filters)
+    emails = mls.EmailsSent(mls_dbcon, filters)
+    submitted = scr.Submitted(scr_dbcon, filters)
+    questions = qa.Questions(qaforums_dbcon, filters)
+    messages = irc.Sent(irc_dbcon, filters)
+
+
+    from vizgrimoire.ITS import ITS
+    ITS.set_backend("launchpad")
+
+    net_values.append(commits.get_trends(releases[1], 365)["commits_365"])
+    rel_values.append(commits.get_trends(releases[1], 365)["percentage_commits_365"])
+    net_values.append(closed.get_trends(releases[1], 365)["closed_365"])
+    rel_values.append(closed.get_trends(releases[1], 365)["percentage_closed_365"])
+    net_values.append(emails.get_trends(releases[1], 365)["sent_365"])
+    rel_values.append(emails.get_trends(releases[1], 365)["percentage_sent_365"])
+    net_values.append(submitted.get_trends(releases[1], 365)["submitted_365"])
+    rel_values.append(submitted.get_trends(releases[1], 365)["percentage_submitted_365"])
+    net_values.append(questions.get_trends(releases[1], 365)["qsent_365"])
+    rel_values.append(questions.get_trends(releases[1], 365)["percentage_qsent_365"])
+    net_values.append(messages.get_trends(releases[1], 365)["sent_365"])
+    rel_values.append(messages.get_trends(releases[1], 365)["percentage_sent_365"])
+
+    createCSV({"datasource":data_sources, "metricsnames":action, "relativevalues":rel_values, "netvalues":net_values}, "./release/data_source_evolution.csv")
+
+def integrated_projects(dbcon):
+    # List of projects that are under the integrated umbrella
+    query = """ select b.id as subproject_id
+                from projects p, 
+                     project_children pc,
+                     projects b
+                where p.title='integrated'  and 
+                      p.project_id=pc.project_id and
+                      pc.subproject_id = b.project_id
+            """
+    projects = dbcon.ExecuteQuery(query)
+
+    return projects
+
+def integrated_projects_activity(dbcon, opts, people_out, affs_out):
+    # Commits per integrated project
+
+    projects = integrated_projects(dbcon)
+
+    projects_ids = projects["subproject_id"]
+    projects_list = []
+    commits_list = []
+
+    period = "month"
+    releases = opts.releases.split(",")[-2:]
+    startdate = "'"+releases[0]+"'"
+    enddate = "'"+releases[1]+"'"
+    
+    for project_id in projects_ids:
+        project_title = "'" + project_id + "'"
+        type_analysis = ["project", project_title]
+        project_filters = MetricFilters(period, startdate, enddate, type_analysis, 10,
+                                        people_out, affs_out)
+
+        commits = scm.Commits(dbcon, project_filters)
+
+        projects_list.append(project_id)
+        commits_list.append(int(commits.get_agg()["commits"]))
+
+    createCSV({"projects":projects_list, "commits":commits_list}, "./release/integrated_projects_commits.csv")
+
+
+def integrated_projects_top_orgs(dbcon, people_out, affs_out):
+    # Top orgs contributing to each integrated project
+    # The two first companies are depicted.
+    projects = integrated_projects(dbcon)
+
+    projects_ids = projects["subproject_id"]
+    projects_list = []
+    commits_top1 = []
+    commits_top2 = []
+    orgs_top1 = []
+    orgs_top2 = []
+
+    period = "month"
+    releases = opts.releases.split(",")[-2:]
+    startdate = "'"+releases[0]+"'"
+    enddate = "'"+releases[1]+"'"
+    
+    for project_id in projects_ids:
+        project_title = "'" + project_id + "'"
+        type_analysis = ["project", project_title]
+        project_filters = MetricFilters(period, startdate, enddate, type_analysis, 10,
+                                        people_out, affs_out)
+        
+        companies = scm.Companies(dbcon, project_filters)
+        activity = companies.get_list()
+
+        projects_list.append(project_id)
+        commits_top1.append(activity["company_commits"][0])
+        commits_top2.append(activity["company_commits"][1])
+        orgs_top1.append(activity["companies"][0])
+        orgs_top2.append(activity["companies"][1])
+
+    createCSV({"projects":projects_list, "commitstopone":commits_top1, "commitstoptwo":commits_top2, "orgstopone":orgs_top1, "orgstoptwo":orgs_top2}, "./release/integrated_projects_top_orgs.csv")
+
+def integrated_projects_top_contributors(scm_dbcon, people_out, affs_out):
+    # Top contributor per integrated project
+    projects = integrated_projects(scm_dbcon)
+
+    projects_ids = projects["subproject_id"]
+    projects_list = []
+    commits = []
+    top_contributors = []
+
+    period = "month"
+    releases = opts.releases.split(",")[-2:]
+    startdate = "'"+releases[0]+"'"
+    enddate = "'"+releases[1]+"'"
+
+    for project_id in projects_ids:
+        project_title = "'" + project_id + "'"
+        type_analysis = ["project", project_title]
+        project_filters = MetricFilters(period, startdate, enddate, type_analysis, 10,
+                                        people_out, affs_out)
+        authors = scm.Authors(scm_dbcon, project_filters)
+        activity = authors.get_list()
+
+        projects_list.append(project_id)
+        commits.append(activity["commits"][0])
+        top_contributors.append(activity["authors"][0])
+
+    createCSV({"projects":projects_list, "commits":commits, "contributors":top_contributors}, "./release/integrated_projects_top_contributors.csv")
+
+def projects_efficiency(opts, people_out, affs_out):
+    # BMI and time to review in mean per general project
+    scr_dbcon = SCRQuery(opts.dbuser, opts.dbpassword, opts.dbreview, opts.dbidentities)
+    scm_dbcon = SCMQuery(opts.dbuser, opts.dbpassword, opts.dbcvsanaly, opts.dbidentities)
+    its_dbcon = ITSQuery(opts.dbuser, opts.dbpassword, opts.dbbicho, opts.dbidentities)
+
+    projects = integrated_projects(scm_dbcon)
+
+    projects_ids = projects["subproject_id"]
+    projects_list = []
+    bmi_list = []
+    time2review_list = []
+    bmi_its = []
+
+    period = "month"
+    releases = opts.releases.split(",")[-2:]
+    startdate = "'"+releases[0]+"'"
+    enddate = "'"+releases[1]+"'"
+
+    for project_id in projects_ids:
+        project_title = "'" + project_id + "'"
+        type_analysis = ["project", project_id]
+        project_filters = MetricFilters(period, startdate, enddate, type_analysis, 10,
+                                        people_out, affs_out)
+        scr_bmi = scr.BMISCR(scr_dbcon, project_filters)
+        time2review = scr.TimeToReview(scr_dbcon, project_filters)
+   
+        # ITS BMI index
+        from vizgrimoire.ITS import ITS
+        ITS.set_backend("launchpad")
+
+        if project_id == 'Documentation':
+            ITS._get_backend().closed_condition = "(new_value='Fix Committed' or new_value='Fix Released')"
+        else:
+            ITS.closed_condition = "(new_value='Fix Committed')"
+
+        opened = its.Opened(its_dbcon, project_filters)
+        closed = its.Closed(its_dbcon, project_filters)
+
+        tickets_opened = opened.get_agg()["opened"]
+        tickets_closed = closed.get_agg()["closed"]
+
+        its_bmi = 0
+        if tickets_closed > 0:
+           its_bmi = round(float(tickets_closed)/float(tickets_opened), 2)
+
+
+        projects_list.append(project_id)
+        bmi_list.append(round(scr_bmi.get_agg()["bmiscr"], 2))
+        time2review_list.append(round(time2review.get_agg()["review_time_days_median"], 2))
+        bmi_its.append(its_bmi)
+
+
+    createCSV({"projects":projects_list, "bmi":bmi_list, "timereview":time2review_list, "bmiits":bmi_its}, "./release/integrated_projects_efficiency.csv")    
+
+def timezone_analysis(opts):
+    from vizgrimoire.analysis.timezone import Timezone
+    from vizgrimoire.SCM import SCM
+    from vizgrimoire.MLS import MLS
+
+    scm_dbcon = DSQuery(opts.dbuser, opts.dbpassword, opts.dbcvsanaly, opts.dbidentities)
+    mls_dbcon = MLSQuery(opts.dbuser, opts.dbpassword, opts.dbmlstats, opts.dbidentities)
+
+    period = "month"
+    releases = opts.releases.split(",")[-2:]
+    startdate = "'"+releases[0]+"'"
+    enddate = "'"+releases[1]+"'"
+    filters = MetricFilters(period, startdate, enddate, [], 10, "", "")
+
+    tz = Timezone(scm_dbcon, filters)
+    dataset = tz.result(SCM)
+    labels = dataset["tz"]
+    commits = dataset["commits"]
+    authors = dataset["authors"]
+    bar_chart("Timezone git activity", labels, commits, "commits_tz", authors, ["commits", "authors"])
+
+    tz = Timezone(mls_dbcon, filters)
+    dataset = tz.result(MLS)
+    messages = dataset["messages"]
+    authors = dataset["authors"]
+    bar_chart("Timezone mailing list activity", labels, messages, "messages_tz", authors, ["messages", "authors"])
+
 
 def general_info(opts, releases, people_out, affs_out):
-
     # General info from MLS, IRC and QAForums.
+    scm_dbcon = SCMQuery(opts.dbuser, opts.dbpassword, opts.dbcvsanaly, opts.dbidentities)
+    
+    # analysis currently failing
+    #timezone_analysis(opts)
+
     core = []
     regular = []
     occasional = []
@@ -492,8 +820,10 @@ def general_info(opts, releases, people_out, affs_out):
     for release in releases:
         startdate = "'" + release[0] + "'"
         enddate = "'" + release[1] + "'"
-        filters = MetricFilters("month", startdate, enddate, [], opts.npeople, people_out, affs_out)
+        print "General info per release: " + startdate + " - " + enddate
+        filters = MetricFilters("month", startdate, enddate, None, opts.npeople, people_out, affs_out)
         # SCM info
+        print "    General info: SCM"
         scm_dbcon = SCMQuery(opts.dbuser, opts.dbpassword, opts.dbcvsanaly, opts.dbidentities)
         dataset = scm_general(scm_dbcon, filters)
         core.append(dataset["core"])
@@ -505,6 +835,7 @@ def general_info(opts, releases, people_out, affs_out):
         createCSV(top_authors, "./release/top_authors_release" + str(release_pos)+ ".csv")
   
         # MLS info
+        print "    General info: MLS"
         mls_dbcon = MLSQuery(opts.dbuser, opts.dbpassword, opts.dbmlstats, opts.dbidentities)
         dataset = mls_report(mls_dbcon, filters)
         emails.append(dataset["sent"])
@@ -512,6 +843,7 @@ def general_info(opts, releases, people_out, affs_out):
         emails_senders_init.append(dataset["senders_init"])
 
         # QAForums info 
+        print "    General info: QAForums"
         qaforums_dbcon = QAForumsQuery(opts.dbuser, opts.dbpassword, opts.dbqaforums, opts.dbidentities)
         dataset = qaforums_report(qaforums_dbcon, filters)
         questions.append(dataset["questions"])
@@ -520,55 +852,199 @@ def general_info(opts, releases, people_out, affs_out):
         qsenders.append(dataset["qsenders"])
 
         # IRC info
+        print "    General info: IRC"
         irc_dbcon = IRCQuery(opts.dbuser, opts.dbpassword, opts.dbirc, opts.dbidentities)
         dataset = irc_report(irc_dbcon, filters)
         irc_sent.append(dataset["sent"])
         irc_senders.append(dataset["senders"])
 
 
-    #labels = ["2012-Q3", "2012-Q4", "2013-Q1", "2013-Q2", "2013-Q3", "2013-Q4", "2014-Q1", "2014-Q2"]
-    labels = ["2013-Q3", "2013-Q4", "2014-Q1", "2014-Q2"]
-    barh_chart("Emails sent", labels, emails, "emails")
+
+    labels = ["13-Q1", "13-Q2", "13-Q3", "13-Q4", "14-Q1", "14-Q2","14-Q3", "14-Q4"]
+    #labels = ["2013-Q3", "2013-Q4", "2014-Q1", "2014-Q2"]
+    bar_chart("Emails sent", labels, emails, "emails")
+
     createCSV({"labels":labels, "emails":emails}, "./release/emails.csv")
-    barh_chart("People sending emails", labels, emails_senders, "emails_senders")
+    bar_chart("People sending emails", labels, emails_senders, "emails_senders")
     createCSV({"labels":labels, "senders":emails_senders}, "./release/emails_senders.csv")
-    barh_chart("People initiating threads", labels, emails_senders_init, "emails_senders_init")
+    bar_chart("People initiating threads", labels, emails_senders_init, "emails_senders_init")
     createCSV({"labels":labels, "senders":emails_senders_init}, "./release/emails_senders_init.csv")
-    barh_chart("Questions", labels, questions, "questions")
+    bar_chart("Questions", labels, questions, "questions")
     createCSV({"labels":labels, "questions":questions}, "./release/questions.csv")
-    barh_chart("Answers", labels, answers, "answers")
+    bar_chart("Answers", labels, answers, "answers")
     createCSV({"labels":labels, "answers":answers}, "./release/answers.csv")
-    barh_chart("Comments", labels, comments, "comments")
+    bar_chart("Comments", labels, comments, "comments")
     createCSV({"labels":labels, "comments":comments}, "./release/comments.csv")
-    barh_chart("People asking Questions", labels, qsenders, "question_senders")
+    bar_chart("People asking Questions", labels, qsenders, "question_senders")
     createCSV({"labels":labels, "senders":qsenders}, "./release/question_senders.csv")
-    barh_chart("Messages in IRC channels", labels, irc_sent, "irc_sent")
+    bar_chart("Messages in IRC channels", labels, irc_sent, "irc_sent")
     createCSV({"labels":labels, "messages":irc_sent}, "./release/irc_sent.csv")
-    barh_chart("People in IRC channels", labels, irc_senders, "irc_senders")
+    bar_chart("People in IRC channels", labels, irc_senders, "irc_senders")
     createCSV({"labels":labels, "senders":irc_senders}, "./release/irc_senders.csv")
     
-    bar_chart("Community structure", labels, regular, "onion", core, ["regular", "core"])
+    bar3_chart("Community structure", labels, regular, "onion", core, occasional, ["casual", "regular", "core"])
     createCSV({"labels":labels, "core":core, "regular":regular, "occasional":occasional}, "./release/onion_model.csv")
     bar_chart("Developers per month", labels, authors_month, "authors_month")
     createCSV({"labels":labels, "authormonth":authors_month}, "./release/authors_month.csv")
 
+    # other analysis
+    print "Other analysis"
+    scm_dbcon = SCMQuery(opts.dbuser, opts.dbpassword, opts.dbcvsanaly, opts.dbidentities)
+        
+    # Increment of activity in the last 365 days by data source
+    data_source_increment_activity(opts, people_out, affs_out)
+
+    # Commits and reviews per integrated project
+    integrated_projects_activity(scm_dbcon, opts, people_out, affs_out)
+
+    # Top orgs per integrated project
+    integrated_projects_top_orgs(scm_dbcon, people_out, affs_out)
+
+    # Top contributors per integrated project 
+    integrated_projects_top_contributors(scm_dbcon, people_out, affs_out)
+
+    # Efficiency per general project
+    projects_efficiency(opts, people_out, affs_out)    
+   
+    # TZ analysis
+    #timezone_analysis(opts)
+
+def releases_info(startdate, enddate, project, opts, people_out, affs_out):
+    # Releases information.
+    data = {}
+    filters = MetricFilters("month", startdate, enddate, ["project", str(project)], opts.npeople,
+                             people_out, affs_out)
+    # SCM report
+    scm_dbcon = SCMQuery(opts.dbuser, opts.dbpassword, opts.dbcvsanaly, opts.dbidentities)
+    dataset = scm_report(scm_dbcon, filters)
+    data["scm"] = dataset
+
+    #ITS report
+    its_dbcon = ITSQuery(opts.dbuser, opts.dbpassword, opts.dbbicho, opts.dbidentities)
+    dataset = its_report(its_dbcon, filters)
+    data["its"] = dataset
+
+    #SCR Report
+    scr_dbcon = SCRQuery(opts.dbuser, opts.dbpassword, opts.dbreview, opts.dbidentities)
+    dataset = scr_report(scr_dbcon, filters)
+    data["scr"] = dataset
+
+    return data
+
+
+def print_n_draw(agg_data, project):
+    # The releases information is print in CSV/JSON format and specific charts are built
+
+    labels = ["13-Q1", "13-Q2", "13-Q3", "13-Q4", "14-Q1", "14-Q2", "14-Q3", "14-Q4"]
+    #labels = ["2013-Q3", "2013-Q4", "2014-Q1", "2014-Q2"]
+    project_name = project.replace(" ", "")
+
+    commits = agg_data["commits"]
+    submitted = agg_data["submitted"]
+    bar_chart("Commits and reviews: " + project, labels, submitted, "commits"  + project_name, commits, ["reviews", "commits"])
+    createCSV({"labels":labels, "commits":commits, "submitted":submitted}, "./release/commits"+project_name+".csv")
+
+
+    authors = agg_data["authors"]
+    bar_chart("Authors " + project, labels, authors, "authors" + project_name)
+    createCSV({"labels":labels, "authors":authors}, "./release/authors"+project_name+".csv")
+
+    opened = agg_data["opened"]
+    closed = agg_data["closed"]
+    bar_chart("Opened and closed tickets: " + project, labels, opened, "closed" + project_name, closed, ["opened", "closed"])
+    createCSV({"labels":labels, "closed":closed, "opened":opened}, "./release/closed"+project_name+".csv")
+
+    bmi = agg_data["bmi"]
+    bar_chart("Efficiency closing tickets: " + project, labels, bmi, "bmi" + project_name)
+    createCSV({"labels":labels, "bmi":bmi}, "./release/bmi"+project_name+".csv")
+
+    merged = agg_data["merged"]
+    abandoned = agg_data["abandoned"]
+    bmiscr = agg_data["bmiscr"]
+    bar_chart("Merged and abandoned reviews: " + project, labels, merged, "submitted_reviews" + project_name, abandoned, ["merged", "abandoned"])
+    createCSV({"labels":labels, "merged":merged, "abandoned":abandoned, "bmi":bmiscr}, "./release/submitted_reviews"+project_name+".csv")
+
+    bmiscr = agg_data["bmiscr"]
+    bar_chart("Changesets efficiency: " + project, labels, bmiscr, "bmiscr" + project_name)
+
+    iters_reviews_avg = agg_data["iters_reviews_avg"]
+    iters_reviews_median = agg_data["iters_reviews_median"]
+    bar_chart("Patchsets per Changeset: " + project, labels, iters_reviews_avg, "patchsets_avg" + project_name, iters_reviews_median, ["mean", "median"])
+    createCSV({"labels":labels, "meanpatchsets":iters_reviews_avg, "medianpatchsets":iters_reviews_median}, "./release/scr_patchsets_iterations" + project_name+".csv")
+
+    active_core_reviewers = agg_data["active_core_reviewers"]
+    bar_chart("Active Core Reviewers: " + project, labels, active_core_reviewers, "active_core_scr"+project_name)
+    createCSV({"labels":labels, "activecorereviewers":active_core_reviewers}, "./release/active_core_scr"+project_name+".csv")
+
+    review_avg = agg_data["review_avg"]
+    review_median = agg_data["review_median"]
+    bar_chart("Time to merge (days): " + project, labels, review_avg, "timetoreview_median" + project_name, review_median, ["mean", "median"])
+    createCSV({"labels":labels, "mediantime":review_median, "meantime":review_avg}, "./release/timetoreview_median"+project_name+".csv")
+
+    waiting4reviewer_mean = agg_data["waiting4reviewer_mean"]
+    waiting4reviewer_median = agg_data["waiting4reviewer_median"]
+    bar_chart("Time waiting for the reviewer: " + project, labels, waiting4reviewer_mean, "waiting4reviewer_avg" + project_name, waiting4reviewer_median, ["avg", "median"])
+    createCSV({"labels":labels, "mediantime":waiting4reviewer_median, "meantime":waiting4reviewer_mean}, "./release/timewaiting4reviewer_median"+project_name+".csv")
+
+    waiting4submitter_mean = agg_data["waiting4submitter_mean"]
+    waiting4submitter_median = agg_data["waiting4submitter_median"]
+    bar_chart("Time waiting for the submitter: " + project, labels, waiting4submitter_mean, "waiting4submitter_avg" + project_name, waiting4submitter_median, ["avg", "median"])
+    createCSV({"labels":labels, "mediantime":waiting4submitter_median, "meantime":waiting4submitter_mean}, "./release/timewaiting4submitter_median"+project_name+".csv")
+
+
+def order_data(agg_data, releases):
+    # Ordering dta coming from releases
+    for release in releases:
+        agg_data["labels"].append(release[1])
+
+        #scm
+        agg_data["commits"].append(releases_data[release]["scm"]["commits"])
+        agg_data["authors"].append(releases_data[release]["scm"]["authors"])
+
+        #its
+        agg_data["opened"].append(releases_data[release]["its"]["opened"])
+        agg_data["closed"].append(releases_data[release]["its"]["closed"])
+        if releases_data[release]["its"]["opened"] > 0:
+           agg_data["bmi"].append(round(float(releases_data[release]["its"]["closed"])/float(releases_data[release]["its"]["opened"]), 2))
+        else:
+           agg_data["bmi"].append(0)
+   
+        #scr
+        agg_data["submitted"].append(releases_data[release]["scr"]["submitted"])
+        agg_data["merged"].append(releases_data[release]["scr"]["merged"])
+        agg_data["abandoned"].append(releases_data[release]["scr"]["abandoned"])
+        agg_data["review_avg"].append(releases_data[release]["scr"]["review_time_days_avg"])
+        agg_data["review_median"].append(releases_data[release]["scr"]["review_time_days_median"])
+        agg_data["active_core_reviewers"].append(releases_data[release]["scr"]["active_core"])
+        agg_data["iters_reviews_avg"].append(releases_data[release]["scr"]["iterations_mean"])
+        agg_data["iters_reviews_median"].append(releases_data[release]["scr"]["iterations_median"])
+        agg_data["bmiscr"].append(releases_data[release]["scr"]["bmiscr"])
+        agg_data["waiting4submitter_mean"].append(releases_data[release]["scr"]["waiting4submitter_mean"])
+        agg_data["waiting4submitter_median"].append(releases_data[release]["scr"]["waiting4submitter_median"])
+        agg_data["waiting4reviewer_mean"].append(releases_data[release]["scr"]["waiting4reviewer_mean"])
+        agg_data["waiting4reviewer_median"].append(releases_data[release]["scr"]["waiting4reviewer_median"])
+
+    return agg_data
+
+
 if __name__ == '__main__':
 
-    locale.setlocale(locale.LC_ALL, 'en_US')
+    locale.setlocale(locale.LC_ALL, 'en_US.utf8')
 
     init_env()
 
-    from metrics import Metrics
-    from query_builder import DSQuery, SCMQuery, QAForumsQuery, MLSQuery, SCRQuery, ITSQuery, IRCQuery
-    from metrics_filter import MetricFilters
-    import scm_metrics as scm
-    import qaforums_metrics as qa
-    import mls_metrics as mls
-    import scr_metrics as scr
-    import its_metrics as its
-    import irc_metrics as irc
-    from GrimoireUtils import createJSON
-    from GrimoireSQL import SetDBChannel
+    from vizgrimoire.metrics.metrics import Metrics
+    from vizgrimoire.metrics.query_builder import DSQuery, SCMQuery, QAForumsQuery, MLSQuery, SCRQuery, ITSQuery, IRCQuery
+    from vizgrimoire.metrics.metrics_filter import MetricFilters
+    import vizgrimoire.metrics.scm_metrics as scm
+    import vizgrimoire.metrics.qaforums_metrics as qa
+    import vizgrimoire.metrics.mls_metrics as mls
+    import vizgrimoire.metrics.scr_metrics as scr
+    import vizgrimoire.metrics.its_metrics as its
+    import vizgrimoire.metrics.irc_metrics as irc
+    from vizgrimoire.GrimoireUtils import createJSON
+    from vizgrimoire.GrimoireSQL import SetDBChannel
+    from vizgrimoire.datahandlers.data_handler import DHESA
 
     # parse options
     opts = read_options()    
@@ -582,80 +1058,36 @@ if __name__ == '__main__':
     people_out = ["OpenStack Jenkins","Launchpad Translations on behalf of nova-core","Jenkins","OpenStack Hudson","gerrit2@review.openstack.org","linuxdatacenter@gmail.com","Openstack Project Creator","Openstack Gerrit","openstackgerrit"]
     affs_out = ["-Bot","-Individual","-Unknown"]
 
+    # Analysis per project
     for project in projects_list:
         releases_data = {}
+        # For each project, a filter by release date is calculated
+        print "Project: " + str(project)
         for release in releases:
+            print "    Release: " + str(release[0]) + " - " + str(release[1])
             releases_data[release] = {}
 
             startdate = "'" + release[0] + "'"
             enddate = "'" + release[1] + "'"
-            filters = MetricFilters("month", startdate, enddate, ["project", str(project)], opts.npeople,
-                                    people_out, affs_out)
-            scm_dbcon = SCMQuery(opts.dbuser, opts.dbpassword, opts.dbcvsanaly, opts.dbidentities)
-            #SCM report
-            dataset = scm_report(scm_dbcon, filters)
-            releases_data[release]["scm"] = dataset
+            # Per release and project, an analysis is undertaken
+            releases_data[release] = releases_info(startdate, enddate, project, opts, people_out, affs_out)
 
-            #ITS report
-            its_dbcon = ITSQuery(opts.dbuser, opts.dbpassword, opts.dbbicho, opts.dbidentities)
-            dataset = its_report(its_dbcon, filters)
-            releases_data[release]["its"] = dataset
+        # Information is now stored in lists. Each list for each metric contains the values
+        # of the releases analysis. Each entry in the list corresponds to the value of such 
+        # metric in such release and in such project.
+        print "    Ordering data"
+        metrics = ["labels", "commits", "authors", "opened", "submitted", "merged", "abandoned", "bmiscr",
+                   "closed", "active_core_reviewers", "iters_reviews_avg", "iters_reviews_median", "bmi",
+                   "review_avg", "review_median", "waiting4submitter_mean", "waiting4submitter_median",
+                   "waiting4reviewer_mean", "waiting4reviewer_median"]
+        agg_data = {}
+        for metric in metrics:
+            # init agg_data structure
+            agg_data[metric] = []
 
-            #SCR Report
-            scr_dbcon = SCRQuery(opts.dbuser, opts.dbpassword, opts.dbreview, opts.dbidentities)
-            dataset = scr_report(scr_dbcon, filters)
-            releases_data[release]["scr"] = dataset
+        agg_data = order_data(agg_data, releases)
 
-
-        labels = []
-        commits = []
-        authors = []
-        opened = []
-        submitted = []
-        merged = []
-        abandoned = []
-        closed = []
-        bmi = []
-        review_avg = []
-        review_median = []
-        for release in releases:
-            labels.append(release[1])
-            #scm
-            commits.append(releases_data[release]["scm"]["commits"])
-            authors.append(releases_data[release]["scm"]["authors"])
-            #its
-            opened.append(releases_data[release]["its"]["opened"])
-            closed.append(releases_data[release]["its"]["closed"])
-            if releases_data[release]["its"]["opened"] > 0:
-                bmi.append(float(releases_data[release]["its"]["closed"])/float(releases_data[release]["its"]["opened"]))
-            else:
-                bmi.append(0)
-            #scr
-            submitted.append(releases_data[release]["scr"]["submitted"])
-            merged.append(releases_data[release]["scr"]["merged"])
-            abandoned.append(releases_data[release]["scr"]["abandoned"])
-            review_avg.append(releases_data[release]["scr"]["review_time_days_avg"])
-            review_median.append(releases_data[release]["scr"]["review_time_days_median"])
-        
-        #labels = ["2012-Q3", "2012-Q4", "2013-Q1", "2013-Q2", "2013-Q3", "2013-Q4", "2014-Q1", "2014-Q2"]        
-        labels = ["2013-Q3", "2013-Q4", "2014-Q1", "2014-Q2"]
-        project_name = project.replace(" ", "")
-        bar_chart("Commits and reviews" + project, labels, commits, "commits"  + project_name, submitted, ["commits", "reviews"])
-        createCSV({"labels":labels, "commits":commits, "submitted":submitted}, "./release/commits"+project_name+".csv")
-        bar_chart("Authors " + project, labels, authors, "authors" + project_name)
-        createCSV({"labels":labels, "authors":authors}, "./release/authors"+project_name+".csv")
-
-        bar_chart("Opened and closed tickets " + project, labels, opened, "closed" + project_name, closed, ["opened", "closed"])
-        createCSV({"labels":labels, "closed":closed, "opened":opened}, "./release/closed"+project_name+".csv")
-
-        bar_chart("Efficiency closing tickets " + project, labels, bmi, "bmi" + project_name)
-        createCSV({"labels":labels, "bmi":bmi}, "./release/bmi"+project_name+".csv")
-
-        bar_chart("Merged and abandoned reviews " + project, labels, merged, "submitted_reviews" + project_name, abandoned, ["merged", "abandoned"])
-        createCSV({"labels":labels, "merged":merged, "abandoned":abandoned}, "./release/submitted_reviews"+project_name+".csv")
-
-        bar_chart("Time to review (days)  " + project, labels, review_avg, "timetoreview_median" + project_name, review_median, ["mean", "median"])
-        createCSV({"labels":labels, "mediantime":review_median, "meantime":review_avg}, "./release/timetoreview_median"+project_name+".csv")
+        print_n_draw(agg_data, project)
 
 
     # general info: scm, mls, irc and qaforums

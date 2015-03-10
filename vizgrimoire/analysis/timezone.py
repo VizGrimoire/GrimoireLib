@@ -34,9 +34,9 @@ from grimoirelib_alch.family.activity_timezones import (
     SCMActivityTZ, MLSActivityTZ
     )
 
-from analyses import Analyses
-from SCM import SCM
-from MLS import MLS
+from vizgrimoire.analysis.analyses import Analyses
+from vizgrimoire.SCM import SCM
+from vizgrimoire.MLS import MLS
 
 from datetime import datetime, timedelta
 from jsonpickle import encode, set_encoder_options
@@ -72,7 +72,6 @@ class Timezone(Analyses):
     desc = "Timezone of contributions in project"
 
     def __get_sql__(self):
-   
         raise NotImplementedError
 
     def result(self, data_source = None):
@@ -81,58 +80,94 @@ class Timezone(Analyses):
         Parameters
         ----------
 
-        data_source: SCM.SCM
+        data_source: SCM.SCM, MLS.MLS
 
         Returns
         -------
 
         dictionary: timezone data.
-          It includes three components, with fillowing keys:
+          It includes three generic components, with following keys:
           "tz": list of timezones from -12 to 11,
-          "commits": list of commits for each timezone
           "authors": list of authors for each timezone
-                    
-        """
+          "authors365": list of authors for each timezone on the
+              last 365 days
 
+          Depending on the type of data source, it will contain two more keys.
+          On SCM data sources:
+          "commits": list of commits for each timezone
+          "commits365": list of commits for each timezone on the
+              last 365 days
+
+          On MLS data sources:
+          "messages": list of messages for each timezone
+          "messages365": list of messages for each timezone on the
+              last 365 days
+        """
         logging.info("Producing data for study: Timezone")
+
         if data_source is None:
             logging.info("Error: no data source for study!")
             return
+
+        if data_source not in (SCM, MLS):
+            logging.info("Error: data_source not supported!")
+            return
+
         # Prepare the SQLAlchemy database url
         url = 'mysql://' + self.db.user + ':' + \
             self.db.password + '@' + self.db.host + '/'
         schema = self.db.database
         schema_id = self.db.identities_db
+
         # Get startdate, endate as datetime objects
         startdate = datetime.strptime(self.filters.startdate, "'%Y-%m-%d'")
         enddate = datetime.strptime(self.filters.enddate, "'%Y-%m-%d'")
+
+        # Get last 365 days period
+        start365 = enddate - timedelta(days=365)
+        end365 = enddate
+
         if data_source == SCM:
             logging.info("Analyzing timezone for SCM")
-            period = SCMPeriodCondition (start = startdate, end = enddate)
+
             nomerges = SCMNomergesCondition()
-            database = SCMDatabase (url = url,
-                                    schema = schema,
-                                    schema_id = schema_id)
-            data = SCMActivityTZ (
-                datasource = database,
-                name = "authors",
-                conditions = (period, nomerges))
+            database = SCMDatabase(url=url, schema=schema,
+                                   schema_id=schema_id)
+
+            period = SCMPeriodCondition(start=startdate, end=enddate)
+            data = SCMActivityTZ(datasource=database, name="authors",
+                                 conditions=(period, nomerges))
+
+            period365 = SCMPeriodCondition(start=start365, end=end365)
+            data365 = SCMActivityTZ(datasource=database, name="authors",
+                                    conditions=(period365, nomerges))
         elif data_source == MLS:
             logging.info("Analyzing timezone for MLS")
-            period = MLSPeriodCondition (start = startdate, end = enddate)
-            database = MLSDatabase (url = url,
-                                    schema = schema,
-                                    schema_id = schema_id)
-            data = MLSActivityTZ (
-                datasource = database,
-                name = "senders",
-                conditions = (period,))
-        if data_source in (SCM, MLS):
-            timezones = data.timezones()
-            return timezones
-        else:
-            logging.info("Error: data_source not supported!")
-            return {}
+
+            database = MLSDatabase(url=url, schema=schema,
+                                   schema_id=schema_id)
+
+            period = MLSPeriodCondition(start=startdate, end=enddate,
+                                        date="first")
+            data = MLSActivityTZ(datasource=database, name="senders",
+                                 conditions=(period,))
+
+            period365 = MLSPeriodCondition(start=start365, end=end365,
+                                           date="first")
+            data365 = MLSActivityTZ(datasource=database, name="senders",
+                                    conditions=(period365,))
+
+        timezones = data.timezones()
+        timezones365 = data365.timezones()
+
+        if data_source == SCM:
+            timezones['commits365'] = timezones365['commits']
+        elif data_source == MLS:
+            timezones['messages365'] = timezones365['messages']
+
+        timezones['authors365'] = timezones365['authors']
+
+        return timezones
 
     def create_report(self, data_source, destdir):
         """Create report for the analysis.
@@ -140,12 +175,12 @@ class Timezone(Analyses):
         Creates JSON files with the results of the report for timezone:
          ds-timezone.json
          with ds being "scm" or "its".
-        Only works for SCM data sources.
-        
+        Only works for SCM and MLS data sources.
+
         Parameters
         ----------
 
-        data_source: SCM.SCM
+        data_source: SCM.SCM, MLS.MLS
         destdir: name of directory for writing JSON files
 
         """
@@ -153,7 +188,7 @@ class Timezone(Analyses):
         logging.info("Producing report for study: Timezone")
         if data_source == SCM:
             prefix = "scm"
-        if data_source == MLS:
+        elif data_source == MLS:
             prefix = "mls"
         else:
             logging.info("Error: data_source not supported for Timezone")
@@ -166,8 +201,8 @@ class Timezone(Analyses):
 
 if __name__ == '__main__':
 
-    from query_builder import DSQuery
-    from metrics_filter import MetricFilters
+    from vizgrimoire.metrics.query_builder import DSQuery
+    from vizgrimoire.metrics.metrics_filter import MetricFilters
 
     # Get 
     filters = MetricFilters("months", "'2013-06-01'", "'2014-01-01'", [])

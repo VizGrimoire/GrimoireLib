@@ -30,16 +30,17 @@ from numpy import median, average
 import time
 from datetime import datetime, timedelta
 
-from GrimoireSQL import GetSQLGlobal, GetSQLPeriod
-from GrimoireSQL import ExecuteQuery
-from GrimoireUtils import GetPercentageDiff, GetDates, completePeriodIds
-from GrimoireUtils import checkListArray, removeDecimals, get_subprojects
-from GrimoireUtils import getPeriod, createJSON, checkFloatArray, medianAndAvgByPeriod
-from metrics_filter import MetricFilters
+from vizgrimoire.GrimoireSQL import GetSQLGlobal, GetSQLPeriod
+from vizgrimoire.GrimoireSQL import ExecuteQuery
+from vizgrimoire.GrimoireUtils import GetPercentageDiff, GetDates, completePeriodIds
+from vizgrimoire.GrimoireUtils import checkListArray, removeDecimals, get_subprojects
+from vizgrimoire.GrimoireUtils import getPeriod, createJSON, checkFloatArray, medianAndAvgByPeriod, check_array_values
+from vizgrimoire.metrics.metrics_filter import MetricFilters
+from vizgrimoire.metrics.query_builder import DSQuery, SCRQuery
+from vizgrimoire.data_source import DataSource
+from vizgrimoire.filter import Filter
 
-from data_source import DataSource
-from filter import Filter
-from query_builder import SCRQuery
+>>>>>>> master
 
 class SCR(DataSource):
     _metrics_set = []
@@ -53,7 +54,7 @@ class SCR(DataSource):
 
     @staticmethod
     def get_metrics_not_filters():
-        metrics_not_filters =  ['verified','codereview','sent','WaitingForReviewer','WaitingForSubmitter','approved','ReviewsWaitingForReviewer', 'ReviewsWaitingForSubmitter']
+        metrics_not_filters =  ['verified','codereview','sent','WaitingForReviewer','WaitingForSubmitter','approved','ReviewsWaitingForReviewer', 'ReviewsWaitingForSubmitter','repositories']
         return metrics_not_filters
 
     @staticmethod
@@ -84,12 +85,13 @@ class SCR(DataSource):
     def __get_data__ (period, startdate, enddate, identities_db, filter_ = None, evol = False):
         data = {}
         DS = SCR
+        from vizgrimoire.GrimoireUtils import fill_and_order_items
 
         type_analysis = None
         if filter_ is not None:
             type_analysis = [filter_.get_name(), filter_.get_item()]
 
-        from report import Report
+        from vizgrimoire.report import Report
         automator = Report.get_config()
 
         if evol:
@@ -106,10 +108,14 @@ class SCR(DataSource):
 
         metrics_reports = SCR.get_metrics_core_reports()
         if filter_ is None:
-            from report import Report
+            from vizgrimoire.report import Report
             reports_on = Report.get_config()['r']['reports'].split(",")
             for r in metrics_reports:
                 if r in reports_on: metrics_on += [r]
+
+        if type_analysis and type_analysis[1] is None:
+            items = DS.get_filter_items(filter_, startdate, enddate, identities_db)
+            items = items.pop('name')
 
         if DS.get_name()+"_start_date" in Report.get_config()['r']:
             startdate = "'"+Report.get_config()['r'][DS.get_name()+"_start_date"]+"'"
@@ -130,19 +136,33 @@ class SCR(DataSource):
 
         for item in all_metrics:
             if item.id not in metrics_on: continue
+            mfilter_orig = item.filters
             item.filters = mfilter
             if not evol: mvalue = item.get_agg()
             else:        mvalue = item.get_ts()
-            data = dict(data.items() + mvalue.items())
 
+            if type_analysis and type_analysis[1] is None:
+                logging.info(item.id)
+                id_field = DSQuery.get_group_field(type_analysis[0])
+                id_field = id_field.split('.')[1] # remove table name
+                mvalue = check_array_values(mvalue)
+                mvalue = fill_and_order_items(items, mvalue, id_field,
+                                              evol, period, startdate, enddate)
+            data = dict(data.items() + mvalue.items())
+            item.filters = mfilter_orig
 
         # SCR SPECIFIC #
         if evol:
-            metrics_on_changes = ['merged','abandoned','new']
-            for item in all_metrics:
-                if item.id in metrics_on_changes and filter_ is None:
-                    mvalue = item.get_ts_changes()
-                    data = dict(data.items() + mvalue.items())
+            if type_analysis and type_analysis[1] is None: pass
+            else:
+                metrics_on_changes = ['merged','abandoned','new']
+                for item in all_metrics:
+                    if item.id in metrics_on_changes and filter_ is None:
+                        mfilter_orig = item.filters
+                        item.filters = mfilter
+                        mvalue = item.get_ts_changes()
+                        data = dict(data.items() + mvalue.items())
+                        item.filters = mfilter_orig
         # END SCR SPECIFIC #
 
         if not evol:
@@ -161,9 +181,20 @@ class SCR(DataSource):
             for i in [7,30,365]:
                 for item in all_metrics:
                     if item.id not in metrics_trends: continue
+                    mfilter_orig = item.filters
                     item.filters = mfilter
-                    period_data = item.get_agg_diff_days(enddate, i)
+                    period_data = item.get_trends(enddate, i)
+                    item.filters = mfilter_orig
+
                     data = dict(data.items() +  period_data.items())
+
+                    if type_analysis and type_analysis[1] is None:
+                        id_field = DSQuery.get_group_field(type_analysis[0])
+                        id_field = id_field.split('.')[1] # remove table name
+                        period_data = fill_and_order_items(items, period_data, id_field)
+
+                    data = dict(data.items() +  period_data.items())
+
 
         if filter_ is not None: studies_data = {}
         else: 
@@ -177,6 +208,10 @@ class SCR(DataSource):
         data = SCR.get_agg_data (period, startdate, enddate, i_db, filter_)
         filename = SCR().get_agg_filename()
         createJSON (data, os.path.join(destdir, filename))
+
+    @staticmethod
+    def get_top_metrics ():
+        return ["reviewers","openers","mergers"]
 
     @staticmethod
     def get_top_data (startdate, enddate, identities_db, filter_, npeople):
@@ -199,12 +234,12 @@ class SCR(DataSource):
 
             top_openers = {}
             top_openers['openers.'] = mopeners.get_list(mfilter, 0)
-            top_openers['openers.last_month']= mopeners.get_list(mfilter, 31)
+            top_openers['openers.last month']= mopeners.get_list(mfilter, 31)
             top_openers['openers.last year'] = mopeners.get_list(mfilter, 365)
 
             top_mergers = {}
             top_mergers['mergers.'] = mmergers.get_list(mfilter, 0)
-            top_mergers['mergers.last_month'] = mmergers.get_list(mfilter, 31)
+            top_mergers['mergers.last month'] = mmergers.get_list(mfilter, 31)
             top_mergers['mergers.last year'] = mmergers.get_list(mfilter, 365)
 
             # The order of the list item change so we can not check it
@@ -232,6 +267,8 @@ class SCR(DataSource):
             metric = DataSource.get_metrics("countries", SCR)
         elif (filter_name == "project"):
             metric = DataSource.get_metrics("projects", SCR)
+        elif (filter_name == "people2"):
+            metric = DataSource.get_metrics("people2", SCR)
         else:
             logging.error("SCR " + filter_name + " not supported")
             return items
@@ -241,9 +278,12 @@ class SCR(DataSource):
 
     @staticmethod
     def create_filter_report(filter_, period, startdate, enddate, destdir, npeople, identities_db):
-        items = SCR.get_filter_items(filter_, startdate, enddate, identities_db)
-        if (items == None): return
-        items = items['name']
+        from vizgrimoire.report import Report
+        items = Report.get_items()
+        if items is None:
+            items = SCR.get_filter_items(filter_, startdate, enddate, identities_db)
+            if (items == None): return
+            items = items['name']
 
         filter_name = filter_.get_name()
 
@@ -287,6 +327,37 @@ class SCR(DataSource):
         fn = os.path.join(destdir, filter_.get_filename(SCR()))
         createJSON(items_list, fn)
 
+    @staticmethod
+    def _check_report_all_data(data, filter_, startdate, enddate, idb,
+                               evol = False, period = None):
+        pass
+
+    @staticmethod
+    def create_filter_report_all(filter_, period, startdate, enddate, destdir, npeople, identities_db):
+        check = False # activate to debug issues
+        filter_name = filter_.get_name()
+
+        if filter_name == "people2" or filter_name == "company":
+            filter_all = Filter(filter_name, None)
+            agg_all = SCR.get_agg_data(period, startdate, enddate,
+                                       identities_db, filter_all)
+            fn = os.path.join(destdir, filter_.get_static_filename_all(SCR()))
+            createJSON(agg_all, fn)
+
+            evol_all = SCR.get_evolutionary_data(period, startdate, enddate,
+                                                 identities_db, filter_all)
+            fn = os.path.join(destdir, filter_.get_evolutionary_filename_all(SCR()))
+            createJSON(evol_all, fn)
+
+            if check:
+                SCR._check_report_all_data(evol_all, filter_, startdate, enddate,
+                                           identities_db, True, period)
+                SCR._check_report_all_data(agg_all, filter_, startdate, enddate,
+                                           identities_db, False, period)
+        else:
+            logging.error(filter_name +" does not support yet group by items sql queries")
+
+
     # Unify top format
     @staticmethod
     def _safeTopIds(top_data_period):
@@ -305,10 +376,10 @@ class SCR(DataSource):
         top += SCR._safeTopIds(top_data['reviewers.last month'])
         top += SCR._safeTopIds(top_data['openers.'])
         top += SCR._safeTopIds(top_data['openers.last year'])
-        top += SCR._safeTopIds(top_data['openers.last_month'])
+        top += SCR._safeTopIds(top_data['openers.last month'])
         top += SCR._safeTopIds(top_data['mergers.'])
         top += SCR._safeTopIds(top_data['mergers.last year'])
-        top += SCR._safeTopIds(top_data['mergers.last_month'])
+        top += SCR._safeTopIds(top_data['mergers.last month'])
         # remove duplicates
         people = list(set(top)) 
 
@@ -330,12 +401,13 @@ class SCR(DataSource):
 
     @staticmethod
     def get_query_builder():
-        from query_builder import SCRQuery
+        from vizgrimoire.metrics.query_builder import SCRQuery
         return SCRQuery
 
     @staticmethod
     def get_metrics_core_agg():
-        m =  ['submitted','opened','closed','merged','abandoned','new','inprogress','pending','review_time','repositories']
+        m =  ['submitted','opened','closed','merged','abandoned','new','inprogress',
+              'pending','review_time','repositories']
         # patches metrics
         m += ['verified','approved','codereview','sent','WaitingForReviewer','WaitingForSubmitter','review_time_pending_total']
         m += ['submitters','reviewers']
@@ -392,13 +464,13 @@ def GetSQLCompaniesFromSCR (identities_db):
 
 def GetSQLCompaniesWhereSCR (company):
     #fields necessaries to match info among tables
-    return ("and i.submitted_by = pup.people_id "+\
+    filters = "and i.submitted_by = pup.people_id "+\
               "and pup.upeople_id = upc.upeople_id "+\
               "and i.submitted_on >= upc.init "+\
               "and i.submitted_on < upc.end "+\
-              "and upc.company_id = c.id "+\
-              "and c.name ='"+ company+"'")
-
+              "and upc.company_id = c.id "
+    if company is not None:
+        filters += "and c.name ='"+ company+"'"
 
 def GetSQLCountriesFromSCR (identities_db):
     #tables necessaries for companies

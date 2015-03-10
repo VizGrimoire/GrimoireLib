@@ -27,12 +27,12 @@
 
 import logging, os
 
-from GrimoireSQL import ExecuteQuery, BuildQuery
-from GrimoireUtils import completePeriodIds, createJSON
+from vizgrimoire.GrimoireSQL import ExecuteQuery, BuildQuery
+from vizgrimoire.GrimoireUtils import completePeriodIds, createJSON
 
-from data_source import DataSource
+from vizgrimoire.data_source import DataSource
 
-from metrics_filter import MetricFilters
+from vizgrimoire.metrics.metrics_filter import MetricFilters
 
 
 class DownloadsDS(DataSource):
@@ -84,7 +84,7 @@ class DownloadsDS(DataSource):
                 for i in [7,30,365]:
                     for item in all_metrics:
                         if item.id not in metrics_trends: continue
-                        period_data = item.get_agg_diff_days(enddate, i)
+                        period_data = item.get_trends(enddate, i)
                         data = dict(data.items() +  period_data.items())
 
         if filter_ is not None: studies = {}
@@ -123,7 +123,34 @@ class DownloadsDS(DataSource):
         createJSON (data, os.path.join(destdir, filename))
 
     @staticmethod
+    def create_filter_report_all(filter_, period, startdate, enddate, destdir, npeople, identities_db):
+        filter_name = filter_.get_name()
+        logging.error(DownloadsDS.get_name()+ " " + filter_name +" does not support yet group by items sql queries")
+
+    @staticmethod
+    def get_top_metrics ():
+        return ["ips","packages"]
+
+    @staticmethod
     def get_top_data (startdate, enddate, identities_db, filter_ = None, npeople = None):
+
+        def filter_ips(ips):
+            new_ips = {}
+            new_ips['downloads'] = ips['downloads']
+            new_ips['ips'] = []
+            for ip in ips['ips']:
+                # ipv4
+                new_ip_aux = ip.split(".")
+                new_ip = ip
+                if len(new_ip_aux) == 4:
+                    new_ip = "x.x."+new_ip_aux[2]+"."+new_ip_aux[3]
+                # ipv6
+                new_ip_aux = ip.split(":")
+                if len(new_ip_aux) > 1:
+                    new_ip = new_ip_aux[0]+":X"
+                new_ips['ips'].append(new_ip)
+            return new_ips
+
         top = {}
         mips = DataSource.get_metrics("ips", DownloadsDS)
         mpackages = DataSource.get_metrics("packages", DownloadsDS)
@@ -134,7 +161,7 @@ class DownloadsDS(DataSource):
         mfilter = MetricFilters(period, startdate, enddate, type_analysis, npeople)
 
         if filter_ is None:
-            top['ips.'] = mips.get_list(mfilter, 0)
+            top['ips.'] = filter_ips(mips.get_list(mfilter, 0))
             top['packages.'] = mpackages.get_list(mfilter, 0)
         else:
             logging.info("DownloadsDS does not support yet top for filters.")
@@ -158,8 +185,11 @@ class DownloadsDS(DataSource):
 
     @staticmethod
     def create_filter_report(filter_, period, startdate, enddate, destdir, npeople, identities_db):
-        items = DownloadsDS.get_filter_items(filter_, startdate, enddate, identities_db)
-        if (items == None): return
+        from vizgrimoire.report import Report
+        items = Report.get_items()
+        if items is None:
+            items = DownloadsDS.get_filter_items(filter_, startdate, enddate, identities_db)
+            if (items == None): return
 
     @staticmethod
     def get_top_people(startdate, enddate, identities_db, npeople):
@@ -179,7 +209,7 @@ class DownloadsDS(DataSource):
 
     @staticmethod
     def get_query_builder ():
-        from query_builder import DownloadsDSQuery
+        from vizgrimoire.metrics.query_builder import DownloadsDSQuery
         return DownloadsDSQuery
 
     @staticmethod
@@ -192,4 +222,4 @@ class DownloadsDS(DataSource):
 
     @staticmethod
     def get_metrics_core_trends():
-        return ['downloads','packages']
+        return ['downloads','packages','ips']

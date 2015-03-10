@@ -27,12 +27,13 @@ import logging
 import sys
 from ConfigParser import SafeConfigParser
 
-import GrimoireUtils, GrimoireSQL
-from GrimoireUtils import createJSON, completePeriodIds
-from GrimoireUtils import getPeriod
-from SCM import GetPeopleListSCM
-import SCM, ITS, MLS, SCR, Mediawiki, IRC
-import People
+import vizgrimoire.GrimoireUtils, vizgrimoire.vizgrimoire.GrimoireSQL
+from vizgrimoire.GrimoireUtils import createJSON, completePeriodIds
+from vizgrimoire.GrimoireUtils import getPeriod
+from vizgrimoire.SCM import GetPeopleListSCM
+import vizgrimoire.SCM, vizgrimoire.ITS, vizgrimoire.MLS, vizgrimoire.SCR, vizgrimoire.Mediawiki, vizgrimoire.IRC
+import vizgrimoire.People
+
 from utils import read_options
 
 def read_main_conf(config_file):
@@ -61,27 +62,27 @@ def get_top_people(startdate, enddate, idb, bots):
     all_top = {}
     all_top_min_ds = {}
     db = automator['generic']['db_gerrit']
-    GrimoireSQL.SetDBChannel (database=db, user=opts.dbuser, password=opts.dbpassword)
+    vizgrimoire.GrimoireSQL.SetDBChannel (database=db, user=opts.dbuser, password=opts.dbpassword)
     tops["scr"] = SCR.GetTopOpenersSCR(0, startdate, enddate, idb, bots, npeople)
     db = automator['generic']['db_mlstats']
-    GrimoireSQL.SetDBChannel (database=db, user=opts.dbuser, password=opts.dbpassword)
-    tops["mls"] = MLS.top_senders(0, startdate, enddate, idb, bots, npeople)
+    vizgrimoire.GrimoireSQL.SetDBChannel (database=db, user=opts.dbuser, password=opts.dbpassword)
+    tops["mls"] = vizgrimoire.MLS.top_senders(0, startdate, enddate, idb, bots, npeople)
     db = automator['generic']['db_bicho']
-    GrimoireSQL.SetDBChannel (database=db, user=opts.dbuser, password=opts.dbpassword)
+    vizgrimoire.GrimoireSQL.SetDBChannel (database=db, user=opts.dbuser, password=opts.dbpassword)
     # Fixed for bugzilla, what Wikimedia uses
     closed_condition = "(new_value='RESOLVED' OR new_value='CLOSED' OR new_value='Lowest')"
     # TODO: include in "-Bot" company all the bots
-    tops["its"] = ITS.GetTopOpeners(0, startdate, enddate, idb, ["-Bot"], closed_condition, npeople)
+    tops["its"] = vizgrimoire.ITS.GetTopOpeners(0, startdate, enddate, idb, ["-Bot"], closed_condition, npeople)
     db = automator['generic']['db_irc']
-    GrimoireSQL.SetDBChannel (database=db, user=opts.dbuser, password=opts.dbpassword)
-    tops["irc"] = IRC.GetTopSendersIRC(0, startdate, enddate, idb, bots, npeople)
+    vizgrimoire.GrimoireSQL.SetDBChannel (database=db, user=opts.dbuser, password=opts.dbpassword)
+    tops["irc"] = vizgrimoire.IRC.GetTopSendersIRC(0, startdate, enddate, idb, bots, npeople)
     db = automator['generic']['db_mediawiki']
-    GrimoireSQL.SetDBChannel (database=db, user=opts.dbuser, password=opts.dbpassword)
-    tops["mediawiki"] = Mediawiki.GetTopAuthorsMediaWiki(0, startdate, enddate, idb, bots, npeople)
+    vizgrimoire.GrimoireSQL.SetDBChannel (database=db, user=opts.dbuser, password=opts.dbpassword)
+    tops["mediawiki"] = vizgrimoire.Mediawiki.GetTopAuthorsMediaWiki(0, startdate, enddate, idb, bots, npeople)
     # SCR and SCM are the same. Don't use both for Tops
     # TODO: include in "-Bot" company all the bots
     # db = automator['generic']['db_cvsanaly']
-    # GrimoireSQL.SetDBChannel (database=db, user=opts.dbuser, password=opts.dbpassword)
+    # vizgrimoire.GrimoireSQL.SetDBChannel (database=db, user=opts.dbuser, password=opts.dbpassword)
     # tops["scm"] = SCM.top_people(0, startdate, enddate, "author" , ["-Bot"] , npeople)
 
     # Build the consolidated top list using all data sources data
@@ -106,7 +107,7 @@ def create_top_people_report(startdate, enddate, idb, bots):
 def create_people_identifiers(startdate, enddate, idb, bots):
 
     db = automator['generic']['db_cvsanaly']
-    GrimoireSQL.SetDBChannel (database=db, user=opts.dbuser, password=opts.dbpassword)
+    vizgrimoire.GrimoireSQL.SetDBChannel (database=db, user=opts.dbuser, password=opts.dbpassword)
 
     people_data = {}
     people = GetPeopleListSCM(startdate, enddate)
@@ -122,7 +123,7 @@ def create_people_identifiers(startdate, enddate, idb, bots):
     print(all_top_min_ds)
 
     db = automator['generic']['db_cvsanaly']
-    GrimoireSQL.SetDBChannel (database=db, user=opts.dbuser, password=opts.dbpassword)
+    vizgrimoire.GrimoireSQL.SetDBChannel (database=db, user=opts.dbuser, password=opts.dbpassword)
 
     for upeople_id in all_top_min_ds:
         people_data[upeople_id] = People.GetPersonIdentifiers(upeople_id)

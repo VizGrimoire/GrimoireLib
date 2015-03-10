@@ -29,15 +29,13 @@ import re
 import sys
 import datetime
 
-from GrimoireSQL import GetSQLGlobal, GetSQLPeriod
-from GrimoireSQL import ExecuteQuery, BuildQuery
-from GrimoireUtils import GetPercentageDiff, GetDates, completePeriodIds, getPeriod, createJSON, get_subprojects
-from metrics_filter import MetricFilters
-from threads import Threads
-
-from data_source import DataSource
-import report
-from filter import Filter
+from vizgrimoire.GrimoireSQL import GetSQLGlobal, GetSQLPeriod
+from vizgrimoire.GrimoireSQL import ExecuteQuery, BuildQuery
+from vizgrimoire.GrimoireUtils import GetPercentageDiff, GetDates, completePeriodIds, getPeriod, createJSON, get_subprojects
+from vizgrimoire.metrics.metrics_filter import MetricFilters
+from vizgrimoire.analysis.threads import Threads
+from vizgrimoire.data_source import DataSource
+from vizgrimoire.filter import Filter
 
 
 class MLS(DataSource):
@@ -131,7 +129,9 @@ class MLS(DataSource):
             l_threads['message_id'].append(email.message_id)
             l_threads['length'].append(main_topics.lenThread(email.message_id))
             l_threads['subject'].append(email.subject)
-            l_threads['date'].append(email.date.strftime("%Y-%m-%d"))
+            if not isinstance(email.date, list):
+                #not expected result: an empty list.
+                l_threads['date'].append(email.date.strftime("%Y-%m-%d"))
             l_threads['initiator_name'].append(email.initiator_name)
             l_threads['initiator_id'].append(email.initiator_id)
             l_threads['url'].append(email.url)
@@ -140,34 +140,46 @@ class MLS(DataSource):
 
 
     @staticmethod
-    def get_top_data (startdate, enddate, identities_db, filter_, npeople):
+    def get_top_metrics ():
+        return ["senders"]
+
+    @staticmethod
+    def get_top_data (startdate, enddate, identities_db, filter_, npeople, threads_top = True):
         msenders = DataSource.get_metrics("senders", MLS)
         period = None
         type_analysis = None
         if filter_ is not None:
             type_analysis = filter_.get_type_analysis()
         mfilter = MetricFilters(period, startdate, enddate, type_analysis, npeople)
+        top = {}
 
         if filter_ is None:
-            top = {}
+
             top['senders.'] = msenders.get_list(mfilter, 0)
             top['senders.last month'] = msenders.get_list(mfilter, 31)
             top['senders.last year'] = msenders.get_list(mfilter, 365)
 
-            top['threads.'] = MLS.getLongestThreads(startdate, enddate, identities_db, npeople)
-            startdate = datetime.date.today() - datetime.timedelta(days=365)
-            startdate =  "'" + str(startdate) + "'"
-            top['threads.last year'] = MLS.getLongestThreads(startdate, enddate, identities_db, npeople)
-            startdate = datetime.date.today() - datetime.timedelta(days=30)
-            startdate =  "'" + str(startdate) + "'"
-            top['threads.last month'] = MLS.getLongestThreads(startdate, enddate, identities_db, npeople) 
+            if threads_top:
+	    	top['threads.'] = MLS.getLongestThreads(startdate, enddate, identities_db, npeople)
+            	startdate = datetime.date.today() - datetime.timedelta(days=365)
+            	startdate =  "'" + str(startdate) + "'"
+            	top['threads.last year'] = MLS.getLongestThreads(startdate, enddate, identities_db, npeople)
+            	startdate = datetime.date.today() - datetime.timedelta(days=30)
+            	startdate =  "'" + str(startdate) + "'"
+            	top['threads.last month'] = MLS.getLongestThreads(startdate, enddate, identities_db, npeople) 
 
         else:
             filter_name = filter_.get_name()
             item = filter_.get_item()
 
             if filter_name in ["company","domain","repository","domain","country"]:
-                top = msenders.get_list(mfilter)
+                if filter_name in ["company","domain","repository","domain","country"]:
+                    top['senders.'] = msenders.get_list(mfilter, 0)
+                    top['senders.last month'] = msenders.get_list(mfilter, 31)
+                    top['senders.last year'] = msenders.get_list(mfilter, 365)
+                else:
+                    # Remove filters above if there are performance issues
+                    top = msenders.get_list(mfilter)
             else:
                 top = None
 
@@ -194,11 +206,15 @@ class MLS(DataSource):
             metric = DataSource.get_metrics("domains", MLS)
         elif (filter_name == "project"):
             metric = DataSource.get_metrics("projects", MLS)
+        elif (filter_name == "people2"):
+            metric = DataSource.get_metrics("people2", MLS)
         else:
             logging.error(filter_name + " not supported")
+            return items
 
         items = metric.get_list()
-        return items
+
+        return {"name":items}
 
     @staticmethod
     def get_filter_summary(filter_, period, startdate, enddate, identities_db, limit):
@@ -211,8 +227,12 @@ class MLS(DataSource):
 
     @staticmethod
     def create_filter_report(filter_, period, startdate, enddate, destdir, npeople, identities_db):
-        items = MLS.get_filter_items(filter_, startdate, enddate, identities_db)
-        if (items == None): return
+        from vizgrimoire.report import Report
+        items = Report.get_items()
+        if items is None:
+            items = MLS.get_filter_items(filter_, startdate, enddate, identities_db)
+            if (items == None): return
+            items = items['name']
 
         filter_name = filter_.get_name()
 
@@ -249,7 +269,7 @@ class MLS(DataSource):
                 items_list['sent_365'].append(agg['sent_365'])
                 items_list['senders_365'].append(agg['senders_365'])
 
-            top_senders = MLS.get_top_data(startdate, enddate, identities_db, filter_item, npeople)
+            top_senders = MLS.get_top_data(startdate, enddate, identities_db, filter_item, npeople, False)
             createJSON(top_senders, destdir+"/"+filter_item.get_top_filename(MLS()))
 
         fn = os.path.join(destdir, filter_.get_filename(MLS()))
@@ -260,8 +280,37 @@ class MLS(DataSource):
             createJSON (sent, destdir+"/"+filter_.get_summary_filename(MLS))
 
     @staticmethod
+    def _check_report_all_data(data, filter_, startdate, enddate, idb,
+                               evol = False, period = None):
+        pass
+
+    @staticmethod
+    def create_filter_report_all(filter_, period, startdate, enddate, destdir, npeople, identities_db):
+        check = False # activate to debug issues
+        filter_name = filter_.get_name()
+        if filter_name == "people2" or filter_name == "company":
+            filter_all = Filter(filter_name, None)
+            agg_all = MLS.get_agg_data(period, startdate, enddate,
+                                       identities_db, filter_all)
+            fn = os.path.join(destdir, filter_.get_static_filename_all(MLS()))
+            createJSON(agg_all, fn)
+
+            evol_all = MLS.get_evolutionary_data(period, startdate, enddate,
+                                                 identities_db, filter_all)
+            fn = os.path.join(destdir, filter_.get_evolutionary_filename_all(MLS()))
+            createJSON(evol_all, fn)
+
+            if check:
+                MLS._check_report_all_data(evol_all, filter_, startdate, enddate,
+                                           identities_db, True, period)
+                MLS._check_report_all_data(agg_all, filter_, startdate, enddate,
+                                           identities_db, False, period)
+        else:
+            logging.error(filter_name +" does not support yet group by items sql queries")
+
+    @staticmethod
     def get_top_people(startdate, enddate, identities_db, npeople):
-        top_data = MLS.get_top_data (startdate, enddate, identities_db, None, npeople)
+        top_data = MLS.get_top_data (startdate, enddate, identities_db, None, npeople, False)
 
         top = top_data['senders.']["id"]
         top += top_data['senders.last year']["id"]
@@ -283,8 +332,9 @@ class MLS(DataSource):
     @staticmethod
     def create_r_reports(vizr, enddate, destdir):
         unique_ids = True
-        vizr.ReportDemographicsAgingMLS(enddate, destdir, unique_ids)
-        vizr.ReportDemographicsBirthMLS(enddate, destdir, unique_ids)
+        # Demographics - created now with age study in Python
+        # vizr.ReportDemographicsAgingMLS(enddate, destdir, unique_ids)
+        # vizr.ReportDemographicsBirthMLS(enddate, destdir, unique_ids)
 
         ## Which quantiles we're interested in
         # quantiles_spec = [0.99,0.95,0.5,0.25]
@@ -296,7 +346,7 @@ class MLS(DataSource):
 
     @staticmethod
     def get_query_builder():
-        from query_builder import MLSQuery
+        from vizgrimoire.metrics.query_builder import MLSQuery
         return MLSQuery
 
     @staticmethod
@@ -599,57 +649,6 @@ def GetStaticPeopleMLS (developer_id, startdate, enddate) :
     data = ExecuteQuery(q)
     return (data)
 
-
-#####################
-# MICRO STUDIES
-#####################
-
-def StaticNumSent (startdate, enddate):
-    fields = " COUNT(*) as sent "
-    tables = GetTablesOwnUniqueIdsMLS()
-    filters = GetFiltersOwnUniqueIdsMLS()
-    q = GetSQLGlobal('first_date', fields, tables, filters,
-            startdate, enddate)
-    sent = ExecuteQuery(q)
-    return(sent)
-
-
-def StaticNumSenders (startdate, enddate):
-    fields = " COUNT(DISTINCT(pup.upeople_id)) as senders "
-    tables = GetTablesOwnUniqueIdsMLS()
-    filters = GetFiltersOwnUniqueIdsMLS()
-    q = GetSQLGlobal('first_date', fields, tables, filters,
-            startdate, enddate)
-    senders = ExecuteQuery(q)
-    return(senders)
-
-def GetDiffSentDays (period, init_date, days):
-    chardates = GetDates(init_date, days)
-    last = StaticNumSent(chardates[1], chardates[0])
-    last = int(last['sent'])
-    prev = StaticNumSent(chardates[2], chardates[1])
-    prev = int(prev['sent'])
-
-    data = {}
-    data['diff_netsent_'+str(days)] = last - prev
-    data['percentage_sent_'+str(days)] = GetPercentageDiff(prev, last)
-    data['sent_'+str(days)] = last
-    return (data)
-
-def GetDiffSendersDays (period, init_date, days):
-    # This function provides the percentage in activity between two periods
-
-    chardates = GetDates(init_date, days)
-    last = StaticNumSenders(chardates[1], chardates[0])
-    last = int(last['senders'])
-    prev = StaticNumSenders(chardates[2], chardates[1])
-    prev = int(prev['senders'])
-
-    data = {}
-    data['diff_netsenders_'+str(days)] = last - prev
-    data['percentage_senders_'+str(days)] = GetPercentageDiff(prev, last)
-    data['senders_'+str(days)] = last
-    return (data)
 
 def GetSentSummaryCompanies (period, startdate, enddate, identities_db, num_companies):
     count = 1

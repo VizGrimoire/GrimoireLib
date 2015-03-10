@@ -21,13 +21,18 @@
 ## Authors:
 ##   Alvaro del Castillo <acs@bitergia.com>
 
-import logging
+import logging, re
 
 class Filter(object):
 
-    _filters_data = [["repository","rep","repos"], ["company","com","companies"],
-                    ["country","cou","countries"], ["domain","dom","domains"],
-                    ["project","prj","projects"], ["tag", "tag", "tags"]]
+    _filters_data = [
+                     ["repository","rep","repos"], ["company","com","companies"],
+                     ["country","cou","countries"], ["domain","dom","domains"],
+                     ["project","prj","projects"], ["tag", "tag", "tags"],
+                     ["people","people","people"],
+                     ["people2","people2","people2"],
+                     ["company+country","com+cou","companies+countries"]
+                    ]
 
     def __init__(self, name, item = None):
         self.name = name
@@ -58,6 +63,9 @@ class Filter(object):
     def get_filename (self, ds):
         return ds.get_name()+"-"+self.get_name_plural()+".json"
 
+    def get_evolutionary_filename_all (self, ds):
+        return ds.get_name()+"-"+self.get_name_short()+"-all-evolutionary.json"
+
     def get_evolutionary_filename (self, ds):
         name  = None
 
@@ -66,9 +74,13 @@ class Filter(object):
         else:
             selfname_short = self.get_name_short()
             item = self.get_item().replace("/","_").replace("<","__").replace(">","___")
+            if re.compile("^\..*").match(item) is not None: item = "_"+item
             name = item+"-"+ds.get_name()+"-"+selfname_short+"-evolutionary.json"
 
         return name
+
+    def get_static_filename_all (self, ds):
+        return ds.get_name()+"-"+self.get_name_short()  +"-all-static.json"
 
     def get_static_filename (self, ds):
         name  = None
@@ -78,6 +90,7 @@ class Filter(object):
         else:
             selfname_short = self.get_name_short()
             item = self.get_item().replace("/","_").replace("<","__").replace(">","___")
+            if re.compile("^\..*").match(item) is not None: item = "_"+item
             name = item+"-"+ds.get_name()+"-"+selfname_short+"-static.json"
 
         return name
@@ -93,7 +106,7 @@ class Filter(object):
             name = item+"-"+ds.get_name()+"-"+self.get_name_short()+"-top-"
             if (ds.get_name() == "scm"):
                 name += "authors.json"
-            elif (ds.get_name() == "its"):
+            elif (ds.get_name() == "its" or ds.get_name() == "its_1"):
                 name += "closers.json"
             elif (ds.get_name() == "mls"): 
                 name += "senders.json"
@@ -109,7 +122,7 @@ class Filter(object):
         if (ds.get_name() == "scm"):
             if (self.get_name() == "company"):
                 name += "companies-commits-summary.json"
-        elif (ds.get_name() == "its"):
+        elif (ds.get_name() == "its" or ds.get_name() == "its_1"):
             if (self.get_name() == "company"):
                 name += "closed-companies-summary.json"
         elif (ds.get_name() == "mls"):
@@ -121,5 +134,9 @@ class Filter(object):
 
     def get_type_analysis(self):
         """Old format for filtering"""
-        type_analysis = [self.get_name(), "'"+self.get_item()+"'"]
+        name = self.get_name()
+        item = self.get_item()
+        if item is not None: item =  "'"+self.get_item()+"'"
+
+        type_analysis = [name, item]
         return type_analysis

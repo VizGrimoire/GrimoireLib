@@ -20,12 +20,12 @@
 
 import logging, os
 
-from GrimoireSQL import GetSQLGlobal, GetSQLPeriod, ExecuteQuery, BuildQuery
-from GrimoireUtils import GetPercentageDiff, GetDates, completePeriodIds, createJSON
+from vizgrimoire.GrimoireSQL import GetSQLGlobal, GetSQLPeriod, ExecuteQuery, BuildQuery
+from vizgrimoire.GrimoireUtils import GetPercentageDiff, GetDates, completePeriodIds, createJSON
 
-from data_source import DataSource
+from vizgrimoire.data_source import DataSource
 
-from metrics_filter import MetricFilters
+from vizgrimoire.metrics.metrics_filter import MetricFilters
 
 
 
@@ -84,6 +84,15 @@ class ReleasesDS(DataSource):
         createJSON (data, os.path.join(destdir, filename))
 
     @staticmethod
+    def create_filter_report_all(filter_, period, startdate, enddate, destdir, npeople, identities_db):
+        filter_name = filter_.get_name()
+        logging.error(ReleasesDS.get_name()+ " " + filter_name +" does not support yet group by items sql queries")
+
+    @staticmethod
+    def get_top_metrics ():
+        return ["authors"]
+
+    @staticmethod
     def get_top_data (startdate, enddate, identities_db, filter_, npeople):
         top = {}
         mauthors = DataSource.get_metrics("authors", ReleasesDS)
@@ -118,8 +127,11 @@ class ReleasesDS(DataSource):
 
     @staticmethod
     def create_filter_report(filter_, period, startdate, enddate, destdir, npeople, identities_db):
-        items = ReleasesDS.get_filter_items(filter_, startdate, enddate, identities_db)
-        if (items == None): return
+        from vizgrimoire.report import Report
+        items = Report.get_items()
+        if items is None:
+            items = ReleasesDS.get_filter_items(filter_, startdate, enddate, identities_db)
+            if (items == None): return
 
     @staticmethod
     def get_top_people(startdate, enddate, identities_db, npeople):
@@ -157,7 +169,7 @@ class ReleasesDS(DataSource):
 
     @staticmethod
     def get_query_builder ():
-        from query_builder import ReleasesDSQuery
+        from vizgrimoire.metrics.query_builder import ReleasesDSQuery
         return ReleasesDSQuery
 
     @staticmethod

@@ -28,9 +28,9 @@
 #    Santiago Dueñas <sduenas@bitergia.com>
 #
 
-from analyses import Analyses
+from vizgrimoire.analysis.analyses import Analyses
 
-from GrimoireUtils import completePeriodIds
+from vizgrimoire.GrimoireUtils import completePeriodIds
 
 
 class TicketsStates(Analyses):
@@ -56,11 +56,20 @@ class TicketsStates(Analyses):
 
         fields = " count(distinct(id)) as `current_" + state + "` "
         tables = " issues i "
-        filters = " status = '" + state + "' "
+        filters = " status = '" + state.replace("'", "''") + "' "
 
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                self.filters.enddate, " i.submitted_on ",
                                fields, tables, filters, evolutionary)
+        return q
+
+    def __get_sql_state_types__(self, backend_type):
+        """This function returns the list of states available on the database"""
+
+        if backend_type == "lp": backend_type = "launchpad" # openstack
+
+        q = """SELECT DISTINCT(status) status
+               FROM issues_log_%s""" % backend_type
         return q
 
     def get_backlog(self, states, backend_type):
@@ -152,9 +161,14 @@ class TicketsStates(Analyses):
 
         return current_states
 
+    def get_state_types(self, backend_type):
+        query = self.__get_sql_state_types__(backend_type)
+        result = self.db.ExecuteQuery(query)
 
-    def get_ts (self, data_source = None):
-        from ITS import ITS
+        return [state  for state in result['status']]
+
+    def get_ts(self, data_source = None):
+        from vizgrimoire.ITS import ITS
         if data_source is not None and data_source != ITS: return {}
         return self.result()
 
@@ -162,7 +176,7 @@ class TicketsStates(Analyses):
         # FIXME: this import is needed to get the list of
         # states available on the tracker. This should be moved
         # to configuration file to let the user choose among states.
-        from ITS import ITS
+        from vizgrimoire.ITS import ITS
         if data_source is not None and data_source != ITS: return None
         backend = ITS._get_backend()
 
@@ -171,6 +185,8 @@ class TicketsStates(Analyses):
         else:
             backend_type = backend.its_type
 
-        backlog = self.get_backlog(backend.statuses, backend_type)
-        current_states = self.get_current_states(backend.statuses)
+        states = self.get_state_types(backend_type)
+
+        backlog = self.get_backlog(states, backend_type)
+        current_states = self.get_current_states(states)
         return dict(backlog.items() + current_states.items())
