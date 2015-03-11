@@ -27,7 +27,7 @@ import time
 
 from sets import Set
 
-from vizgrimoire.GrimoireUtils import completePeriodIds, createTimeSeries
+from vizgrimoire.GrimoireUtils import completePeriodIds, createTimeSeries, genDates
 from vizgrimoire.metrics.metrics import Metrics
 from vizgrimoire.QAForums import QAForums
 
@@ -108,23 +108,10 @@ class UnansweredQuestions(Metrics):
               """ % (enddate, enddate)
         return sql
 
-    def __gen_dates(self, period, startdate, enddate):
-        dates = createTimeSeries({})
-        dates.pop('id')
-        dates[period] = []
-
-        dates = completePeriodIds(dates, period, startdate, enddate)
-
-        # Remove zeros
-        dates['date'] = [d for d in dates['date'] if d != 0]
-        dates['unixtime'] = [d for d in dates['unixtime'] if d != 0]
-
-        return dates
-
     def get_ts(self):
-        data = self.__gen_dates(self.filters.period,
-                                self.filters.startdate,
-                                self.filters.enddate)
+        data = genDates(self.filters.period,
+                        self.filters.startdate,
+                        self.filters.enddate)
 
         # Generate periods
         last_date = int(time.mktime(datetime.datetime.strptime(

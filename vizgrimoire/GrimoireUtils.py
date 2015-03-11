@@ -1,5 +1,7 @@
+# -*- coding: utf-8 -*-
+#
 #!/usr/bin/env python
-
+#
 # Copyright (C) 2014 Bitergia
 # 
 # This program is free software; you can redistribute it and/or modify
@@ -19,6 +21,8 @@
 #
 # Authors:
 #     Alvaro del Castillo <acs@bitergia.com>
+#     Santiago Dueñas <sduenas@bitergia.com>
+#     Daniel Izquierdo <dizquierdo@bitergia.com>
 
 # Misc utils
 
@@ -207,6 +211,27 @@ def completePeriodIds(ts_data, period, startdate, enddate):
         new_ts_data = completePeriodIdsYears(ts_data, start, end)
 
     return cleanNaN(new_ts_data)
+
+def genDates(period, startdate, enddate):
+    """ This function generates empty timeseries period
+
+        This is typically used for metric classes that need
+        to iterate through the several periods and populate
+        the data structure.
+    """
+
+    dates = createTimeSeries({})
+    dates.pop('id')
+    dates[period] = []
+
+    dates = completePeriodIds(dates, period, startdate, enddate)
+
+    # Remove zeros
+    dates['date'] = [d for d in dates['date'] if d != 0]
+    dates['unixtime'] = [d for d in dates['unixtime'] if d != 0]
+
+    return dates
+
 
 # Convert a R data frame to a python dictionary
 def dataFrame2Dict(data):
