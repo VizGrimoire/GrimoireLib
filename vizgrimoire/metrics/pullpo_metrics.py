@@ -331,8 +331,7 @@ class TimeToMerge(Metrics):
     data_source = Pullpo
 
     def get_agg(self):
-        query = self.db.GetTimeToSQL(self.filters, "merged")
-        return self.db.ExecuteQuery(query)
+        return self.db.GetTimeToAgg(self.filters, "merged")
 
     def get_ts(self):
         return self.db.GetTimeToTimeSeriesData(self.filters, "merged")
@@ -354,8 +353,7 @@ class TimeToClose(Metrics):
     data_source = Pullpo
 
     def get_agg(self):
-        query = self.db.GetTimeToSQL(self.filters, "closed")
-        return self.db.ExecuteQuery(query)
+        return self.db.GetTimeToAgg(self.filters, "closed")
 
     def get_ts(self):
         return self.db.GetTimeToTimeSeriesData(self.filters, "closed")

@@ -2747,25 +2747,14 @@ class PullpoQuery(DSQuery):
                              filters, evolutionary, type_analysis)
         return q
 
-    def GetTimeToSQL(self, metric_filters, actionto):
+    def GetTimeToSQL(self, metric_filters, closed_field, metric_name):
         """ This function returns the query to count "time to" a specific state
             from the moment where the pull request was uploaded to GitHub
-
-            actionto initially accepts closed or merged
         """
 
         fields = Set([])
         tables = Set([])
         filters = Set([])
-
-        if actionto == "closed":
-            closed_field = "closed_at"
-            metric_name = "closedtime"
-        elif actionto == "merged":
-            closed_field = "merged_at"
-            metric_name = "mergedtime"
-        else:
-            raise Exception("'actionto' not supported")
 
         fields.add("TIMESTAMPDIFF(SECOND, created_at, "+ closed_field  +") as " + metric_name)
 
@@ -2778,6 +2767,38 @@ class PullpoQuery(DSQuery):
                                 metric_filters.enddate, closed_field, fields,
                                 tables, filters, False)
         return query
+
+    def GetTimeToAgg(self, metric_filters, actionto):
+        """ This function provides final aggregated data based on actionto value
+        """
+
+        if actionto == "closed":
+            closed_field = "closed_at"
+            metric_name = "closedtime"
+            value = "close"
+        elif actionto == "merged":
+            closed_field = "merged_at"
+            metric_name = "mergedtime"
+            value = "merge"
+        else:
+            raise Exception("'actionto' not supported")
+
+        #Building the query
+        timeto_sql = self.GetTimeToSQL(metric_filters, closed_field, metric_name)
+        data = self.ExecuteQuery(timeto_sql)
+
+        #Calculating specific statistical values
+        stats_data = DHESA(data[metric_name])
+        to_days = 3600*24
+        median = round(stats_data.data["median"] / to_days, 2)
+        mean = round(stats_data.data["mean"] / to_days, 2)
+
+        agg_data = {}
+        agg_data["timeto_"+value+"_median"] = median
+        agg_data["timeto_"+value+"_avg"] = mean
+
+        return agg_data
+
 
     def GetTimeToTimeSeriesData(self, metric_filters, actionto):
         """ This function provides final time serie about a final 'actionto' value
@@ -2803,17 +2824,6 @@ class PullpoQuery(DSQuery):
 
         periods = list(data['unixtime'])
         periods.append(last_date)
-        if actionto == "closed":
-            value = "close"
-            metricname = "closedtime"
-        elif actionto == "merged":
-            value = "merge"
-            metricname = "mergedtime"
-        else:
-            raise Exception ("'actionto' not supported")
-
-        data["timeto_"+value+"_median"] = []
-        data["timeto_"+value+"_avg"] = []
 
         startdate = "'" + datetime.datetime.fromtimestamp(int(periods[0])).strftime('%Y-%m-%d %H:%M:%S') + "'"
         for p in periods[1:]:
@@ -2822,17 +2832,14 @@ class PullpoQuery(DSQuery):
             mfilters.startdate = startdate
             mfilters.enddate = enddate
 
-            timeto_sql = self.GetTimeToSQL(mfilters, actionto)
-            timeto = self.ExecuteQuery(timeto_sql)
-            #Call DHESA to produce mean and median for each period.
-            #Other values are available such as min, max, percentiles, etc.
-            stats_data = DHESA(timeto[metricname])
-
-            to_days = 3600*24
-            median = round(stats_data.data["median"] / to_days, 2)
-            mean = round(stats_data.data["mean"] / to_days, 2)
-            data["timeto_"+value+"_median"].append(median)
-            data["timeto_"+value+"_avg"].append(mean)
+            data_agg = self.GetTimeToAgg(mfilters, actionto)
+            for metric in data_agg.keys():
+                #data_agg contains a list of metrics between two dates
+                #This inserts in the final data structure those values
+                #in each of the cases.
+                if not data.has_key(metric):
+                    data[metric] = []
+                data[metric].append(data_agg[metric])
 
             startdate = enddate
 
