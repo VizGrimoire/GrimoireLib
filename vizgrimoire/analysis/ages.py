@@ -35,7 +35,10 @@ from grimoirelib_alch.family.its import (
     OrgsCondition as ITSOrgsCondition
     )
 from grimoirelib_alch.query.mls import DB as MLSDatabase
-from grimoirelib_alch.family.mls import PeriodCondition as MLSPeriodCondition
+from grimoirelib_alch.family.mls import (
+    PeriodCondition as MLSPeriodCondition,
+    OrgsCondition as MLSOrgsCondition
+    )
 from grimoirelib_alch.family.activity_persons import (
     SCMActivityPersons,
     ITSActivityPersons,
@@ -204,17 +207,24 @@ class Ages(Analyses):
             period = MLSPeriodCondition (start = startdate,
                                          end = enddate,
                                          date = "check")
+            conditions = [period,]
+            if self.filters.COMPANY in self.analysis_dict:
+                orgs = MLSOrgsCondition (
+                    orgs = (self.analysis_dict[self.filters.COMPANY],),
+                    actors = "senders",
+                    date = "check"
+                    )
+                conditions.append(orgs)
             database = MLSDatabase (url = url,
                                     schema = schema,
                                     schema_id = schema_id)
-            
             data = MLSActivityPersons (
                 datasource = database,
                 name = "list_usenders",
                 date_kind = "check",
-                conditions = (period,))
+                conditions = conditions)
         else:
-            logging.info("Error: No aging analysys for this data source!")
+            logging.info("Error: No aging analysis for this data source!")
         if data_source in (SCM, ITS, MLS):
             # Birth has the ages of all actors, consiering enddate as
             # current (snapshot) time
@@ -288,6 +298,11 @@ if __name__ == '__main__':
     from vizgrimoire.metrics.metrics_filter import MetricFilters
 
     filters = MetricFilters("months", "'2013-12-01'", "'2014-01-01'", [])
+
+    ##
+    ## SCM
+    ##
+
     # Warning: next "Red Hat" string will be changed to "'Red Hat'" by
     # the internals of Automator etc.
     filters_scm = filters
@@ -310,8 +325,12 @@ if __name__ == '__main__':
                         encoding="utf8")
     print encode(ages.result(SCM), unpicklable=False)
 
+    ##
+    ## ITS
+    ##
+
     filters_its = filters
-    filters_its.add_filter (filters.COMPANY, "company2")
+    filters_its.add_filter (filters_its.COMPANY, "company2")
     dbcon = DSQuery(user = "jgb", password = "XXX", 
                     database = "cp_bicho_GrimoireLibTests",
                     identities_db = "cp_cvsanaly_GrimoireLibTests")
@@ -323,10 +342,16 @@ if __name__ == '__main__':
                         encoding="utf8")
     print encode(ages.result(ITS), unpicklable=False)
 
+    ##
+    ## MLS
+    ##
+
+    filters_mls = filters
+    filters_mls.add_filter (filters_mls.COMPANY, "company3")
     dbcon = DSQuery(user = "jgb", password = "XXX", 
                     database = "cp_mlstats_GrimoireLibTests",
                     identities_db = "cp_cvsanaly_GrimoireLibTests")
-    ages = Ages(dbcon, filters)
+    ages = Ages(dbcon, filters_mls)
     # Produce pretty JSON output
     set_encoder_options('json', sort_keys=True, indent=4,
                         separators=(',', ': '),
