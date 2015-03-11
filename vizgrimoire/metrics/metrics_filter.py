@@ -159,3 +159,14 @@ class MetricFilters(object):
 
     def set_closed_condition(self, value): self.closed_condition = value
 
+    def copy(self):
+        newcopy = MetricFilters(self.period,
+                                self.startdate,
+                                self.enddate,
+                                self.type_analysis,
+                                self.npeople,
+                                self.people_out,
+                                self.companies_out,
+                                self.global_filter)
+        return newcopy
+
