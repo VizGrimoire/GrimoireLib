@@ -257,7 +257,7 @@ class Ages(Analyses):
         Creates JSON files with the results of the report for birth and aging:
          ds-demographics-birth.json, ds-demographics-aging.json,
          with ds being "scm" or "its".
-        Only works for SCM or ITS data sources.
+        Only works for SCM, ITS, MLS data sources.
         
         Parameters
         ----------
@@ -278,7 +278,8 @@ class Ages(Analyses):
             logging.info("Error: data_source not supported for Aging")
             return
         demos = self.result(data_source)
-        log_message = "Producing report for study: Aging (done!)"
+        log_message = "Producing report for study: Aging " + prefix + \
+            " (done!)"
         if self.filters.COMPANY in self.analysis_dict:
             org = self.analysis_dict[self.filters.COMPANY]
             file_birth = destdir + "/" + org + "-" + prefix + "-com-demographics-birth.json"
