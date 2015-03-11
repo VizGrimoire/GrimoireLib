@@ -361,42 +361,6 @@ class TimeToClose(Metrics):
         return self.db.GetTimeToTimeSeriesData(self.filters, "closed")
 
 
-class TimeToReview(Metrics):
-    """ The time is measure for closed reviews merged """
-    id = "review_time"
-    name = "Review Time"
-    desc = "Time to review"
-    data_source = Pullpo
-
-    def _get_sql(self):
-        if self.filters.period != "month": return None
-        bots = []
-        q = self.db.GetTimeToReviewQuerySQL (self.filters.startdate, self.filters.enddate,
-                                             self.filters.type_analysis, bots)
-        return q
-
-    def get_agg(self):
-        from numpy import median, average
-        from vizgrimoire.GrimoireUtils import removeDecimals
-
-        q = self._get_sql()
-        if q is None: return {}
-        data = self.db.ExecuteQuery(q)
-        data = data['revtime']
-        if (isinstance(data, list) == False): data = [data]
-        # ttr_median = sorted(data)[len(data)//2]
-        if (len(data) == 0):
-            ttr_median = float("nan")
-            ttr_avg = float("nan")
-        else:
-            ttr_median = float(median(removeDecimals(data)))
-            ttr_avg = float(average(removeDecimals(data)))
-        return {"review_time_days_median":ttr_median, "review_time_days_avg":ttr_avg}
-
-    def get_ts(self):
-        logging.warning("Not implemented time to review evolution in time for github pull requests")
-        return {}
-
 ######################
 # Contributors metrics
 ######################

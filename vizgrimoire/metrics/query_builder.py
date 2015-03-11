@@ -2838,34 +2838,3 @@ class PullpoQuery(DSQuery):
 
         return data
 
-
-    def GetTimeToReviewQuerySQL (self, startdate, enddate, type_analysis = [], bots = []):
-        fields = Set([])
-        tables = Set([])
-        filters = Set([])
-
-        filter_bots = ''
-        for bot in bots:
-            filters.add("people.login <> '"+bot+"'")
-
-        fields.add("TIMESTAMPDIFF(SECOND, created_at, closed_at)/(24*3600) AS revtime")
-
-        tables.add("pull_requests pr")
-        tables.union_update(self.GetSQLReportFrom(type_analysis))
-
-        filters.union_update(self.GetSQLReportWhere(type_analysis))
-        # filters.add("merged_at is NOT NULL")
-        # remove autoreviews
-        # filters.add("i.submitted_by<>ch.changed_by")
-        #filters.add("ORDER BY ch_ext.changed_on")
-
-        fields_str = self._get_fields_query(fields)
-        tables_str = self._get_tables_query(tables)
-        filters_str = self._get_filters_query(filters)
-        q = self.GetSQLGlobal('closed_at', fields_str, tables_str, filters_str,
-                              startdate, enddate)
-        # min_days_for_review = 0.042 # one hour
-        # q = "SELECT revtime, changed_on FROM ("+q+") qrevs WHERE revtime>"+str(min_days_for_review)
-        return q
-
-
