@@ -67,6 +67,7 @@ class DB (GrimoireDatabase):
                 issue_id = Column(Integer,
                                   ForeignKey(self.schema + '.' + 'issues.id'))
                 ))
+
         DB.Issues = GrimoireDatabase._table (
             bases = (self.Base,), name = 'Issues',
             tablename = 'issues',
@@ -76,10 +77,12 @@ class DB (GrimoireDatabase):
                     Integer,
                     ForeignKey(self.schema + '.' + 'people.id'))     
                 ))
+
         DB.People = GrimoireDatabase._table (
             bases = (self.Base,), name = 'People',
             tablename = 'people',
             schemaname = self.schema)
+
         DB.PeopleUPeople = GrimoireDatabase._table (
             bases = (self.Base,), name = 'PeopleUPeople',
             tablename = 'people_upeople',
@@ -89,27 +92,33 @@ class DB (GrimoireDatabase):
                     Integer,
                     ForeignKey(self.schema_id + '.' + 'upeople.id'))
                 ))
+
         DB.Trackers = GrimoireDatabase._table (
             bases = (self.Base,), name = 'Trackers',
             tablename = 'trackers',
             schemaname = self.schema)
+
         DB.UPeople = GrimoireDatabase._table (
             bases = (self.Base,), name = 'UPeople',
             tablename = 'upeople',
             schemaname = self.schema_id)
-        DB.Companies = GrimoireDatabase._table (
-            bases = (self.Base,), name = 'Companies',
-            tablename = 'companies',
-            schemaname = self.schema_id,
-            columns = dict (
-                id = Column(Integer, primary_key = True)
+
+        if "companies" in tables_id:
+            DB.Companies = GrimoireDatabase._table (
+                bases = (self.Base,), name = 'Companies',
+                tablename = 'companies',
+                schemaname = self.schema_id,
+                columns = dict (
+                    id = Column(Integer, primary_key = True)
+                    )
                 )
-            )
-        DB.UPeopleCompanies = GrimoireDatabase._table (
-            bases = (self.Base,), name = 'UPeopleCompanies',
-            tablename = 'upeople_companies',
-            schemaname = self.schema_id,
-            )
+
+        if "upeople_companies" in tables_id:
+            DB.UPeopleCompanies = GrimoireDatabase._table (
+                bases = (self.Base,), name = 'UPeopleCompanies',
+                tablename = 'upeople_companies',
+                schemaname = self.schema_id,
+                )
 
 
 class Query (GrimoireQuery):
