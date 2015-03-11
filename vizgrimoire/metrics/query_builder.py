@@ -26,8 +26,12 @@ import MySQLdb
 import re
 import sys
 from sets import Set
+import datetime
+import time
 
 from vizgrimoire.metrics.metrics_filter import MetricFilters
+from vizgrimoire.GrimoireUtils import genDates
+from vizgrimoire.datahandlers.data_handler import DHESA
 
 class DSQuery(object):
     """ Generic methods to control access to db """
@@ -2742,6 +2746,98 @@ class PullpoQuery(DSQuery):
         q = self.BuildQuery (period, startdate, enddate, date_field, fields, tables,
                              filters, evolutionary, type_analysis)
         return q
+
+    def GetTimeToSQL(self, metric_filters, actionto):
+        """ This function returns the query to count "time to" a specific state
+            from the moment where the pull request was uploaded to GitHub
+
+            actionto initially accepts closed or merged
+        """
+
+        fields = Set([])
+        tables = Set([])
+        filters = Set([])
+
+        if actionto == "closed":
+            closed_field = "closed_at"
+            metric_name = "closedtime"
+        elif actionto == "merged":
+            closed_field = "merged_at"
+            metric_name = "mergedtime"
+        else:
+            raise Exception("'actionto' not supported")
+
+        fields.add("TIMESTAMPDIFF(SECOND, created_at, "+ closed_field  +") as " + metric_name)
+
+        tables.add("pull_requests pr")
+        tables.union_update(self.GetSQLReportFrom(metric_filters.type_analysis))
+
+        filters.union_update(self.GetSQLReportWhere(metric_filters.type_analysis))
+
+        query = self.BuildQuery(metric_filters.period, metric_filters.startdate,
+                                metric_filters.enddate, closed_field, fields,
+                                tables, filters, False)
+        return query
+
+    def GetTimeToTimeSeriesData(self, metric_filters, actionto):
+        """ This function provides final time serie about a final 'actionto' value
+
+            Pull Requests typically are either merged or closed. This function simply
+            allows to avoid repeating the same code for the classes TimeToMerge and
+            TimeToClose
+        """
+        #TODO: this function is not exactly a query builder. This should be moved to
+        #      some other place to deal with data handler generators.
+
+        fields = Set([])
+        tables = Set([])
+        filters = Set([])
+
+        data = genDates(metric_filters.period,
+                        metric_filters.startdate,
+                        metric_filters.enddate)
+
+        # Generating periods
+        last_date = int(time.mktime(datetime.datetime.strptime(
+                        metric_filters.enddate, "'%Y-%m-%d'").timetuple()))
+
+        periods = list(data['unixtime'])
+        periods.append(last_date)
+        if actionto == "closed":
+            value = "close"
+            metricname = "closedtime"
+        elif actionto == "merged":
+            value = "merge"
+            metricname = "mergedtime"
+        else:
+            raise Exception ("'actionto' not supported")
+
+        data["timeto_"+value+"_median"] = []
+        data["timeto_"+value+"_avg"] = []
+
+        startdate = "'" + datetime.datetime.fromtimestamp(int(periods[0])).strftime('%Y-%m-%d %H:%M:%S') + "'"
+        for p in periods[1:]:
+            enddate = "'" + datetime.datetime.fromtimestamp(int(p)).strftime('%Y-%m-%d %H:%M:%S') + "'"
+            mfilters = metric_filters.copy()
+            mfilters.startdate = startdate
+            mfilters.enddate = enddate
+
+            timeto_sql = self.GetTimeToSQL(mfilters, actionto)
+            timeto = self.ExecuteQuery(timeto_sql)
+            #Call DHESA to produce mean and median for each period.
+            #Other values are available such as min, max, percentiles, etc.
+            stats_data = DHESA(timeto[metricname])
+
+            to_days = 3600*24
+            median = round(stats_data.data["median"] / to_days, 2)
+            mean = round(stats_data.data["mean"] / to_days, 2)
+            data["timeto_"+value+"_median"].append(median)
+            data["timeto_"+value+"_avg"].append(mean)
+
+            startdate = enddate
+
+        return data
+
 
     def GetTimeToReviewQuerySQL (self, startdate, enddate, type_analysis = [], bots = []):
         fields = Set([])

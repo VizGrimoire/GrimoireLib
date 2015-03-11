@@ -312,6 +312,32 @@ class New(Metrics):
                                  self.filters.startdate, self.filters.enddate)
 
 
+class TimeToMerge(Metrics):
+    """ Time between the pull request is opened and merged
+
+        A pull request is closed when this is identified in the field state
+        as "merged". When that pull request is closed, the "merged_at" field
+        is also populated.
+
+        This can be seen as a subset of the dataset provided by the TimeToClose
+        class.
+
+        This method does not check the merge flag in the database.
+    """
+
+    id = "timeto_merge"
+    name = "Time to merge a pull request"
+    desc = "Time to merge a pull request"
+    data_source = Pullpo
+
+    def get_agg(self):
+        query = self.db.GetTimeToSQL(self.filters, "merged")
+        return self.db.ExecuteQuery(query)
+
+    def get_ts(self):
+        return self.db.GetTimeToTimeSeriesData(self.filters, "merged")
+
+
 class TimeToClose(Metrics):
     """ Time between the pull request is opened and closed
 
@@ -328,62 +354,12 @@ class TimeToClose(Metrics):
     data_source = Pullpo
 
     def get_agg(self):
-        fields = Set([])
-        tables = Set([])
-        filters = Set([])
-
-        fields.add("TIMESTAMPDIFF(SECOND, created_at, closed_at) as closedtime")
-
-        tables.add("pull_requests pr")
-        tables.union_update(self.db.GetSQLReportFrom(self.filters.type_analysis))
-
-        filters.union_update(self.db.GetSQLReportWhere(self.filters.type_analysis))
-
-        query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
-                                   self.filters.enddate, 'closed_at', fields,
-                                   tables, filters, False)
-
+        query = self.db.GetTimeToSQL(self.filters, "closed")
         return self.db.ExecuteQuery(query)
 
     def get_ts(self):
-        fields = Set([])
-        tables = Set([])
-        filters = Set([])
+        return self.db.GetTimeToTimeSeriesData(self.filters, "closed")
 
-        data = genDates(self.filters.period,
-                        self.filters.startdate,
-                        self.filters.enddate)
-
-        # Generating periods
-        last_date = int(time.mktime(datetime.datetime.strptime(
-                        self.filters.enddate, "'%Y-%m-%d'").timetuple()))
-
-        periods = list(data['unixtime'])
-        periods.append(last_date)
-        data["timeto_close_median"] = []
-        data["timeto_close_avg"] = []
-
-        startdate = "'" + datetime.datetime.fromtimestamp(int(periods[0])).strftime('%Y-%m-%d %H:%M:%S') + "'"
-        for p in periods[1:]:
-            enddate = "'" + datetime.datetime.fromtimestamp(int(p)).strftime('%Y-%m-%d %H:%M:%S') + "'"
-            filters = self.filters.copy()
-            filters.startdate = startdate
-            filters.enddate = enddate
-            timetoclose = TimeToClose(self.db, filters)
-
-            #Call DHESA to produce mean and median for each period.
-            #Other values are available such as min, max, percentiles, etc.
-            stats_data = DHESA(timetoclose.get_agg()["closedtime"])
-
-            to_days = 3600*24
-            median = round(stats_data.data["median"] / to_days, 2)
-            mean = round(stats_data.data["mean"] / to_days, 2)
-            data["timeto_close_median"].append(median)
-            data["timeto_close_avg"].append(mean)
-
-            startdate = enddate
-
-        return data
 
 class TimeToReview(Metrics):
     """ The time is measure for closed reviews merged """
@@ -839,3 +815,21 @@ class Repositories(Metrics):
         if not isinstance(names['name'], (list)): names['name'] = [names['name']]
         return(names)
 
+
+if __name__ == '__main__':
+    filters = MetricFilters("month", "'2014-01-01'", "'2015-01-01'")
+    dbcon = PullpoQuery("root", "", "xxxxx", "xxxxx")
+
+    timeto = TimeToClose(dbcon, filters)
+    print timeto.get_agg()
+    print timeto.get_ts()
+
+    timeto = TimeToMerge(dbcon, filters)
+    print timeto.get_agg()
+    print timeto.get_ts()
+
+    filters1 = filters.copy()
+    type_analysis = ["company", "'xxxxx'"]
+    filters1.type_analysis = type_analysis
+    company = TimeToMerge(dbcon, filters1)
+    print company.get_ts()
