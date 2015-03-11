@@ -2788,10 +2788,13 @@ class PullpoQuery(DSQuery):
         data = self.ExecuteQuery(timeto_sql)
 
         #Calculating specific statistical values
-        stats_data = DHESA(data[metric_name])
-        to_days = 3600*24
-        median = round(stats_data.data["median"] / to_days, 2)
-        mean = round(stats_data.data["mean"] / to_days, 2)
+        median = 0.0
+        mean = 0.0
+        if isinstance(data[metric_name], list):
+            stats_data = DHESA(data[metric_name])
+            to_days = 3600*24
+            median = round(stats_data.data["median"] / to_days, 2)
+            mean = round(stats_data.data["mean"] / to_days, 2)
 
         agg_data = {}
         agg_data["timeto_"+value+"_median"] = median

@@ -330,11 +330,11 @@ class Pullpo(DataSource):
 
     @staticmethod
     def get_metrics_core_ts():
-        m  = ['submitted','merged','mergers','abandoned','bmiscr','pending','closed',
+        m  = ['submitted','merged','abandoned','bmiscr','pending','closed',
              'timeto_merge', 'timeto_close', 'repositories', 'submitters']
         return m
 
     @staticmethod
     def get_metrics_core_trends():
-        return ['submitted','merged','mergers','abandoned','bmiscr','submitters']
+        return ['submitted','merged','abandoned','bmiscr','submitters']
 
