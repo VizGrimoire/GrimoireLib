@@ -324,25 +324,17 @@ class Pullpo(DataSource):
 
     @staticmethod
     def get_metrics_core_agg():
-        m =  ['submitted','opened','closed','merged','abandoned','new','inprogress',
-              'pending','review_time','repositories']
-        # patches metrics
-        m += ['verified','approved','codereview','sent','WaitingForReviewer','WaitingForSubmitter']
-        m += ['submitters','reviewers']
-
+        m =  ['submitted','merged','mergers','abandoned','bmiscr','pending','closed',
+              'timeto_merge','timeto_close', 'repositories', 'submitters']
         return m
 
     @staticmethod
     def get_metrics_core_ts():
-        m  = ['submitted','opened','closed','merged','abandoned','new','pending','review_time','repositories']
-        # Get metrics using changes table for more precise results
-        m += ['merged','abandoned','new']
-        m += ['verified','codereview','sent','WaitingForReviewer','WaitingForSubmitter']
-        m += ['submitters','reviewers']
-
+        m  = ['submitted','merged','mergers','abandoned','bmiscr','pending','closed',
+             'timeto_merge', 'timeto_close', 'repositories', 'submitters']
         return m
 
     @staticmethod
     def get_metrics_core_trends():
-        return ['submitted','merged','pending','abandoned','closed','submitters']
+        return ['submitted','merged','mergers','abandoned','bmiscr','submitters']
 
