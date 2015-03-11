@@ -1645,7 +1645,7 @@ class SCRQuery(DSQuery):
         filters.union_update(self.GetSQLReportWhere(type_analysis))
         filters.add("i.id = ie.issue_id")
 
-        if (self.GetIssuesFiltered() != ""): filters.union_update(self.GetIssuesFiltered())
+        if (self.GetIssuesFiltered() != ""): filters.add(self.GetIssuesFiltered())
 
         date_field = "i.submitted_on"
         if type_ in ["closed", "merged", "abandoned"]: date_field = "ie.mod_date"
@@ -1925,8 +1925,9 @@ class SCRQuery(DSQuery):
 
     def GetPeopleQuerySubmissions (self, developer_id, period, startdate, enddate, evol):
         fields = "COUNT(i.id) AS submissions"
-        tables = self.GetTablesOwnUniqueIds('issues')
-        filters = self.GetFiltersOwnUniqueIds('issues')+ " AND pup.upeople_id = "+ str(developer_id)
+        tables = self._get_tables_query(self.GetTablesOwnUniqueIds('issues'))
+        filters = self._get_filters_query(self.GetFiltersOwnUniqueIds('issues'))
+        filters += " AND pup.upeople_id = "+ str(developer_id)
 
         if (evol):
             q = self.GetSQLPeriod(period,'submitted_on', fields, tables, filters,
