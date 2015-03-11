@@ -30,7 +30,10 @@ from grimoirelib_alch.family.scm import (
     OrgsCondition as SCMOrgsCondition
     )
 from grimoirelib_alch.query.its import DB as ITSDatabase
-from grimoirelib_alch.family.its import PeriodCondition as ITSPeriodCondition
+from grimoirelib_alch.family.its import (
+    PeriodCondition as ITSPeriodCondition,
+    OrgsCondition as ITSOrgsCondition
+    )
 from grimoirelib_alch.query.mls import DB as MLSDatabase
 from grimoirelib_alch.family.mls import PeriodCondition as MLSPeriodCondition
 from grimoirelib_alch.family.activity_persons import (
@@ -180,13 +183,19 @@ class Ages(Analyses):
             # all the actors, considering only activty during
             # the startdate..enddate period
             period = ITSPeriodCondition (start = startdate, end = enddate)
+            conditions = [period,]
+            if self.filters.COMPANY in self.analysis_dict:
+                orgs = ITSOrgsCondition (
+                    orgs = (self.analysis_dict[self.filters.COMPANY],)
+                    )
+                conditions.append(orgs)
             database = ITSDatabase (url = url,
                                     schema = schema,
                                     schema_id = schema_id)
             data = ITSActivityPersons (
                 datasource = database,
                 name = "list_uchangers",
-                conditions = (period,))
+                conditions = conditions)
         elif data_source == MLS:
             logging.info("Analyzing aging for MLS")
             # Activity data (start time, end time for contributions) for
@@ -278,14 +287,15 @@ if __name__ == '__main__':
     from vizgrimoire.metrics.query_builder import DSQuery
     from vizgrimoire.metrics.metrics_filter import MetricFilters
 
-    filters = MetricFilters("months", "'2013-06-01'", "'2014-01-01'", [])
+    filters = MetricFilters("months", "'2013-12-01'", "'2014-01-01'", [])
     # Warning: next "Red Hat" string will be changed to "'Red Hat'" by
     # the internals of Automator etc.
-    filters.add_filter (filters.COMPANY, "SwiftStack")
+    filters_scm = filters
+    filters_scm.add_filter (filters.COMPANY, "SwiftStack")
     dbcon = DSQuery(user = "jgb", password = "XXX", 
                     database = "oscon_openstack_scm",
                     identities_db = "oscon_openstack_scm")
-    ages = Ages(dbcon, filters)
+    ages = Ages(dbcon, filters_scm)
 
     # Produce pretty JSON output
     set_encoder_options('json', sort_keys=True, indent=4,
@@ -300,10 +310,12 @@ if __name__ == '__main__':
                         encoding="utf8")
     print encode(ages.result(SCM), unpicklable=False)
 
+    filters_its = filters
+    filters_its.add_filter (filters.COMPANY, "company2")
     dbcon = DSQuery(user = "jgb", password = "XXX", 
-                    database = "vizgrimoire_bicho",
-                    identities_db = "vizgrimoire_cvsanaly")
-    ages = Ages(dbcon, filters)
+                    database = "cp_bicho_GrimoireLibTests",
+                    identities_db = "cp_cvsanaly_GrimoireLibTests")
+    ages = Ages(dbcon, filters_its)
     # Produce pretty JSON output
     set_encoder_options('json', sort_keys=True, indent=4,
                         separators=(',', ': '),
@@ -312,8 +324,8 @@ if __name__ == '__main__':
     print encode(ages.result(ITS), unpicklable=False)
 
     dbcon = DSQuery(user = "jgb", password = "XXX", 
-                    database = "oscon_openstack_mls",
-                    identities_db = "oscon_openstack_scm")
+                    database = "cp_mlstats_GrimoireLibTests",
+                    identities_db = "cp_cvsanaly_GrimoireLibTests")
     ages = Ages(dbcon, filters)
     # Produce pretty JSON output
     set_encoder_options('json', sort_keys=True, indent=4,
