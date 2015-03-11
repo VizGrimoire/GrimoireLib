@@ -266,6 +266,26 @@ class Query (GrimoireQuery):
             DB.Messages.message_ID == DB.MessagesPeople.message_id)
         return query
 
+
+    def select_orgs (self):
+        """Select organizations data.
+
+        Include id and name, as they appear in the companies table.
+        Warning: doesn't join other tables. For now, only works alone.
+
+        Returns
+        -------
+
+        Query
+            Including new columns in SELECT
+        
+        """
+
+        query = self.add_columns (label("org_id", DB.Companies.id),
+                                  label("org_name", DB.Companies.name))
+        return query
+
+
     def filter_period(self, start = None, end = None, date = "arrival"):
         """Filter for a period, according to message dates
 
