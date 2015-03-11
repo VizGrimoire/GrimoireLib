@@ -20,6 +20,7 @@
 ##
 ## Authors:
 ##   Alvaro del Castillo <acs@bitergia.com>
+##   Daniel Izquierdo <dizquierdo@bitergia.com>
 
 """ Metrics for the source code review system based in the pullpo data model """
 
@@ -27,13 +28,16 @@ import logging
 import MySQLdb
 import numpy
 from sets import Set
+import datetime
+import time
 
-from vizgrimoire.GrimoireUtils import completePeriodIds, checkListArray, medianAndAvgByPeriod, check_array_values
+from vizgrimoire.GrimoireUtils import completePeriodIds, checkListArray, medianAndAvgByPeriod, check_array_values, genDates
 from vizgrimoire.metrics.query_builder import DSQuery
 from vizgrimoire.metrics.metrics import Metrics
 from vizgrimoire.metrics.metrics_filter import MetricFilters
 from vizgrimoire.Pullpo import Pullpo
 from vizgrimoire.metrics.query_builder import PullpoQuery
+from vizgrimoire.datahandlers.data_handler import DHESA
 
 class Submitted(Metrics):
     id = "submitted"
@@ -307,6 +311,79 @@ class New(Metrics):
         return completePeriodIds(ts, self.filters.period,
                                  self.filters.startdate, self.filters.enddate)
 
+
+class TimeToClose(Metrics):
+    """ Time between the pull request is opened and closed
+
+        A pull request is closed when this is identified in the field state
+        as 'closed'. When that pull request is closed, the 'closed_at' field
+        is also populated.
+
+        Thus, this class does not understand of merges or abandoned issues.
+    """
+
+    id = "timeto_close"
+    name = "Time to close a pull request"
+    desc = "Time to close a pull request"
+    data_source = Pullpo
+
+    def get_agg(self):
+        fields = Set([])
+        tables = Set([])
+        filters = Set([])
+
+        fields.add("TIMESTAMPDIFF(SECOND, created_at, closed_at) as closedtime")
+
+        tables.add("pull_requests pr")
+        tables.union_update(self.db.GetSQLReportFrom(self.filters.type_analysis))
+
+        filters.union_update(self.db.GetSQLReportWhere(self.filters.type_analysis))
+
+        query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
+                                   self.filters.enddate, 'closed_at', fields,
+                                   tables, filters, False)
+
+        return self.db.ExecuteQuery(query)
+
+    def get_ts(self):
+        fields = Set([])
+        tables = Set([])
+        filters = Set([])
+
+        data = genDates(self.filters.period,
+                        self.filters.startdate,
+                        self.filters.enddate)
+
+        # Generating periods
+        last_date = int(time.mktime(datetime.datetime.strptime(
+                        self.filters.enddate, "'%Y-%m-%d'").timetuple()))
+
+        periods = list(data['unixtime'])
+        periods.append(last_date)
+        data["timeto_close_median"] = []
+        data["timeto_close_avg"] = []
+
+        startdate = "'" + datetime.datetime.fromtimestamp(int(periods[0])).strftime('%Y-%m-%d %H:%M:%S') + "'"
+        for p in periods[1:]:
+            enddate = "'" + datetime.datetime.fromtimestamp(int(p)).strftime('%Y-%m-%d %H:%M:%S') + "'"
+            filters = self.filters.copy()
+            filters.startdate = startdate
+            filters.enddate = enddate
+            timetoclose = TimeToClose(self.db, filters)
+
+            #Call DHESA to produce mean and median for each period.
+            #Other values are available such as min, max, percentiles, etc.
+            stats_data = DHESA(timetoclose.get_agg()["closedtime"])
+
+            to_days = 3600*24
+            median = round(stats_data.data["median"] / to_days, 2)
+            mean = round(stats_data.data["mean"] / to_days, 2)
+            data["timeto_close_median"].append(median)
+            data["timeto_close_avg"].append(mean)
+
+            startdate = enddate
+
+        return data
 
 class TimeToReview(Metrics):
     """ The time is measure for closed reviews merged """
@@ -761,3 +838,4 @@ class Repositories(Metrics):
         names = self.db.ExecuteQuery(q)
         if not isinstance(names['name'], (list)): names['name'] = [names['name']]
         return(names)
+
