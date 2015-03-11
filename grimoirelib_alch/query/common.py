@@ -28,6 +28,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm.query import Query
 from sqlalchemy.ext.declarative import declarative_base, DeferredReflection
+from sqlalchemy.inspection import inspect
 
 class GrimoireDatabase:
     """Class for dealing with Grimoire databases.
@@ -55,7 +56,7 @@ class GrimoireDatabase:
         self.schema_id = schema_id
         self.query_cls = self._query_cls()
         self.Base = declarative_base(cls=DeferredReflection)
-        self._create_tables()
+        self.created_tables = False
 
     def _query_cls(self):
         """Return the default Query class for this database
@@ -69,12 +70,24 @@ class GrimoireDatabase:
 
         raise Exception ("_query_cls should be provided by child class")
 
-    def _create_tables(self):
+    def _create_tables(self, tables = None, tables_id = None):
         """Create all SQLAlchemy tables.
 
         Builds a SQLAlchemy class per SQL table, by using _table().
         It assumes self.Base, self.schema and self.schema_id are already
         set (see __init__() code).
+
+        Parameters
+        ----------
+
+        tables: list of str
+           If not None, list of tables found in schema,
+           usually via inspection.
+           Default: None.
+        tables_id: list of str
+           If not None, list of tables found in schema_id,
+           usually via inspection.
+           Default: None.
 
         """
 
@@ -142,6 +155,15 @@ class GrimoireDatabase:
         engine = create_engine(database,
                                convert_unicode=True, encoding='utf8',
                                echo=echo)
+        # Get list of tables via inspection
+        inspector = inspect(engine)
+        tables = inspector.get_table_names(schema = self.schema)
+        tables_id = inspector.get_table_names(schema = self.schema_id)
+        # Create table objects
+        if not self.created_tables:
+            self._create_tables(tables = tables, tables_id = tables_id)
+            self.created_tables = True
+        # Produce a working session
         self.Base.prepare(engine)
         if query_cls is None:
             query_cls = self.query_cls

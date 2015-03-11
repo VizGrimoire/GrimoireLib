@@ -50,7 +50,7 @@ class DB (GrimoireDatabase):
 
         return Query
 
-    def _create_tables(self):
+    def _create_tables(self, tables = None, tables_id = None):
         """Create all SQLAlchemy tables.
 
         Builds a SQLAlchemy class per SQL table, by using _table().
