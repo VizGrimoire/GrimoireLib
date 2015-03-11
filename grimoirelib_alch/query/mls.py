@@ -69,6 +69,7 @@ class DB (GrimoireDatabase):
                     ForeignKey(self.schema + '.' + \
                                    'mailing_lists.mailing_list_url'))
                 ))
+
         DB.MessagesPeople = GrimoireDatabase._table (
             bases = (self.Base,), name = 'MessagesPeople',
             tablename = 'messages_people',
@@ -87,10 +88,12 @@ class DB (GrimoireDatabase):
                     ForeignKey(self.schema + '.' + \
                                    'people.email_address'))     
                 ))
+
         DB.People = GrimoireDatabase._table (
             bases = (self.Base,), name = 'People',
             tablename = 'people',
             schemaname = self.schema)
+
         DB.PeopleUPeople = GrimoireDatabase._table (
             bases = (self.Base,), name = 'PeopleUPeople',
             tablename = 'people_upeople',
@@ -108,14 +111,34 @@ class DB (GrimoireDatabase):
                     ),
                 )
             )
+
         DB.MailingLists = GrimoireDatabase._table (
             bases = (self.Base,), name = 'MailingLists',
             tablename = 'mailing_lists',
             schemaname = self.schema)
+
         DB.UPeople = GrimoireDatabase._table (
             bases = (self.Base,), name = 'UPeople',
             tablename = 'upeople',
             schemaname = self.schema_id)
+
+        if "companies" in tables_id:
+            DB.Companies = GrimoireDatabase._table (
+                bases = (self.Base,), name = 'Companies',
+                tablename = 'companies',
+                schemaname = self.schema_id,
+                columns = dict (
+                    id = Column(Integer, primary_key = True)
+                    )
+                )
+
+        if "upeople_companies" in tables_id:
+            DB.UPeopleCompanies = GrimoireDatabase._table (
+                bases = (self.Base,), name = 'UPeopleCompanies',
+                tablename = 'upeople_companies',
+                schemaname = self.schema_id,
+                )
+
 
 class Query (GrimoireQuery):
     """Class for dealing with MLS queries"""
@@ -287,6 +310,74 @@ class Query (GrimoireQuery):
         if end is not None:
             self.end = end
             query = query.filter(date_field < end.isoformat())
+        return query
+
+
+    def filter_orgs (self, orgs):
+        """Filter organizations matching a list of names
+
+        Fiters query by a list of organization names, checking for
+        them in the companies table.
+
+        Parameters
+        ----------
+        
+        orgs: list of str
+            List of organizations
+
+        """
+
+        query = self
+        query = query.filter(DB.Companies.name.in_(orgs))
+        return query
+
+
+    def filter_org_ids (self, list, kind = "senders", date = "arrival"):
+        """Filter organizations matching a list of organization ids
+
+        Fiters query by a list of organization ids.
+
+        Parameters
+        ----------
+        
+        list: list of int
+            List of organization ids
+        kind: {"senders", "starters", "followers"}
+           Kind of person to select
+        date: {"arrival"|"first"}
+           consider either arrival date or first date (default: arrival)
+
+        """
+
+        query = self
+        if date == "arrival":
+            date_field = DB.Messages.arrival_date
+        elif date == "first":
+            date_field = DB.Messages.first_date
+        else:
+            raise Exception ("select_activeperiod: Unknown kind of date: %s." \
+                                 % date)
+        if kind == "senders":
+            query = query.filter (DB.MessagesPeople.type_of_recipient == \
+                                      "From")
+        elif kind in ("starters", "followers"):
+            raise Exception ("filter_org_ids: " \
+                                 "Kind not yet implemented %s." \
+                                 % kind)
+        else:
+            raise Exception ("filter_org_ids: Unknown kind %s." \
+                                 % kind)
+        query = query \
+            .filter (DB.MessagesPeople.email_address == \
+                        DB.PeopleUPeople.people_id) \
+            .join (DB.UPeopleCompanies,
+                   DB.PeopleUPeople.upeople_id == \
+                       DB.UPeopleCompanies.upeople_id) \
+            .filter (date_field.between (
+                           DB.UPeopleCompanies.init,
+                           DB.UPeopleCompanies.end
+                           )) \
+            .filter (DB.UPeopleCompanies.company_id.in_(list))
         return query
 
 
