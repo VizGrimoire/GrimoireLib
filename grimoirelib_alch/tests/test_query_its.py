@@ -32,7 +32,7 @@ schema_id = 'cp_cvsanaly_GrimoireLibTests'
 start = datetime(2013,11,13)
 end = datetime(2014,2,1)
 
-class TestSCMQuery (unittest.TestCase):
+class TestITSQuery (unittest.TestCase):
 
     def setUp (self):
         database = DB (url = url,
