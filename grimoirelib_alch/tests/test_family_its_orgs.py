@@ -51,9 +51,9 @@ class TestITSOrgs (unittest.TestCase):
 
         orgs = OrgsCondition (orgs = ("company2", "company3", "company1"),
                               actors = "changers")
-        data = ITS (datasource = self.database, name = "ncommits",
+        data = ITS (datasource = self.database, name = "npersons",
                     conditions = (orgs,))
-        self.assertEqual (data.total(), 20115)
+        self.assertEqual (data.total(), 15)
 
 if __name__ == "__main__":
     unittest.main()

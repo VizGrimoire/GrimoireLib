@@ -25,6 +25,7 @@
 
 from common import DBFamily, DBCondition, Entities, Entity
 from grimoirelib_alch.query.its import DB, Query
+from sqlalchemy import inspect
 
 class Persons (Entity):
     """Number of persons
@@ -76,7 +77,7 @@ class ITS (DBFamily):
         if name in Entities.subclasses:
             self.query = Entities.subclasses[name].query(self.query)
         else:
-            raise Exception ("SCM: Invalid entity name for this family, " + \
+            raise Exception ("ITS: Invalid entity name for this family, " + \
                                  name)
 
     def timeseries (self):
