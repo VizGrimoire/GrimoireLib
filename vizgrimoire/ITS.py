@@ -192,6 +192,7 @@ class ITS(DataSource):
             top = dict(top_closers_data.items() + top_openers_data.items())
 
             from vizgrimoire.analysis.top_issues import TopIssues
+            from vizgrimoire.report import Report
             db_identities= Report.get_config()['generic']['db_identities']
             dbuser = Report.get_config()['generic']['db_user']
             dbpass = Report.get_config()['generic']['db_password']
