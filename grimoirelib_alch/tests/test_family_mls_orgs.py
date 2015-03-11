@@ -24,7 +24,7 @@
 
 from grimoirelib_alch.query.mls import DB
 from grimoirelib_alch.family.mls import (
-    MLS, OrgsCondition
+    MLS, OrgsCondition, PeriodCondition
     )
 from datetime import datetime
 import unittest
@@ -54,6 +54,20 @@ class TestMLSOrgs (unittest.TestCase):
         data = MLS (datasource = self.database, name = "npersons",
                     conditions = (orgs,))
         self.assertEqual (data.total(), 6)
+
+    def test_orgs_period_condition (self):
+        """Test MLS object with organizations and period conditions"""
+
+        orgs = OrgsCondition (orgs = ("company2", "company3", "company1"),
+                              actors = "senders", date = "check")
+        period = PeriodCondition (start = self.start, end = self.end,
+                                  date = "check")
+        data = MLS (datasource = self.database, name = "npersons",
+                    conditions = (orgs, period))
+        self.assertEqual (data.total(), 2)
+        data = MLS (datasource = self.database, name = "npersons",
+                    conditions = (period, orgs))
+        self.assertEqual (data.total(), 2)
 
 if __name__ == "__main__":
     unittest.main()
