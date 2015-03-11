@@ -50,7 +50,7 @@ class DB (GrimoireDatabase):
 
         return Query
 
-    def _create_tables(self):
+    def _create_tables(self, tables = None, tables_id = None):
         """Create all SQLAlchemy tables.
 
         Builds a SQLAlchemy class per SQL table, by using _table().
@@ -97,6 +97,19 @@ class DB (GrimoireDatabase):
             bases = (self.Base,), name = 'UPeople',
             tablename = 'upeople',
             schemaname = self.schema_id)
+        DB.Companies = GrimoireDatabase._table (
+            bases = (self.Base,), name = 'Companies',
+            tablename = 'companies',
+            schemaname = self.schema_id,
+            columns = dict (
+                id = Column(Integer, primary_key = True)
+                )
+            )
+        DB.UPeopleCompanies = GrimoireDatabase._table (
+            bases = (self.Base,), name = 'UPeopleCompanies',
+            tablename = 'upeople_companies',
+            schemaname = self.schema_id,
+            )
 
 
 class Query (GrimoireQuery):
@@ -243,6 +256,25 @@ class Query (GrimoireQuery):
         return query
 
 
+    def select_orgs (self):
+        """Select organizations data.
+
+        Include id and name, as they appear in the companies table.
+        Warning: doesn't join other tables. For now, only works alone.
+
+        Returns
+        -------
+
+        Query
+            Including new columns in SELECT
+        
+        """
+
+        query = self.add_columns (label("org_id", DB.Companies.id),
+                                  label("org_name", DB.Companies.name))
+        return query
+
+
     def filter_period(self, start = None, end = None, date = "change"):
         """Filter variable for a period
 
@@ -267,6 +299,63 @@ class Query (GrimoireQuery):
         if end is not None:
             self.end = end
             query = query.filter(date_field < end.isoformat())
+        return query
+
+
+    def filter_orgs (self, orgs):
+        """Filter organizations matching a list of names
+
+        Fiters query by a list of organization names, checking for
+        them in the companies table.
+
+        Parameters
+        ----------
+        
+        orgs: list of str
+            List of organizations
+
+        """
+
+        query = self
+        query = query.filter(DB.Companies.name.in_(orgs))
+        return query
+
+
+    def filter_org_ids (self, list, kind):
+        """Filter organizations matching a list of organization ids
+
+        Fiters query by a list of organization ids.
+
+        Parameters
+        ----------
+        
+        list: list of int
+            List of organization ids
+        kind: {"openers", "closers", "changers"}
+           Kind of person to select
+
+        """
+
+        query = self
+        if kind == "changers":
+            person_id = DB.Changes.changed_by
+            date_id = DB.Changes.changed_on
+        elif kind in ("closers", "openers"):
+            raise Exception ("filter_org_ids: " \
+                                 "Kind not yet implemented %s." \
+                                 % kind)
+        else:
+            raise Exception ("filter_org_ids: Unknown kind %s." \
+                                 % kind)
+        query = query \
+            .join (DB.UPeopleCompanies,
+                   DB.PeopleUPeople.upeople_id == \
+                       DB.UPeopleCompanies.upeople_id) \
+            .filter (date_id.between (
+                           DB.UPeopleCompanies.init,
+                           DB.UPeopleCompanies.end
+                           )) \
+            .filter (DB.UPeopleCompanies.company_id.in_(list))
         return query
 
 
