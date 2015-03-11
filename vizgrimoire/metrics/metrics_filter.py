@@ -139,8 +139,8 @@ class MetricFilters(object):
         if self.type_analysis is None or self.type_analysis == []:
             self.type_analysis = [typeof_analysis, value]
         else:
-            self.type_analysis[0] = self.type_analysis[0] + "," + typeof_analysis
-            self.type_analysis[1] = self.type_analysis[1] + "," + value
+            self.type_analysis[0] = self.type_analysis[0] + MetricFilters.DELIMITER + typeof_analysis
+            self.type_analysis[1] = self.type_analysis[1] + MetricFilters.DELIMITER + value
 
 
     def add_period(self, typeof_period):
