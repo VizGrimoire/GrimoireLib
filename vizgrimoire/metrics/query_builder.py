@@ -26,8 +26,12 @@ import MySQLdb
 import re
 import sys
 from sets import Set
+import datetime
+import time
 
 from vizgrimoire.metrics.metrics_filter import MetricFilters
+from vizgrimoire.GrimoireUtils import genDates
+from vizgrimoire.datahandlers.data_handler import DHESA
 
 class DSQuery(object):
     """ Generic methods to control access to db """
@@ -261,7 +265,7 @@ class DSQuery(object):
     def get_group_field (filter_type, ds_query = None):
         """ Return the name of the field to group by in filter all queries """
         field = None
-        supported = ['people2','company','country','domain','project','repository','company,country']
+        supported = ['people2','company','country','domain','project','repository','company'+MetricFilters.DELIMITER+'country']
 
         analysis = filter_type
 
@@ -274,7 +278,8 @@ class DSQuery(object):
         elif analysis == "repository":
             field = "r.name"
             if type(ds_query) == ITSQuery: field = "t.url"
-        elif analysis == "company,country": field = "CONCAT(org.name,'_',cou.name)"
+        elif analysis == "company"+MetricFilters.DELIMITER+"country":
+            field = "CONCAT(com.name,'_',cou.name)"
 
         return field
 
@@ -539,7 +544,7 @@ class SCMQuery(DSQuery):
         # the type_analysis length !=2 error should be raised in the MetricFilter instance
         if type_analysis is not None:
             # To be improved... not a very smart way of doing this
-            list_analysis = type_analysis[0].split(",")
+            list_analysis = type_analysis[0].split(MetricFilters.DELIMITER)
 
             analysis = type_analysis[0]
 
@@ -581,8 +586,8 @@ class SCMQuery(DSQuery):
     # TODO: share between all data sources
     def _get_where_global_filter_set(self, global_filter):
         if len(global_filter) == 2:
-            fields = global_filter[0].split(",")
-            values = global_filter[1].split(",")
+            fields = global_filter[0].split(MetricFilters.DELIMITER)
+            values = global_filter[1].split(MetricFilters.DELIMITER)
             if len(fields) > 1:
                 if fields.count(fields[0]) == len(fields):
                     # Same fields, different values, use OR
@@ -606,7 +611,7 @@ class SCMQuery(DSQuery):
             if values is not None:
                 if type(values) is str:
                     # To be improved... not a very smart way of doing this...
-                    list_values = values.split(",")
+                    list_values = values.split(MetricFilters.DELIMITER)
                 elif type(values) is list:
                     # On item or list of lists. Unify to list of lists
                     list_values = values
@@ -615,7 +620,7 @@ class SCMQuery(DSQuery):
             else:
                 list_values = None
 
-            list_analysis = type_analysis[0].split(",")
+            list_analysis = type_analysis[0].split(MetricFilters.DELIMITER)
 
             pos = 0
             for analysis in list_analysis:
@@ -873,7 +878,7 @@ class ITSQuery(DSQuery):
 
         if type_analysis is not None and len(type_analysis)>1:
             # To be improved... not a very smart way of doing this
-            list_analysis = type_analysis[0].split(",")
+            list_analysis = type_analysis[0].split(MetricFilters.DELIMITER)
 
             # Retrieving tables based on the required type of analysis.
             for analysis in list_analysis:
@@ -903,8 +908,8 @@ class ITSQuery(DSQuery):
 
     def _get_where_global_filter_set(self, global_filter):
         if len(global_filter) == 2:
-            fields = global_filter[0].split(",")
-            values = global_filter[1].split(",")
+            fields = global_filter[0].split(MetricFilters.DELIMITER)
+            values = global_filter[1].split(MetricFilters.DELIMITER)
             if len(fields) > 1:
                 if fields.count(fields[0]) == len(fields):
                     # Same fields, different values, use OR
@@ -927,7 +932,7 @@ class ITSQuery(DSQuery):
             if values is not None:
                 if type(values) is str:
                     # To be improved... not a very smart way of doing this...
-                    list_values = values.split(",")
+                    list_values = values.split(MetricFilters.DELIMITER)
                 elif type(values) is list:
                     # On item or list of lists. Unify to list of lists
                     list_values = values
@@ -936,7 +941,7 @@ class ITSQuery(DSQuery):
             else:
                 list_values = None
 
-            list_analysis = type_analysis[0].split(",")
+            list_analysis = type_analysis[0].split(MetricFilters.DELIMITER)
 
             pos = 0
             for analysis in list_analysis:
@@ -1234,7 +1239,7 @@ class MLSQuery(DSQuery):
         type_analysis = filters.type_analysis
         #if (type_analysis is None or len(type_analysis) != 2): return From
         if type_analysis is not None:
-            list_analysis = type_analysis[0].split(",") 
+            list_analysis = type_analysis[0].split(MetricFilters.DELIMITER)
             #analysis = type_analysis[0]
 
             for analysis in list_analysis:
@@ -1281,10 +1286,10 @@ class MLSQuery(DSQuery):
 
             # To be improved... not a very smart way of doing this...
             if type_analysis[1] is not None:
-                list_values = type_analysis[1].split(",")
+                list_values = type_analysis[1].split(MetricFilters.DELIMITER)
             else:
                 list_values = None
-            list_analysis = type_analysis[0].split(",")
+            list_analysis = type_analysis[0].split(MetricFilters.DELIMITER)
 
             for analysis in list_analysis:
                 if list_values is not None:
@@ -1563,7 +1568,7 @@ class SCRQuery(DSQuery):
 
         if type_analysis is not None:
 
-            list_analysis = type_analysis[0].split(",")
+            list_analysis = type_analysis[0].split(MetricFilters.DELIMITER)
 
             for analysis in list_analysis:
                 if analysis == 'repository': From.union_update(self.GetSQLRepositoriesFrom())
@@ -1591,7 +1596,7 @@ class SCRQuery(DSQuery):
             if values is not None:
                 if type(values) is str:
                     # To be improved... not a very smart way of doing this...
-                    list_values = values.split(",")
+                    list_values = values.split(MetricFilters.DELIMITER)
                 elif type(values) is list:
                     # On item or list of lists. Unify to list of lists
                     list_values = values
@@ -1600,7 +1605,7 @@ class SCRQuery(DSQuery):
             else:
                 list_values = None
 
-            list_analysis = type_analysis[0].split(",")
+            list_analysis = type_analysis[0].split(MetricFilters.DELIMITER)
 
             pos = 0
             for analysis in list_analysis:
@@ -2743,33 +2748,104 @@ class PullpoQuery(DSQuery):
                              filters, evolutionary, type_analysis)
         return q
 
-    def GetTimeToReviewQuerySQL (self, startdate, enddate, type_analysis = [], bots = []):
+    def GetTimeToSQL(self, metric_filters, closed_field, metric_name):
+        """ This function returns the query to count "time to" a specific state
+            from the moment where the pull request was uploaded to GitHub
+        """
+
         fields = Set([])
         tables = Set([])
         filters = Set([])
 
-        filter_bots = ''
-        for bot in bots:
-            filters.add("people.login <> '"+bot+"'")
-
-        fields.add("TIMESTAMPDIFF(SECOND, created_at, closed_at)/(24*3600) AS revtime")
+        fields.add("TIMESTAMPDIFF(SECOND, created_at, "+ closed_field  +") as " + metric_name)
 
         tables.add("pull_requests pr")
-        tables.union_update(self.GetSQLReportFrom(type_analysis))
+        tables.union_update(self.GetSQLReportFrom(metric_filters.type_analysis))
 
-        filters.union_update(self.GetSQLReportWhere(type_analysis))
-        # filters.add("merged_at is NOT NULL")
-        # remove autoreviews
-        # filters.add("i.submitted_by<>ch.changed_by")
-        #filters.add("ORDER BY ch_ext.changed_on")
+        filters.union_update(self.GetSQLReportWhere(metric_filters.type_analysis))
 
-        fields_str = self._get_fields_query(fields)
-        tables_str = self._get_tables_query(tables)
-        filters_str = self._get_filters_query(filters)
-        q = self.GetSQLGlobal('closed_at', fields_str, tables_str, filters_str,
-                              startdate, enddate)
-        # min_days_for_review = 0.042 # one hour
-        # q = "SELECT revtime, changed_on FROM ("+q+") qrevs WHERE revtime>"+str(min_days_for_review)
-        return q
+        query = self.BuildQuery(metric_filters.period, metric_filters.startdate,
+                                metric_filters.enddate, closed_field, fields,
+                                tables, filters, False)
+        return query
 
+    def GetTimeToAgg(self, metric_filters, actionto):
+        """ This function provides final aggregated data based on actionto value
+        """
+
+        if actionto == "closed":
+            closed_field = "closed_at"
+            metric_name = "closedtime"
+            value = "close"
+        elif actionto == "merged":
+            closed_field = "merged_at"
+            metric_name = "mergedtime"
+            value = "merge"
+        else:
+            raise Exception("'actionto' not supported")
+
+        #Building the query
+        timeto_sql = self.GetTimeToSQL(metric_filters, closed_field, metric_name)
+        data = self.ExecuteQuery(timeto_sql)
+
+        #Calculating specific statistical values
+        median = 0.0
+        mean = 0.0
+        if isinstance(data[metric_name], list):
+            stats_data = DHESA(data[metric_name])
+            to_days = 3600*24
+            median = round(stats_data.data["median"] / to_days, 2)
+            mean = round(stats_data.data["mean"] / to_days, 2)
+
+        agg_data = {}
+        agg_data["timeto_"+value+"_median"] = median
+        agg_data["timeto_"+value+"_avg"] = mean
+
+        return agg_data
+
+
+    def GetTimeToTimeSeriesData(self, metric_filters, actionto):
+        """ This function provides final time serie about a final 'actionto' value
+
+            Pull Requests typically are either merged or closed. This function simply
+            allows to avoid repeating the same code for the classes TimeToMerge and
+            TimeToClose
+        """
+        #TODO: this function is not exactly a query builder. This should be moved to
+        #      some other place to deal with data handler generators.
+
+        fields = Set([])
+        tables = Set([])
+        filters = Set([])
+
+        data = genDates(metric_filters.period,
+                        metric_filters.startdate,
+                        metric_filters.enddate)
+
+        # Generating periods
+        last_date = int(time.mktime(datetime.datetime.strptime(
+                        metric_filters.enddate, "'%Y-%m-%d'").timetuple()))
+
+        periods = list(data['unixtime'])
+        periods.append(last_date)
+
+        startdate = "'" + datetime.datetime.fromtimestamp(int(periods[0])).strftime('%Y-%m-%d %H:%M:%S') + "'"
+        for p in periods[1:]:
+            enddate = "'" + datetime.datetime.fromtimestamp(int(p)).strftime('%Y-%m-%d %H:%M:%S') + "'"
+            mfilters = metric_filters.copy()
+            mfilters.startdate = startdate
+            mfilters.enddate = enddate
+
+            data_agg = self.GetTimeToAgg(mfilters, actionto)
+            for metric in data_agg.keys():
+                #data_agg contains a list of metrics between two dates
+                #This inserts in the final data structure those values
+                #in each of the cases.
+                if not data.has_key(metric):
+                    data[metric] = []
+                data[metric].append(data_agg[metric])
+
+            startdate = enddate
+
+        return data
 

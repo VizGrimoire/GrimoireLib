@@ -106,6 +106,9 @@ class MetricFilters(object):
        filtered by a specific status of a ticket."""
     ITS_TICKET_TYPE = "ticket_type"
 
+    """ Delimiter to be used in type_analysis for multivalues filters """
+    DELIMITER = ",,"
+
     def __init__(self, period, startdate, enddate, type_analysis=None, npeople=10,
                  people_out = None, organizations_out = None, global_filter = None):
         self.period = period
@@ -136,8 +139,8 @@ class MetricFilters(object):
         if self.type_analysis is None or self.type_analysis == []:
             self.type_analysis = [typeof_analysis, value]
         else:
-            self.type_analysis[0] = self.type_analysis[0] + "," + typeof_analysis
-            self.type_analysis[1] = self.type_analysis[1] + "," + value
+            self.type_analysis[0] = self.type_analysis[0] + MetricFilters.DELIMITER + typeof_analysis
+            self.type_analysis[1] = self.type_analysis[1] + MetricFilters.DELIMITER + value
 
 
     def add_period(self, typeof_period):
@@ -155,4 +158,15 @@ class MetricFilters(object):
     def set_global_filter(self, value): self.global_filter = value
 
     def set_closed_condition(self, value): self.closed_condition = value
+
+    def copy(self):
+        newcopy = MetricFilters(self.period,
+                                self.startdate,
+                                self.enddate,
+                                self.type_analysis,
+                                self.npeople,
+                                self.people_out,
+                                self.companies_out,
+                                self.global_filter)
+        return newcopy
 

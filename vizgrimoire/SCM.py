@@ -215,8 +215,8 @@ class SCM(DataSource):
             metric = DataSource.get_metrics("projects", SCM)
         elif (filter_name == "people2"):
             metric = DataSource.get_metrics("people2", SCM)
-        elif (filter_name == "company,country"):
-            metric = DataSource.get_metrics("organizations+countries", SCM)
+        elif (filter_name == "company"+MetricFilters.DELIMITER+"country"):
+            metric = DataSource.get_metrics("companies+countries", SCM)
         else:
             logging.error("SCM " + filter_name + " not supported")
             return items
@@ -235,6 +235,69 @@ class SCM(DataSource):
         if (filter_name == "company"):
             summary =  GetCommitsSummaryCompanies(period, startdate, enddate, identities_db, limit)
         return summary
+
+
+    @staticmethod
+    def ages_study_com (Report, ds, items, period,
+                        startdate, enddate, destdir):
+        """Perform ages study for companies, if it is specified in Report.
+
+        Produces JSON files for those studies.
+
+        Parameters
+        ----------
+
+        Report: Report object
+           Configuration about the report being produced.
+        ds: { SCM | ITS | MLS }
+           Data source
+        items: ??
+           Items
+        period: ??
+           Period
+        startdate: ??
+           Start date
+        enddate: ??
+           End date
+        destdir: string
+           Directory for writing the JSON files
+        """
+
+        filter_name = "company"
+        studies = Report.get_studies()
+        ages = None
+        for study in studies:
+            if study.id == "ages":
+                ages = study
+
+        if ages is not None:
+            # Get config parameters for producing a connection
+            # to the database
+            config = Report.get_config()
+            db_identities = config['generic']['db_identities']
+            dbuser = config['generic']['db_user']
+            dbpass = config['generic']['db_password']
+
+            start_string = ds.get_name() + "_start_date"
+            end_string = ds.get_name() + "_end_date"
+            if start_string in config['r']:
+                startdate = "'" + config['r'][start_string] + "'"
+            if end_string in config['r']:
+                enddate = "'" + config['r'][end_string] + "'"
+            ds_dbname = ds.get_db_name()
+            dbname = config['generic'][ds_dbname]
+            dsquery = ds.get_query_builder()
+            dbcon = dsquery(dbuser, dbpass, dbname, db_identities)
+
+            for item in items :
+                filter_item = Filter(filter_name, item)
+                metric_filters = MetricFilters(
+                    period, startdate, enddate,
+                    filter_item.get_type_analysis()
+                    )
+                obj = ages(dbcon, metric_filters)
+                res = obj.create_report(ds, destdir)
+
 
     @staticmethod
     def create_filter_report(filter_, period, startdate, enddate, destdir, npeople, identities_db):
@@ -288,33 +351,10 @@ class SCM(DataSource):
             ds = SCM
             summary =  SCM.get_filter_summary(filter_, period, startdate, enddate, identities_db, 10)
             createJSON (summary, destdir+"/"+ filter_.get_summary_filename(SCM))
+            # Perform ages study, if it is specified in Report
+            SCM.ages_study_com (Report, ds, items, period,
+                                startdate, enddate, destdir)
 
-            # Ages study
-            studies = Report.get_studies()
-            ages = None
-            for study in studies:
-                if study.id == "ages":
-                    ages = study
-
-            if ages is not None:
-                db_identities = Report.get_config()['generic']['db_identities']
-                dbuser = Report.get_config()['generic']['db_user']
-                dbpass = Report.get_config()['generic']['db_password']
-
-                if ds.get_name()+"_start_date" in Report.get_config()['r']:
-                    startdate = "'"+Report.get_config()['r'][ds.get_name()+"_start_date"]+"'"
-                if ds.get_name()+"_end_date" in Report.get_config()['r']:
-                    enddate = "'"+Report.get_config()['r'][ds.get_name()+"_end_date"]+"'"
-                ds_dbname = ds.get_db_name()
-                dbname = Report.get_config()['generic'][ds_dbname]
-                dsquery = ds.get_query_builder()
-                dbcon = dsquery(dbuser, dbpass, dbname, db_identities)
-
-                for item in items :
-                    filter_item = Filter(filter_name, item)
-                    metric_filters = MetricFilters(period, startdate, enddate, filter_item.get_type_analysis())
-                    obj = ages(dbcon, metric_filters)
-                    res = obj.create_report(ds, destdir)
 
     @staticmethod
     def _check_report_all_data(data, filter_, startdate, enddate, idb,
@@ -360,9 +400,10 @@ class SCM(DataSource):
         filter_name = filter_.get_name()
 
         # Change filter to GrimoireLib notation
-        filter_name = filter_name.replace("+",",")
+        filter_name = filter_name.replace("+", MetricFilters.DELIMITER)
 
-        if filter_name in ["people2","company","company,country","country","repository","domain"] :
+        if filter_name in ["people2","company","company"+MetricFilters.DELIMITER+"country",
+                           "country","repository","domain"] :
             filter_all = Filter(filter_name, None)
             agg_all = SCM.get_agg_data(period, startdate, enddate,
                                        identities_db, filter_all)

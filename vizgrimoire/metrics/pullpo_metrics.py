@@ -20,6 +20,7 @@
 ##
 ## Authors:
 ##   Alvaro del Castillo <acs@bitergia.com>
+##   Daniel Izquierdo <dizquierdo@bitergia.com>
 
 """ Metrics for the source code review system based in the pullpo data model """
 
@@ -27,13 +28,16 @@ import logging
 import MySQLdb
 import numpy
 from sets import Set
+import datetime
+import time
 
-from vizgrimoire.GrimoireUtils import completePeriodIds, checkListArray, medianAndAvgByPeriod, check_array_values
+from vizgrimoire.GrimoireUtils import completePeriodIds, checkListArray, medianAndAvgByPeriod, check_array_values, genDates
 from vizgrimoire.metrics.query_builder import DSQuery
 from vizgrimoire.metrics.metrics import Metrics
 from vizgrimoire.metrics.metrics_filter import MetricFilters
 from vizgrimoire.Pullpo import Pullpo
 from vizgrimoire.metrics.query_builder import PullpoQuery
+from vizgrimoire.datahandlers.data_handler import DHESA
 
 class Submitted(Metrics):
     id = "submitted"
@@ -308,41 +312,52 @@ class New(Metrics):
                                  self.filters.startdate, self.filters.enddate)
 
 
-class TimeToReview(Metrics):
-    """ The time is measure for closed reviews merged """
-    id = "review_time"
-    name = "Review Time"
-    desc = "Time to review"
+class TimeToMerge(Metrics):
+    """ Time between the pull request is opened and merged
+
+        A pull request is closed when this is identified in the field state
+        as "merged". When that pull request is closed, the "merged_at" field
+        is also populated.
+
+        This can be seen as a subset of the dataset provided by the TimeToClose
+        class.
+
+        This method does not check the merge flag in the database.
+    """
+
+    id = "timeto_merge"
+    name = "Time to merge a pull request"
+    desc = "Time to merge a pull request"
     data_source = Pullpo
 
-    def _get_sql(self):
-        if self.filters.period != "month": return None
-        bots = []
-        q = self.db.GetTimeToReviewQuerySQL (self.filters.startdate, self.filters.enddate,
-                                             self.filters.type_analysis, bots)
-        return q
-
     def get_agg(self):
-        from numpy import median, average
-        from vizgrimoire.GrimoireUtils import removeDecimals
-
-        q = self._get_sql()
-        if q is None: return {}
-        data = self.db.ExecuteQuery(q)
-        data = data['revtime']
-        if (isinstance(data, list) == False): data = [data]
-        # ttr_median = sorted(data)[len(data)//2]
-        if (len(data) == 0):
-            ttr_median = float("nan")
-            ttr_avg = float("nan")
-        else:
-            ttr_median = float(median(removeDecimals(data)))
-            ttr_avg = float(average(removeDecimals(data)))
-        return {"review_time_days_median":ttr_median, "review_time_days_avg":ttr_avg}
+        return self.db.GetTimeToAgg(self.filters, "merged")
 
     def get_ts(self):
-        logging.warning("Not implemented time to review evolution in time for github pull requests")
-        return {}
+        return self.db.GetTimeToTimeSeriesData(self.filters, "merged")
+
+
+class TimeToClose(Metrics):
+    """ Time between the pull request is opened and closed
+
+        A pull request is closed when this is identified in the field state
+        as 'closed'. When that pull request is closed, the 'closed_at' field
+        is also populated.
+
+        Thus, this class does not understand of merges or abandoned issues.
+    """
+
+    id = "timeto_close"
+    name = "Time to close a pull request"
+    desc = "Time to close a pull request"
+    data_source = Pullpo
+
+    def get_agg(self):
+        return self.db.GetTimeToAgg(self.filters, "closed")
+
+    def get_ts(self):
+        return self.db.GetTimeToTimeSeriesData(self.filters, "closed")
+
 
 ######################
 # Contributors metrics
@@ -761,3 +776,22 @@ class Repositories(Metrics):
         names = self.db.ExecuteQuery(q)
         if not isinstance(names['name'], (list)): names['name'] = [names['name']]
         return(names)
+
+
+if __name__ == '__main__':
+    filters = MetricFilters("month", "'2014-01-01'", "'2015-01-01'")
+    dbcon = PullpoQuery("root", "", "xxxxx", "xxxxx")
+
+    timeto = TimeToClose(dbcon, filters)
+    print timeto.get_agg()
+    print timeto.get_ts()
+
+    timeto = TimeToMerge(dbcon, filters)
+    print timeto.get_agg()
+    print timeto.get_ts()
+
+    filters1 = filters.copy()
+    type_analysis = ["company", "'xxxxx'"]
+    filters1.type_analysis = type_analysis
+    company = TimeToMerge(dbcon, filters1)
+    print company.get_ts()
