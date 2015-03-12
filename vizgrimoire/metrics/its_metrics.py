@@ -151,21 +151,9 @@ class Openers(Metrics):
 
         filters.union_update(self.db.GetSQLReportWhere(self.filters))
 
-        # Add global filtering queries
-        global_filters_sql = None
-        global_filter = self.filters.global_filter
-        if global_filter  is not None:
-            if len(global_filter) == 2:
-                self.db._add_global_query_sets(tables, filters, global_filter)
-            elif len(global_filter) == 3:
-                global_filters_sql = self.db._get_global_filters(global_filter)
-
-
         tpeople_sql = "select " + self.db._get_fields_query(fields)
         tpeople_sql = tpeople_sql + " from " + self.db._get_tables_query(tables)
         tpeople_sql = tpeople_sql + " where " + self.db._get_filters_query(filters)
-
-        if global_filters_sql is not None:  tpeople_sql += " AND " + global_filters_sql
 
         # joining those wieh unique ids
         fields = Set([])
@@ -611,21 +599,9 @@ class Changed(Metrics):
         tables.union_update(self.db.GetSQLReportFrom(self.filters))
         filters.union_update(self.db.GetSQLReportWhere(self.filters))
 
-        # Add global filtering queries
-        global_filters_sql = None
-        global_filter = self.filters.global_filter
-        if global_filter  is not None:
-            if len(global_filter) == 2:
-                self.db._add_global_query_sets(tables, filters, global_filter)
-            elif len(global_filter) == 3:
-                global_filters_sql = self.db._get_global_filters(global_filter)
-
-
         issues_sql = "select " + self.db._get_fields_query(fields)
         issues_sql = issues_sql + " from " + self.db._get_tables_query(tables)
         issues_sql = issues_sql + " where " + self.db._get_filters_query(filters)
-
-        if global_filters_sql is not None:  issues_sql += " AND " + global_filters_sql
 
         #Action needed to replace issues filters by changes one
         # issues_sql = issues_sql.replace("i.submitted", "ch.changed")
@@ -728,20 +704,9 @@ class Changers(Metrics):
 
         filters.union_update(self.db.GetSQLReportWhere(self.filters))
 
-        # Add global filtering queries
-        global_filters_sql = None
-        global_filter = self.filters.global_filter
-        if global_filter  is not None:
-            if len(global_filter) == 2:
-                self.db._add_global_query_sets(tables, filters, global_filter)
-            elif len(global_filter) == 3:
-                global_filters_sql = self.db._get_global_filters(global_filter)
-
         tpeople_sql = "select " + self.db._get_fields_query(fields)
         tpeople_sql = tpeople_sql + " from " + self.db._get_tables_query(tables)
         tpeople_sql = tpeople_sql + " where " + self.db._get_filters_query(filters)
-
-        if global_filters_sql is not None:  tpeople_sql += " AND " + global_filters_sql
 
         fields = Set([])
         tables = Set([])

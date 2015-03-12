@@ -324,13 +324,13 @@ class Pullpo(DataSource):
 
     @staticmethod
     def get_metrics_core_agg():
-        m =  ['submitted','merged','mergers','abandoned','bmiscr','pending','closed',
+        m =  ['submitted','merged','mergers','abandoned','pending','closed',
               'timeto_merge','timeto_close', 'repositories', 'submitters']
         return m
 
     @staticmethod
     def get_metrics_core_ts():
-        m  = ['submitted','merged','abandoned','bmiscr','pending','closed',
+        m  = ['submitted','merged','abandoned','pending','closed',
              'timeto_merge', 'timeto_close', 'repositories', 'submitters']
         return m
 
