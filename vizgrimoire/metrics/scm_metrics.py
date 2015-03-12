@@ -858,8 +858,8 @@ class Companies(Metrics):
                                    tables, filters, False, self.filters.type_analysis)
 
         #TODO: to be included as another filter
-        if self.filters.organizations_out is not None:
-            for company in self.filters.organizations_out:
+        if self.filters.companies_out is not None:
+            for company in self.filters.companies_out:
                 query = query + " and org.name <> '" + company + "' "
 
         query = query + " GROUP by org.name ORDER BY company_commits DESC, org.name"

@@ -110,14 +110,14 @@ class MetricFilters(object):
     DELIMITER = ",,"
 
     def __init__(self, period, startdate, enddate, type_analysis=None, npeople=10,
-                 people_out = None, organizations_out = None, global_filter = None):
+                 people_out = None, companies_out = None, global_filter = None):
         self.period = period
         self.startdate = startdate
         self.enddate = enddate
         self.type_analysis = type_analysis
         self.npeople = npeople
         self.people_out = people_out
-        self.organizations_out = organizations_out
+        self.companies_out = companies_out
         self.global_filter = global_filter
         self.closed_condition = None
 
