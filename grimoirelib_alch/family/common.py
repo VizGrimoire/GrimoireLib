@@ -246,3 +246,81 @@ class DBCondition (Condition):
         """
 
         return query
+
+
+class Entities(type):
+    """Watcher for a metaclass, maintaining a dictionary with its subclasses
+
+    This watcher class maintains a dictionary with all the subclasses of
+    the metaclass that uses it.
+
+    Attributes
+    ----------
+
+    subclasses : dictionary
+        Subclasses of metaclass, keyed by name attribute of each subclass
+        (values are the subclasses themselves)
+
+    """
+
+    subclasses = {}
+
+    def __init__(cls, name, bases, clsdict):
+        """Add subclass cls to subclasses, keyed by its name attribute.
+
+        """
+
+        if clsdict['name'] is not None:
+            Entities.subclasses[clsdict['name']] = cls
+    
+
+class Entity ():
+    """Metaclass, root of all entities.
+
+    This is the root of the hierarchy of entities.
+    It uses a watcher for keeping a dictionary with all its subclasses.
+    Defines attributes and methods to be used in all the hierarchy.
+
+    Attributes
+    ----------
+
+    name: str
+        Entity name used for the entity represented by the class
+    desc: str
+        Description of the entity (one line)
+    longdesc: str
+        Description of the entity (long)
+
+    Methods
+    -------
+
+    query (q)
+        Returns the query to produce the entity
+
+    """
+
+    __metaclass__ = Entities
+
+    name = None
+    desc = None
+    longdesc = None
+
+    @staticmethod
+    def query (q):
+        """Return the query to produce this entity.
+
+        Parameters
+        ----------
+
+        q: query.scm.Query
+            Base query
+
+        Returns
+        -------
+
+        query.scm.Query
+            Query with the needed filters to produce the entity.
+
+        """
+
+        raise Exception ("query(): real entities should provide real code")
