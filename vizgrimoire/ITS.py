@@ -235,7 +235,7 @@ class ITS(DataSource):
             metric = DataSource.get_metrics("projects", cls)
         elif (filter_name == "people2"):
             metric = DataSource.get_metrics("people2", cls)
-        elif (filter_name == "company,country"):
+        elif (filter_name == "company"+MetricFilters.DELIMITER+"country"):
             metric = DataSource.get_metrics("companies+countries", cls)
         else:
             logging.error(filter_name + " not supported")
@@ -392,9 +392,10 @@ class ITS(DataSource):
         filter_name = filter_.get_name()
 
         # Change filter to GrimoireLib notation
-        filter_name = filter_name.replace("+",",")
+        filter_name = filter_name.replace("+", MetricFilters.DELIMITER)
 
-        if filter_name in ["people2","company","company,country","country","repository","domain"] :
+        if filter_name in ["people2","company","company"+MetricFilters.DELIMITER+"country",
+                           "country","repository","domain"] :
             filter_all = Filter(filter_name, None)
             agg_all = cls.get_agg_data(period, startdate, enddate,
                                        identities_db, filter_all)

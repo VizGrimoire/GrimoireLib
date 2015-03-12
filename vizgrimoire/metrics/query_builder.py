@@ -265,7 +265,7 @@ class DSQuery(object):
     def get_group_field (filter_type, ds_query = None):
         """ Return the name of the field to group by in filter all queries """
         field = None
-        supported = ['people2','company','country','domain','project','repository','company,country']
+        supported = ['people2','company','country','domain','project','repository','company'+MetricFilters.DELIMITER+'country']
 
         analysis = filter_type
 
@@ -278,7 +278,8 @@ class DSQuery(object):
         elif analysis == "repository":
             field = "r.name"
             if type(ds_query) == ITSQuery: field = "t.url"
-        elif analysis == "company,country": field = "CONCAT(com.name,'_',cou.name)"
+        elif analysis == "company"+MetricFilters.DELIMITER+"country":
+            field = "CONCAT(com.name,'_',cou.name)"
 
         return field
 

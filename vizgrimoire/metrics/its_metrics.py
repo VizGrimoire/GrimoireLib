@@ -89,6 +89,9 @@ class InitialActivity(Metrics):
                                    tables, filters, False,
                                    self.filters.type_analysis)
 
+        if self.filters.type_analysis and self.filters.type_analysis[1] is None:
+            return {} # in GROUP BY queries not supported
+
         return self.db.ExecuteQuery(query)
 
 class EndOfActivity(Metrics):
@@ -116,6 +119,9 @@ class EndOfActivity(Metrics):
                                    self.filters.enddate, " i.submitted_on ", fields,
                                    tables, filters, False,
                                    self.filters.type_analysis)
+
+        if self.filters.type_analysis and self.filters.type_analysis[1] is None:
+            return {} # in GROUP BY queries not supported
 
         return self.db.ExecuteQuery(query)
 
