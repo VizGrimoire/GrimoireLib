@@ -22,8 +22,7 @@
 ##   Daniel Izquierdo-Cortazar <dizquierdo@bitergia.com>
 ##   Luis Cañas-Díaz <lcanas@bitergia.com>
 ##
-## python openstack_report.py -a dic_cvsanaly_openstack_4114 -d dic_bicho_gerrit_openstack_3359_bis4 -i dic_cvsanaly_openstack_4114 -r 2013-01-01,2013-04-01,2013-07-01,2013-10-01,2014-01-01,2014-04-01,2014-07-01,2014-10-01,2015-01-01 -c lcanas_bicho_openstack_1376_bis -b lcanas_mlstats_openstack_1376 -f dic_sibyl_openstack_3194_new -e dic_irc_openstack_3277
-## python openstack_report.py -a openstack_2014q4_git -d openstack_2014q4_gerrit -i openstack_2014q4_git -r 2013-01-01,2013-04-01,2013-07-01,2013-10-01,2014-01-01,2014-04-01,2014-07-01,2014-10-01,2015-01-01 -c openstack_2014q4_tickets -b openstack_2014q4_mailinglists -f openstack_2014q4_qaforums -e openstack_2014q4_irc
+## python openstack_report.py -a openstack_2015q1_git -d openstack_2015q1_gerrit -i openstack_2015q1_git -r 2013-04-01,2013-07-01,2013-10-01,2014-01-01,2014-04-01,2014-07-01,2014-10-01,2015-01-01,2015-04-01 -c openstack_2015q1_tickets -b openstack_2015q1_mailing_lists -f openstack_2015q1_qaforums -e openstack_2015q1_irc
 
 import imp, inspect
 from optparse import OptionParser
@@ -245,7 +244,7 @@ def scm_report(dbcon, filters):
     top_companies = companies.get_list(filters)
     if not isinstance(top_companies["company_commits"], list):
         top_companies["company_commits"] = [top_companies["company_commits"]]
-        top_companies["companies"] = [top_companies["companies"]]
+        top_companies["companies"] = [top_companies["name"]]
     createJSON(top_companies, "./release/scm_top_companies_project_"+project_name+".json")
     createCSV(top_companies, "./release/scm_top_companies_project_"+project_name+".csv")
 
@@ -679,8 +678,8 @@ def integrated_projects_top_orgs(dbcon, people_out, affs_out):
         projects_list.append(project_id)
         commits_top1.append(activity["company_commits"][0])
         commits_top2.append(activity["company_commits"][1])
-        orgs_top1.append(activity["companies"][0])
-        orgs_top2.append(activity["companies"][1])
+        orgs_top1.append(activity["name"][0])
+        orgs_top2.append(activity["name"][1])
 
     createCSV({"projects":projects_list, "commitstopone":commits_top1, "commitstoptwo":commits_top2, "orgstopone":orgs_top1, "orgstoptwo":orgs_top2}, "./release/integrated_projects_top_orgs.csv")
 
@@ -860,7 +859,7 @@ def general_info(opts, releases, people_out, affs_out):
 
 
 
-    labels = ["13-Q1", "13-Q2", "13-Q3", "13-Q4", "14-Q1", "14-Q2","14-Q3", "14-Q4"]
+    labels = ["13-Q2", "13-Q3", "13-Q4", "14-Q1", "14-Q2","14-Q3", "14-Q4", "15-Q1"]
     #labels = ["2013-Q3", "2013-Q4", "2014-Q1", "2014-Q2"]
     bar_chart("Emails sent", labels, emails, "emails")
 
@@ -935,7 +934,7 @@ def releases_info(startdate, enddate, project, opts, people_out, affs_out):
 def print_n_draw(agg_data, project):
     # The releases information is print in CSV/JSON format and specific charts are built
 
-    labels = ["13-Q1", "13-Q2", "13-Q3", "13-Q4", "14-Q1", "14-Q2", "14-Q3", "14-Q4"]
+    labels = ["13-Q2", "13-Q3", "13-Q4", "14-Q1", "14-Q2", "14-Q3", "14-Q4", "15-Q1"]
     #labels = ["2013-Q3", "2013-Q4", "2014-Q1", "2014-Q2"]
     project_name = project.replace(" ", "")
 
