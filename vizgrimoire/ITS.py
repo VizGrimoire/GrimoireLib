@@ -235,7 +235,7 @@ class ITS(DataSource):
             metric = DataSource.get_metrics("projects", cls)
         elif (filter_name == "people2"):
             metric = DataSource.get_metrics("people2", cls)
-        elif (filter_name == "company,country"):
+        elif (filter_name == "company"+MetricFilters.DELIMITER+"country"):
             metric = DataSource.get_metrics("companies+countries", cls)
         else:
             logging.error(filter_name + " not supported")
@@ -255,6 +255,69 @@ class ITS(DataSource):
 
             summary =  GetClosedSummaryCompanies(period, startdate, enddate, identities_db, closed_condition, limit)
         return summary
+
+
+    @staticmethod
+    def ages_study_com (Report, ds, items, period,
+                        startdate, enddate, destdir):
+        """Perform ages study for companies, if it is specified in Report.
+
+        Produces JSON files for those studies.
+
+        Parameters
+        ----------
+
+        Report: Report object
+           Configuration about the report being produced.
+        ds: { SCM | ITS | MLS }
+           Data source
+        items: ??
+           Items
+        period: ??
+           Period
+        startdate: ??
+           Start date
+        enddate: ??
+           End date
+        destdir: string
+           Directory for writing the JSON files
+        """
+
+        filter_name = "company"
+        studies = Report.get_studies()
+        ages = None
+        for study in studies:
+            if study.id == "ages":
+                ages = study
+
+        if ages is not None:
+            # Get config parameters for producing a connection
+            # to the database
+            config = Report.get_config()
+            db_identities = config['generic']['db_identities']
+            dbuser = config['generic']['db_user']
+            dbpass = config['generic']['db_password']
+
+            start_string = ds.get_name() + "_start_date"
+            end_string = ds.get_name() + "_end_date"
+            if start_string in config['r']:
+                startdate = "'" + config['r'][start_string] + "'"
+            if end_string in config['r']:
+                enddate = "'" + config['r'][end_string] + "'"
+            ds_dbname = ds.get_db_name()
+            dbname = config['generic'][ds_dbname]
+            dsquery = ds.get_query_builder()
+            dbcon = dsquery(dbuser, dbpass, dbname, db_identities)
+
+            for item in items :
+                filter_item = Filter(filter_name, item)
+                metric_filters = MetricFilters(
+                    period, startdate, enddate,
+                    filter_item.get_type_analysis()
+                    )
+                obj = ages(dbcon, metric_filters)
+                res = obj.create_report(ds, destdir)
+
 
     @classmethod
     def create_filter_report(cls, filter_, period, startdate, enddate, destdir, npeople, identities_db):
@@ -305,8 +368,18 @@ class ITS(DataSource):
         createJSON(items_list, fn)
 
         if (filter_name == "company"):
-            closed = cls.get_filter_summary(filter_, period, startdate, enddate, identities_db, 10)
-            createJSON (closed, destdir+"/"+ filter_.get_summary_filename(cls))
+            ds = ITS
+            summary = cls.get_filter_summary(
+                filter_, period, startdate, enddate,
+                identities_db, 10
+                )
+            createJSON (summary,
+                        destdir + "/" + filter_.get_summary_filename(cls))
+
+            # Perform ages study, if it is specified in Report
+            cls.ages_study_com (Report, ds, items, period,
+                                startdate, enddate, destdir)
+
 
     @staticmethod
     def _check_report_all_data(data, filter_, startdate, enddate, idb,
@@ -319,9 +392,10 @@ class ITS(DataSource):
         filter_name = filter_.get_name()
 
         # Change filter to GrimoireLib notation
-        filter_name = filter_name.replace("+",",")
+        filter_name = filter_name.replace("+", MetricFilters.DELIMITER)
 
-        if filter_name in ["people2","company","company,country","country","repository","domain"] :
+        if filter_name in ["people2","company","company"+MetricFilters.DELIMITER+"country",
+                           "country","repository","domain"] :
             filter_all = Filter(filter_name, None)
             agg_all = cls.get_agg_data(period, startdate, enddate,
                                        identities_db, filter_all)
