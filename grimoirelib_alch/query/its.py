@@ -83,40 +83,47 @@ class DB (GrimoireDatabase):
             tablename = 'people',
             schemaname = self.schema)
 
-        DB.PeopleUPeople = GrimoireDatabase._table (
-            bases = (self.Base,), name = 'PeopleUPeople',
-            tablename = 'people_upeople',
+        DB.PeopleUIdentities = GrimoireDatabase._table (
+            bases = (self.Base,), name = 'PeopleUIdentities',
+            tablename = 'people_uidentities',
             schemaname = self.schema,
             columns = dict (
-                upeople_id = Column(
+                uuid = Column(
                     Integer,
-                    ForeignKey(self.schema_id + '.' + 'upeople.id'))
-                ))
+                    ForeignKey(self.schema_id + '.' + 'uidentities.uuid')
+                ),
+                people_id = Column(
+                    Integer,
+                    ForeignKey(self.schema + '.' + 'people.id'),
+                    primary_key = True
+               ),
+            )
+        )
 
         DB.Trackers = GrimoireDatabase._table (
             bases = (self.Base,), name = 'Trackers',
             tablename = 'trackers',
             schemaname = self.schema)
 
-        DB.UPeople = GrimoireDatabase._table (
-            bases = (self.Base,), name = 'UPeople',
-            tablename = 'upeople',
+        DB.UIdentities = GrimoireDatabase._table (
+            bases = (self.Base,), name = 'UIdentities',
+            tablename = 'uidentities',
             schemaname = self.schema_id)
 
-        if "companies" in tables_id:
-            DB.Companies = GrimoireDatabase._table (
-                bases = (self.Base,), name = 'Companies',
-                tablename = 'companies',
+        if "organizations" in tables_id:
+            DB.Organizations = GrimoireDatabase._table (
+                bases = (self.Base,), name = 'Organizations',
+                tablename = 'organizations',
                 schemaname = self.schema_id,
                 columns = dict (
                     id = Column(Integer, primary_key = True)
                     )
                 )
 
-        if "upeople_companies" in tables_id:
-            DB.UPeopleCompanies = GrimoireDatabase._table (
-                bases = (self.Base,), name = 'UPeopleCompanies',
-                tablename = 'upeople_companies',
+        if "uidentities_organizations" in tables_id:
+            DB.UIdentitiesOrganizations = GrimoireDatabase._table (
+                bases = (self.Base,), name = 'UIdentitiesOrganizations',
+                tablename = 'uidentities_organizations',
                 schemaname = self.schema_id,
                 )
 
@@ -172,10 +179,10 @@ class Query (GrimoireQuery):
 
         Adds person_id, name, to the select clause of query,
         having unique identities into account.
-        Joins with PeopleUPeople, UPeople, and Changes / Isues if they
+        Joins with PeopleUIdentities, UIdentities, and Changes / Isues if they
         are not already joined.
-        Relationships: UPeople.id == PeopleUPeople.upeople_id,
-        PeopleUPeople.people_id == person
+        Relationships: UIdentities.uuid == PeopleUIdentities.uuid,
+        PeopleUIdentities.people_id == person
 
         Parameters
         ----------
@@ -190,8 +197,8 @@ class Query (GrimoireQuery):
 
         """
 
-        query = self.add_columns (label("person_id", DB.UPeople.id),
-                                  label("name", DB.UPeople.identifier))
+        query = self.add_columns (label("person_id", DB.UIdentities.uuid),
+                                  label("name", DB.UIdentities.uuid))
         if kind == "openers":
             person = DB.Issues.submitted_by
             table = DB.Issues
@@ -204,42 +211,42 @@ class Query (GrimoireQuery):
             raise Exception ("select_personsdata: Unknown kind %s." \
                              % kind)
         if not self.joined:
-            # First table, UPeople is in FROM
-            self.joined.append (DB.UPeople)
-        if not self.joined or DB.UPeople in self.joined:
-            # First table, UPeople is in FROM, or we have UPeople
-            if DB.PeopleUPeople not in self.joined:
-                self.joined.append (DB.PeopleUPeople)
+            # First table, UIdentities is in FROM
+            self.joined.append (DB.UIdentities)
+        if not self.joined or DB.UIdentities in self.joined:
+            # First table, UIdentities is in FROM, or we have UIdentities
+            if DB.PeopleUIdentities not in self.joined:
+                self.joined.append (DB.PeopleUIdentities)
                 query = query.join (
-                    DB.PeopleUPeople,
-                    DB.UPeople.id == DB.PeopleUPeople.upeople_id
+                    DB.PeopleUIdentities,
+                    DB.UIdentities.uuid == DB.PeopleUIdentities.uuid
                     )
             if table in self.joined:
-                query = query.filter (DB.PeopleUPeople.people_id == person)
+                query = query.filter (DB.PeopleUIdentities.people_id == person)
             else:
                 self.joined.append (table)
                 query = query.join (table,
-                                    DB.PeopleUPeople.people_id == person)
-        elif DB.PeopleUPeople in self.joined:
-            # We have PeopleUPeople (table should be joined), no UPeople
+                                    DB.PeopleUIdentities.people_id == person)
+        elif DB.PeopleUIdentities in self.joined:
+            # We have PeopleUIdentities (table should be joined), no UIdentities
             if table not in self.joined:
                 raise Exception ("select_personsdata_uid: " + \
-                                     "If PeopleUPeople is joined, " + \
+                                     "If PeopleUIdentities is joined, " + \
                                      str(table) + " should be joined too")
-            self.joined.append (DB.UPeople)
+            self.joined.append (DB.UIdentities)
             query = query.join (
-                DB.UPeople,
-                DB.UPeople.id == DB.PeopleUPeople.upeople_id)
+                DB.UIdentities,
+                DB.UIdentities.uuid == DB.PeopleUIdentities.uuid)
         elif table in self.joined:
-            # We have table, and no PeopleUPeople, no UPeople
-            self.joined.append (DB.PeopleUPeople)
-            query = query.join (DB.PeopleUPeople,
-                                DB.PeopleUPeople.people_id == person)
-            self.joined.append (DB.UPeople)
-            query = query.join (DB.UPeople,
-                                DB.UPeople.id == PeopleUPeople.upeople_id)
+            # We have table, and no PeopleUIdentities, no UIdentities
+            self.joined.append (DB.PeopleUIdentities)
+            query = query.join (DB.PeopleUIdentities,
+                                DB.PeopleUIdentities.people_id == person)
+            self.joined.append (DB.UIdentities)
+            query = query.join (DB.UIdentities,
+                                DB.UIdentities.uuid == PeopleUIdentities.uuid)
         else:
-            # No table, no PeopleUPeople, no UPeople but some other table
+            # No table, no PeopleUIdentities, no UIdentities but some other table
             raise Exception ("select_personsdata_uid: " + \
                                  "Unknown table to join to")
         return query
@@ -268,7 +275,7 @@ class Query (GrimoireQuery):
     def select_orgs (self):
         """Select organizations data.
 
-        Include id and name, as they appear in the companies table.
+        Include id and name, as they appear in the organizations table.
         Warning: doesn't join other tables. For now, only works alone.
 
         Returns
@@ -279,8 +286,8 @@ class Query (GrimoireQuery):
         
         """
 
-        query = self.add_columns (label("org_id", DB.Companies.id),
-                                  label("org_name", DB.Companies.name))
+        query = self.add_columns (label("org_id", DB.Organizations.id),
+                                  label("org_name", DB.Organizations.name))
         return query
 
 
@@ -315,7 +322,7 @@ class Query (GrimoireQuery):
         """Filter organizations matching a list of names
 
         Fiters query by a list of organization names, checking for
-        them in the companies table.
+        them in the organizations table.
 
         Parameters
         ----------
@@ -326,7 +333,7 @@ class Query (GrimoireQuery):
         """
 
         query = self
-        query = query.filter(DB.Companies.name.in_(orgs))
+        query = query.filter(DB.Organizations.name.in_(orgs))
         return query
 
 
@@ -357,14 +364,14 @@ class Query (GrimoireQuery):
             raise Exception ("filter_org_ids: Unknown kind %s." \
                                  % kind)
         query = query \
-            .join (DB.UPeopleCompanies,
-                   DB.PeopleUPeople.upeople_id == \
-                       DB.UPeopleCompanies.upeople_id) \
+            .join (DB.UIdentitiesOrganizations,
+                   DB.PeopleUIdentities.uuid == \
+                       DB.UIdentitiesOrganizations.uuid) \
             .filter (date_id.between (
-                           DB.UPeopleCompanies.init,
-                           DB.UPeopleCompanies.end
+                           DB.UIdentitiesOrganizations.start,
+                           DB.UIdentitiesOrganizations.end
                            )) \
-            .filter (DB.UPeopleCompanies.company_id.in_(list))
+            .filter (DB.UIdentitiesOrganizations.organization_id.in_(list))
         return query
 
 

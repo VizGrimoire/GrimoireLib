@@ -149,12 +149,12 @@ if __name__ == "__main__":
     query = session.query(
         label(
             "authors",
-            func.count (func.distinct(SCMDatabase.PeopleUPeople.upeople_id))
+            func.count (func.distinct(SCMDatabase.PeopleUIdentities.uuid))
             )
         ) \
         .join (
             SCMDatabase.SCMLog,
-            SCMDatabase.PeopleUPeople.people_id == SCMDatabase.SCMLog.author_id
+            SCMDatabase.PeopleUIdentities.people_id == SCMDatabase.SCMLog.author_id
             ) \
         .join (SCMDatabase.Actions) \
         .filter(SCMDatabase.Actions.branch_id.in_ (scm_branches),
@@ -167,12 +167,12 @@ if __name__ == "__main__":
     query = session.query(
         label(
             "authors",
-            func.distinct(SCMDatabase.PeopleUPeople.upeople_id)
+            func.distinct(SCMDatabase.PeopleUIdentities.uuid)
             )
         ) \
         .join (
             SCMDatabase.SCMLog,
-            SCMDatabase.PeopleUPeople.people_id == SCMDatabase.SCMLog.author_id
+            SCMDatabase.PeopleUIdentities.people_id == SCMDatabase.SCMLog.author_id
             ) \
         .join (SCMDatabase.Actions) \
         .filter(SCMDatabase.Actions.branch_id.in_ (scm_branches),
@@ -231,12 +231,12 @@ if __name__ == "__main__":
     query = session.query(
         label(
             "authors",
-            func.count (func.distinct(MLSDatabase.PeopleUPeople.upeople_id))
+            func.count (func.distinct(MLSDatabase.PeopleUIdentities.uuid))
             )
         ) \
         .join (
             MLSDatabase.MessagesPeople,
-            MLSDatabase.PeopleUPeople.people_id == \
+            MLSDatabase.PeopleUIdentities.people_id == \
                 MLSDatabase.MessagesPeople.email_address
             ) \
         .join (MLSDatabase.Messages) \
@@ -256,12 +256,12 @@ if __name__ == "__main__":
     query = session.query(
         label(
             "authors",
-            func.count (func.distinct(MLSDatabase.PeopleUPeople.upeople_id))
+            func.count (func.distinct(MLSDatabase.PeopleUIdentities.uuid))
             )
         ) \
         .join (
             MLSDatabase.MessagesPeople,
-            MLSDatabase.PeopleUPeople.people_id == \
+            MLSDatabase.PeopleUIdentities.people_id == \
                 MLSDatabase.MessagesPeople.email_address
             ) \
         .join (MLSDatabase.Messages) \
