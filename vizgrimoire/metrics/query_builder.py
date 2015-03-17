@@ -38,8 +38,11 @@ class DSQuery(object):
 
     db_conn_pool = {} # one connection per database
 
-    def __init__(self, user, password, database, identities_db = None, host="127.0.0.1", port=3306, group=None):
+    def __init__(self, user, password, database,
+                 identities_db = None, projects_db = None,
+                 host="127.0.0.1", port=3306, group=None):
         self.identities_db = identities_db
+        self.projects_db = projects_db
         self.user = user
         self.password = password
         self.database = database
@@ -242,12 +245,12 @@ class DSQuery(object):
     def get_subprojects(self, project):
         """ Return all subprojects ids for a project in a string join by comma """
 
-        q = "SELECT project_id from %s.projects WHERE id='%s'" % (self.identities_db, project)
+        q = "SELECT project_id from %s.projects WHERE id='%s'" % (self.projects_db, project)
         project_id = self.ExecuteQuery(q)['project_id']
 
         q = """
             SELECT subproject_id from %s.project_children pc where pc.project_id = '%s'
-        """ % (self.identities_db, project_id)
+        """ % (self.projects_db, project_id)
 
         subprojects = self.ExecuteQuery(q)
 
@@ -333,7 +336,7 @@ class SCMQuery(DSQuery):
                FROM   %s.projects p, %s.project_repositories pr
                WHERE  p.project_id = pr.project_id AND p.project_id IN (%s)
                      AND pr.data_source='scm'
-               )""" % (self.identities_db, self.identities_db, self.get_subprojects(project))
+               )""" % (self.projects_db, self.projects_db, self.get_subprojects(project))
         fields.add(repos)
         fields.add("r.id = s.repository_id")
 
@@ -756,7 +759,7 @@ class ITSQuery(DSQuery):
                SELECT repository_name
                FROM   %s.projects p, %s.project_repositories pr
                WHERE  p.project_id = pr.project_id AND pr.data_source='its'
-        """ % (self.identities_db, self.identities_db)
+        """ % (self.projects_db, self.projects_db)
 
         if subprojects != "[]":
             repos += " AND p.project_id IN (%s) " % subprojects
@@ -1167,7 +1170,7 @@ class MLSQuery(DSQuery):
                FROM   %s.projects p, %s.project_repositories pr
                WHERE  p.project_id = pr.project_id AND p.project_id IN (%s)
                    AND pr.data_source='mls'
-        )""" % (self.identities_db, self.identities_db, self.get_subprojects(p))
+        )""" % (self.projects_db, self.projects_db, self.get_subprojects(p))
         repos.add(repos_str)
         repos.add("ml.mailing_list_url = m.mailing_list_url")
 
@@ -1448,7 +1451,7 @@ class SCRQuery(DSQuery):
                FROM   %s.projects p, %s.project_repositories pr
                WHERE  p.project_id = pr.project_id AND p.project_id IN (%s)
                    AND pr.data_source='scr'
-        )""" % (self.identities_db, self.identities_db, self.get_subprojects(project))
+        )""" % (self.projects_db, self.projects_db, self.get_subprojects(project))
         filters.add(repos)
         filters.add("t.id = i.tracker_id")
 
@@ -2045,8 +2048,11 @@ class SCRQuery(DSQuery):
         return(self.ExecuteQuery(q))
 
     # Global filter to remove all results from Wikimedia KPIs from SCR
-    def __init__(self, user, password, database, identities_db = None, host="127.0.0.1", port=3306, group=None):
-        super(SCRQuery, self).__init__(user, password, database, identities_db, host, port, group)
+    def __init__(self, user, password, database,
+                 identities_db = None, projects_db = None,
+                 host="127.0.0.1", port=3306, group=None):
+        super(SCRQuery, self).__init__(user, password, database, identities_db, projects_db,
+                                       host, port, group)
         # _filter_submitter_id as a static global var to avoid SQL re-execute
         people_userid = 'l10n-bot'
         q = "SELECT id FROM people WHERE user_id = '%s'" % (people_userid)
@@ -2670,7 +2676,7 @@ class PullpoQuery(DSQuery):
                FROM   %s.projects p, %s.project_repositories prep
                WHERE  p.project_id = prep.project_id AND p.project_id IN (%s)
                    AND prep.data_source='pullpo'
-        )""" % (self.identities_db, self.identities_db, self.get_subprojects(project))
+        )""" % (self.projects_db, self.projects_db, self.get_subprojects(project))
         filters.add(repos)
         filters.add("re.id = pr.repo_id")
 

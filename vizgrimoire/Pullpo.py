@@ -32,7 +32,7 @@ from datetime import datetime, timedelta
 from vizgrimoire.GrimoireSQL import GetSQLGlobal, GetSQLPeriod
 from vizgrimoire.GrimoireSQL import ExecuteQuery
 from vizgrimoire.GrimoireUtils import GetPercentageDiff, GetDates, completePeriodIds
-from vizgrimoire.GrimoireUtils import checkListArray, removeDecimals, get_subprojects
+from vizgrimoire.GrimoireUtils import checkListArray, removeDecimals
 from vizgrimoire.GrimoireUtils import getPeriod, createJSON, checkFloatArray, medianAndAvgByPeriod, check_array_values
 from vizgrimoire.metrics.metrics_filter import MetricFilters
 from vizgrimoire.metrics.query_builder import DSQuery

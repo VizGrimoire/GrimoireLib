@@ -56,6 +56,13 @@ class MetricFilters(object):
        metrics for a specific company."""
     COMPANY = "company"
 
+    """Allows per organization type of analysis.
+       People of the community may have an affiliation. That affiliation
+       can be registered. This type of analysis helps to produce 
+       metrics for a specific organization."""
+    ORGANIZATION = "organization"
+
+
     """Allows per domain type of analysis.
        People of the community are related to an email address. That email address
        has a domain, that can be registered. This type of analysis helps to
@@ -118,6 +125,7 @@ class MetricFilters(object):
         self.npeople = npeople
         self.people_out = people_out
         self.companies_out = companies_out
+        self.organizations_out = None
         self.global_filter = global_filter
         self.closed_condition = None
 

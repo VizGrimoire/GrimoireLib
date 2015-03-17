@@ -1039,7 +1039,7 @@ class Projects(Metrics):
         logging.info ("Getting projects list for ITS")
         from vizgrimoire.metrics.metrics_filter import MetricFilters
 
-        q = "SELECT p.id AS name FROM  %s.projects p" % (self.db.identities_db)
+        q = "SELECT p.id AS name FROM  %s.projects p" % (self.db.projects_db)
         projects = self.db.ExecuteQuery(q)
         data = []
 

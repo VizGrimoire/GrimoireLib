@@ -995,12 +995,11 @@ class Projects(Metrics):
     data_source = SCM
 
     def get_list(self):
-        identities_db = self.db.identities_db
         startdate = self.filters.startdate
         enddate = self.filters.enddate
 
         # Get all projects list
-        q = "SELECT p.id AS name FROM  %s.projects p" % (identities_db)
+        q = "SELECT p.id AS name FROM  %s.projects p" % (self.db.projects_db)
         projects = self.db.ExecuteQuery(q)
         data = []
 

@@ -513,19 +513,19 @@ def read_main_conf(config_file):
     return options
 
 # Old code moved to query_builder. To be removed once it is not needed.
-def get_subprojects(project, identities_db, dsquery = None):
+def get_subprojects(project, projects_db, dsquery = None):
     """ Return all subprojects ids for a project in a string join by comma """
 
     from vizgrimoire.GrimoireSQL import ExecuteQuery
     query = ExecuteQuery
     if dsquery is not None: query = dsquery.ExecuteQuery
 
-    q = "SELECT project_id from %s.projects WHERE id='%s'" % (identities_db, project)
+    q = "SELECT project_id from %s.projects WHERE id='%s'" % (projects_db, project)
     project_id = query(q)['project_id']
 
     q = """
         SELECT subproject_id from %s.project_children pc where pc.project_id = '%s'
-    """ % (identities_db, project_id)
+    """ % (projects_db, project_id)
 
     subprojects = query(q)
 

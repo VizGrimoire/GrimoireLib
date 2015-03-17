@@ -29,7 +29,7 @@ from vizgrimoire.GrimoireSQL import GetSQLGlobal, GetSQLPeriod
 # TODO integrate: from GrimoireSQL import  GetSQLReportFrom 
 from vizgrimoire.GrimoireSQL import ExecuteQuery, BuildQuery
 from vizgrimoire.GrimoireUtils import GetPercentageDiff, GetDates, completePeriodIds
-from vizgrimoire.GrimoireUtils import createJSON, getPeriod, get_subprojects
+from vizgrimoire.GrimoireUtils import createJSON, getPeriod
 from vizgrimoire.data_source import DataSource
 from vizgrimoire.filter import Filter
 from vizgrimoire.metrics.metrics_filter import MetricFilters

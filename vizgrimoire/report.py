@@ -71,10 +71,14 @@ class Report(object):
         for name in filters:
             filter_ = Filter.get_filter_from_plural(name)
             if filter_ is not None:
+                if filter_.get_name() == "project":
+                    if not 'db_projects' in Report._automator['generic']:
+                        logging.error("project filter configured but no db_projects. Review " + Report._automator_file)
+                        raise Exception("Wrong configuration")
                 Report._filters.append(filter_)
                 Report._filters_automator.append(filter_)
             else:
-                logging.error("Wrong filter " + name + ", review " + Report._automator_file)
+                logging.error("Wrong filter " + name + ". Review " + Report._automator_file)
                 raise Exception('Wrong automator config file')
 
     @staticmethod
@@ -125,6 +129,9 @@ class Report(object):
         import imp, inspect
 
         db_identities = Report._automator['generic']['db_identities']
+        db_projects = None
+        if 'db_projects' in Report._automator['generic']:
+            db_projects = Report._automator['generic']['db_projects']
         dbuser = Report._automator['generic']['db_user']
         dbpass = Report._automator['generic']['db_password']
 
@@ -166,7 +173,7 @@ class Report(object):
                 metric_filters = get_default_filter()
                 if (ds.get_global_filter(ds) is not None):
                     metric_filters.global_filter = ds.get_global_filter(ds)
-                metrics = metrics_class(builder(dbuser, dbpass, db, db_identities), metric_filters)
+                metrics = metrics_class(builder(dbuser, dbpass, db, db_identities, db_projects), metric_filters)
                 ds.add_metrics(metrics, ds)
                 if ds == ITS.ITS:
                     db_its1_name = ITS_1.ITS_1.get_db_name()
@@ -174,7 +181,7 @@ class Report(object):
                         db_its1 = Report._automator['generic'][db_its1_name]
                         metric_filters = get_default_filter()
                         metric_filters.set_closed_condition(ITS_1.ITS_1._get_closed_condition())
-                        metrics = metrics_class(builder(dbuser, dbpass, db_its1, db_identities), metric_filters)
+                        metrics = metrics_class(builder(dbuser, dbpass, db_its1, db_identities, db_projects), metric_filters)
                         ITS_1.ITS_1.add_metrics(metrics, ITS_1.ITS_1)
 
                 # Specific filters

@@ -217,12 +217,12 @@ class MLS(DataSource):
         return {"name":items}
 
     @staticmethod
-    def get_filter_summary(filter_, period, startdate, enddate, identities_db, limit):
+    def get_filter_summary(filter_, period, startdate, enddate, identities_db, limit, projects_db):
         summary = None
         filter_name = filter_.get_name()
 
         if (filter_name == "company"):
-            summary =  GetSentSummaryCompanies(period, startdate, enddate, identities_db, limit)
+            summary =  GetSentSummaryCompanies(period, startdate, enddate, identities_db, limit, projects_db)
         return summary
 
 
@@ -342,7 +342,7 @@ class MLS(DataSource):
             ds = MLS
             summary = MLS.get_filter_summary(
                 filter_, period, startdate, enddate,
-                identities_db, 10
+                identities_db, 10, self.db.projects_db
                 )
             createJSON (summary,
                         destdir + "/" + filter_.get_summary_filename(MLS))
@@ -513,7 +513,7 @@ def GetSQLProjectsFromMLS():
     return (" , mailing_lists ml")
 
 
-def GetSQLProjectsWhereMLS(project, identities_db):
+def GetSQLProjectsWhereMLS(project, projects_db):
     # include all repositories for a project and its subprojects
     p = project.replace("'", "") # FIXME: why is "'" needed in the name?
 
@@ -522,7 +522,7 @@ def GetSQLProjectsWhereMLS(project, identities_db):
            FROM   %s.projects p, %s.project_repositories pr
            WHERE  p.project_id = pr.project_id AND p.project_id IN (%s)
                AND pr.data_source='mls'
-    )""" % (identities_db, identities_db, get_subprojects(p, identities_db))
+    )""" % (projects_db, projects_db, get_subprojects(p, identities_db))
 
     return (repos  + " and ml.mailing_list_url = m.mailing_list_url")
 
@@ -556,7 +556,7 @@ def GetMLSSQLReportFrom (identities_db, type_analysis):
     return (From)
 
 
-def GetMLSSQLReportWhere (type_analysis, identities_db=None):
+def GetMLSSQLReportWhere (type_analysis, projects_db):
     #generic function to generate 'where' clauses
     #"type" is a list of two values: type of analysis and value of 
     #such analysis
@@ -577,7 +577,7 @@ def GetMLSSQLReportWhere (type_analysis, identities_db=None):
             logging.error("project filter not supported without identities_db")
             sys.exit(0)
         else:
-            where = GetSQLProjectsWhereMLS(value, identities_db)
+            where = GetSQLProjectsWhereMLS(value, projects_db)
 
     return (where)
 
@@ -607,7 +607,7 @@ def GetMLSFiltersResponse () :
 # Meta functions that aggregate all evolutionary or static data in one call
 ##########
 
-def GetEmailsSent (period, startdate, enddate, identities_db, type_analysis, evolutionary):
+def GetEmailsSent (period, startdate, enddate, identities_db, type_analysis, evolutionary, projects_db):
     # Generic function that counts emails sent
 
     if (evolutionary):
@@ -618,20 +618,14 @@ def GetEmailsSent (period, startdate, enddate, identities_db, type_analysis, evo
                   " DATE_FORMAT (max(m.first_date), '%Y-%m-%d') as last_date "
 
     tables = " messages m " + GetMLSSQLReportFrom(identities_db, type_analysis)
-    filters = GetMLSSQLReportWhere(type_analysis, identities_db)
+    filters = GetMLSSQLReportWhere(type_analysis, projects_db)
 
     q = BuildQuery(period, startdate, enddate, " m.first_date ", fields, tables, filters, evolutionary)
     return(ExecuteQuery(q))
 
-def EvolEmailsSent (period, startdate, enddate, identities_db, type_analysis = []):
+def EvolEmailsSent (period, startdate, enddate, identities_db, type_analysis = [], projects_db = None):
     # Evolution of emails sent
-    return(GetEmailsSent(period, startdate, enddate, identities_db, type_analysis , True))
-
-
-def AggEmailsSent (period, startdate, enddate, identities_db, type_analysis = []):
-    # Aggregated number of emails sent
-    return(GetEmailsSent(period, startdate, enddate, identities_db, type_analysis, False))
-
+    return(GetEmailsSent(period, startdate, enddate, identities_db, type_analysis , True, projects_db))
 
 ########################
 # People functions as in the old version, still to be refactored!
@@ -699,7 +693,7 @@ def GetStaticPeopleMLS (developer_id, startdate, enddate) :
     return (data)
 
 
-def GetSentSummaryCompanies (period, startdate, enddate, identities_db, num_organizations):
+def GetSentSummaryCompanies (period, startdate, enddate, identities_db, num_organizations, projects_db):
     count = 1
     first_organizations = {}
 
@@ -708,7 +702,7 @@ def GetSentSummaryCompanies (period, startdate, enddate, identities_db, num_orga
 
     for company in organizations:
         type_analysis = ["company", "'"+company+"'"]
-        sent = EvolEmailsSent(period, startdate, enddate, identities_db, type_analysis)
+        sent = EvolEmailsSent(period, startdate, enddate, identities_db, type_analysis, projects_db)
         sent = completePeriodIds(sent, period, startdate, enddate)
         # Rename field sent to company name
         sent[company] = sent["sent"]

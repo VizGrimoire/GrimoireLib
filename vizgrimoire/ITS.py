@@ -29,7 +29,7 @@ import logging, os, re
 from vizgrimoire.GrimoireSQL import GetSQLGlobal, GetSQLPeriod
 from vizgrimoire.GrimoireSQL import ExecuteQuery, BuildQuery
 from vizgrimoire.GrimoireUtils import GetPercentageDiff, GetDates, completePeriodIds, getPeriod, check_array_value
-from vizgrimoire.GrimoireUtils import createJSON, get_subprojects
+from vizgrimoire.GrimoireUtils import createJSON
 from vizgrimoire.metrics.metrics_filter import MetricFilters
 
 from vizgrimoire.data_source import DataSource
@@ -52,38 +52,14 @@ class ITS(DataSource):
     @staticmethod
     def get_date_init(startdate, enddate, identities_db, type_analysis):
         """Get the date of the first activity in the data source"""
-        from vizgrimoire.metrics.its_metrics import InitialActivity
-        from vizgrimoire.report import Report
-        from vizgrimoire.metrics.query_builder import ITSQuery
-
-        db_identities = Report.get_config()['generic']['db_identities']
-        dbuser = Report.get_config()['generic']['db_user']
-        dbpass = Report.get_config()['generic']['db_password']
-        dbbicho = Report.get_config()['generic']['db_bicho']
-
-        dbcon = ITSQuery(dbuser, dbpass, dbbicho, db_identities)
-        filters = MetricFilters("", startdate, enddate, type_analysis)
-        init_date = InitialActivity(dbcon, filters)
-
-        return init_date.get_agg()
+        first_date = ITS.get_metrics("first_date", ITS)
+        return first_date.get_agg()
 
     @staticmethod
     def get_date_end(startdate, enddate, identities_db, type_analysis):
         """Get the date of the last activity in the data source"""
-        from vizgrimoire.metrics.its_metrics import EndOfActivity
-        from vizgrimoire.report import Report
-        from vizgrimoire.metrics.query_builder import ITSQuery
-
-        db_identities = Report.get_config()['generic']['db_identities']
-        dbuser = Report.get_config()['generic']['db_user']
-        dbpass = Report.get_config()['generic']['db_password']
-        dbbicho = Report.get_config()['generic']['db_bicho']
-
-        dbcon = ITSQuery(dbuser, dbpass, dbbicho, db_identities)
-        filters = MetricFilters("", startdate, enddate, type_analysis)
-        final_date = EndOfActivity(dbcon, filters)
-
-        return final_date.get_agg()
+        last_date = ITS.get_metrics("last_date", ITS)
+        return last_date.get_agg()
  
     @staticmethod
     def get_url():

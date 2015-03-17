@@ -621,7 +621,7 @@ class Projects(Metrics):
         logging.info ("Getting projects list for MLS")
 
         # Get all projects list
-        q = "SELECT p.id AS name FROM  %s.projects p" % (self.db.identities_db)
+        q = "SELECT p.id AS name FROM  %s.projects p" % (self.db.projects_db)
         projects = self.db.ExecuteQuery(q)
         data = []
 
