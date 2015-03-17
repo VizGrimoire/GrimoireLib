@@ -1,3 +1,4 @@
+## Copyright (C) 2014 Bitergia
 ##
 ## This program is free software; you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -1840,9 +1841,11 @@ class SCRQuery(DSQuery):
             fields = "TIMESTAMPDIFF(SECOND, ch.changed_on, NOW())/(24*3600) AS revtime, i.submitted_on as submitted_on "
         tables = "issues i, people, issues_ext_gerrit ie "
         if (uploaded): tables += " , changes ch, ("+sql_max_patchset+") last_patch "
-        tables += self._get_tables_query(self.GetSQLReportFrom(type_analysis))
+        if self._get_tables_query(self.GetSQLReportFrom(type_analysis)) != "":
+            tables += ", " + self._get_tables_query(self.GetSQLReportFrom(type_analysis))
         filters = filter_bots + " people.id = i.submitted_by "
-        filters += self._get_filters_query(self.GetSQLReportWhere(type_analysis))
+        if self._get_filters_query(self.GetSQLReportWhere(type_analysis)) != "":
+            filters += " AND " + self._get_filters_query(self.GetSQLReportWhere(type_analysis))
         filters += " AND status<>'MERGED' AND status<>'ABANDONED' "
         filters += " AND ie.issue_id  = i.id "
         if (uploaded):

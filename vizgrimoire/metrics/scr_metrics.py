@@ -705,11 +705,13 @@ class ReviewsWaitingForReviewerTS(Metrics):
             fields = "COUNT(DISTINCT(i.id)) as pending"
 
             tables = " issues i "
-            tables = tables + self.db._get_tables_query(self.db.GetSQLReportFrom(type_analysis))
+            if self.db._get_tables_query(self.db.GetSQLReportFrom(type_analysis)) != "":
+                tables += ", " + self.db._get_tables_query(self.db.GetSQLReportFrom(type_analysis))
 
             # Pending (NEW = submitted-merged-abandoned) REVIEWS
             filters = " i.submitted_on <= '"+current+"' "
-            filters += self.db._get_filters_query(self.db.GetSQLReportWhere(type_analysis))
+            if self.db._get_filters_query(self.db.GetSQLReportWhere(type_analysis)) != "":
+                filters += " AND " + self.db._get_filters_query(self.db.GetSQLReportWhere(type_analysis))
             # remove closed reviews
             filters += " AND i.id NOT IN ("+ sql_reviews_closed +")"
 
@@ -768,11 +770,13 @@ class ReviewsWaitingForReviewer(Metrics):
 
         fields = "COUNT(DISTINCT(i.id)) as ReviewsWaitingForReviewer"
         tables = "issues i "
-        tables += self.db._get_tables_query(self.db.GetSQLReportFrom(self.filters.type_analysis))
+        if self.db._get_tables_query(self.db.GetSQLReportFrom(self.filters.type_analysis)) != "":
+            tables += ", " + self.db._get_tables_query(self.db.GetSQLReportFrom(self.filters.type_analysis))
         filters = " i.status = 'NEW' AND i.id NOT IN (%s) " % (sql_reviews_reviewed)
         filters += " AND i.summary not like '%WIP%' "
 
-        filters = filters + self.db._get_filters_query(self.db.GetSQLReportWhere(self.filters.type_analysis))
+        if self.db._get_filters_query(self.db.GetSQLReportWhere(self.filters.type_analysis)) != "":
+            filters = filters + " AND " + self.db._get_filters_query(self.db.GetSQLReportWhere(self.filters.type_analysis))
 
         q = self.db.BuildQuery (self.filters.period, self.filters.startdate,
                                 self.filters.enddate, "i.submitted_on",
@@ -792,13 +796,15 @@ class ReviewsWaitingForSubmitter(Metrics):
 
         fields = "COUNT(DISTINCT(i.id)) as ReviewsWaitingForSubmitter"
         tables = "changes c, issues i, (%s) t1 " % q_last_change
-        tables += self.db._get_tables_query(self.db.GetSQLReportFrom(self.filters.type_analysis))
+        if self.db._get_tables_query(self.db.GetSQLReportFrom(self.filters.type_analysis)) != "":
+            tables += ", " + self.db._get_tables_query(self.db.GetSQLReportFrom(self.filters.type_analysis))
         filters = """
             i.id = c.issue_id  AND t1.id = c.id
             AND (c.field='CRVW' or c.field='Code-Review' or c.field='Verified' or c.field='VRIF')
             AND (c.new_value=-1 or c.new_value=-2)
         """
-        filters = filters + self.db._get_filters_query(self.db.GetSQLReportWhere(self.filters.type_analysis))
+        if self.db._get_filters_query(self.db.GetSQLReportWhere(self.filters.type_analysis)) != "":
+            filters = filters + " AND " + self.db._get_filters_query(self.db.GetSQLReportWhere(self.filters.type_analysis))
 
         q = self.db.BuildQuery (self.filters.period, self.filters.startdate,
                                 self.filters.enddate, " c.changed_on",
