@@ -14,6 +14,7 @@ echo "drop database cp_releases_GrimoireLibTests" | mysql -u root
 echo "drop database cp_sibyl_GrimoireLibTests" | mysql -u root
 echo "drop database cp_pullpo_GrimoireLibTests" | mysql -u root
 echo "drop database cp_sortinghat_GrimoireLibTests" | mysql -u root
+echo "drop database cp_projects_GrimoireLibTests" | mysql -u root
 
 
 echo Creating testing dbs
@@ -28,6 +29,7 @@ echo "CREATE DATABASE cp_releases_GrimoireLibTests CHARACTER SET utf8" |  mysql 
 echo "CREATE DATABASE cp_sibyl_GrimoireLibTests CHARACTER SET utf8" |  mysql -u root
 echo "CREATE DATABASE cp_pullpo_GrimoireLibTests CHARACTER SET utf8" |  mysql -u root
 echo "CREATE DATABASE cp_sortinghat_GrimoireLibTests CHARACTER SET utf8" |  mysql -u root
+echo "CREATE DATABASE cp_projects_GrimoireLibTests CHARACTER SET utf8" |  mysql -u root
 
 echo Uncompressing testing dbs dumps
 7zr -y x irc.mysql.7z
@@ -41,6 +43,7 @@ echo Uncompressing testing dbs dumps
 7zr -y x sibyl.mysql.7z
 7zr -y x pullpo.mysql.7z
 7zr -y x sortinghat.mysql.7z
+7zr -y x projects.mysql.7z
 
 echo Loading testing dbs dumps
 mysql -u root cp_cvsanaly_GrimoireLibTests < source_code.mysql
@@ -54,5 +57,6 @@ mysql -u root cp_releases_GrimoireLibTests < releases.mysql
 mysql -u root cp_sibyl_GrimoireLibTests < sibyl.mysql
 mysql -u root cp_pullpo_GrimoireLibTests < pullpo.mysql
 mysql -u root cp_sortinghat_GrimoireLibTests < sortinghat.mysql
+mysql -u root cp_projects_GrimoireLibTests < projects.mysql
 
 cd ..

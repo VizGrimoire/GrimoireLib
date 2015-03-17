@@ -31,49 +31,7 @@ Then execute in testing directory:
 
     ./test_data_source_api.py
 
-## Manaul procedure for installing databases
-
-In order to create the test dbs in MySQL.
-
-    mysqladmin -u root create  cp_cvsanaly_GrimoireLibTests
-    mysqladmin -u root create  cp_bicho_GrimoireLibTests
-    mysqladmin -u root create  cp_gerrit_GrimoireLibTests
-    mysqladmin -u root create  cp_mlstats_GrimoireLibTests
-    mysqladmin -u root create  cp_irc_GrimoireLibTests
-    mysqladmin -u root create  cp_mediawiki_GrimoireLibTests
-    mysqladmin -u root create  cp_downloads_GrimoireLibTests
-    mysqladmin -u root create  cp_releases_GrimoireLibTests
-    mysqladmin -u root create  cp_sibyl_GrimoireLibTests
-    mysqladmin -u root create  cp_pullpo_GrimoireLibTests
-    mysqladmin -u root create  cp_sortinghat_GrimoireLibTests
-
-In testing/db execute:
-
-    7zr x bicho.mysql.7z
-    7zr x cvsanaly.mysql.7z
-    7zr x downloads.mysql.7z
-    7zr x gerrit.mysql.7z
-    7zr x irc.mysql.7z
-    7zr x mediawiki.mysql.7z
-    7zr x mlstats.mysql.7z
-    7zr x pullpo.mysql.7z
-    7zr x releases.mysql.7z
-    7zr x sibyl.mysql.7z
-    7zr x sortinghat.mysql.7z
-
-    mysql -u root cp_bicho_GrimoireLibTests < tickets.mysql
-    mysql -u root cp_cvsanaly_GrimoireLibTests < source_code.mysql
-    mysql -u root cp_downloads_GrimoireLibTests < downloads.mysql
-    mysql -u root cp_gerrit_GrimoireLibTests < reviews.mysql
-    mysql -u root cp_irc_GrimoireLibTests < irc.mysql
-    mysql -u root cp_mediawiki_GrimoireLibTests < mediawiki.mysql
-    mysql -u root cp_mlstats_GrimoireLibTests < mailing_lists.mysql
-    mysql -u root cp_pullpo_GrimoireLibTests < pullpo.mysql
-    mysql -u root cp_releases_GrimoireLibTests < releases.mysql
-    mysql -u root cp_sibyl_GrimoireLibTests < sibyl.mysql
-    mysql -u root cp_sortinghat_GrimoireLibTests < sortinghat.mysql
-
-## Shell script for creating databases
+## Shell script for creating testing databases
 
 In the testing directory, run
 
