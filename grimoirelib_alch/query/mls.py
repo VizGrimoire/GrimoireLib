@@ -132,10 +132,10 @@ class DB (GrimoireDatabase):
                     )
                 )
 
-        if "uidentities_organizations" in tables_id:
-            DB.UIdentitiesOrganizations = GrimoireDatabase._table (
-                bases = (self.Base,), name = 'UIdentitiesOrganizations',
-                tablename = 'uidentities_organizations',
+        if "enrollments" in tables_id:
+            DB.Enrollments = GrimoireDatabase._table (
+                bases = (self.Base,), name = 'Enrollments',
+                tablename = 'enrollments',
                 schemaname = self.schema_id,
                 )
 
@@ -390,14 +390,14 @@ class Query (GrimoireQuery):
         query = query \
             .filter (DB.MessagesPeople.email_address == \
                         DB.PeopleUIdentities.people_id) \
-            .join (DB.UIdentitiesOrganizations,
+            .join (DB.Enrollments,
                    DB.PeopleUIdentities.uuid == \
-                       DB.UIdentitiesOrganizations.uuid) \
+                       DB.Enrollments.uuid) \
             .filter (date_field.between (
-                           DB.UIdentitiesOrganizations.start,
-                           DB.UIdentitiesOrganizations.end
+                           DB.Enrollments.start,
+                           DB.Enrollments.end
                            )) \
-            .filter (DB.UIdentitiesOrganizations.organization_id.in_(list))
+            .filter (DB.Enrollments.organization_id.in_(list))
         return query
 
 
