@@ -340,12 +340,13 @@ class MLS(DataSource):
 
         if (filter_name == "company"):
             ds = MLS
-            summary = MLS.get_filter_summary(
-                filter_, period, startdate, enddate,
-                identities_db, 10, self.db.projects_db
-                )
-            createJSON (summary,
-                        destdir + "/" + filter_.get_summary_filename(MLS))
+            if False:
+                summary = MLS.get_filter_summary(
+                    filter_, period, startdate, enddate,
+                    identities_db, 10, self.db.projects_db
+                    )
+                createJSON (summary,
+                            destdir + "/" + filter_.get_summary_filename(MLS))
             # Perform ages study, if it is specified in Report
             MLS.ages_study_com (Report, ds, items, period,
                                 startdate, enddate, destdir)
