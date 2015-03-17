@@ -50,7 +50,7 @@ class DB (GrimoireDatabase):
 
         return Query
 
-    def _create_tables(self):
+    def _create_tables(self, tables = None, tables_id = None):
         """Create all SQLAlchemy tables.
 
         Builds a SQLAlchemy class per SQL table, by using _table().
@@ -152,20 +152,22 @@ class DB (GrimoireDatabase):
             tablename = 'upeople',
             schemaname = self.schema_id)
 
-        DB.Companies = GrimoireDatabase._table (
-            bases = (self.Base,), name = 'Companies',
-            tablename = 'companies',
-            schemaname = self.schema_id,
-            columns = dict (
-                id = Column(Integer, primary_key = True)
+        if "companies" in tables_id:
+            DB.Companies = GrimoireDatabase._table (
+                bases = (self.Base,), name = 'Companies',
+                tablename = 'companies',
+                schemaname = self.schema_id,
+                columns = dict (
+                    id = Column(Integer, primary_key = True)
+                    )
                 )
-            )
 
-        DB.UPeopleCompanies = GrimoireDatabase._table (
-            bases = (self.Base,), name = 'UPeopleCompanies',
-            tablename = 'upeople_companies',
-            schemaname = self.schema_id,
-            )
+        if "upeople_companies" in tables_id:
+            DB.UPeopleCompanies = GrimoireDatabase._table (
+                bases = (self.Base,), name = 'UPeopleCompanies',
+                tablename = 'upeople_companies',
+                schemaname = self.schema_id,
+                )
 
 class Query (GrimoireQuery):
     """Class for dealing with SCM queries"""

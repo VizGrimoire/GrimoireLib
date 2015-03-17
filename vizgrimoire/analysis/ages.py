@@ -30,9 +30,15 @@ from grimoirelib_alch.family.scm import (
     OrgsCondition as SCMOrgsCondition
     )
 from grimoirelib_alch.query.its import DB as ITSDatabase
-from grimoirelib_alch.family.its import PeriodCondition as ITSPeriodCondition
+from grimoirelib_alch.family.its import (
+    PeriodCondition as ITSPeriodCondition,
+    OrgsCondition as ITSOrgsCondition
+    )
 from grimoirelib_alch.query.mls import DB as MLSDatabase
-from grimoirelib_alch.family.mls import PeriodCondition as MLSPeriodCondition
+from grimoirelib_alch.family.mls import (
+    PeriodCondition as MLSPeriodCondition,
+    OrgsCondition as MLSOrgsCondition
+    )
 from grimoirelib_alch.family.activity_persons import (
     SCMActivityPersons,
     ITSActivityPersons,
@@ -180,13 +186,19 @@ class Ages(Analyses):
             # all the actors, considering only activty during
             # the startdate..enddate period
             period = ITSPeriodCondition (start = startdate, end = enddate)
+            conditions = [period,]
+            if self.filters.COMPANY in self.analysis_dict:
+                orgs = ITSOrgsCondition (
+                    orgs = (self.analysis_dict[self.filters.COMPANY],)
+                    )
+                conditions.append(orgs)
             database = ITSDatabase (url = url,
                                     schema = schema,
                                     schema_id = schema_id)
             data = ITSActivityPersons (
                 datasource = database,
                 name = "list_uchangers",
-                conditions = (period,))
+                conditions = conditions)
         elif data_source == MLS:
             logging.info("Analyzing aging for MLS")
             # Activity data (start time, end time for contributions) for
@@ -195,17 +207,24 @@ class Ages(Analyses):
             period = MLSPeriodCondition (start = startdate,
                                          end = enddate,
                                          date = "check")
+            conditions = [period,]
+            if self.filters.COMPANY in self.analysis_dict:
+                orgs = MLSOrgsCondition (
+                    orgs = (self.analysis_dict[self.filters.COMPANY],),
+                    actors = "senders",
+                    date = "check"
+                    )
+                conditions.append(orgs)
             database = MLSDatabase (url = url,
                                     schema = schema,
                                     schema_id = schema_id)
-            
             data = MLSActivityPersons (
                 datasource = database,
                 name = "list_usenders",
                 date_kind = "check",
-                conditions = (period,))
+                conditions = conditions)
         else:
-            logging.info("Error: No aging analysys for this data source!")
+            logging.info("Error: No aging analysis for this data source!")
         if data_source in (SCM, ITS, MLS):
             # Birth has the ages of all actors, consiering enddate as
             # current (snapshot) time
@@ -238,7 +257,7 @@ class Ages(Analyses):
         Creates JSON files with the results of the report for birth and aging:
          ds-demographics-birth.json, ds-demographics-aging.json,
          with ds being "scm" or "its".
-        Only works for SCM or ITS data sources.
+        Only works for SCM, ITS, MLS data sources.
         
         Parameters
         ----------
@@ -259,7 +278,8 @@ class Ages(Analyses):
             logging.info("Error: data_source not supported for Aging")
             return
         demos = self.result(data_source)
-        log_message = "Producing report for study: Aging (done!)"
+        log_message = "Producing report for study: Aging " + prefix + \
+            " (done!)"
         if self.filters.COMPANY in self.analysis_dict:
             org = self.analysis_dict[self.filters.COMPANY]
             file_birth = destdir + "/" + org + "-" + prefix + "-com-demographics-birth.json"
@@ -278,14 +298,20 @@ if __name__ == '__main__':
     from vizgrimoire.metrics.query_builder import DSQuery
     from vizgrimoire.metrics.metrics_filter import MetricFilters
 
-    filters = MetricFilters("months", "'2013-06-01'", "'2014-01-01'", [])
+    filters = MetricFilters("months", "'2013-12-01'", "'2014-01-01'", [])
+
+    ##
+    ## SCM
+    ##
+
     # Warning: next "Red Hat" string will be changed to "'Red Hat'" by
     # the internals of Automator etc.
-    filters.add_filter (filters.COMPANY, "SwiftStack")
+    filters_scm = filters
+    filters_scm.add_filter (filters.COMPANY, "SwiftStack")
     dbcon = DSQuery(user = "jgb", password = "XXX", 
                     database = "oscon_openstack_scm",
                     identities_db = "oscon_openstack_scm")
-    ages = Ages(dbcon, filters)
+    ages = Ages(dbcon, filters_scm)
 
     # Produce pretty JSON output
     set_encoder_options('json', sort_keys=True, indent=4,
@@ -300,10 +326,16 @@ if __name__ == '__main__':
                         encoding="utf8")
     print encode(ages.result(SCM), unpicklable=False)
 
+    ##
+    ## ITS
+    ##
+
+    filters_its = filters
+    filters_its.add_filter (filters_its.COMPANY, "company2")
     dbcon = DSQuery(user = "jgb", password = "XXX", 
-                    database = "vizgrimoire_bicho",
-                    identities_db = "vizgrimoire_cvsanaly")
-    ages = Ages(dbcon, filters)
+                    database = "cp_bicho_GrimoireLibTests",
+                    identities_db = "cp_cvsanaly_GrimoireLibTests")
+    ages = Ages(dbcon, filters_its)
     # Produce pretty JSON output
     set_encoder_options('json', sort_keys=True, indent=4,
                         separators=(',', ': '),
@@ -311,10 +343,16 @@ if __name__ == '__main__':
                         encoding="utf8")
     print encode(ages.result(ITS), unpicklable=False)
 
+    ##
+    ## MLS
+    ##
+
+    filters_mls = filters
+    filters_mls.add_filter (filters_mls.COMPANY, "company3")
     dbcon = DSQuery(user = "jgb", password = "XXX", 
-                    database = "oscon_openstack_mls",
-                    identities_db = "oscon_openstack_scm")
-    ages = Ages(dbcon, filters)
+                    database = "cp_mlstats_GrimoireLibTests",
+                    identities_db = "cp_cvsanaly_GrimoireLibTests")
+    ages = Ages(dbcon, filters_mls)
     # Produce pretty JSON output
     set_encoder_options('json', sort_keys=True, indent=4,
                         separators=(',', ': '),

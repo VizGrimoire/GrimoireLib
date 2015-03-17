@@ -55,7 +55,7 @@ class DB (ITSDB):
 
         return Query
 
-    def _create_tables(self):
+    def _create_tables(self, tables = None, tables_id = None):
         """Create all SQLAlchemy tables.
 
         Builds a SQLAlchemy class per SQL table, by using _table().
@@ -67,7 +67,7 @@ class DB (ITSDB):
 
         """
 
-        ITSDB._create_tables(self)
+        ITSDB._create_tables(self, tables, tables_id)
         DB.IssuesExtGerrit = GrimoireDatabase._table (
             bases = (self.Base,), name = 'IssuesExtGerrit',
             tablename = 'issues_ext_gerrit',
