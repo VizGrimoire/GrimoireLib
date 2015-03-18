@@ -494,7 +494,7 @@ class Participants(Metrics):
     changeset/patchset.
     """
 
-    id = "ParticipantsSCR"
+    id = "participants"
     name = "Participants in SCR"
     desc = "A participant is defined as any person with any type of activity in SCR"
     data_source = SCR
@@ -575,10 +575,13 @@ class Participants(Metrics):
         return query
  
 
-    def get_list(self):
+    def get_list(self, metric_filters = None, days = 0):
         fields = Set([])
         tables = Set([])
         filters = Set([])
+
+        if days > 0:
+            filters.add("DATEDIFF (%s, t.submitted_on) < %s " % (self.filters.enddate, days))
 
         fields.add("u.identifier")
         fields.add("count(*) as events")
@@ -1088,7 +1091,7 @@ class ActiveCoreReviewers(Metrics):
         tables = Set([])
         filters = Set([])
 
-        fields.add("count(distinct(changed_by)) as core_reviewers")
+        fields.add("count(distinct(changed_by)) as active_core_reviewers")
         tables.add("changes ch")
         tables.add("issues_ext_gerrit ieg")
         tables.add("issues i")
@@ -1112,12 +1115,15 @@ class ActiveCoreReviewers(Metrics):
                                 fields, tables, filters, evolutionary, self.filters.type_analysis)
         return q
 
-    def get_list(self):
+    def get_list(self, metric_filters = None, days = 0):
         # TODO: missing calculation of last x days in the query
 
         fields = Set([])
         tables = Set([])
         filters = Set([])
+
+        if days > 0:
+            filters.add("DATEDIFF (%s, ch.changed_on) < %s " % (self.filters.enddate, days))
 
         fields.add("up.id as id")
         fields.add("up.identifier as identifier")
