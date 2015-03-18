@@ -884,7 +884,7 @@ class Countries(Metrics):
         fields.add("count(distinct(nat.country_id)) as countries")
         tables.add("scmlog s")
         tables.add("people_uidentities pup")
-        tables.add("nationalities nat")
+        tables.add(self.db.identities_db+".nationalities nat")
         filters.add("s.author_id = pup.people_id")
         filters.add("pup.uuid = nat.uuid")
 
