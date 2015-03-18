@@ -300,7 +300,8 @@ class DataSourceTest(unittest.TestCase):
 
             self.assertTrue(self.compareJSON(test_json, top_json))
 
-    def test_get_filter_summary (self):
+    # We don't use this JSON anymore.
+    def off_test_get_filter_summary (self):
         opts = read_options()
         period = getPeriod(opts.granularity)
 
