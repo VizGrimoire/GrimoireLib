@@ -257,8 +257,6 @@ class SCR(DataSource):
             top_core_reviewers['active_core_reviewers.last month'] = mcorereviewers.get_list(mfilter, 31)
             top_core_reviewers['active_core_reviewers.last year'] = mcorereviewers.get_list(mfilter, 365)
 
-            print "Top results:"
-            print top_core_reviewers['active_core_reviewers.last month']
             # The order of the list item change so we can not check it
             top_all = dict(top_reviewers.items() +  top_openers.items() + top_mergers.items() + top_participants.items() + top_core_reviewers.items())
         else:

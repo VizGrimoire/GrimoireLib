@@ -505,24 +505,24 @@ class Participants(Metrics):
         filters = Set([])
 
         
-        fields.add("count(distinct(u.id)) as participants")
+        fields.add("count(distinct(u.uuid)) as participants")
 
-        # It does not make sense to link to the table issues.
-        # Thus it does not make sense some filters to be applied here
-        # For example the 'autoreviews'
-        #tables.add("issues i")
+        # issues table is needed given that this is used to
+        # filter by extra conditions such as trackers
         tables.add("people_uidentities pup")
         tables.add(self.db.identities_db + ".uidentities u")
+        tables.add("issues i")
 
         filters.add("t.submitted_by = pup.people_id")
         filters.add("pup.uuid = u.uuid")
-
+        filters.add("i.id = t.issue_id")
         
         # Comments people
         fields_c = Set([])
         tables_c = Set([])
         filters_c = Set([])
 
+        fields_c.add("comments.issue_id as issue_id")
         fields_c.add("comments.submitted_by as submitted_by")
         fields_c.add("comments.submitted_on as submitted_on")
         tables_c.add("comments")
@@ -532,6 +532,7 @@ class Participants(Metrics):
         tables_ch = Set([])
         filters_ch = Set([])
 
+        fields_ch.add("ch.issue_id as issue_id")
         fields_ch.add("ch.changed_by as submitted_by")
         fields_ch.add("ch.changed_on as submitted_on")
         tables_ch.add("changes ch")
@@ -541,6 +542,7 @@ class Participants(Metrics):
         tables_i = Set([])
         filters_i = Set([])
 
+        fields_i.add("i.id as issue_id")
         fields_i.add("i.submitted_by as submitted_by")
         fields_i.add("i.submitted_on as submitted_on")
         tables_i.add("issues i")
@@ -583,20 +585,24 @@ class Participants(Metrics):
         if days > 0:
             filters.add("DATEDIFF (%s, t.submitted_on) < %s " % (self.filters.enddate, days))
 
+        fields.add("u.uuid as id")
         fields.add("u.identifier")
         fields.add("count(*) as events")
 
         tables.add("people_uidentities pup")
         tables.add(self.db.identities_db + ".uidentities u")
+        tables.add("issues i")
 
         filters.add("t.submitted_by = pup.people_id")
         filters.add("pup.uuid = u.uuid")
+        filters.add("i.id = t.issue_id")
 
         # Comments people
         fields_c = Set([])
         tables_c = Set([])
         filters_c = Set([])
 
+        fields_c.add("comments.issue_id as issue_id")
         fields_c.add("comments.submitted_by as submitted_by")
         fields_c.add("comments.submitted_on as submitted_on")
         tables_c.add("comments")
@@ -606,6 +612,7 @@ class Participants(Metrics):
         tables_ch = Set([])
         filters_ch = Set([])
 
+        fields_ch.add("ch.issue_id as issue_id")
         fields_ch.add("ch.changed_by as submitted_by")
         fields_ch.add("ch.changed_on as submitted_on")
         tables_ch.add("changes ch")
@@ -615,6 +622,7 @@ class Participants(Metrics):
         tables_i = Set([])
         filters_i = Set([])
 
+        fields_i.add("i.id as issue_id")
         fields_i.add("i.submitted_by as submitted_by")
         fields_i.add("i.submitted_on as submitted_on")
         tables_i.add("issues i")
@@ -1139,7 +1147,7 @@ class ActiveCoreReviewers(Metrics):
         tables.add(self.db.identities_db + ".uidentities up")
         tables.add("people_uidentities pup")
         filters.add("ch.changed_by  = pup.people_id")
-        filters.add("pup.uuid = up.id")
+        filters.add("pup.uuid = up.uuid")
         filters.add("(ch.new_value = -2 or ch.new_value = 2)")
         filters.add("field = 'Code-Review'")
         #dates
@@ -1151,7 +1159,7 @@ class ActiveCoreReviewers(Metrics):
         filters = self.db._get_filters_query(filters)
 
         query = "select " + select + " from " + from_ + " where " + filters
-        query = query + " group by up.id, up.identifier"
+        query = query + " group by up.uuid, up.identifier"
         query = query + " order by count(distinct(ch.id)) desc "
 
         return self.db.ExecuteQuery(query)
