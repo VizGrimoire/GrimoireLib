@@ -223,6 +223,8 @@ class SCR(DataSource):
         mreviewers = DataSource.get_metrics("reviewers", SCR)
         mopeners = DataSource.get_metrics("submitters", SCR)
         mmergers = DataSource.get_metrics("closers", SCR)
+        mcorereviewers = DataSource.get_metrics("active_core_reviewers", SCR)
+        mparticipants = DataSource.get_metrics("participants", SCR)
         period = None
         type_analysis = None
         if filter_ is not None:
@@ -245,8 +247,20 @@ class SCR(DataSource):
             top_mergers['mergers.last month'] = mmergers.get_list(mfilter, 31)
             top_mergers['mergers.last year'] = mmergers.get_list(mfilter, 365)
 
+            top_participants = {}
+            top_participants['participants.'] = mparticipants.get_list(mfilter, 0)
+            top_participants['participants.last month'] = mparticipants.get_list(mfilter, 31)
+            top_participants['participants.last year'] = mparticipants.get_list(mfilter, 365)
+
+            top_core_reviewers = {}
+            top_core_reviewers['active_core_reviewers.'] = mcorereviewers.get_list(mfilter, 0)
+            top_core_reviewers['active_core_reviewers.last month'] = mcorereviewers.get_list(mfilter, 31)
+            top_core_reviewers['active_core_reviewers.last year'] = mcorereviewers.get_list(mfilter, 365)
+
+            print "Top results:"
+            print top_core_reviewers['active_core_reviewers.last month']
             # The order of the list item change so we can not check it
-            top_all = dict(top_reviewers.items() +  top_openers.items() + top_mergers.items())
+            top_all = dict(top_reviewers.items() +  top_openers.items() + top_mergers.items() + top_participants.items() + top_core_reviewers.items())
         else:
             logging.info("SCR does not support yet top for filters.")
 
@@ -380,6 +394,13 @@ class SCR(DataSource):
         top += SCR._safeTopIds(top_data['mergers.'])
         top += SCR._safeTopIds(top_data['mergers.last year'])
         top += SCR._safeTopIds(top_data['mergers.last month'])
+        top += SCR._safeTopIds(top_data['participants.'])
+        top += SCR._safeTopIds(top_data['participants.last month'])
+        top += SCR._safeTopIds(top_data['participants.last year'])
+        top += SCR._safeTopIds(top_data['active_core_reviewers.'])
+        top += SCR._safeTopIds(top_data['active_core_reviewers.last month'])
+        top += SCR._safeTopIds(top_data['active_core_reviewers.last year'])
+
         # remove duplicates
         people = list(set(top)) 
 
@@ -410,7 +431,7 @@ class SCR(DataSource):
               'pending','review_time','repositories']
         # patches metrics
         m += ['verified','approved','codereview','sent','WaitingForReviewer','WaitingForSubmitter']
-        m += ['submitters','reviewers']
+        m += ['submitters','reviewers','active_core_reviewers','participants']
 
         return m
 
@@ -420,13 +441,13 @@ class SCR(DataSource):
         # Get metrics using changes table for more precise results
         m += ['merged','abandoned','new']
         m += ['verified','codereview','sent','WaitingForReviewer','WaitingForSubmitter']
-        m += ['submitters','reviewers']
+        m += ['submitters','reviewers','active_core_reviewers','participants']
 
         return m
 
     @staticmethod
     def get_metrics_core_trends():
-        return ['submitted','merged','pending','abandoned','closed','submitters']
+        return ['submitted','merged','pending','abandoned','closed','submitters','active_core_reviewers','ParticipantsSCR']
 
 
 #########
