@@ -583,6 +583,7 @@ class Participants(Metrics):
         if days > 0:
             filters.add("DATEDIFF (%s, t.submitted_on) < %s " % (self.filters.enddate, days))
 
+        fields.add("u.id as id")
         fields.add("u.identifier")
         fields.add("count(*) as events")
 
