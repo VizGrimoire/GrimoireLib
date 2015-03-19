@@ -1936,8 +1936,10 @@ class SCRQuery(DSQuery):
 
     def GetPeopleQuerySubmissions (self, developer_id, period, startdate, enddate, evol):
         fields = "COUNT(i.id) AS submissions"
-        tables = self.GetTablesOwnUniqueIds('issues')
-        filters = self.GetFiltersOwnUniqueIds('issues')+ " AND pup.uuid = "+ str(developer_id)
+
+        tables = self._get_tables_query(self.GetTablesOwnUniqueIds('issues'))
+        filters = self._get_filters_query(self.GetFiltersOwnUniqueIds('issues'))
+        filters += " AND pup.uuid  = '"+ str(developer_id) +  "'"
 
         if (evol):
             q = self.GetSQLPeriod(period,'submitted_on', fields, tables, filters,

@@ -19,17 +19,19 @@
 
 from vizgrimoire.GrimoireSQL import ExecuteQuery
 
-def GetPersonIdentifiers (upeople_id):
+def GetPersonIdentifiers (identities_db, upeople_id):
     q = """
-        SELECT identity, type, cou.name as country, com.name as affiliation, up.identifier
-        FROM upeople up, identities i,
-            companies com, upeople_companies upcom,
-            countries cou, upeople_countries upcou
-        WHERE up.id ='%s' AND
-            up.id = i.upeople_id AND
-            upcom.upeople_id= up.id AND
-            com.id = upcom.company_id AND
-            upcou.upeople_id= up.id AND
-            cou.id = upcou.country_id
-        """ % (upeople_id)
+        SELECT i.name, email, username, cou.name as country, org.name as affiliation, up.identifier
+        FROM %s.uidentities up, %s.identities i,
+             %s.organizations org, %s.enrollments enr,
+             %s.countries cou, %s.nationalities nat
+        WHERE up.uuid ='%s' AND
+            up.uuid = i.uuid AND
+            enr.uuid= up.uuid AND
+            org.id = enr.organization_id AND
+            nat.uuid= up.uuid AND
+            cou.id = nat.country_id
+        """ % (identities_db, identities_db, identities_db,
+               identities_db, identities_db, identities_db, 
+               upeople_id)
     return (ExecuteQuery(q))
