@@ -146,21 +146,21 @@ class ReleasesDS(DataSource):
         return people
 
     @staticmethod
-    def _get_people_sql (upeople_id, period, startdate, enddate, evol):
+    def _get_people_sql (uuid, period, startdate, enddate, evol):
         fields = "COUNT(r.id) AS releases"
-        tables = "users u, releases r, people_upeople pup"
-        filters = "pup.people_id = u.id AND r.author_id = u.id AND pup.upeople_id = '" + str(upeople_id) + "'"
+        tables = "users u, releases r, people_uidentities pup"
+        filters = "pup.people_id = u.id AND r.author_id = u.id AND pup.uuid = '" + str(uuid) + "'"
         q = BuildQuery (period, startdate, enddate, 'r.created_on', fields, tables, filters, evol)
         return (q)
 
     @staticmethod
-    def get_person_evol(upeople_id, period, startdate, enddate, identities_db, type_analysis):
-        q = ReleasesDS._get_people_sql (upeople_id, period, startdate, enddate, True)
+    def get_person_evol(uuid, period, startdate, enddate, identities_db, type_analysis):
+        q = ReleasesDS._get_people_sql (uuid, period, startdate, enddate, True)
         return completePeriodIds(ExecuteQuery(q), period, startdate, enddate)
 
     @staticmethod
-    def get_person_agg(upeople_id, startdate, enddate, identities_db, type_analysis):
-        q = ReleasesDS._get_people_sql (upeople_id, None, startdate, enddate, False)
+    def get_person_agg(uuid, startdate, enddate, identities_db, type_analysis):
+        q = ReleasesDS._get_people_sql (uuid, None, startdate, enddate, False)
         return ExecuteQuery(q)
 
     @staticmethod

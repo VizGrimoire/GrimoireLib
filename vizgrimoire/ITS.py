@@ -29,7 +29,7 @@ import logging, os, re
 from vizgrimoire.GrimoireSQL import GetSQLGlobal, GetSQLPeriod
 from vizgrimoire.GrimoireSQL import ExecuteQuery, BuildQuery
 from vizgrimoire.GrimoireUtils import GetPercentageDiff, GetDates, completePeriodIds, getPeriod, check_array_value
-from vizgrimoire.GrimoireUtils import createJSON, get_subprojects
+from vizgrimoire.GrimoireUtils import createJSON
 from vizgrimoire.metrics.metrics_filter import MetricFilters
 
 from vizgrimoire.metrics.query_builder import ITSQuery
@@ -55,38 +55,14 @@ class ITS(DataSource):
     @staticmethod
     def get_date_init(startdate, enddate, identities_db, type_analysis):
         """Get the date of the first activity in the data source"""
-        from vizgrimoire.metrics.its_metrics import InitialActivity
-        from vizgrimoire.report import Report
-        from vizgrimoire.metrics.query_builder import ITSQuery
-
-        db_identities = Report.get_config()['generic']['db_identities']
-        dbuser = Report.get_config()['generic']['db_user']
-        dbpass = Report.get_config()['generic']['db_password']
-        dbbicho = Report.get_config()['generic']['db_bicho']
-
-        dbcon = ITSQuery(dbuser, dbpass, dbbicho, db_identities)
-        filters = MetricFilters("", startdate, enddate, type_analysis)
-        init_date = InitialActivity(dbcon, filters)
-
-        return init_date.get_agg()
+        first_date = ITS.get_metrics("first_date", ITS)
+        return first_date.get_agg()
 
     @staticmethod
     def get_date_end(startdate, enddate, identities_db, type_analysis):
         """Get the date of the last activity in the data source"""
-        from vizgrimoire.metrics.its_metrics import EndOfActivity
-        from vizgrimoire.report import Report
-        from vizgrimoire.metrics.query_builder import ITSQuery
-
-        db_identities = Report.get_config()['generic']['db_identities']
-        dbuser = Report.get_config()['generic']['db_user']
-        dbpass = Report.get_config()['generic']['db_password']
-        dbbicho = Report.get_config()['generic']['db_bicho']
-
-        dbcon = ITSQuery(dbuser, dbpass, dbbicho, db_identities)
-        filters = MetricFilters("", startdate, enddate, type_analysis)
-        final_date = EndOfActivity(dbcon, filters)
-
-        return final_date.get_agg()
+        last_date = ITS.get_metrics("last_date", ITS)
+        return last_date.get_agg()
  
     @staticmethod
     def get_url():
@@ -239,7 +215,7 @@ class ITS(DataSource):
         if (filter_name == "repository"):
             metric = DataSource.get_metrics("trackers", cls)
         elif (filter_name == "company"):
-            metric = DataSource.get_metrics("companies",  cls)
+            metric = DataSource.get_metrics("organizations",  cls)
         elif (filter_name == "country"):
             metric = DataSource.get_metrics("countries", cls)
         elif (filter_name == "domain"):
@@ -450,17 +426,17 @@ class ITS(DataSource):
         return people
 
     @classmethod
-    def get_person_evol(cls, upeople_id, period, startdate, enddate, identities_db, type_analysis):
+    def get_person_evol(cls, uuid, period, startdate, enddate, identities_db, type_analysis):
         closed_condition =  cls._get_closed_condition()
 
-        evol = GetPeopleEvolITS(upeople_id, period, startdate, enddate, closed_condition)
+        evol = GetPeopleEvolITS(uuid, period, startdate, enddate, closed_condition)
         evol = completePeriodIds(evol, period, startdate, enddate)
         return evol
 
     @classmethod
-    def get_person_agg(cls, upeople_id, startdate, enddate, identities_db, type_analysis):
+    def get_person_agg(cls, uuid, startdate, enddate, identities_db, type_analysis):
         closed_condition =  cls._get_closed_condition()
-        return GetPeopleStaticITS(upeople_id, startdate, enddate, closed_condition)
+        return GetPeopleStaticITS(uuid, startdate, enddate, closed_condition)
 
     @classmethod
     def create_r_reports(cls, vizr, enddate, destdir):
@@ -594,7 +570,7 @@ class ITS(DataSource):
 
 def AggAllParticipants (startdate, enddate):
     # All participants from the whole history
-    q = "SELECT count(distinct(pup.upeople_id)) as allhistory_participants from people_upeople pup"
+    q = "SELECT count(distinct(pup.uuid)) as allhistory_participants from people_uidentities pup"
 
     return(ExecuteQuery(q))
 
@@ -607,7 +583,7 @@ def GetTopClosersByAssignee (days, startdate, enddate, identities_db, filter) :
 
     affiliations = ""
     for aff in filter:
-        affiliations += " com.name<>'"+ aff +"' and "
+        affiliations += " org.name<>'"+ aff +"' and "
 
     date_limit = ""
     if (days != 0 ) :
@@ -615,21 +591,21 @@ def GetTopClosersByAssignee (days, startdate, enddate, identities_db, filter) :
         ExecuteQuery(sql)
         date_limit = " AND DATEDIFF(@maxdate, changed_on)<"+str(days)
 
-    q = "SELECT up.id as id, "+\
+    q = "SELECT up.uuid as id, "+\
         "       up.identifier as closers, "+\
         "       count(distinct(ill.issue_id)) as closed "+\
-        "FROM people_upeople pup,  "+\
-        "     "+ identities_db+ ".upeople_companies upc, "+\
-        "     "+ identities_db+ ".upeople up,  "+\
-        "     "+ identities_db+ ".companies com, "+\
+        "FROM people_uidentities pup,  "+\
+        "     "+ identities_db+ ".enrollments enr, "+\
+        "     "+ identities_db+ ".uidentities up,  "+\
+        "     "+ identities_db+ ".organizations org, "+\
         "     issues_log_launchpad ill  "+\
         "WHERE ill.assigned_to = pup.people_id and "+\
-        "      pup.upeople_id = up.id and  "+\
-        "      up.id = upc.upeople_id and  "+\
-        "      upc.company_id = com.id and "+\
+        "      pup.uuid = up.uuid and  "+\
+        "      up.uuid = enr.uuid and  "+\
+        "      enr.organization_id = org.id and "+\
         "      "+ affiliations+ " "+\
-        "      ill.date >= upc.init and "+\
-        "      ill.date < upc.end and  "+\
+        "      ill.date >= enr.start and "+\
+        "      ill.date < enr.end and  "+\
         "      ill.change_id  in (  "+\
         "         select id "+\
         "         from changes  "+\
@@ -645,8 +621,8 @@ def GetTopClosersByAssignee (days, startdate, enddate, identities_db, filter) :
 
 
 def GetTablesOwnUniqueIdsITS (table='') :
-    tables = 'changes c, people_upeople pup'
-    if (table == "issues"): tables = 'issues i, people_upeople pup'
+    tables = 'changes c, people_uidentities pup'
+    if (table == "issues"): tables = 'issues i, people_uidentities pup'
     return (tables)
 
 def GetFiltersOwnUniqueIdsITS (table='') :
@@ -660,7 +636,7 @@ def GetFiltersOwnUniqueIdsITS (table='') :
 #################
 
 def GetPeopleListITS (startdate, enddate) :
-    fields = "DISTINCT(pup.upeople_id) as pid, count(c.id) as total"
+    fields = "DISTINCT(pup.uuid) as pid, count(c.id) as total"
     tables = GetTablesOwnUniqueIdsITS()
     filters = GetFiltersOwnUniqueIdsITS()
     filters += " GROUP BY pid ORDER BY total desc"
@@ -673,7 +649,7 @@ def GetPeopleListITS (startdate, enddate) :
 def GetPeopleQueryITS (developer_id, period, startdate, enddate, evol,  closed_condition) :
     fields = " COUNT(distinct(c.issue_id)) AS closed"
     tables = GetTablesOwnUniqueIdsITS()
-    filters = GetFiltersOwnUniqueIdsITS() + " AND pup.upeople_id = "+ str(developer_id)
+    filters = GetFiltersOwnUniqueIdsITS() + " AND pup.uuid = '"+ str(developer_id)+"'"
     filters += " AND "+ closed_condition
 
     if (evol) :

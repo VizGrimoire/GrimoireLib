@@ -32,7 +32,7 @@ from datetime import datetime, timedelta
 from vizgrimoire.GrimoireSQL import GetSQLGlobal, GetSQLPeriod
 from vizgrimoire.GrimoireSQL import ExecuteQuery
 from vizgrimoire.GrimoireUtils import GetPercentageDiff, GetDates, completePeriodIds
-from vizgrimoire.GrimoireUtils import checkListArray, removeDecimals, get_subprojects
+from vizgrimoire.GrimoireUtils import checkListArray, removeDecimals
 from vizgrimoire.GrimoireUtils import getPeriod, createJSON, checkFloatArray, medianAndAvgByPeriod, check_array_values
 from vizgrimoire.metrics.metrics_filter import MetricFilters
 from vizgrimoire.metrics.query_builder import DSQuery
@@ -162,7 +162,7 @@ class Pullpo(DataSource):
         if (filter_name == "repository"):
             metric = DataSource.get_metrics("repositories", Pullpo)
         elif (filter_name == "company"):
-            metric = DataSource.get_metrics("companies", Pullpo)
+            metric = DataSource.get_metrics("organizations", Pullpo)
         elif (filter_name == "country"):
             metric = DataSource.get_metrics("countries", Pullpo)
         elif (filter_name == "project"):
@@ -283,14 +283,14 @@ class Pullpo(DataSource):
         return people
 
     @staticmethod
-    def get_person_evol(upeople_id, period, startdate, enddate, identities_db, type_analysis):
-        evol = Pullpo.get_people_query(upeople_id, startdate, enddate, True, period)
+    def get_person_evol(uuid, period, startdate, enddate, identities_db, type_analysis):
+        evol = Pullpo.get_people_query(uuid, startdate, enddate, True, period)
         evol = completePeriodIds(evol, period, startdate, enddate)
         return evol
 
     @staticmethod
-    def get_person_agg(upeople_id, startdate, enddate, identities_db, type_analysis):
-        agg = Pullpo.get_people_query(upeople_id, startdate, enddate)
+    def get_person_agg(uuid, startdate, enddate, identities_db, type_analysis):
+        agg = Pullpo.get_people_query(uuid, startdate, enddate)
         return agg
 
     # TODO: this should be done using people filter metrics
@@ -298,9 +298,9 @@ class Pullpo(DataSource):
     def get_people_query(developer_id, startdate, enddate, evol = False, period = None):
         query_builder = Pullpo.get_query_builder()
         fields ='COUNT(distinct(pr.id)) AS submissions'
-        tables = 'pull_requests pr, people_upeople pup'
+        tables = 'pull_requests pr, people_uidentities pup'
         filters = 'pr.user_id = pup.people_id'
-        filters +=" AND pup.upeople_id="+str(developer_id)
+        filters +=" AND pup.uuid='"+str(developer_id)+"'"
         if (evol) :
             q = GetSQLPeriod(period,'pr.created_at', fields, tables, filters,
                     startdate, enddate)

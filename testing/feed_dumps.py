@@ -19,7 +19,7 @@ dumps in the db directory, after uncompressing them.
 dumps = {
     "db": ["bicho", "cvsanaly", "downloads", "gerrit", "irc",
            "mediawiki", "mlstats", "pullpo", "releases", "sibyl",
-           "sortinghat", 
+           "sortinghat","projects"
            ],
     }
 

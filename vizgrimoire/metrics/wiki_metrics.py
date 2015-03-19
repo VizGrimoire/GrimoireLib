@@ -116,12 +116,12 @@ class Authors(Metrics):
             self.db.ExecuteQuery("SELECT @maxdate:=max(date) from wiki_pages_revs limit 1")
             date_limit = " AND DATEDIFF(@maxdate, date)<"+str(days)
 
-        q = "SELECT up.id as id, up.identifier as authors, "+\
+        q = "SELECT up.uuid as id, up.identifier as authors, "+\
             "    count(wiki_pages_revs.id) as reviews "+\
-            "FROM wiki_pages_revs, people_upeople pup, "+self.db.identities_db+".upeople up "+\
+            "FROM wiki_pages_revs, people_uidentities pup, "+self.db.identities_db+".uidentities up "+\
             "WHERE "+ filter_bots+ " "+\
             "    wiki_pages_revs.user = pup.people_id and "+\
-            "    pup.upeople_id = up.id and "+\
+            "    pup.uuid = up.uuid and "+\
             "    date >= "+ startdate+ " and "+\
             "    date  < "+ enddate+ " "+ date_limit+ " "+\
             "    GROUP BY authors "+\

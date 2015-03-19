@@ -180,14 +180,14 @@ class Mediawiki(DataSource):
         return people
 
     @staticmethod
-    def get_person_evol(upeople_id, period, startdate, enddate, identities_db, type_analysis):
-        evol = GetEvolPeopleMediaWiki(upeople_id, period, startdate, enddate)
+    def get_person_evol(uuid, period, startdate, enddate, identities_db, type_analysis):
+        evol = GetEvolPeopleMediaWiki(uuid, period, startdate, enddate)
         evol = completePeriodIds(evol, period, startdate, enddate)
         return evol
 
     @staticmethod
-    def get_person_agg(upeople_id, startdate, enddate, identities_db, type_analysis):
-        return GetStaticPeopleMediaWiki(upeople_id, startdate, enddate)
+    def get_person_agg(uuid, startdate, enddate, identities_db, type_analysis):
+        return GetStaticPeopleMediaWiki(uuid, startdate, enddate)
 
     @staticmethod
     def create_r_reports(vizr, enddate, destdir):
@@ -213,7 +213,7 @@ class Mediawiki(DataSource):
 # SQL Metaqueries
 
 def GetTablesOwnUniqueIdsMediaWiki () :
-    tables = 'wiki_pages_revs, people_upeople pup'
+    tables = 'wiki_pages_revs, people_uidentities pup'
     return (tables)
 
 
@@ -225,7 +225,7 @@ def GetFiltersOwnUniqueIdsMediaWiki () :
 # PEOPLE
 #########
 def GetListPeopleMediaWiki (startdate, enddate) :
-    fields = "DISTINCT(pup.upeople_id) as id, count(wiki_pages_revs.id) total"
+    fields = "DISTINCT(pup.uuid) as id, count(wiki_pages_revs.id) total"
     tables = GetTablesOwnUniqueIdsMediaWiki()
     filters = GetFiltersOwnUniqueIdsMediaWiki()
     filters += " GROUP BY user ORDER BY total desc"
@@ -238,7 +238,7 @@ def GetListPeopleMediaWiki (startdate, enddate) :
 def GetQueryPeopleMediaWiki (developer_id, period, startdate, enddate, evol) :
     fields = "COUNT(wiki_pages_revs.id) AS revisions"
     tables = GetTablesOwnUniqueIdsMediaWiki()
-    filters = GetFiltersOwnUniqueIdsMediaWiki() + " AND pup.upeople_id = " + str(developer_id)
+    filters = GetFiltersOwnUniqueIdsMediaWiki() + " AND pup.uuid = '" + str(developer_id) + "'"
 
     if (evol) :
         q = GetSQLPeriod(period,'date', fields, tables, filters,

@@ -29,7 +29,7 @@ from vizgrimoire.GrimoireSQL import GetSQLGlobal, GetSQLPeriod
 # TODO integrate: from GrimoireSQL import  GetSQLReportFrom 
 from vizgrimoire.GrimoireSQL import ExecuteQuery, BuildQuery
 from vizgrimoire.GrimoireUtils import GetPercentageDiff, GetDates, completePeriodIds
-from vizgrimoire.GrimoireUtils import createJSON, getPeriod, get_subprojects
+from vizgrimoire.GrimoireUtils import createJSON, getPeriod
 from vizgrimoire.data_source import DataSource
 from vizgrimoire.filter import Filter
 from vizgrimoire.metrics.metrics_filter import MetricFilters
@@ -132,21 +132,21 @@ class SCM(DataSource):
 
 
     @staticmethod
-    def get_top_data_companies (startdate, enddate, i_db, filter_, npeople):
+    def get_top_data_organizations (startdate, enddate, i_db, filter_, npeople):
         top = {}
-        mcompanies = DataSource.get_metrics("companies", SCM)
-        if mcompanies is None: return top
+        morganizations = DataSource.get_metrics("organizations", SCM)
+        if morganizations is None: return top
         period = None
         if filter_ is not None:
             if filter_.get_name() == "project":
-                # TODO missing companies_out
-                companies_out = mcompanies.filters.companies_out
+                # TODO missing organizations_out
+                organizations_out = morganizations.filters.organizations_out
                 people_out = None
-                mfilter = MetricFilters(period, startdate, enddate, filter_.get_type_analysis(), npeople, people_out, companies_out)
-                mfilter_orig = mcompanies.filters
-                mcompanies.filters = mfilter
-                top = mcompanies.get_list()
-                mcompanies.filters = mfilter_orig
+                mfilter = MetricFilters(period, startdate, enddate, filter_.get_type_analysis(), npeople, people_out, organizations_out)
+                mfilter_orig = morganizations.filters
+                morganizations.filters = mfilter
+                top = morganizations.get_list()
+                morganizations.filters = mfilter_orig
         return top
 
 
@@ -185,11 +185,11 @@ class SCM(DataSource):
         top = {}
         data = SCM.get_top_data_authors (startdate, enddate, i_db, filter_, npeople)
         top = dict(top.items() + data.items())
-        companies_on = False
+        organizations_on = False
         if Report.get_filter_automator('company') is not None:
-            companies_on = True
-        if companies_on:
-            data = SCM.get_top_data_companies (startdate, enddate, i_db, filter_, npeople)
+            organizations_on = True
+        if organizations_on:
+            data = SCM.get_top_data_organizations (startdate, enddate, i_db, filter_, npeople)
             top = dict(top.items() + data.items())
         return top
 
@@ -206,7 +206,7 @@ class SCM(DataSource):
         if (filter_name == "repository"):
             metric = DataSource.get_metrics("repositories", SCM)
         elif (filter_name == "company"):
-            metric = DataSource.get_metrics("companies", SCM)
+            metric = DataSource.get_metrics("organizations", SCM)
         elif (filter_name == "country"):
             metric = DataSource.get_metrics("countries", SCM)
         elif (filter_name == "domain"):
@@ -367,8 +367,8 @@ class SCM(DataSource):
             name = items['name'][i]
             logging.info("Checking " + name + " " + str(i) + "/" + str(len(items['name'])))
             if filter_.get_name() == "people2":
-                upeople_id = items['id'][i]
-                item = upeople_id
+                uuid = items['id'][i]
+                item = uuid
             else:
                 item = name
             pos = data[id_field].index(name)
@@ -378,7 +378,7 @@ class SCM(DataSource):
 
             if not evol:
                 if filter_.get_name() == "people2":
-                    agg = SCM.get_person_agg(upeople_id, startdate, enddate,
+                    agg = SCM.get_person_agg(uuid, startdate, enddate,
                                              idb, type_analysis)
                 else:
                     agg = SCM.get_agg_data(period, startdate, enddate,
@@ -386,7 +386,7 @@ class SCM(DataSource):
                 assert agg['commits' ] == data['commits'][pos]
             else:
                 if filter_.get_name() == "people2":
-                    ts = SCM.get_person_evol(upeople_id, period,
+                    ts = SCM.get_person_evol(uuid, period,
                                              startdate, enddate, idb, type_analysis)
                 else:
                     ts = SCM.get_evolutionary_data(period, startdate, enddate,
@@ -437,14 +437,14 @@ class SCM(DataSource):
         return people
 
     @staticmethod
-    def get_person_evol(upeople_id, period, startdate, enddate, identities_db, type_analysis):
-        evol_data = GetEvolPeopleSCM(upeople_id, period, startdate, enddate)
+    def get_person_evol(uuid, period, startdate, enddate, identities_db, type_analysis):
+        evol_data = GetEvolPeopleSCM(uuid, period, startdate, enddate)
         evol_data = completePeriodIds(evol_data, period, startdate, enddate)
         return evol_data
 
     @staticmethod
-    def get_person_agg(upeople_id, startdate, enddate, identities_db, type_analysis):
-        agg = GetStaticPeopleSCM(upeople_id,  startdate, enddate)
+    def get_person_agg(uuid, startdate, enddate, identities_db, type_analysis):
+        agg = GetStaticPeopleSCM(uuid,  startdate, enddate)
         return agg
 
     # Studies implemented in R
@@ -571,14 +571,14 @@ class SCM(DataSource):
 #
 
 def GetTablesOwnUniqueIdsSCM () :
-    return (' actions a, scmlog s, people_upeople pup')
+    return (' actions a, scmlog s, people_uidentities pup')
 
 
 def GetFiltersOwnUniqueIdsSCM () :
     return ('pup.people_id = s.author_id and s.id = a.commit_id ') 
 
 def GetPeopleListSCM (startdate, enddate) :
-    fields = "DISTINCT(pup.upeople_id) as pid, COUNT(distinct(s.id)) as total"
+    fields = "DISTINCT(pup.uuid) as pid, COUNT(distinct(s.id)) as total"
     tables = GetTablesOwnUniqueIdsSCM()
     filters = GetFiltersOwnUniqueIdsSCM()
     filters +=" GROUP BY pid ORDER BY total desc, pid"
@@ -591,7 +591,7 @@ def GetPeopleQuerySCM (developer_id, period, startdate, enddate, evol) :
     fields ='COUNT(distinct(s.id)) AS commits'
     tables = GetTablesOwnUniqueIdsSCM()
     filters = GetFiltersOwnUniqueIdsSCM()
-    filters +=" AND pup.upeople_id="+str(developer_id)
+    filters +=" AND pup.uuid='"+str(developer_id)+"'"
     if (evol) :
         q = GetSQLPeriod(period,'s.author_date', fields, tables, filters,
                 startdate, enddate)

@@ -94,14 +94,14 @@ class DB (GrimoireDatabase):
             tablename = 'people',
             schemaname = self.schema)
 
-        DB.PeopleUPeople = GrimoireDatabase._table (
-            bases = (self.Base,), name = 'PeopleUPeople',
-            tablename = 'people_upeople',
+        DB.PeopleUIdentities = GrimoireDatabase._table (
+            bases = (self.Base,), name = 'PeopleUIdentities',
+            tablename = 'people_uidentities',
             schemaname = self.schema,
             columns = dict (
-                upeople_id = Column(
+                uuid = Column(
                     Integer,
-                    ForeignKey(self.schema_id + '.' + 'upeople.id'),
+                    ForeignKey(self.schema_id + '.' + 'uidentities.uuid'),
                     primary_key = True
                     ),
                 people_id = Column(
@@ -117,25 +117,25 @@ class DB (GrimoireDatabase):
             tablename = 'mailing_lists',
             schemaname = self.schema)
 
-        DB.UPeople = GrimoireDatabase._table (
-            bases = (self.Base,), name = 'UPeople',
-            tablename = 'upeople',
+        DB.UIdentities = GrimoireDatabase._table (
+            bases = (self.Base,), name = 'UIdentities',
+            tablename = 'uidentities',
             schemaname = self.schema_id)
 
-        if "companies" in tables_id:
-            DB.Companies = GrimoireDatabase._table (
-                bases = (self.Base,), name = 'Companies',
-                tablename = 'companies',
+        if "organizations" in tables_id:
+            DB.Organizations = GrimoireDatabase._table (
+                bases = (self.Base,), name = 'Organizations',
+                tablename = 'organizations',
                 schemaname = self.schema_id,
                 columns = dict (
                     id = Column(Integer, primary_key = True)
                     )
                 )
 
-        if "upeople_companies" in tables_id:
-            DB.UPeopleCompanies = GrimoireDatabase._table (
-                bases = (self.Base,), name = 'UPeopleCompanies',
-                tablename = 'upeople_companies',
+        if "enrollments" in tables_id:
+            DB.Enrollments = GrimoireDatabase._table (
+                bases = (self.Base,), name = 'Enrollments',
+                tablename = 'enrollments',
                 schemaname = self.schema_id,
                 )
 
@@ -187,10 +187,10 @@ class Query (GrimoireQuery):
 
         Adds person_id, name, to the select clause of query,
         having unique identities into account.
-        Joins with PeopleUPeople, UPeople, and MessagesPeople if they
+        Joins with PeopleUIdentities, UIdentities, and MessagesPeople if they
         are not already joined.
-        Relationships: UPeople.id == PeopleUPeople.upeople_id,
-          PeopleUPeople.people_id == MessagesPeople.email_address
+        Relationships: UIdentities.uuid == PeopleUIdentities.uuid,
+          PeopleUIdentities.people_id == MessagesPeople.email_address
           MessagesPeople.type_of_recipient == "From"
 
         Parameters
@@ -206,20 +206,20 @@ class Query (GrimoireQuery):
 
         """
 
-        query = self.add_columns (label("person_id", DB.UPeople.id),
-                                  label("name", DB.UPeople.identifier))
-        self.joined.append (DB.UPeople)
+        query = self.add_columns (label("person_id", DB.UIdentities.uuid),
+                                  label("name", DB.UIdentities.uuid))
+        self.joined.append (DB.UIdentities)
         if kind == "senders":
-            if DB.PeopleUPeople not in self.joined:
+            if DB.PeopleUIdentities not in self.joined:
                 query = query.join (
-                    DB.PeopleUPeople,
-                    DB.UPeople.id == DB.PeopleUPeople.upeople_id)
-                self.joined.append (DB.PeopleUPeople)
+                    DB.PeopleUIdentities,
+                    DB.UIdentities.uuid == DB.PeopleUIdentities.uuid)
+                self.joined.append (DB.PeopleUIdentities)
             if DB.MessagesPeople not in self.joined:
                 query = query.join (
                     DB.MessagesPeople,
                     DB.MessagesPeople.email_address == \
-                        DB.PeopleUPeople.people_id)
+                        DB.PeopleUIdentities.people_id)
                 self.joined.append (DB.MessagesPeople)
             query = query.filter (DB.MessagesPeople.type_of_recipient == "From")
         elif kind == "starters":
@@ -270,7 +270,7 @@ class Query (GrimoireQuery):
     def select_orgs (self):
         """Select organizations data.
 
-        Include id and name, as they appear in the companies table.
+        Include id and name, as they appear in the organizations table.
         Warning: doesn't join other tables. For now, only works alone.
 
         Returns
@@ -281,8 +281,8 @@ class Query (GrimoireQuery):
         
         """
 
-        query = self.add_columns (label("org_id", DB.Companies.id),
-                                  label("org_name", DB.Companies.name))
+        query = self.add_columns (label("org_id", DB.Organizations.id),
+                                  label("org_name", DB.Organizations.name))
         return query
 
 
@@ -337,7 +337,7 @@ class Query (GrimoireQuery):
         """Filter organizations matching a list of names
 
         Fiters query by a list of organization names, checking for
-        them in the companies table.
+        them in the organizations table.
 
         Parameters
         ----------
@@ -348,7 +348,7 @@ class Query (GrimoireQuery):
         """
 
         query = self
-        query = query.filter(DB.Companies.name.in_(orgs))
+        query = query.filter(DB.Organizations.name.in_(orgs))
         return query
 
 
@@ -389,15 +389,15 @@ class Query (GrimoireQuery):
                                  % kind)
         query = query \
             .filter (DB.MessagesPeople.email_address == \
-                        DB.PeopleUPeople.people_id) \
-            .join (DB.UPeopleCompanies,
-                   DB.PeopleUPeople.upeople_id == \
-                       DB.UPeopleCompanies.upeople_id) \
+                        DB.PeopleUIdentities.people_id) \
+            .join (DB.Enrollments,
+                   DB.PeopleUIdentities.uuid == \
+                       DB.Enrollments.uuid) \
             .filter (date_field.between (
-                           DB.UPeopleCompanies.init,
-                           DB.UPeopleCompanies.end
+                           DB.Enrollments.start,
+                           DB.Enrollments.end
                            )) \
-            .filter (DB.UPeopleCompanies.company_id.in_(list))
+            .filter (DB.Enrollments.organization_id.in_(list))
         return query
 
 

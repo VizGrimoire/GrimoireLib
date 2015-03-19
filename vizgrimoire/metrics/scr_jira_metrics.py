@@ -100,10 +100,10 @@ class Submitters(Metrics):
         tables = Set([])
         filters = Set([])
 
-        fields.add("count(distinct(pup.upeople_id)) as submitters")
+        fields.add("count(distinct(pup.uuid)) as submitters")
 
         tables.add("issues i")
-        tables.add("people_upeople pup")
+        tables.add("people_uidentities pup")
         tables.union_update(self.db.GetSQLReportFrom(self.filters.type_analysis))
 
         filters.union_update(self.db.GetSQLReportWhere(self.filters.type_analysis, "issues"))
@@ -197,9 +197,9 @@ class Companies(its.Companies):
     """ List of organizations
     """
 
-    id = "companies"
-    name = "Jira Companies"
-    desc = "Jira companies in the review process"
+    id = "organizations"
+    name = "Jira organizations"
+    desc = "Jira organizations in the review process"
     data_source = ITS
 
 
@@ -280,18 +280,18 @@ if __name__ == '__main__':
 
     createJSON({"name":trackers_names}, "scr-repos.json")
 
-    companies = Companies(dbcon, filters)
-    companies_list = companies.get_list()
-    companies_names = []
-    for company in companies_list["name"]:
+    organizations = Companies(dbcon, filters)
+    organizations_list = organizations.get_list()
+    organizations_names = []
+    for company in organizations_list["name"]:
         company_name = company.split("/")[-1:][0]
-        companies_names.append(company_name)
+        organizations_names.append(company_name)
         company_str = "'" + company + "'"
         dbcon = ITSQuery("root", "", "lcanas_bicho_gerrit_liferay_4444", "lcanas_cvsanaly_liferay_4444")
         filters = MetricFilters("month", "'2008-10-20'", "'2014-10-01'", ['company', company_str])
         create_json(dbcon, filters)
 
-    createJSON({"name":companies_names}, "scr-companies.json")
+    createJSON({"name":organizations_names}, "scr-organizations.json")
 
     exit(0)
     print "Pull requests"

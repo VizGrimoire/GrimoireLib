@@ -328,8 +328,8 @@ def convertDatetime(data):
                 data[i] = str(data[i])
     return data
 
-# Rename "CONCAT(com.name,'_',cou.name)" to "filter"
-# Create filter_type="CONCAT(com.name,'_',cou.name)"
+# Rename "CONCAT(org.name,'_',cou.name)" to "filter"
+# Create filter_type="CONCAT(org.name,'_',cou.name)"
 def convertCombinedFiltersName(data):
     import re
     if not isinstance(data, dict): return data
@@ -513,19 +513,19 @@ def read_main_conf(config_file):
     return options
 
 # Old code moved to query_builder. To be removed once it is not needed.
-def get_subprojects(project, identities_db, dsquery = None):
+def get_subprojects(project, projects_db, dsquery = None):
     """ Return all subprojects ids for a project in a string join by comma """
 
     from vizgrimoire.GrimoireSQL import ExecuteQuery
     query = ExecuteQuery
     if dsquery is not None: query = dsquery.ExecuteQuery
 
-    q = "SELECT project_id from %s.projects WHERE id='%s'" % (identities_db, project)
+    q = "SELECT project_id from %s.projects WHERE id='%s'" % (projects_db, project)
     project_id = query(q)['project_id']
 
     q = """
         SELECT subproject_id from %s.project_children pc where pc.project_id = '%s'
-    """ % (identities_db, project_id)
+    """ % (projects_db, project_id)
 
     subprojects = query(q)
 
@@ -692,7 +692,7 @@ def order_items(items, data, id_field, evol = False, period = None):
 def fill_and_order_items(items, data, id_field, evol = False,
                          period = None, startdate = None, enddate = None):
     # Only items will appear for a filter
-    if not evol: # evol is already filled (complete data) for a company, but not all companies
+    if not evol: # evol is already filled (complete data) for a company, but not all organizations
         data = fill_items(items, data, id_field)
     if evol: data = fill_items(items, data, id_field,
                                evol, period, startdate, enddate)

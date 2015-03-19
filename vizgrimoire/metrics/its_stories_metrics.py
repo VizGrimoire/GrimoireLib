@@ -94,11 +94,11 @@ class StoriesOpeners(Metrics):
     # TODO: once stories are integrated in ITSQuery, moved this logic there
     def GetTablesOwnUniqueIds (self, table='') :
         tables = Set([])
-        # TODO: The acronym "c" is already used for companies
+        # TODO: The acronym "c" is already used for organizations
         tables.add("stories sto")
         tables.add("people peo")
-        tables.add("people_upeople pup")
-        tables.add(self.db.identities_db+".upeople up")
+        tables.add("people_uidentities pup")
+        tables.add(self.db.identities_db+".uidentities up")
 
         return (tables)
 
@@ -106,7 +106,7 @@ class StoriesOpeners(Metrics):
         filters = Set([])
         filters.add("pup.people_id = peo.id")
         filters.add("sto.creator_id = peo.user_id")
-        filters.add("pup.upeople_id = up.id")
+        filters.add("pup.uuid = up.id")
 
         return (filters)
 
@@ -133,7 +133,7 @@ class StoriesOpeners(Metrics):
             dtables = " , (SELECT MAX(updated_at) as last_date from stories) t "
             dfilters = " AND DATEDIFF (last_date, updated_at) < %s " % (days)
 
-        q = "SELECT up.id as id, up.identifier as stories_openers, "+\
+        q = "SELECT up.uuid as id, up.identifier as stories_openers, "+\
             "    count(distinct(sto.story_id)) as stories_opened "+\
             "FROM " + tables + dtables + \
             "WHERE "+filter_bots + filters +" and "+\

@@ -61,13 +61,13 @@ class Metrics(object):
         self.filters = filters
         if filters == None:
             people_out = None
-            companies_out = None
+            organizations_out = None
             npeople = None
             type_analysis = None
             self.filters = MetricFilters(Metrics.default_period,
                                          Metrics.default_start, Metrics.default_end,
                                          type_analysis, 
-                                         npeople, people_out, companies_out)
+                                         npeople, people_out, organizations_out)
 
     def get_definition(self):
         def_ = {

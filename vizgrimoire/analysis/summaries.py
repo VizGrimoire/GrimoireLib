@@ -24,23 +24,23 @@ from vizgrimoire.data_source import DataSource
 from vizgrimoire.metrics.metrics_filter import MetricFilters
 from vizgrimoire.GrimoireUtils import completePeriodIds
 
-def GetCommitsSummaryCompanies (period, startdate, enddate, identities_db, num_companies):
+def GetCommitsSummaryCompanies (period, startdate, enddate, identities_db, num_organizations):
     # This function returns the following dataframe structrure
-    # unixtime, date, week/month/..., company1, company2, ... company[num_companies -1], others
+    # unixtime, date, week/month/..., company1, company2, ... company[num_organizations -1], others
     # The 3 first fields are used for data and ordering purposes
     # The "companyX" fields are those that provide info about that company
-    # The "Others" field is the aggregated value of the rest of the companies
-    # Companies above num_companies will be aggregated in Others
+    # The "Others" field is the aggregated value of the rest of the organizations
+    # Companies above num_organizations will be aggregated in Others
 
     from vizgrimoire.SCM import SCM
 
-    metric = DataSource.get_metrics("companies", SCM)
-    companies = metric.get_list()
-    companies = companies['name']
+    metric = DataSource.get_metrics("organizations", SCM)
+    organizations = metric.get_list()
+    organizations = organizations['name']
 
-    first_companies = {}
+    first_organizations = {}
     count = 1
-    for company in companies:
+    for company in organizations:
         company_name = "'"+company+"'"
         type_analysis = ['company', company_name]
         mcommits = DataSource.get_metrics("commits", SCM)
@@ -55,34 +55,34 @@ def GetCommitsSummaryCompanies (period, startdate, enddate, identities_db, num_c
         commits[company] = commits["commits"]
         del commits['commits']
 
-        if (count <= num_companies):
-            #Case of companies with entity in the dataset
-            first_companies = dict(first_companies.items() + commits.items())
+        if (count <= num_organizations):
+            #Case of organizations with entity in the dataset
+            first_organizations = dict(first_organizations.items() + commits.items())
         else :
-            #Case of companies that are aggregated in the field Others
-            if 'Others' not in first_companies:
-                first_companies['Others'] = commits[company]
+            #Case of organizations that are aggregated in the field Others
+            if 'Others' not in first_organizations:
+                first_organizations['Others'] = commits[company]
             else:
-                first_companies['Others'] = [a+b for a, b in zip(first_companies['Others'],commits[company])]
+                first_organizations['Others'] = [a+b for a, b in zip(first_organizations['Others'],commits[company])]
         count = count + 1
 
     #TODO: remove global variables...
-    first_companies = completePeriodIds(first_companies, period, startdate, enddate)
-    return(first_companies)
+    first_organizations = completePeriodIds(first_organizations, period, startdate, enddate)
+    return(first_organizations)
 
 
-def GetClosedSummaryCompanies (period, startdate, enddate, identities_db, closed_condition, num_companies):
+def GetClosedSummaryCompanies (period, startdate, enddate, identities_db, closed_condition, num_organizations):
 
     from vizgrimoire.ITS import ITS
 
     count = 1
-    first_companies = {}
+    first_organizations = {}
 
-    metric = DataSource.get_metrics("companies", ITS)
-    companies = metric.get_list()
-    companies = companies['name']
+    metric = DataSource.get_metrics("organizations", ITS)
+    organizations = metric.get_list()
+    organizations = organizations['name']
 
-    for company in companies:
+    for company in organizations:
         type_analysis = ["company", "'"+company+"'"]
         filter_com = MetricFilters(period, startdate, enddate, type_analysis)
         mclosed = ITS.get_metrics("closed", ITS)
@@ -92,18 +92,18 @@ def GetClosedSummaryCompanies (period, startdate, enddate, identities_db, closed
         closed[company] = closed["closed"]
         del closed['closed']
 
-        if (count <= num_companies):
-            #Case of companies with entity in the dataset
-            first_companies = dict(first_companies.items() + closed.items())
+        if (count <= num_organizations):
+            #Case of organizations with entity in the dataset
+            first_organizations = dict(first_organizations.items() + closed.items())
         else :
-            #Case of companies that are aggregated in the field Others
-            if 'Others' not in first_companies:
-                first_companies['Others'] = closed[company]
+            #Case of organizations that are aggregated in the field Others
+            if 'Others' not in first_organizations:
+                first_organizations['Others'] = closed[company]
             else:
-                first_companies['Others'] = [a+b for a, b in zip(first_companies['Others'],closed[company])]
+                first_organizations['Others'] = [a+b for a, b in zip(first_organizations['Others'],closed[company])]
         count = count + 1
-    first_companies = completePeriodIds(first_companies, period, startdate, enddate)
+    first_organizations = completePeriodIds(first_organizations, period, startdate, enddate)
 
-    return(first_companies)
+    return(first_organizations)
 
 

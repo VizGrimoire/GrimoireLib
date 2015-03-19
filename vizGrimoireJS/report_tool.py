@@ -184,7 +184,7 @@ def create_people_identifiers(startdate, enddate, destdir, npeople, identities_d
     Report.connect_ds(ds_scm)
 
     for upeople_id in people_ids:
-        people_data[upeople_id] = People.GetPersonIdentifiers(upeople_id)
+        people_data[upeople_id] = People.GetPersonIdentifiers(identities_db, upeople_id)
 
     all_top_min_ds = get_top_people(startdate, enddate, identities_db)
     # print(all_top_min_ds)
@@ -217,7 +217,7 @@ def create_reports_studies(period, startdate, enddate, destdir):
         dbcon = dsquery(dbuser, dbpass, dbname, db_identities)
         # logging.info(ds.get_name() + " studies active " + str(studies))
         for study in studies:
-            # logging.info("Creating report for " + study.id + " for " + ds.get_name())
+            logging.info("Creating report for " + study.id + " for " + ds.get_name())
             try:
                 obj = study(dbcon, metric_filters)
                 obj.create_report(ds, destdir)

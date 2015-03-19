@@ -49,17 +49,17 @@ class Email(object):
                        m.message_body,
                        m.first_date,
                        u.identifier as initiator_name,
-                       u.id as initiator_id,
+                       u.uuid as initiator_id,
                        m.mailing_list_url as url
                 from messages m,
                      messages_people mp,
-                     people_upeople pup,
-                     %s.upeople u
+                     people_uidentities pup,
+                     %s.uidentities u
                 where m.message_ID = '%s' and
                       m.message_ID = mp.message_id and
                       mp.type_of_recipient = 'From' and
                       mp.email_address = pup.people_id and
-                      pup.upeople_id = u.id 
+                      pup.uuid = u.uuid
                 limit 1
                 """  % (self.i_db, self.message_id)
         # WARNING: There may appear in some cases repeated emails.
@@ -174,17 +174,17 @@ class Threads(object):
             people = set([])
             for message in thread:
                 query = """
-                        select distinct pup.upeople_id as upeople_id
+                        select distinct pup.uuid as upeople_id
                         from messages m,
                              messages_people mp,
-                             people_upeople pup
+                             people_uidentities pup
                         where m.message_ID = '%s' and
                               m.message_ID = mp.message_id and 
                               mp.type_of_recipient = 'From' and
                               mp.email_address = pup.people_id
                         """ % (message)
                 result = ExecuteQuery(query)
-                upeople_id = int(result["upeople_id"])       
+                upeople_id = int(result["upeople_id"])
                 people.add(upeople_id)
             top_threads.append((message, len(people)))
 

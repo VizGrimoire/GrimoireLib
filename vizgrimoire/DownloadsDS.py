@@ -196,11 +196,11 @@ class DownloadsDS(DataSource):
         pass
 
     @staticmethod
-    def get_person_evol(upeople_id, period, startdate, enddate, identities_db, type_analysis):
+    def get_person_evol(uuid, period, startdate, enddate, identities_db, type_analysis):
         pass
 
     @staticmethod
-    def get_person_agg(upeople_id, startdate, enddate, identities_db, type_analysis):
+    def get_person_agg(uuid, startdate, enddate, identities_db, type_analysis):
         pass
 
     @staticmethod

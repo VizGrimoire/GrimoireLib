@@ -84,9 +84,9 @@ class Authors(Metrics):
     data_source = ReleasesDS
 
     def _get_sql (self, evolutionary):
-        fields = " COUNT(DISTINCT(pup.upeople_id)) as authors "
+        fields = " COUNT(DISTINCT(pup.uuid)) as authors "
         # fields = "COUNT(DISTINCT(u.id)) AS authors"
-        tables = "users u, releases r, projects p, people_upeople pup"
+        tables = "users u, releases r, projects p, people_uidentities pup"
         filters = "r.author_id = u.id AND r.project_id = p.id AND pup.people_id = u.id"
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                self.filters.enddate, "r.created_on", fields,
@@ -110,8 +110,8 @@ class Authors(Metrics):
         # filter_bots = ''
 
         # fields = "COUNT(r.id) as releases, username, u.id"
-        fields = "COUNT(r.id) as releases, pup.upeople_id AS id, username"
-        tables = "users u, releases r, projects p, people_upeople pup"
+        fields = "COUNT(r.id) as releases, pup.uuid AS id, username"
+        tables = "users u, releases r, projects p, people_uidentities pup"
         filters = filter_bots + "pup.people_id = u.id AND r.author_id = u.id AND r.project_id = p.id"
         if (days > 0):
             tables += ", (SELECT MAX(r.created_on) as last_date from releases r) t"

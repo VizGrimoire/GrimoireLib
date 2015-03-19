@@ -63,7 +63,7 @@ class Territoriality(Analyses):
                     select sum(a.file_id) as territorial_files       
                     from actions a, 
                          scmlog s, 
-                         people_upeople pup, 
+                         people_uidentities pup, 
                          file_types ft %s
                     where a.commit_id=s.id and 
                           s.author_date >= %s and
@@ -72,7 +72,7 @@ class Territoriality(Analyses):
                           a.file_id=ft.file_id and 
                           ft.type='code' %s
                     group by a.file_id
-                    having count(distinct(pup.upeople_id)) = 1 ) as t )
+                    having count(distinct(pup.uuid)) = 1 ) as t )
                 /
                     (
                     select count(distinct(a.file_id)) as total_files 

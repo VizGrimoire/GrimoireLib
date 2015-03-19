@@ -37,60 +37,60 @@ from vizgrimoire.report import Report
 import logging
 
 class CompaniesActivity(Analyses):
-    id = "companies_activity"
+    id = "organizations_activity"
     name = "Companies Activity"
     desc = "Companies activity for different periods: commits, authors, actions ..."
 
-    def get_mls_from_companies(self):
+    def get_mls_from_organizations(self):
         automator = Report.get_config()
         identities_db = automator['generic']['db_identities']
 
         from_ = """
             FROM messages m
               JOIN messages_people mp ON m.message_ID = mp.message_id
-              JOIN people_upeople pup ON mp.email_address = pup.people_id 
-              JOIN %s.upeople_companies upc ON upc.upeople_id = pup.upeople_id 
-              JOIN %s.companies c ON c.id = upc.company_id 
+              JOIN people_uidentities pup ON mp.email_address = pup.people_id 
+              JOIN %s.enrollments enr ON enr.upeople_id = pup.uuid 
+              JOIN %s.organizations org ON org.id = enr.organization_id 
         """ % (identities_db, identities_db)
         return from_
 
 
-    def get_its_from_companies(self):
+    def get_its_from_organizations(self):
         automator = Report.get_config()
         identities_db = automator['generic']['db_identities']
 
         from_ = """
             FROM issues i
-              JOIN people_upeople pup ON i.submitted_by = pup.people_id 
-              JOIN %s.upeople_companies upc ON upc.upeople_id = pup.upeople_id 
-              JOIN %s.companies c ON c.id = upc.company_id 
+              JOIN people_uidentities pup ON i.submitted_by = pup.people_id 
+              JOIN %s.enrollments enr ON enr.uuid = pup.uuid 
+              JOIN %s.organizations org ON org.id = enr.organization_id 
         """ % (identities_db, identities_db)
         return from_
 
-    def get_scm_from_companies(self, committers = False):
+    def get_scm_from_organizations(self, committers = False):
         if (committers): field = "s.committer_id"
         else:  field = "s.author_id"
         from_ = """
             FROM scmlog s 
-              JOIN people_upeople pup ON %s = pup.people_id
-              JOIN upeople_companies upc ON upc.upeople_id = pup.upeople_id 
-              JOIN companies c ON c.id = upc.company_id 
+              JOIN people_uidentities pup ON %s = pup.people_id
+              JOIN enrollments enr ON enr.uuid = pup.uuid 
+              JOIN organizations org ON org.id = enr.organization_id 
         """ % (field)
         return from_
 
     def get_sql_commits(self, year = None):
         where = ""
         field = "commits"
-        from_ =  self.get_scm_from_companies()
+        from_ =  self.get_scm_from_organizations()
 
         if year is not None:
             where = " WHERE YEAR(s.author_date) = " + str(year)
             field = field + "_" + str(year)
         sql = """
-            select c.name, count(c.id) as %s
+            select org.name, count(distinct(s.id)) as %s
             %s %s
-            group by c.id
-            order by %s desc, c.name
+            group by org.id
+            order by %s desc, org.name
         """ % (field, from_, where, field)
 
         return (sql)
@@ -98,16 +98,16 @@ class CompaniesActivity(Analyses):
     def get_sql_authors(self, year = None):
         where = ""
         field = "authors"
-        from_ =  self.get_scm_from_companies()
+        from_ =  self.get_scm_from_organizations()
 
         if year is not None:
             where = " WHERE YEAR(s.author_date) = " + str(year)
             field = field + "_" + str(year)
         sql = """
-            select c.name, count(distinct(s.author_id)) as %s
+            select org.name, count(distinct(s.author_id)) as %s
             %s %s
-            group by c.id
-            order by %s desc, c.name
+            group by org.id
+            order by %s desc, org.name
         """ % (field, from_, where, field)
 
         return (sql)
@@ -121,7 +121,7 @@ class CompaniesActivity(Analyses):
         where = ""
         field = "committers"
         if active: field = "committers_active"
-        from_ =  self.get_scm_from_companies(True)
+        from_ =  self.get_scm_from_organizations(True)
 
         if year is not None:
             where = " WHERE YEAR(s.author_date) = " + str(year)
@@ -131,10 +131,10 @@ class CompaniesActivity(Analyses):
   	    else: where += " AND "
             where += " DATEDIFF(NOW(), s.author_date) < " + active_max_days
         sql = """
-            select c.name, count(distinct(s.committer_id)) as %s
+            select org.name, count(distinct(s.committer_id)) as %s
             %s %s
-            group by c.id
-            order by %s desc, c.name
+            group by org.id
+            order by %s desc, org.name
         """ % (field, from_, where, field)
 
         return (sql)
@@ -142,18 +142,18 @@ class CompaniesActivity(Analyses):
     def get_sql_actions(self, year = None):
         where = ""
         field = "actions"
-        from_ =  self.get_scm_from_companies()
+        from_ =  self.get_scm_from_organizations()
 
         if year is not None:
             where = " WHERE YEAR(s.author_date) = " + str(year)
             field = field + "_" + str(year)
         sql = """
-            select c.name, count(a.id) as %s
+            select org.name, count(a.id) as %s
             %s
               JOIN actions a ON a.commit_id = s.id 
             %s
-            group by c.id
-            order by %s desc, c.name
+            group by org.id
+            order by %s desc, org.name
         """ % (field, from_, where, field)
 
         return (sql)
@@ -162,7 +162,7 @@ class CompaniesActivity(Analyses):
         """ Metric not used. Use lines_added and lines_removed """
         where = ""
         field = "sloc"
-        from_ =  self.get_scm_from_companies()
+        from_ =  self.get_scm_from_organizations()
 
         # Remove commits from cvs2svn migration with removed lines issues
         where = "WHERE  message NOT LIKE '%cvs2svn%'"
@@ -172,10 +172,10 @@ class CompaniesActivity(Analyses):
 
         sql = """
             select name, added-removed as %s FROM (
-              select c.name, SUM(removed) as removed, SUM(added) as added
+              select org.name, SUM(removed) as removed, SUM(added) as added
               %s JOIN commits_lines cl ON cl.commit_id = s.id
               %s
-              group by c.id
+              group by org.id
             ) t
             order by %s desc, name
         """ % (field, from_, where, field)
@@ -191,7 +191,7 @@ class CompaniesActivity(Analyses):
     def get_sql_lines_added(self, year = None):
         where = self.get_lines_filters()
         field = "lines_added"
-        from_ =  self.get_scm_from_companies()
+        from_ =  self.get_scm_from_organizations()
 
         if year is not None:
             where += " AND YEAR(s.author_date) = " + str(year)
@@ -199,10 +199,10 @@ class CompaniesActivity(Analyses):
 
         sql = """
             select name, added as %s FROM (
-              select c.name, SUM(added) as added
+              select org.name, SUM(added) as added
               %s JOIN commits_lines cl ON cl.commit_id = s.id
               %s
-              group by c.id
+              group by org.id
             ) t
             order by %s desc, name
         """ % (field, from_, where, field)
@@ -212,7 +212,7 @@ class CompaniesActivity(Analyses):
     def get_sql_lines_removed(self, year = None):
         where = self.get_lines_filters()
         field = "lines_removed"
-        from_ =  self.get_scm_from_companies()
+        from_ =  self.get_scm_from_organizations()
 
         if year is not None:
             where += " AND YEAR(s.author_date) = " + str(year)
@@ -220,10 +220,10 @@ class CompaniesActivity(Analyses):
 
         sql = """
             select name, removed as %s FROM (
-              select c.name, SUM(removed) as removed
+              select org.name, SUM(removed) as removed
               %s JOIN commits_lines cl ON cl.commit_id = s.id
               %s
-              group by c.id
+              group by org.id
             ) t
             order by %s desc, name
         """ % (field, from_, where, field)
@@ -233,7 +233,7 @@ class CompaniesActivity(Analyses):
     def get_sql_lines_total(self, year = None):
         where = self.get_lines_filters()
         field = "lines_total"
-        from_ =  self.get_scm_from_companies()
+        from_ =  self.get_scm_from_organizations()
 
         if year is not None:
             where += " AND YEAR(s.author_date) = " + str(year)
@@ -241,10 +241,10 @@ class CompaniesActivity(Analyses):
 
         sql = """
             select name, (added+removed) as %s FROM (
-              select c.name, SUM(removed) as removed, SUM(added) as added
+              select org.name, SUM(removed) as removed, SUM(added) as added
               %s JOIN commits_lines cl ON cl.commit_id = s.id
               %s
-              group by c.id
+              group by org.id
             ) t
             order by %s desc, name
         """ % (field, from_, where, field)
@@ -253,7 +253,7 @@ class CompaniesActivity(Analyses):
 
     def get_sql_tickets(self, field = None, year = None):
         where = "WHERE"
-        from_ =  self.get_its_from_companies()
+        from_ =  self.get_its_from_organizations()
         if field == "opened":
             if year is None: where = ""
         elif field == "closed":
@@ -267,10 +267,10 @@ class CompaniesActivity(Analyses):
             where += " YEAR(i.submitted_on) = " + str(year) 
             field = field + "_" + str(year)
         sql = """
-            select c.name, count(distinct(i.id)) as %s
+            select org.name, count(distinct(i.id)) as %s
             %s %s
-            group by c.id
-            order by %s desc, c.name
+            group by org.id
+            order by %s desc, org.name
         """ % (field, from_, where, field)
         return (sql)
 
@@ -286,17 +286,17 @@ class CompaniesActivity(Analyses):
     def get_sql_sent(self, year = None):
         where = ""
         field = "sent"
-        from_ =  self.get_mls_from_companies()
+        from_ =  self.get_mls_from_organizations()
 
         if year is not None:
             where = " WHERE YEAR(m.first_date) = " + str(year)
             field = field + "_" + str(year)
 
         sql = """
-            select c.name, count(distinct(m.message_ID)) as %s
+            select org.name, count(distinct(m.message_ID)) as %s
             %s %s
-            group by c.id
-            order by %s desc, c.name
+            group by org.id
+            order by %s desc, org.name
         """ % (field, from_, where, field)
         return (sql)
 
@@ -304,8 +304,8 @@ class CompaniesActivity(Analyses):
         if data_source != SCM: return
         self.result(data_source, destdir)
 
-    def add_companies_data (self, activity, data):
-        """ Add companies data in an already existing complete companies activity dictionary """
+    def add_organizations_data (self, activity, data):
+        """ Add organizations data in an already existing complete organizations activity dictionary """
         new_activity = []
         field = None
 
@@ -341,7 +341,7 @@ class CompaniesActivity(Analyses):
         metrics = ['commits','authors','committers','actions','sloc',
                    'lines-total','lines-added','lines-removed','opened','closed','sent']
         if metric not in metrics:
-            logging.error(metric + " not supported in companies activity.")
+            logging.error(metric + " not supported in organizations activity.")
             return
         for i in range(start, end+1):
             if metric == "commits":
@@ -370,7 +370,7 @@ class CompaniesActivity(Analyses):
             elif metric == "sent":
                 data = self.db.ExecuteQuery(self.get_sql_sent(i))
             self.check_array_values(data)
-            activity = self.add_companies_data (activity, data)
+            activity = self.add_organizations_data (activity, data)
 
 
     def _convert_dict_field(self, dict, str_old, str_new):
@@ -422,20 +422,20 @@ class CompaniesActivity(Analyses):
 
         # Commits
         data = self.db.ExecuteQuery(self.get_sql_commits())
-        activity = self.add_companies_data (activity, data)
+        activity = self.add_organizations_data (activity, data)
         self.add_metric_years("commits", activity, start_year, end_year)
         # Authors
         data = self.db.ExecuteQuery(self.get_sql_authors())
-        activity = self.add_companies_data (activity, data)
+        activity = self.add_organizations_data (activity, data)
         self.add_metric_years("authors", activity, start_year, end_year)
         # Committers
         data = self.db.ExecuteQuery(self.get_sql_committers())
-        activity = self.add_companies_data (activity, data)
+        activity = self.add_organizations_data (activity, data)
         self.add_metric_years("committers", activity, start_year, end_year)
         # Committers active: only valid for today
         data = self.db.ExecuteQuery(self.get_sql_committers(None, True))
         data = self._convert_dict_field(data, "committers_active","committers-active")
-        activity = self.add_companies_data (activity, data)
+        activity = self.add_organizations_data (activity, data)
         # Committers inactive: only valid for today
         activity['committers-inactive'] = \
             [ activity['committers'][i] - activity['committers-active'][i] \
@@ -449,22 +449,22 @@ class CompaniesActivity(Analyses):
                 (activity['committers-active'][i]*100) / activity['committers'][i])
         # Actions
         data = self.db.ExecuteQuery(self.get_sql_actions())
-        activity = self.add_companies_data (activity, data)
+        activity = self.add_organizations_data (activity, data)
         self.add_metric_years("actions", activity, start_year, end_year)
         # Source lines of code added
         data = self.db.ExecuteQuery(self.get_sql_lines_added())
         data = self._convert_dict_field(data, "lines_added", "lines-added")
-        activity = self.add_companies_data (activity, data)
+        activity = self.add_organizations_data (activity, data)
         self.add_metric_years("lines-added", activity, start_year, end_year)
         # Source lines of code removed
         data = self.db.ExecuteQuery(self.get_sql_lines_removed())
         data = self._convert_dict_field(data, "lines_removed","lines-removed")
-        activity = self.add_companies_data (activity, data)
+        activity = self.add_organizations_data (activity, data)
         self.add_metric_years("lines-removed", activity, start_year, end_year)
         # Source lines of code total (added+removed)
         data = self.db.ExecuteQuery(self.get_sql_lines_total())
         data = self._convert_dict_field(data, "lines_total","lines-total")
-        activity = self.add_companies_data (activity, data)
+        activity = self.add_organizations_data (activity, data)
         self.add_metric_years("lines-total", activity, start_year, end_year)
         # Lines per commit
         self.add_metric_lines_commit(activity, start_year, end_year)
@@ -476,11 +476,11 @@ class CompaniesActivity(Analyses):
         self.db = dbcon
         # Tickets opened
         data = self.db.ExecuteQuery(self.get_sql_opened())
-        activity = self.add_companies_data (activity, data)
+        activity = self.add_organizations_data (activity, data)
         self.add_metric_years("opened", activity, start_year, end_year)
         # Tickets closed
         data = self.db.ExecuteQuery(self.get_sql_closed())
-        activity = self.add_companies_data (activity, data)
+        activity = self.add_organizations_data (activity, data)
         self.add_metric_years("closed", activity, start_year, end_year)
 
         # Messages sent 
@@ -490,11 +490,11 @@ class CompaniesActivity(Analyses):
         self.db = dbcon
 
         data = self.db.ExecuteQuery(self.get_sql_sent())
-        activity = self.add_companies_data (activity, data)
+        activity = self.add_organizations_data (activity, data)
         self.add_metric_years("sent", activity, start_year, end_year)
 
-        createJSON(activity, destdir+"/companies-activity.json")
-        logging.info(destdir+"/companies-activity.json created")
+        createJSON(activity, destdir+"/organizations-activity.json")
+        logging.info(destdir+"/organizations-activity.json created")
 
     def get_report_files(self, data_source = None):
-        return ["companies-activity.json"]
+        return ["organizations-activity.json"]

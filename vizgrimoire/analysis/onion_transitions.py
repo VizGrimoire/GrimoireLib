@@ -61,11 +61,11 @@ class OnionTransitions(Analyses):
         person_data = {}
         if (data_source.get_name() == "scm"):
             logging.info("Warning: current queries are counting merges")
-            # q = " select pup.upeople_id as uid, p.name, p.email, "+\
+            # q = " select pup.uuid as uid, p.name, p.email, "+\
             #     "        (count(distinct(s.id))) as commits "+\
             #     " from scmlog s, "+\
             #     "      actions a, "+\
-            #     "      people_upeople pup, "+\
+            #     "      people_uidentities pup, "+\
             #     "      people p "+\
             #     " where s.id = a.commit_id and "+\
             #     "       s.date>="+ from_date+" and "+\
@@ -74,17 +74,17 @@ class OnionTransitions(Analyses):
             #     "       s.author_id = p.id and "+\
             #     "       p.email <> '%gerrit@%' and "+\
             #     "       p.email <> '%jenkins@%' and "+\
-            #     "       pup.upeople_id = " + str(upeople_id) +\
-            #     " group by pup.upeople_id "+\
+            #     "       pup.uuid = " + str(upeople_id) +\
+            #     " group by pup.uuid "+\
             #     " order by commits desc; "
-            q0 = "select name, email from people, people_upeople pup "+\
-                "where people.id = pup.people_id and pup.upeople_id = " + str(upeople_id) + " "+\
+            q0 = "select name, email from people, people_uidentities pup "+\
+                "where people.id = pup.people_id and pup.uuid = " + str(upeople_id) + " "+\
                 " LIMIT 1"
             
-            q1 = " select pup.upeople_id as uid, p.name, p.email, "+\
+            q1 = " select pup.uuid as uid, p.name, p.email, "+\
                 "        (count(distinct(s.id))) as commits "+\
                 " from scmlog s, "+\
-                "      people_upeople pup, "+\
+                "      people_uidentities pup, "+\
                 "      people p "+\
                 " where s.author_date>="+ from_date+" and "+\
                 "       s.author_date<"+ to_date+" and "+\
@@ -92,8 +92,8 @@ class OnionTransitions(Analyses):
                 "       s.author_id = p.id and "+\
                 "       p.email <> '%gerrit@%' and "+\
                 "       p.email <> '%jenkins@%' and "+\
-                "       pup.upeople_id = " + str(upeople_id) +\
-                " group by pup.upeople_id "+\
+                "       pup.uuid = " + str(upeople_id) +\
+                " group by pup.uuid "+\
                 " order by commits desc; "
 
             aux = self.db.ExecuteQuery(q0)
@@ -307,11 +307,11 @@ class OnionTransitions(Analyses):
     def _get_personal_commits_query(self, from_date, to_date):
         logging.info("Warning: current queries are counting merges")
         # uncomment this query in order to remove the queries
-        # q = " select pup.upeople_id as uid, p.name, p.email, "+\
+        # q = " select pup.uuid as uid, p.name, p.email, "+\
         #     "        (count(distinct(s.id))) as commits "+\
         #     " from scmlog s, "+\
         #     "      actions a, "+\
-        #     "      people_upeople pup, "+\
+        #     "      people_uidentities pup, "+\
         #     "      people p "+\
         #     " where s.id = a.commit_id and "+\
         #     "       s.date>="+ from_date+" and "+\
@@ -320,13 +320,13 @@ class OnionTransitions(Analyses):
         #     "       s.author_id = p.id and "+\
         #     "       p.email <> '%gerrit@%' and "+\
         #     "       p.email <> '%jenkins@%' "+\
-        #     " group by pup.upeople_id "+\
+        #     " group by pup.uuid "+\
         #     " order by commits desc; "
         # Database access: developer, %commits
-        q = " select pup.upeople_id as uid, p.name, p.email, "+\
+        q = " select pup.uuid as uid, p.name, p.email, "+\
             "        (count(distinct(s.id))) as commits "+\
             " from scmlog s, "+\
-            "      people_upeople pup, "+\
+            "      people_uidentities pup, "+\
             "      people p "+\
             " where s.author_date>="+ from_date+" and "+\
             "       s.author_date<"+ to_date+" and "+\
@@ -334,7 +334,7 @@ class OnionTransitions(Analyses):
             "       s.author_id = p.id and "+\
             "       p.email <> '%gerrit@%' and "+\
             "       p.email <> '%jenkins@%' "+\
-            " group by pup.upeople_id "+\
+            " group by pup.uuid "+\
             " order by commits desc; "
         return(q)
 
