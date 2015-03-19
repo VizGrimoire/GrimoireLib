@@ -1160,7 +1160,7 @@ class ActiveCoreReviewers(Metrics):
 
         query = "select " + select + " from " + from_ + " where " + filters
         query = query + " group by up.uuid, up.identifier"
-        query = query + " order by count(distinct(ch.id)) desc "
+        query = query + " order by count(distinct(ch.id)) desc, up.uuid "
 
         return self.db.ExecuteQuery(query)
 
