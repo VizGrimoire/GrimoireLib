@@ -96,30 +96,32 @@ class Report(object):
                 ds.set_global_filter(ds, Report.get_config()['r'][ds.get_name()+'_global_filter'])
 
     @staticmethod
+    def get_default_filter():
+        npeople = Metrics.default_npeople
+        people_out = None
+        if 'people_out' in Report._automator['r']:
+            people_out = Report._automator['r']['people_out'].split(",")
+        organizations_out = None
+        if 'organizations_out' in Report._automator['r']:
+            organizations_out = Report._automator['r']['organizations_out'].split(",")
+        type_analysis = None
+        if 'start_date' not in Report._automator['r']:
+            raise Exception("Start date not configured in automator main.conf")
+        start_date = Report._automator['r']['start_date']
+        if 'end_date' in Report._automator['r']:
+            end_date = Report._automator['r']['end_date']
+        else:
+            end_date = time.strftime('%Y-%m-%d')
+
+
+        metric_filters = MetricFilters(Metrics.default_period, "'"+start_date+"'", "'"+end_date+"'",
+                                       type_analysis,
+                                       npeople, people_out, organizations_out)
+        return metric_filters
+
+    @staticmethod
     def _init_metrics(metrics_path):
         """Register all available metrics"""
-        def get_default_filter():
-            npeople = Metrics.default_npeople
-            people_out = None
-            if 'people_out' in Report._automator['r']:
-                people_out = Report._automator['r']['people_out'].split(",")
-            organizations_out = None
-            if 'organizations_out' in Report._automator['r']:
-                organizations_out = Report._automator['r']['organizations_out'].split(",")
-            type_analysis = None
-            if 'start_date' not in Report._automator['r']:
-                raise Exception("Start date not configured in automator main.conf")
-            start_date = Report._automator['r']['start_date']
-            if 'end_date' in Report._automator['r']:
-                end_date = Report._automator['r']['end_date']
-            else:
-                end_date = time.strftime('%Y-%m-%d')
-
-
-            metric_filters = MetricFilters(Metrics.default_period, "'"+start_date+"'", "'"+end_date+"'",
-                                           type_analysis,
-                                           npeople, people_out, organizations_out)
-            return metric_filters
 
         # logging.info("Loading metrics modules from %s" % (metrics_path))
         # sys.path.insert(1,metrics_path) # Prepend the metrics path
@@ -170,7 +172,7 @@ class Report(object):
                 if ds.get_db_name() not in Report._automator['generic']: continue
                 builder = ds.get_query_builder()
                 db = Report._automator['generic'][ds.get_db_name()]
-                metric_filters = get_default_filter()
+                metric_filters = Report.get_default_filter()
                 if (ds.get_global_filter(ds) is not None):
                     metric_filters.global_filter = ds.get_global_filter(ds)
                 metrics = metrics_class(builder(dbuser, dbpass, db, db_identities, db_projects), metric_filters)
