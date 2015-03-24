@@ -108,8 +108,10 @@ class SCM(DataSource):
     def get_events():
         events = {}
         newcomers = DataSource.get_metrics("newauthors", SCM)
-        if newcomers is None: return events
+        goneauthors = DataSource.get_metrics("goneauthors", SCM)
+        if newcomers is None and goneauthors is None: return events
         events['newcomers'] = newcomers.get_list()
+        events['goneauthors'] = goneauthors.get_list()
         return events
 
     @staticmethod
