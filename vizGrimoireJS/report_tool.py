@@ -99,7 +99,7 @@ def get_top_people (startdate, enddate, idb):
     from vizgrimoire.metrics.metrics_filter import MetricFilters
     from vizgrimoire.data_source import DataSource
     npeople = "10000" # max limit, all people included
-    min_data_sources = 4 # min data sources to be in the list
+    min_data_sources = 3 # min data sources to be in the list
     tops = {}
     all_top = {}
     all_top_min_ds = {}
@@ -122,7 +122,7 @@ def get_top_people (startdate, enddate, idb):
     # Build the consolidated top list using all data sources data
     # Only people in all data sources is used
     for ds in tops:
-        pos = 1;
+        pos = 1
         for id in tops[ds]['id']:
             if id not in all_top: all_top[id] = []
             all_top[id].append({"ds":ds,"pos":pos})
@@ -193,7 +193,7 @@ def create_people_identifiers(startdate, enddate, destdir, npeople, identities_d
     SetDBChannel (database=db, user=opts.dbuser, password=opts.dbpassword)
 
     for upeople_id in all_top_min_ds:
-        people_data[upeople_id] = People.GetPersonIdentifiers(upeople_id)
+        people_data[upeople_id] = People.GetPersonIdentifiers(identities_db, upeople_id)
 
     createJSON(people_data, destdir+"/people.json")
 
@@ -356,6 +356,7 @@ if __name__ == '__main__':
             if (automator['r']['reports'].find('people')>-1):
                 create_report_people(startdate, enddate, opts.destdir, opts.npeople, identities_db, people_ids)
             # create_reports_r(end_date, opts.destdir)
+            create_top_people_report(startdate, enddate, opts.destdir, identities_db)
 
     if not opts.study and not opts.no_filters and not opts.metric:
         create_reports_filters(period, startdate, enddate, opts.destdir, opts.npeople, identities_db)
