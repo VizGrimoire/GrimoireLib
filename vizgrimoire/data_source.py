@@ -307,11 +307,7 @@ class DataSource(object):
 
         studies = Report.get_studies()
 
-        if ds.get_name()+"_start_date" in Report.get_config()['r']:
-            startdate = "'"+Report.get_config()['r'][ds.get_name()+"_start_date"]+"'"
-        if ds.get_name()+"_end_date" in Report.get_config()['r']:
-            enddate = "'"+Report.get_config()['r'][ds.get_name()+"_end_date"]+"'"
-        metric_filters = MetricFilters(period, startdate, enddate, [])
+        metric_filters = Report.get_default_filter()
 
         ds_dbname = ds.get_db_name()
         dbname = Report.get_config()['generic'][ds_dbname]
