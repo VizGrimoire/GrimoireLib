@@ -552,19 +552,19 @@ class SCM(DataSource):
     @staticmethod
     def get_metrics_core_agg():
         m  = ['commits','authors','committers','branches','files','actions']
-        m += ['added_lines','removed_lines', 'repositories','newauthors']
+        m += ['added_lines','removed_lines', 'repositories']
         m += ['avg_commits', 'avg_files', 'avg_commits_author', 'avg_files_author']
         return m
 
     @staticmethod
     def get_metrics_core_ts():
         m  = ['commits','authors','committers','branches','files']
-        m += ['added_lines','removed_lines','repositories','newauthors']
+        m += ['added_lines','removed_lines','repositories']
         return m
 
     @staticmethod
     def get_metrics_core_trends():
-        return ['commits','authors','files','lines','newauthors']
+        return ['commits','authors','files','lines']
 
 #
 # People
