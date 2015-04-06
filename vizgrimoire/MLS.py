@@ -479,7 +479,7 @@ def GetMLSSQLCountriesFrom (i_db):
     return(" , messages_people mp, "+\
                "people_uidentities pup, "+\
                i_db+".countries c, "+\
-               i_db+".nationalities nat ")
+               i_db+".profiles pro ")
 
 
 def GetMLSSQLCountriesWhere (name):
@@ -488,8 +488,8 @@ def GetMLSSQLCountriesWhere (name):
     return(" m.message_ID = mp.message_id and "+\
                "mp.email_address = pup.people_id and "+\
                "mp.type_of_recipient=\'From\' and "+\
-               "pup.uuid = nat.uuid and "+\
-               "nat.country_id = c.id and "+\
+               "pup.uuid = pro.uuid and "+\
+               "pro.country_code = c.id and "+\
                "c.name="+name)
 
 def GetMLSSQLDomainsFrom (i_db) :

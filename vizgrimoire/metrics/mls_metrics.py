@@ -122,7 +122,7 @@ class EmailsSenders(Metrics):
             " FROM messages m, "+ countries_tables+ \
             "  , "+self.db.identities_db+".uidentities up "+\
             " WHERE "+ countries_filters + " AND "+\
-            "  up.uuid = nat.uuid AND "+\
+            "  up.uuid = pro.uuid AND "+\
             "  m.first_date >= "+startdate+" AND "+\
             "  m.first_date < "+enddate+\
             " GROUP BY up.identifier "+\
@@ -592,18 +592,19 @@ class Countries(Metrics):
         filter_ = DataSource.get_filter_bots(Filter("country"))
         filter_countries = ''
         for country in filter_:
-            filter_countries += " c.name<>'"+country+"' AND "
+            filter_countries += " cou.name<>'"+country+"' AND "
 
         countries_tables = self.db._get_tables_query(self.db.GetTablesCountries())
         countries_filters = self.db._get_filters_query(self.db.GetFiltersCountries())
-        q = "SELECT c.name as name, COUNT(m.message_ID) as sent "+\
+        q = "SELECT cou.name as name, COUNT(m.message_ID) as sent "+\
                 "FROM "+ countries_tables + " "+\
                 "WHERE "+ countries_filters + " AND "+\
                 "  "+ filter_countries+ " "+\
                 "  m.first_date >= "+self.filters.startdate+" AND "+\
                 "  m.first_date < "+self.filters.enddate+" "+\
-                "GROUP BY c.name "+\
-                "ORDER BY COUNT((m.message_ID)) DESC, name "
+                "GROUP BY cou.name "+\
+                "ORDER BY COUNT((m.message_ID)) DESC, cou.name "
+        print q
         data = self.db.ExecuteQuery(q)
         return(data['name'])
 

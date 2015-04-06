@@ -867,12 +867,12 @@ class Countries(Metrics):
         filters = Set([])
 
         #TODO: warning -> not using GetSQLReportFrom/Where to build queries
-        fields.add("count(distinct(nat.country_id)) as countries")
+        fields.add("count(distinct(pro.country_code)) as countries")
         tables.add("issues i")
         tables.add("people_uidentities pup")
-        tables.add(self.db.identities_db + ".nationalities nat")
+        tables.add(self.db.identities_db + ".profiles pro")
         filters.add("i.submitted_by = pup.people_id")
-        filters.add("pup.uuid = nat.uuid")
+        filters.add("pup.uuid = pro.uuid")
 
         q = self.db.BuildQuery (self.filters.period, self.filters.startdate,
                                 self.filters.enddate, " i.submitted_on",
@@ -880,18 +880,18 @@ class Countries(Metrics):
         return q
 
     def get_list  (self):
-        q = "SELECT c.name as name, COUNT(DISTINCT(i.id)) AS issues "+\
-               "FROM  "+self.db.identities_db+".countries c, "+\
-                       self.db.identities_db+".nationalities nat, "+\
+        q = "SELECT cou.name as name, COUNT(DISTINCT(i.id)) AS issues "+\
+               "FROM  "+self.db.identities_db+".countries cou, "+\
+                       self.db.identities_db+".profiles pro, "+\
                 "    people_uidentities pup, "+\
                 "    issues i "+\
                "WHERE i.submitted_by = pup.people_id AND "+\
-               "  nat.uuid = pup.uuid AND "+\
-               "  c.id = nat.country_id AND "+\
+               "  pro.uuid = pup.uuid AND "+\
+               "  cou.code = pro.country_code AND "+\
                "  i.status = 'merged' AND "+\
                "  i.submitted_on >="+  self.filters.startdate+ " AND "+\
                "  i.submitted_on < "+ self.filters.enddate+ " "+\
-               "GROUP BY c.name "+\
+               "GROUP BY cou.name "+\
                "ORDER BY issues DESC "
         return(self.db.ExecuteQuery(q))
 

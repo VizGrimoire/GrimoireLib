@@ -881,12 +881,12 @@ class Countries(Metrics):
         tables = Set([])
         filters = Set([])
 
-        fields.add("count(distinct(nat.country_id)) as countries")
+        fields.add("count(distinct(pro.country_code)) as countries")
         tables.add("scmlog s")
         tables.add("people_uidentities pup")
-        tables.add(self.db.identities_db+".nationalities nat")
+        tables.add(self.db.identities_db+".profiles pro")
         filters.add("s.author_id = pup.people_id")
-        filters.add("pup.uuid = nat.uuid")
+        filters.add("pup.uuid = pro.uuid")
 
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                self.filters.enddate, " s.author_date ", fields,
@@ -903,10 +903,10 @@ class Countries(Metrics):
             "FROM scmlog s,  "+\
             "     people_uidentities pup, "+\
             "     "+identities_db+".countries cou, "+\
-            "     "+identities_db+".nationalities nat "+\
+            "     "+identities_db+".profiles pro "+\
             "WHERE pup.people_id = s."+rol+"_id AND "+\
-            "      pup.uuid  = nat.uuid and "+\
-            "      nat.country_id = cou.id and "+\
+            "      pup.uuid  = pro.uuid and "+\
+            "      pro.country_code = cou.code and "+\
             "      s.author_date >="+startdate+ " and "+\
             "      s.author_date < "+enddate+ " "+\
             "group by cou.name "+\
@@ -930,11 +930,11 @@ class CompaniesCountries(Metrics):
 
         q = "SELECT count(s.id) as commits, CONCAT(org.name, '_', cou.name) as name "+\
             "FROM scmlog s, people_uidentities pup, "+\
-            identities_db+".countries cou, "+identities_db+".nationalities nat, "+\
+            identities_db+".countries cou, "+identities_db+".profiles pro, "+\
             identities_db+".organizations org, "+identities_db+".enrollments enr "+\
             "WHERE pup.people_id = s."+rol+"_id AND "+\
-            "      pup.uuid  = nat.uuid and "+\
-            "      nat.country_id = cou.uuid and "+\
+            "      pup.uuid  = pro.uuid and "+\
+            "      pro.country_code = cou.uuid and "+\
             "      pup.uuid  = enr.uuid and "+\
             "      enr.organization_id = org.id and "+\
             "      s.author_date >= enr.start  and s.author_date < enr.end and "+\
