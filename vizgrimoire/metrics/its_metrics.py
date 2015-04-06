@@ -936,12 +936,12 @@ class Countries(Metrics):
             "from issues i, "+\
             "     changes ch, "+\
             "     people_uidentities pup, "+\
-            "     "+ self.db.identities_db+ ".nationalities nat, "+\
+            "     "+ self.db.identities_db+ ".profiles pro, "+\
             "     "+ self.db.identities_db+ ".countries cou "+\
             "where i.id = ch.issue_id and "+\
             "      ch.changed_by = pup.people_id and "+\
-            "      pup.uuid = nat.uuid and "+\
-            "      nat.country_id = cou.id and "+\
+            "      pup.uuid = pro.uuid and "+\
+            "      pro.country_code = cou.code and "+\
             "      ch.changed_on >= "+ startdate+ " and "+\
             "      ch.changed_on < "+ enddate+" and "+\
             "      "+ closed_condition+ " "+\
@@ -965,11 +965,11 @@ class CompaniesCountries(Metrics):
 
         q = "SELECT count(i.id) as tickets, CONCAT(org.name, '_', cou.name) as name "+\
             "FROM issues i, people_uidentities pup, "+\
-            identities_db+".countries cou, "+identities_db+".nationalities nat, "+\
+            identities_db+".countries cou, "+identities_db+".profiles pro, "+\
             identities_db+".organizations org, "+identities_db+".enrollments enr "+\
             "WHERE pup.people_id = i.submitted_by and "+\
-            "      pup.uuid  = nat.uuid and "+\
-            "      nat.country_id = cou.id and "+\
+            "      pup.uuid  = pro.uuid and "+\
+            "      pro.country_code = cou.code and "+\
             "      pup.uuid  = enr.uuid and "+\
             "      enr.organization_id = org.id and "+\
             "      i.submitted_on >= enr.start  and i.submitted_on < enr.end and "+\

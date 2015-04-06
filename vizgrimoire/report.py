@@ -181,7 +181,7 @@ class Report(object):
                     db_its1_name = ITS_1.ITS_1.get_db_name()
                     if db_its1_name in Report._automator['generic']:
                         db_its1 = Report._automator['generic'][db_its1_name]
-                        metric_filters = get_default_filter()
+                        metric_filters = Report.get_default_filter()
                         metric_filters.set_closed_condition(ITS_1.ITS_1._get_closed_condition())
                         metrics = metrics_class(builder(dbuser, dbpass, db_its1, db_identities, db_projects), metric_filters)
                         ITS_1.ITS_1.add_metrics(metrics, ITS_1.ITS_1)

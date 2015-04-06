@@ -368,7 +368,7 @@ class SCMQuery(DSQuery):
         #tables necessaries for organizations
         tables = Set([])
         tables.add("people_uidentities pup")
-        tables.add(self.identities_db + ".nationalities nat")
+        tables.add(self.identities_db + ".profiles pro")
         tables.add(self.identities_db + ".countries cou")
 
         return tables
@@ -377,8 +377,8 @@ class SCMQuery(DSQuery):
          #fields necessaries to match info among tables
         fields = Set([])
         fields.add("s."+role+"_id = pup.people_id")
-        fields.add("pup.uuid = nat.uuid")
-        fields.add("nat.country_id = cou.id")
+        fields.add("pup.uuid = pro.uuid")
+        fields.add("pro.country_code = cou.code")
         if country is not None: fields.add("cou.name ="+ country)
 
         return fields
@@ -804,7 +804,7 @@ class ITSQuery(DSQuery):
         tables = Set([])
         tables.add("people_uidentities pup")
         tables.add(self.identities_db + ".countries cou")
-        tables.add(self.identities_db + ".nationalities nat")
+        tables.add(self.identities_db + ".profiles pro")
 
         return tables
 
@@ -812,8 +812,8 @@ class ITSQuery(DSQuery):
         # filters for the countries analysis
         filters = Set([])
         filters.add("i.submitted_by = pup.people_id")
-        filters.add("pup.uuid = nat.uuid")
-        filters.add("nat.country_id = cou.id")
+        filters.add("pup.uuid = pro.uuid")
+        filters.add("pro.country_code = cou.code")
         if name is not None: filters.add("cou.name = "+name)
 
         return filters
@@ -988,7 +988,8 @@ class ITSQuery(DSQuery):
         tables = Set([])
         filters = Set([])
 
-        fields.add("count(distinct(name)) as " + study)
+        if study == "countries": fields.add("count(distinct(cou.name)) as " + study)
+        else: fields.add("count(distinct(name)) as " + study)
         tables.add("issues i")
         mtype_analysis = mfilters.type_analysis
         mfilters.type_analysis = type_analysis
@@ -1113,8 +1114,8 @@ class MLSQuery(DSQuery):
         tables = Set([])
         tables.add("messages_people mp")
         tables.add("people_uidentities pup")
-        tables.add(self.identities_db + ".countries c")
-        tables.add(self.identities_db + ".nationalities nat")
+        tables.add(self.identities_db + ".countries cou")
+        tables.add(self.identities_db + ".profiles pro")
 
         return tables
 
@@ -1124,10 +1125,10 @@ class MLSQuery(DSQuery):
         filters.add("m.message_ID = mp.message_id")
         filters.add("mp.email_address = pup.people_id")
         filters.add("mp.type_of_recipient = \'From\'")
-        filters.add("pup.uuid = nat.uuid")
-        filters.add("nat.country_id = c.id")
+        filters.add("pup.uuid = pro.uuid")
+        filters.add("pro.country_code = cou.code")
         if name <> "":
-            filters.add("c.name = " + name)
+            filters.add("cou.name = " + name)
 
         return filters
 
@@ -1327,7 +1328,8 @@ class MLSQuery(DSQuery):
         filters = Set([])
 
         metric_filters = MetricFilters(period, startdate, enddate, type_analysis, evolutionary)
-        fields.add("count(distinct(name)) as " + study)
+        if study == "countries": fields.add("count(distinct(cou.name)) as " + study)
+        else: fields.add("count(distinct(name)) as " + study)
         tables.add("messages m")
         tables.union_update(self.GetSQLReportFrom(metric_filters))
         filters.add("m.is_response_of is null")
@@ -1337,7 +1339,7 @@ class MLSQuery(DSQuery):
         #filters = gsub("and\n( )+(d|c|cou|com).name =.*$", "", filters)
 
         q = self.BuildQuery(period, startdate, enddate, " m.first_date ", fields, tables, filters, evolutionary)
-        q = re.sub(r'(d|c|cou|org).name.*and', "", q)
+        if study != "countries": q = re.sub(r'(d|c|cou|org).name.*and', "", q)
 
         return q
 
@@ -1347,16 +1349,16 @@ class MLSQuery(DSQuery):
     def GetTablesCountries (self):
         tables = Set([])
         tables.union_update(self.GetTablesOwnUniqueIds())
-        tables.add(self.identities_db + ".countries c")
-        tables.add(self.identities_db + ".nationalities nat")
+        tables.add(self.identities_db + ".countries cou")
+        tables.add(self.identities_db + ".profiles pro")
 
         return tables
 
     def GetFiltersCountries (self):
         filters = Set([])
         filters.union_update(self.GetFiltersOwnUniqueIds())
-        filters.add("pup.uuid = nat.uuid")
-        filters.add("nat.country_id = c.id")
+        filters.add("pup.uuid = pro.uuid")
+        filters.add("pro.country_code = cou.code")
 
         return filters
 
@@ -1486,9 +1488,9 @@ class SCRQuery(DSQuery):
         tables = Set([])
 
         tables.add("people_uidentities pup")
-        tables.add(self.identities_db + ".nationalities nat")
+        tables.add(self.identities_db + ".profiles pro")
         #TODO: warning -> countries is using the same acronym as organizations
-        tables.add(self.identities_db + ".countries c")
+        tables.add(self.identities_db + ".countries cou")
 
         return tables
 
@@ -1497,10 +1499,10 @@ class SCRQuery(DSQuery):
         filters = Set([])
         
         filters.add("i.submitted_by = pup.people_id")
-        filters.add("pup.uuid = nat.uuid")
-        filters.add("nat.country_id = c.id")
+        filters.add("pup.uuid = pro.uuid")
+        filters.add("pro.country_code = cou.code")
         if country is not None:
-            filters.add("c.name = '"+country+"'")
+            filters.add("cou.name = '"+country+"'")
 
         return filters
 
@@ -2130,8 +2132,8 @@ class IRCQuery(DSQuery):
         # tables necessary to countries analysis
         tables = Set([])
         tables.add("people_uidentities pup")
-        tables.add(self.identities_db + ".countries c")
-        tables.add(self.identities_db + ".nationalities nat")
+        tables.add(self.identities_db + ".countries cou")
+        tables.add(self.identities_db + ".profiles pro")
 
         return tables
 
@@ -2139,9 +2141,9 @@ class IRCQuery(DSQuery):
         # filters necessary to countries analysis
         filters = Set([])
         filters.add("i.nick = pup.people_id")
-        filters.add("pup.uuid = nat.uuid")
-        filters.add("nat.country_id = c.id")
-        filters.add("c.name = " + name)
+        filters.add("pup.uuid = pro.uuid")
+        filters.add("pro.country_code = cou.code")
+        filters.add("cou.name = " + name)
 
         return filters
 
@@ -2639,8 +2641,8 @@ class PullpoQuery(DSQuery):
         # tables necessary to countries analysis
         tables = Set([])
         tables.add("people_uidentities pup")
-        tables.add(self.identities_db + ".countries c")
-        tables.add(self.identities_db + ".nationalities nat")
+        tables.add(self.identities_db + ".countries cou")
+        tables.add(self.identities_db + ".profiles pro")
 
         return tables
 
@@ -2648,9 +2650,9 @@ class PullpoQuery(DSQuery):
         # filters necessary to countries analysis
         filters = Set([])
         filters.add("pr.user_id = pup.people_id")
-        filters.add("pup.uuid = nat.uuid")
-        filters.add("nat.country_id = c.id")
-        filters.add("c.name = " + name)
+        filters.add("pup.uuid = pro.uuid")
+        filters.add("pro.country_code = cou.code")
+        filters.add("cou.name = " + name)
 
         return filters
 

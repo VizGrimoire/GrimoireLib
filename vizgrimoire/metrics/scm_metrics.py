@@ -126,6 +126,109 @@ class NewAuthors(Metrics):
         return data
 
 
+class GoneAuthors(Metrics):
+    """ An author has left the community after some time without activity
+
+        That activiy is measured as number of commits. By default, 180 days
+        are the timeframe selected for a developer to indicate that they have
+        not been active during such period.
+
+        This class only provides information about the set of developers that
+        were active in the previous period of the same amount of "days" and
+        that did not leave any trace of information during the last amount
+        of "days".
+
+        Period (1) looking for all active developers:
+            (self.enddate - days - days) : (self.endate - days)
+
+        Period (2) looking for no-active developers (those that were active
+        in (1) and not in (2)):
+            (self.enddate - days) : (self.enddate)
+
+        This class is not using unique identities core table given that we
+        specifically need the last email and name used by the developer.
+        However, when using that table, that information is not assured.
+    """
+
+    id = "goneauthors"
+    name = "Authors leaving the community"
+    desc = "Authors leaving the community"
+    data_source = SCM
+
+    def _get_sql_generic(self, evolutionary, islist = False, days = 180):
+        fields = Set([])
+        tables = Set([])
+        filters = Set([])
+
+        # Defining intervals of analysis
+        interval = str(days)
+        prev_interval = str(days * 2)
+
+        if islist:
+            fields.add("pup.uuid")
+            fields.add("p.name")
+            fields.add("p.email")
+            fields.add("max(author_date) as last_activity")
+        else:
+            fields.add("count(distinct(pup.uuid))")
+
+        tables.add("scmlog s")
+        tables.add("people_uidentities pup")
+        tables.add("people p")
+        tables.union_update(self.db.GetSQLReportFrom(self.filters))
+
+        filters.add("s.author_id = pup.people_id")
+        filters.add("pup.people_id = p.id")
+        filters.add("s.author_date >= DATE_SUB(%s, INTERVAL %s DAY)" % (self.filters.enddate, prev_interval))
+        filters.add("s.author_date < DATE_SUB(%s, INTERVAL %s DAY)" % (self.filters.enddate, interval))
+        filters.union_update(self.db.GetSQLReportWhere(self.filters))
+
+        # Building subquery
+        fields_sq = Set([]) #fields in the subquery
+        tables_sq = Set([]) #tables in the subquery
+        filters_sq = Set([]) #filters in the subquery
+
+        fields_sq.add("distinct(pup.uuid)")
+
+        tables_sq.add("scmlog s")
+        tables_sq.add("people_uidentities pup")
+        tables_sq.union_update(self.db.GetSQLReportFrom(self.filters))
+
+        filters_sq.add("s.author_id = pup.people_id")
+        filters_sq.add("s.author_date >= DATE_SUB(%s, INTERVAL %s DAY)" % (self.filters.enddate, interval))
+        filters_sq.add("s.author_date < %s" % (self.filters.enddate))
+        filters_sq.union_update(self.db.GetSQLReportWhere(self.filters))
+
+        subquery = "select " + self.db._get_fields_query(fields_sq)
+        subquery += " from " + self.db._get_tables_query(tables_sq)
+        subquery += " where " + self.db._get_filters_query(filters_sq)
+
+        # Building main query
+        filters.add("pup.uuid not in (%s)" % (subquery))
+
+        query = "select " + self.db._get_fields_query(fields)
+        query += " from " + self.db._get_tables_query(tables)
+        query += " where " + self.db._get_filters_query(filters)
+
+        if islist:
+            query += " group by pup.uuid "
+            query += " order by last_activity desc "
+
+        print query
+        return query
+
+    def get_agg(self):
+        query = self._get_sql_generic(False)
+        return self.db.ExecuteQuery(query)
+
+    def get_ts(self):
+       raise NotImplementedError
+
+    def get_list(self):
+        query = self._get_sql_generic(False, True)
+        return self.db.ExecuteQuery(query)
+
+
 class Authors(Metrics):
     """ Authors metric class for source code management systems """
 
@@ -881,12 +984,12 @@ class Countries(Metrics):
         tables = Set([])
         filters = Set([])
 
-        fields.add("count(distinct(nat.country_id)) as countries")
+        fields.add("count(distinct(pro.country_code)) as countries")
         tables.add("scmlog s")
         tables.add("people_uidentities pup")
-        tables.add(self.db.identities_db+".nationalities nat")
+        tables.add(self.db.identities_db+".profiles pro")
         filters.add("s.author_id = pup.people_id")
-        filters.add("pup.uuid = nat.uuid")
+        filters.add("pup.uuid = pro.uuid")
 
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                self.filters.enddate, " s.author_date ", fields,
@@ -903,10 +1006,10 @@ class Countries(Metrics):
             "FROM scmlog s,  "+\
             "     people_uidentities pup, "+\
             "     "+identities_db+".countries cou, "+\
-            "     "+identities_db+".nationalities nat "+\
+            "     "+identities_db+".profiles pro "+\
             "WHERE pup.people_id = s."+rol+"_id AND "+\
-            "      pup.uuid  = nat.uuid and "+\
-            "      nat.country_id = cou.id and "+\
+            "      pup.uuid  = pro.uuid and "+\
+            "      pro.country_code = cou.code and "+\
             "      s.author_date >="+startdate+ " and "+\
             "      s.author_date < "+enddate+ " "+\
             "group by cou.name "+\
@@ -930,11 +1033,11 @@ class CompaniesCountries(Metrics):
 
         q = "SELECT count(s.id) as commits, CONCAT(org.name, '_', cou.name) as name "+\
             "FROM scmlog s, people_uidentities pup, "+\
-            identities_db+".countries cou, "+identities_db+".nationalities nat, "+\
+            identities_db+".countries cou, "+identities_db+".profiles pro, "+\
             identities_db+".organizations org, "+identities_db+".enrollments enr "+\
             "WHERE pup.people_id = s."+rol+"_id AND "+\
-            "      pup.uuid  = nat.uuid and "+\
-            "      nat.country_id = cou.uuid and "+\
+            "      pup.uuid  = pro.uuid and "+\
+            "      pro.country_code = cou.uuid and "+\
             "      pup.uuid  = enr.uuid and "+\
             "      enr.organization_id = org.id and "+\
             "      s.author_date >= enr.start  and s.author_date < enr.end and "+\
@@ -1027,20 +1130,8 @@ class Projects(Metrics):
 
 
 if __name__ == '__main__':
-    filters1 = MetricFilters("month", "'2014-04-01'", "'2014-07-01'", ["repository,company", "'nova.git','Red Hat'"])
-    filters2 = MetricFilters("week", "'2014-04-01'", "'2014-07-01'", ["repository,company", "'nova.git','Red Hat'"], 10, "OpenStack Jenkins")
-    filters3 = MetricFilters("week", "'2014-04-01'", "'2014-07-01'", None, 10, "OpenStack Jenkins,Jenkins")
-    filters4 = MetricFilters("week", "'2014-04-01'", "'2014-07-01'", None, 10)
-    dbcon = SCMQuery("root", "", "dic_cvsanaly_openstack_2259_tm", "dic_cvsanaly_openstack_2259_tm",)
-    os_sw = Commits(dbcon, filters1)
-    print os_sw.get_ts()
-
-    os_sw = Commits(dbcon, filters2)
-    print os_sw.get_ts()
-
-    os_sw = Commits(dbcon, filters3)
-    print os_sw.get_ts()
-
-    os_sw = Commits(dbcon, filters4)
-    print os_sw.get_ts()
-
+    filters1 = MetricFilters("month", "'2014-04-01'", "'2015-01-01'", ['repository',"'OpenID'"])
+    dbcon = SCMQuery("root", "", "cp_cvsanaly_GrimoireLibTests", "cp_sortinghat_GrimoireLibTests")
+    gone = GoneAuthors(dbcon, filters1)
+    print gone.get_agg()
+    print gone.get_list()

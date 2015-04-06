@@ -268,14 +268,14 @@ def GetIRCSQLCountriesFrom (i_db):
     # tables necessary to countries analysis
     return(" , people_uidentities pup, "+\
            i_db+".countries c, "+\
-           i_db+".nationalities nat")
+           i_db+".profiles pro")
 
 
 def GetIRCSQLCountriesWhere(name):
     # filters necessary to countries analysis
     return(" i.nick = pup.people_id and "+\
-           "pup.uuid = nat.uuid and "+\
-           "nat.country_id = c.id and "+\
+           "pup.uuid = pro.uuid and "+\
+           "pro.country_code = c.id and "+\
            "c.name = " + name)
 
 def GetIRCSQLDomainsFrom (i_db):
