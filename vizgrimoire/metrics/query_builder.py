@@ -2857,3 +2857,81 @@ class PullpoQuery(DSQuery):
 
         return data
 
+
+class EventizerQuery(DSQuery):
+
+    # Groups conditions
+    def GetSQLGroupsFrom(self):
+        tables = Set([])
+        tables.add("events eve")
+        tables.add("groups gro")
+        return tables
+
+    def GetSQLGroupsWhere(self, value):
+        filters = Set([])
+        filters.add("eve.group_id = gro.id")
+        filters.add("gro.name = " + value)
+        return filters
+
+    # Categories conditions
+    def GetSQLCategoriesFrom(self):
+        tables = Set([])
+        tables.add("events eve")
+        tables.add("groups gro")
+        tables.add("categories cat")
+        return tables
+
+    def GetSQLCategoriesWhere(self, value):
+        filters = Set([])
+        filters.add("eve.group_id = gro.id")
+        filters.add("gro.category_id = cat.id")
+        filters.add("cat.name = " + value)
+        return filters
+
+    # Cities conditions
+    def GetSQLCitiesFrom(self):
+        tables = Set([])
+        tables.add("events eve")
+        tables.add("cities cit")
+        return tables
+
+    def GetSQLCitiesWhere(self, value):
+        filters = Set([])
+        filters.add("eve.city_id = cit.id")
+        filters.add("cit.city = " + value)
+        return filters
+
+    # Generic query builders
+    def GetSQLReportFrom(self, filters):
+        type_analysis = filters.type_analysis
+        From = Set([])
+
+        if type_analysis is not None:
+            # To be improved... not a very smart way of doing this
+            list_analysis = type_analysis[0].split(MetricFilters.DELIMITER)
+            analysis = type_analysis[0]
+            # Retrieving tables based on the required type of analysis.
+            for analysis in list_analysis:
+                if analysis == 'group': From.union_update(self.GetSQLGroupsFrom())
+                elif analysis == 'category': From.union_update(self.GetSQLCategoriesFrom())
+                elif analysis == 'city': From.union_update(self.GetSQLCitiesFrom())
+
+        return From
+
+    def GetSQLReportWhere(self, filters):
+        type_analysis = filters.type_analysis
+        where = Set([])
+
+        if type_analysis is not None:
+            # To be improved... not a very smart way of doing this
+            list_analysis = type_analysis[0].split(MetricFilters.DELIMITER)
+            list_values = type_analysis[1].split(MetricFilters.DELIMITER)
+            # Retrieving tables based on the required type of analysis.
+            for analysis in list_analysis:
+                value = list_values[list_analysis.index(analysis)]
+                if analysis == 'group': where.union_update(self.GetSQLGroupsWhere(value))
+                elif analysis == 'category': where.union_update(self.GetSQLCategoriesWhere(value))
+                elif analysis == 'city': where.union_update(self.GetSQLCitiesWhere(value))
+
+        return where
+
