@@ -2082,15 +2082,15 @@ class IRCQuery(DSQuery):
         fields = Set([])
         # TODO: channels c should be changed to channels ch
         #       c is typically used for organizations table
-        fields.add("channels c")
+        fields.add("channels chan")
 
         return fields
 
     def GetSQLRepositoriesWhere(self, repository):
         # filters necessaries for repositories
         filters = Set([])
-        filters.add("i.channel_id = c.id")
-        filters.add("c.name = " + repository)
+        filters.add("i.channel_id = chan.id")
+        filters.add("chan.name = " + repository)
 
         return filters
 
@@ -2153,6 +2153,28 @@ class IRCQuery(DSQuery):
 
         return filters
 
+    def GetSQLPublicFrom(self):
+        # tables necessary to public channels analysis
+        tables = Set([])
+        tables.add("channels chan")
+        return tables
+
+    def GetSQLPublicWhere(self, value):
+        # filters necessary to public channels analysis
+        filters = Set([])
+        filters.add("i.channel_id = chan.id")
+        filters.add("chan.public = " + value)
+
+        return filters
+
+    def GetSQLPeople2From(self):
+        # tables necessary to countries analysis
+        tables = Set([])
+        tables.add("people_uidentities pup")
+        tables.add(self.identities_db + ".uidentities up")
+
+        return tables
+
     def GetSQLPeople2From(self):
         # tables necessary to countries analysis
         tables = Set([])
@@ -2182,42 +2204,96 @@ class IRCQuery(DSQuery):
 
         return filters
 
-    def GetSQLReportFrom(self, type_analysis):
-        #generic function to generate 'from' clauses
-        #"type" is a list of two values: type of analysis and value of 
-        #such analysis
-
+    def _get_from_type_analysis_set(self, type_analysis):
         From = Set([])
 
-        if (type_analysis is None or len(type_analysis) != 2): return From
+        if type_analysis is not None and len(type_analysis)>1:
+            # To be improved... not a very smart way of doing this
+            list_analysis = type_analysis[0].split(MetricFilters.DELIMITER)
 
-        analysis = type_analysis[0]
+            # Retrieving tables based on the required type of analysis.
+            for analysis in list_analysis:
+                if analysis == 'repository': From.union_update(self.GetSQLRepositoriesFrom())
+                elif analysis == 'company': From.union_update(self.GetSQLCompaniesFrom())
+                elif analysis == 'country': From.union_update(self.GetSQLCountriesFrom())
+                elif analysis == 'domain': From.union_update(self.GetSQLDomainsFrom())
+                elif analysis == 'people2': From.union_update(self.GetSQLPeople2From())
+                elif analysis == 'public': From.union_update(self.GetSQLPublicFrom())
+        return From
 
-        if analysis == 'repository': From.union_update(self.GetSQLRepositoriesFrom())
-        elif analysis == 'company': From.union_update(self.GetSQLCompaniesFrom())
-        elif analysis == 'country': From.union_update(self.GetSQLCountriesFrom())
-        elif analysis == 'domain': From.union_update(self.GetSQLDomainsFrom())
-        elif analysis == 'people2': From.union_update(self.GetSQLPeople2From())
+
+    def GetSQLReportFrom (self, filters):
+        #generic function to generate 'from' clauses
+        #"type" is a list of two values: type of analysis and value of
+        #such analysis
+
+        From = self._get_from_type_analysis_set(filters.type_analysis)
+
+        if filters.global_filter is not None:
+            From.union_update(self._get_from_type_analysis_set(filters.global_filter))
 
         return From
 
-    def GetSQLReportWhere (self, type_analysis):
-        #generic function to generate 'where' clauses
-        #"type" is a list of two values: type of analysis and value of 
-        #such analysis
+    def _get_where_global_filter_set(self, global_filter):
+        if len(global_filter) == 2:
+            fields = global_filter[0].split(MetricFilters.DELIMITER)
+            values = global_filter[1].split(MetricFilters.DELIMITER)
+            if len(fields) > 1:
+                if fields.count(fields[0]) == len(fields):
+                    # Same fields, different values, use OR
+                    global_filter = [fields[0],values]
 
+        global_where = self._get_where_type_analysis_set(global_filter)
+
+        return global_where
+
+
+    def _get_where_type_analysis_set(self, type_analysis):
+        #"type" is a list of two values: type of analysis and value of
+        #such analysis
         where = Set([])
 
-        if (type_analysis is None or len(type_analysis) != 2): return where
+        if type_analysis is not None and len(type_analysis)>1:
+            analysis = type_analysis[0]
+            values = type_analysis[1]
 
-        analysis = type_analysis[0]
-        value = type_analysis[1]
+            if values is not None:
+                if type(values) is str:
+                    # To be improved... not a very smart way of doing this...
+                    list_values = values.split(MetricFilters.DELIMITER)
+                elif type(values) is list:
+                    # On item or list of lists. Unify to list of lists
+                    list_values = values
+                    if list_values[0] is not list:
+                        list_values = [list_values]
+            else:
+                list_values = None
 
-        if analysis == 'repository': where.union_update(self.GetSQLRepositoriesWhere(value))
-        elif analysis == 'company': where.union_update(self.GetSQLCompaniesWhere(value))
-        elif analysis == 'country': where.union_update(self.GetSQLCountriesWhere(value))
-        elif analysis == 'domain': where.union_update(self.GetSQLDomainsWhere(value))
-        elif analysis == 'people2': where.union_update(self.GetSQLPeople2Where(value))
+            list_analysis = type_analysis[0].split(MetricFilters.DELIMITER)
+
+            pos = 0
+            for analysis in list_analysis:
+                if list_values is not None:
+                    value = list_values[pos]
+                else:
+                    value = None
+
+                if analysis == 'repository': where.union_update(self.GetSQLRepositoriesWhere(value))
+                elif analysis == 'company': where.union_update(self.GetSQLCompaniesWhere(value))
+                elif analysis == 'country': where.union_update(self.GetSQLCountriesWhere(value))
+                elif analysis == 'domain': where.union_update(self.GetSQLDomainsWhere(value))
+                elif analysis == 'people2': where.union_update(self.GetSQLPeople2Where(value))
+                elif analysis == 'public': where.union_update(self.GetSQLPublicWhere(value))
+                pos += 1
+        return where
+
+    def GetSQLReportWhere (self, filters):
+        #generic function to generate 'where' clauses
+
+        where = self._get_where_type_analysis_set(filters.type_analysis)
+
+        if filters.global_filter is not None:
+            where.union_update(self._get_where_global_filter_set(filters.global_filter))
 
         return where
 

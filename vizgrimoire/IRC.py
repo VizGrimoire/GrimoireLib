@@ -116,7 +116,7 @@ class IRC(DataSource):
             metric = DataSource.get_metrics("repositories", IRC)
             items = metric.get_list()
             # items = GetReposNameIRC()
-        if (filter_name == "people2"):
+        elif (filter_name == "people2"):
             metric = DataSource.get_metrics("senders", IRC)
             items = metric.get_list()
             items['name'] = items.pop('senders')
