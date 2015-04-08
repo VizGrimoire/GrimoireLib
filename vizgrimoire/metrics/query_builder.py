@@ -2756,7 +2756,7 @@ class PullpoQuery(DSQuery):
         filters = Set([])
 
         repos = """re.url IN (
-               SELECT re.name
+               SELECT prep.repository_name
                FROM   %s.projects p, %s.project_repositories prep
                WHERE  p.project_id = prep.project_id AND p.project_id IN (%s)
                    AND prep.data_source='pullpo'
