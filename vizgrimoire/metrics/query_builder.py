@@ -245,6 +245,12 @@ class DSQuery(object):
     def get_subprojects(self, project):
         """ Return all subprojects ids for a project in a string join by comma """
 
+        if project[0] == "'" and project[len(project) - 1] == "'":
+            # TODO: this method shouldn't care this issue.
+            #       This needs to be checked in the type_analysis builder
+            #       or in the final query builder
+            project = project.replace("'", "")
+
         q = "SELECT project_id from %s.projects WHERE id='%s'" % (self.projects_db, project)
         project_id = self.ExecuteQuery(q)['project_id']
 
