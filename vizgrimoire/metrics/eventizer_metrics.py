@@ -68,3 +68,45 @@ class Events(Metrics):
                                    tables, filters, evolutionary, self.filters.type_analysis)
         return query
 
+
+class Members(Metrics):
+    """ Members of a group are people that subscribed at some point to this
+
+        This set of people contains all of them, confirmed attendees, confirmed
+        not attendees and the unknown ones.
+    """
+
+    id = "members"
+    name = "Members"
+    desc = "Meetup members"
+    data_source = Events
+
+    def _get_sql (self, evolutionary):
+        fields = Set([])
+        tables = Set([])
+        filters = Set([])
+
+        fields.add("count(distinct(p.id)) as members")
+
+        tables.add("events eve")
+        tables.add("groups gro")
+        tables.add("members_groups mg")
+        tables.add("people p")
+        tables.union_update(self.db.GetSQLReportFrom(self.filters))
+
+        filters.add("eve.group_id = gro.id")
+        filters.add("gro.id = mg.group_id")
+        filters.add("mg.member_id = p.id")
+        filters.union_update(self.db.GetSQLReportWhere(self.filters))
+
+        # Using the field "p.joined" to calculate timeseries, we're assuming
+        # that when the user joined Meetup, the user directly joined to the
+        # several groups. This is initially false and we would need to build
+        # another algorithm. This would trace all of the rsvps and check the first
+        # time the user decided to attend or not a group.
+        query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
+                                   self.filters.enddate, " p.joined ", fields,
+                                   tables, filters, evolutionary, self.filters.type_analysis)
+
+        return query
+
