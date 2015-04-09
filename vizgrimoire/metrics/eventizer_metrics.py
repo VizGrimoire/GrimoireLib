@@ -34,7 +34,7 @@ from vizgrimoire.metrics.metrics_filter import MetricFilters
 
 from vizgrimoire.metrics.query_builder import EventizerQuery
 
-from vizgrimoire.Events import Events
+from vizgrimoire.Events import EventsDS
 
 from sets import Set
 
@@ -49,7 +49,7 @@ class Events(Metrics):
     id = "events"
     name = "Events"
     desc = "Meetup events"
-    data_source = Events
+    data_source = EventsDS
 
     def _get_sql(self, evolutionary):
         fields = Set([])
@@ -79,7 +79,7 @@ class Members(Metrics):
     id = "members"
     name = "Members"
     desc = "Meetup members"
-    data_source = Events
+    data_source = EventsDS
 
     def _get_sql (self, evolutionary):
         fields = Set([])

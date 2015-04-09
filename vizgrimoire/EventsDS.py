@@ -22,5 +22,8 @@
 
 from vizgrimoire.data_source import DataSource
 
-class Events(DataSource):
-    pass
+class EventsDS(DataSource):
+
+    @staticmethod
+    def get_db_name():
+        return "db_eventizer"
