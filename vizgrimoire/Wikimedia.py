@@ -24,7 +24,7 @@
 ## Authors:
 ##   Alvaro del Castillo <acs@bitergia.com>
 
-from GrimoireSQL import ExecuteQuery,ExecuteViewQuery
+from GrimoireSQL import ExecuteQuery
 
 # _filter_submitter_id as a static global var to avoid SQL re-execute
 def _init_filter_submitter_id():

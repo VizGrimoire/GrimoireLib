@@ -102,6 +102,7 @@ class DownloadsDS(DataSource):
         q = " SELECT DATE_FORMAT (MAX(date), '%Y-%m-%d') as last_date FROM downloads"
         return(ExecuteQuery(q))
 
+
     @staticmethod
     def get_evolutionary_data (period, startdate, enddate, i_db, filter_ = None):
         return DownloadsDS._get_data(period, startdate, enddate, i_db, filter_, True)
