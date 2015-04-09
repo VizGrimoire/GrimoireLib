@@ -32,8 +32,11 @@ from vizgrimoire.GrimoireUtils import GetPercentageDiff, GetDates, completePerio
 from vizgrimoire.GrimoireUtils import createJSON
 from vizgrimoire.metrics.metrics_filter import MetricFilters
 
+from vizgrimoire.metrics.query_builder import ITSQuery
+import vizgrimoire.report
 from vizgrimoire.data_source import DataSource
 from vizgrimoire.filter import Filter
+
 
 class ITS(DataSource):
     _metrics_set = []
@@ -137,6 +140,8 @@ class ITS(DataSource):
     def get_top_data (cls, startdate, enddate, identities_db, filter_, npeople):
         bots = cls.get_bots()
         closed_condition =  cls._get_closed_condition()
+        # TODO: It should be configurable from Automator
+        top_issues_on = False
         top = None
         mopeners = DataSource.get_metrics("openers", cls)
         mclosers = DataSource.get_metrics("closers", cls)
@@ -164,6 +169,19 @@ class ITS(DataSource):
 
             top = dict(top_closers_data.items() + top_openers_data.items())
 
+            if top_issues_on:
+                from vizgrimoire.analysis.top_issues import TopIssues
+                from vizgrimoire.report import Report
+                db_identities= Report.get_config()['generic']['db_identities']
+                dbuser = Report.get_config()['generic']['db_user']
+                dbpass = Report.get_config()['generic']['db_password']
+                dbname = Report.get_config()['generic']['db_bicho']
+                dbcon = ITSQuery(dbuser, dbpass, dbname, db_identities)
+                metric_filters = MetricFilters(None, startdate, enddate, [])
+                top_issues_data = TopIssues(dbcon, metric_filters).result()
+
+                top = dict(top.items() + top_issues_data.items())
+
             if False and stories_openers is not None:
                 top_sopeners_data = {}
                 top_sopeners_data['stories_openers.'] = stories_openers.get_list(mfilter, 0)
@@ -171,8 +189,6 @@ class ITS(DataSource):
                 top_sopeners_data['stories_openers.last year'] = stories_openers.get_list(mfilter, 365)
 
                 top = dict(top.items() + top_sopeners_data.items())
-
-
         else:
             filter_name = filter_.get_name()
             if filter_name in ["company","domain","repository"]:

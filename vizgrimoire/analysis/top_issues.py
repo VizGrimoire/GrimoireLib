@@ -149,7 +149,7 @@ class TopIssues(Analyses):
     def result(self, data_source = None):
         """ Returns a JSON to be included in top file """
         from vizgrimoire.ITS import ITS
-        if data_source != ITS: return None
+        if  data_source is not None and data_source != ITS: return None
 
         # Closed condition for MediaWiki
         top_close_condition_mediawiki = """
