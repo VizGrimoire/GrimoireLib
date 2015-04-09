@@ -34,7 +34,7 @@ from vizgrimoire.metrics.metrics_filter import MetricFilters
 
 from vizgrimoire.metrics.query_builder import EventizerQuery
 
-from vizgrimoire.Events import EventsDS
+from vizgrimoire.EventsDS import EventsDS
 
 from sets import Set
 
