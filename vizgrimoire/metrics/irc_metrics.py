@@ -26,9 +26,6 @@
 #   Santiago Dueñas <sduenas@bitergia.com>
 #
 
-""" Opened metric for the IRC systems """
-
-
 from vizgrimoire.metrics.metrics import Metrics
 from vizgrimoire.metrics.metrics_filter import MetricFilters
 from vizgrimoire.metrics.query_builder import IRCQuery
@@ -50,9 +47,9 @@ class Sent(Metrics):
 
         fields.add("COUNT(i.message) AS sent")
         tables.add("irclog i")
-        tables.union_update(self.db.GetSQLReportFrom(self.filters.type_analysis))
+        tables.union_update(self.db.GetSQLReportFrom(self.filters))
         filters.add("i.type = 'COMMENT'")
-        filters.union_update(self.db.GetSQLReportWhere(self.filters.type_analysis))
+        filters.union_update(self.db.GetSQLReportWhere(self.filters))
 
         query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                self.filters.enddate, " i.date ", fields,
@@ -104,9 +101,9 @@ class Senders(Metrics):
 
         fields.add("COUNT(DISTINCT(i.nick)) AS senders")
         tables.add("irclog i")
-        tables.union_update(self.db.GetSQLReportFrom(self.filters.type_analysis))
+        tables.union_update(self.db.GetSQLReportFrom(self.filters))
         filters.add("type = 'COMMENT'")
-        filters.union_update(self.db.GetSQLReportWhere(self.filters.type_analysis))
+        filters.union_update(self.db.GetSQLReportWhere(self.filters))
 
         query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                self.filters.enddate, " i.date ", fields,
@@ -128,8 +125,8 @@ class Repositories(Metrics):
 
         fields.add("COUNT(DISTINCT(i.channel_id)) AS repositories")
         tables.add("irclog i")
-        tables.union_update(self.db.GetSQLReportFrom(self.filters.type_analysis))
-        filters.union_update(self.db.GetSQLReportWhere(self.filters.type_analysis))
+        tables.union_update(self.db.GetSQLReportFrom(self.filters))
+        filters.union_update(self.db.GetSQLReportWhere(self.filters))
 
         query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                self.filters.enddate, " i.date ", fields,
@@ -137,9 +134,21 @@ class Repositories(Metrics):
         return query
 
     def get_list (self):
+        tables_set = Set([])
+        tables_set.add("irclog i")
+        tables_set.add("channels chan")
+        filters_set = Set([])
+        filters_set.add("i.channel_id = chan.id")
+
+        tables_set.union_update(self.db.GetSQLReportFrom(self.filters))
+        filters_set.union_update(self.db.GetSQLReportWhere(self.filters))
+
+        tables = self.db._get_fields_query(tables_set)
+        filters = self.db._get_filters_query(filters_set)
+
         q = "SELECT name, count(i.id) AS total "+\
-            "  FROM irclog i, channels c "+\
-            "  WHERE i.channel_id=c.id "+\
+            "  FROM " + tables +\
+            "  WHERE " + filters +\
             "  GROUP BY name ORDER BY total DESC"
         return(self.db.ExecuteQuery(q)['name'])
 

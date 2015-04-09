@@ -732,7 +732,7 @@ class Projects(Metrics):
             metric.filters.type_analysis = type_analysis_orig
 
             reviews = reviews['submitted']
-            if (reviews > 0):
+            if (reviews >= 0):
                 data.append([reviews,project])
 
         # Order the list using reviews: https://wiki.python.org/moin/HowTo/Sorting
