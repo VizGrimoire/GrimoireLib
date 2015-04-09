@@ -88,6 +88,56 @@ def create_report_people(startdate, enddate, destdir, npeople, identities_db, pe
         logging.info("Creating people for " + ds.get_name())
         ds().create_people_report(period, startdate, enddate, destdir, npeople, identities_db, people_ids)
 
+def get_top_people (startdate, enddate, idb):
+    """Top people for all data sources."""
+    import vizgrimoire.GrimoireSQL
+    from vizgrimoire.SCR import SCR
+    from vizgrimoire.MLS import MLS
+    from vizgrimoire.ITS import ITS
+    from vizgrimoire.IRC import IRC
+    from vizgrimoire.Mediawiki import Mediawiki
+    from vizgrimoire.metrics.metrics_filter import MetricFilters
+    from vizgrimoire.data_source import DataSource
+    npeople = "10000" # max limit, all people included
+    min_data_sources = 3 # min data sources to be in the list
+    tops = {}
+    all_top = {}
+    all_top_min_ds = {}
+    period = None
+    type_analysis = None
+    mfilter = MetricFilters(period, startdate, enddate, type_analysis, npeople)
+
+    # SCR and SCM are the same. Don't use both for Tops
+    mopeners = DataSource.get_metrics("submitters", SCR)
+    tops["scr"] =  mopeners.get_list(mfilter, 0)
+    msenders = DataSource.get_metrics("senders", MLS)
+    tops["mls"] =  msenders.get_list(mfilter, 0)
+    mopeners = DataSource.get_metrics("openers", ITS)
+    tops["its"] =  mopeners.get_list(mfilter, 0)
+    msenders = DataSource.get_metrics("senders", IRC)
+    tops["irc"] =  msenders.get_list(mfilter, 0)
+    mauthors = DataSource.get_metrics("authors", Mediawiki)
+    tops["mediawiki"] = mauthors.get_list(mfilter, 0)
+
+    # Build the consolidated top list using all data sources data
+    # Only people in all data sources is used
+    for ds in tops:
+        pos = 1
+        for id in tops[ds]['id']:
+            if id not in all_top: all_top[id] = []
+            all_top[id].append({"ds":ds,"pos":pos})
+            pos += 1
+
+    for id in all_top:
+        if len(all_top[id])>=min_data_sources: all_top_min_ds[id] = all_top[id]
+    return all_top_min_ds
+
+def create_top_people_report(startdate, enddate, destdir, idb):
+    """Top people for all data sources."""
+    all_top_min_ds = get_top_people (startdate, enddate, idb)
+    createJSON(all_top_min_ds, opts.destdir+"/all_top.json")
+
+
 def create_reports_r(enddate, destdir):
     from rpy2.robjects.packages import importr
     opts = read_options()
@@ -128,11 +178,20 @@ def create_people_identifiers(startdate, enddate, destdir, npeople, identities_d
 
     from vizgrimoire.SCM import GetPeopleListSCM
     import vizgrimoire.People as People
+    from vizgrimoire.GrimoireSQL import SetDBChannel
 
     # TODO: Identities db is the same than SCM
     Report.connect_ds(ds_scm)
 
     for upeople_id in people_ids:
+        people_data[upeople_id] = People.GetPersonIdentifiers(identities_db, upeople_id)
+
+    all_top_min_ds = get_top_people(startdate, enddate, identities_db)
+
+    db = automator['generic']['db_cvsanaly']
+    SetDBChannel (database=db, user=opts.dbuser, password=opts.dbpassword)
+
+    for upeople_id in all_top_min_ds:
         people_data[upeople_id] = People.GetPersonIdentifiers(identities_db, upeople_id)
 
     createJSON(people_data, destdir+"/people.json")
@@ -296,6 +355,7 @@ if __name__ == '__main__':
             if (automator['r']['reports'].find('people')>-1):
                 create_report_people(startdate, enddate, opts.destdir, opts.npeople, identities_db, people_ids)
             # create_reports_r(end_date, opts.destdir)
+            create_top_people_report(startdate, enddate, opts.destdir, identities_db)
 
     if not opts.study and not opts.no_filters and not opts.metric:
         create_reports_filters(period, startdate, enddate, opts.destdir, opts.npeople, identities_db)
