@@ -59,7 +59,7 @@ class DataSource(object):
     def set_global_filter(ds, global_filter):
         """
             Set the global filter to be applied to all metrics
-            Format: its_global_filter = ['ticket_type,ticket_type','"Bug","New Feature"','OR']
+            Format: its_global_filter = ['ticket_type,,ticket_type','"Bug",,"New Feature"']
         """
         # We need to parse filter string to convert to type_analysis
         global_filter = global_filter.replace("[","").replace("]","")
