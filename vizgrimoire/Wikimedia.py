@@ -43,19 +43,3 @@ def GetChangesFiltered():
     if ('_filter_submitter_id' not in globals()): _init_filter_submitter_id()
     filters = " changed_by <> %s" % (globals()['_filter_submitter_id'])
     return filters
-
-
-# Is being used? - acs
-def GetViewNoActionIssuesQueryITS():
-    """Returns those issues without actions.
-       Actions means changes or comments that were made by others than
-       the reporter."""
-
-    q = "CREATE OR REPLACE VIEW no_action_issues AS " +\
-        "SELECT id issue_id " +\
-        "FROM issues " +\
-        "WHERE id NOT IN ( " +\
-        "SELECT DISTINCT(c.issue_id) " +\
-        "FROM issues i, changes c " +\
-        "WHERE i.id = c.issue_id AND c.changed_by <> i.submitted_by)"
-    return q
