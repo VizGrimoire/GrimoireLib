@@ -22,113 +22,19 @@
 ##   Alvaro del Castillo <acs@bitergia.com>
 ##
 ##
+## Usage:
+##  R --vanilla --args -d dbname < people-analysis.R
 
 import logging
 import sys
-from ConfigParser import SafeConfigParser
 
-import vizgrimoire.GrimoireUtils, vizgrimoire.vizgrimoire.GrimoireSQL
+import vizgrimoire.GrimoireUtils, vizgrimoire.GrimoireSQL
 from vizgrimoire.GrimoireUtils import createJSON, completePeriodIds
 from vizgrimoire.GrimoireUtils import getPeriod
 from vizgrimoire.SCM import GetPeopleListSCM
-import vizgrimoire.SCM, vizgrimoire.ITS, vizgrimoire.MLS, vizgrimoire.SCR, vizgrimoire.Mediawiki, vizgrimoire.IRC
 import vizgrimoire.People
 
 from utils import read_options
-
-def read_main_conf(config_file):
-    options = {}
-    parser = SafeConfigParser()
-    fd = open(config_file, 'r')
-    parser.readfp(fd)
-    fd.close()
-
-    sec = parser.sections()
-    # we'll read "generic" for db information and "r" for start_date
-    for s in sec:
-        if not((s == "generic") or (s == "r")):
-            continue
-        options[s] = {}
-        opti = parser.options(s)
-        for o in opti:
-            options[s][o] = parser.get(s, o)
-    return options
-
-def get_top_people(startdate, enddate, idb, bots):
-    """Top people for all data sources. Wikimedia specific"""
-    npeople = "10000" # max limit, all people included
-    min_data_sources = 4 # min data sources to be in the list
-    tops = {}
-    all_top = {}
-    all_top_min_ds = {}
-    db = automator['generic']['db_gerrit']
-    vizgrimoire.GrimoireSQL.SetDBChannel (database=db, user=opts.dbuser, password=opts.dbpassword)
-    tops["scr"] = SCR.GetTopOpenersSCR(0, startdate, enddate, idb, bots, npeople)
-    db = automator['generic']['db_mlstats']
-    vizgrimoire.GrimoireSQL.SetDBChannel (database=db, user=opts.dbuser, password=opts.dbpassword)
-    tops["mls"] = vizgrimoire.MLS.top_senders(0, startdate, enddate, idb, bots, npeople)
-    db = automator['generic']['db_bicho']
-    vizgrimoire.GrimoireSQL.SetDBChannel (database=db, user=opts.dbuser, password=opts.dbpassword)
-    # Fixed for bugzilla, what Wikimedia uses
-    closed_condition = "(new_value='RESOLVED' OR new_value='CLOSED' OR new_value='Lowest')"
-    # TODO: include in "-Bot" company all the bots
-    tops["its"] = vizgrimoire.ITS.GetTopOpeners(0, startdate, enddate, idb, ["-Bot"], closed_condition, npeople)
-    db = automator['generic']['db_irc']
-    vizgrimoire.GrimoireSQL.SetDBChannel (database=db, user=opts.dbuser, password=opts.dbpassword)
-    tops["irc"] = vizgrimoire.IRC.GetTopSendersIRC(0, startdate, enddate, idb, bots, npeople)
-    db = automator['generic']['db_mediawiki']
-    vizgrimoire.GrimoireSQL.SetDBChannel (database=db, user=opts.dbuser, password=opts.dbpassword)
-    tops["mediawiki"] = vizgrimoire.Mediawiki.GetTopAuthorsMediaWiki(0, startdate, enddate, idb, bots, npeople)
-    # SCR and SCM are the same. Don't use both for Tops
-    # TODO: include in "-Bot" company all the bots
-    # db = automator['generic']['db_cvsanaly']
-    # vizgrimoire.GrimoireSQL.SetDBChannel (database=db, user=opts.dbuser, password=opts.dbpassword)
-    # tops["scm"] = SCM.top_people(0, startdate, enddate, "author" , ["-Bot"] , npeople)
-
-    # Build the consolidated top list using all data sources data
-    # Only people in all data sources is used
-    for ds in tops:
-        pos = 1;
-        for id in tops[ds]['id']:
-            if id not in all_top: all_top[id] = []
-            all_top[id].append({"ds":ds,"pos":pos})
-            pos += 1
-
-    for id in all_top:
-        if len(all_top[id])>=min_data_sources: all_top_min_ds[id] = all_top[id]
-
-    return all_top_min_ds
-
-def create_top_people_report(startdate, enddate, idb, bots):
-    all_top_min_ds = get_top_people(startdate, enddate, idb, bots)
-
-    createJSON(all_top_min_ds, opts.destdir+"/all_top.json")
-
-def create_people_identifiers(startdate, enddate, idb, bots):
-
-    db = automator['generic']['db_cvsanaly']
-    vizgrimoire.GrimoireSQL.SetDBChannel (database=db, user=opts.dbuser, password=opts.dbpassword)
-
-    people_data = {}
-    people = GetPeopleListSCM(startdate, enddate)
-    people = people['pid']
-    limit = 100
-    if (len(people)<limit): limit = len(people);
-    people = people[0:limit]
-
-    for upeople_id in people:
-        people_data[upeople_id] = People.GetPersonIdentifiers(upeople_id)
-
-    all_top_min_ds = get_top_people(startdate, enddate, idb, bots)
-    print(all_top_min_ds)
-
-    db = automator['generic']['db_cvsanaly']
-    vizgrimoire.GrimoireSQL.SetDBChannel (database=db, user=opts.dbuser, password=opts.dbpassword)
-
-    for upeople_id in all_top_min_ds:
-        people_data[upeople_id] = People.GetPersonIdentifiers(upeople_id)
-
-    createJSON(people_data, opts.destdir+"/people.json")
 
 
 if __name__ == '__main__':
@@ -141,15 +47,19 @@ if __name__ == '__main__':
     startdate = "'"+opts.startdate+"'"
     enddate = "'"+opts.enddate+"'"
 
+    # Working at the same time with VizR and VizPy yet
+    # vizr.SetDBChannel (database=opts.dbname, user=opts.dbuser, password=opts.dbpassword)
+    GrimoireSQL.SetDBChannel (database=opts.dbname, user=opts.dbuser, password=opts.dbpassword)
 
-    bots = ['wikibugs','gerrit-wm','wikibugs_','wm-bot','','Translation updater bot','jenkins-bot','L10n-bot']
+    people_data = {}
+    people = GetPeopleListSCM(startdate, enddate)
+    people = people['pid']
+    limit = 100
+    if (len(people)<limit): limit = len(people);
+    people = people[0:limit]
 
-    if not opts.config_file:
-        logging.error("config_file param need")
+    for upeople_id in people:
+        people_data[upeople_id] = People.GetPersonIdentifiers(upeople_id)
 
-    automator = read_main_conf(opts.config_file)
-
-    create_top_people_report(startdate, enddate, opts.identities_db, bots)
-    create_people_identifiers(startdate, enddate, opts.identities_db, bots)
-
+    createJSON(people_data, opts.destdir+"/people.json")
     logging.info("People data source analysis OK")
