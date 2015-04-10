@@ -110,14 +110,19 @@ def get_top_people (startdate, enddate, idb):
     # SCR and SCM are the same. Don't use both for Tops
     mopeners = DataSource.get_metrics("submitters", SCR)
     tops["scr"] =  mopeners.get_list(mfilter, 0)
+    tops["scr"]["identifier"] = tops["scr"].pop("openers")
     msenders = DataSource.get_metrics("senders", MLS)
     tops["mls"] =  msenders.get_list(mfilter, 0)
+    tops["mls"]["identifier"] = tops["mls"].pop("senders")
     mopeners = DataSource.get_metrics("openers", ITS)
     tops["its"] =  mopeners.get_list(mfilter, 0)
+    tops["its"]["identifier"] = tops["its"].pop("openers")
     msenders = DataSource.get_metrics("senders", IRC)
     tops["irc"] =  msenders.get_list(mfilter, 0)
+    tops["irc"]["identifier"] = tops["irc"].pop("senders")
     mauthors = DataSource.get_metrics("authors", Mediawiki)
     tops["mediawiki"] = mauthors.get_list(mfilter, 0)
+    tops["mediawiki"]["identifier"] = tops["mediawiki"].pop("reviews")
 
     # Build the consolidated top list using all data sources data
     # Only people in all data sources is used
@@ -125,7 +130,7 @@ def get_top_people (startdate, enddate, idb):
         pos = 1
         for id in tops[ds]['id']:
             if id not in all_top: all_top[id] = []
-            all_top[id].append({"ds":ds,"pos":pos})
+            all_top[id].append({"ds":ds,"pos":pos,"identifier":tops[ds]['identifier'][pos-1]})
             pos += 1
 
     for id in all_top:
