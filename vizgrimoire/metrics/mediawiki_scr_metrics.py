@@ -54,8 +54,7 @@ class TimeToReviewPendingSCR(Metrics):
         bots = []
 
         # Review time
-        q = self.db.GetTimeToReviewPendingQuerySQL(startdate, enddate, identities_db,
-                                                   type_analysis, bots)
+        q = self.db.GetTimeToReviewPendingQuerySQL(self.filters, identities_db, bots)
         data = self.db.ExecuteQuery(q)
         data = data['revtime']
         if (isinstance(data, list) == False): data = [data]
@@ -67,8 +66,7 @@ class TimeToReviewPendingSCR(Metrics):
             ttr_avg = average(removeDecimals(data))
 
         # Review time for reviewers
-        q = self.db.GetTimeToReviewPendingQuerySQL(startdate, enddate,identities_db,
-                                                   type_analysis, bots, reviewers_pending)
+        q = self.db.GetTimeToReviewPendingQuerySQL(self.filters, identities_db, bots, reviewers_pending)
         data = self.db.ExecuteQuery(q)
         data = data['revtime']
         if (isinstance(data, list) == False): data = [data]
@@ -80,8 +78,7 @@ class TimeToReviewPendingSCR(Metrics):
             ttr_reviewers_avg = average(removeDecimals(data))
 
         # Upload time
-        q = self.db.GetTimeToReviewPendingQuerySQL (startdate, enddate,identities_db,
-                                                    type_analysis, bots, False, True)
+        q = self.db.GetTimeToReviewPendingQuerySQL (self.filters, identities_db, bots, False, True)
         data = self.db.ExecuteQuery(q)
         data = data['revtime']
         if (isinstance(data, list) == False): data = [data]
@@ -94,8 +91,7 @@ class TimeToReviewPendingSCR(Metrics):
 
 
         # Upload time for reviewers
-        q = self.db.GetTimeToReviewPendingQuerySQL (startdate, enddate, identities_db,
-                                                    type_analysis, bots, reviewers_pending, True)
+        q = self.db.GetTimeToReviewPendingQuerySQL (self.filters, identities_db, bots, reviewers_pending, True)
         data = self.db.ExecuteQuery(q)
         data = data['revtime']
         if (isinstance(data, list) == False): data = [data]

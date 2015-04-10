@@ -1503,7 +1503,7 @@ class SCRQuery(DSQuery):
     def GetSQLCountriesWhere (self, country):
         #fields necessaries to match info among tables
         filters = Set([])
-        
+
         filters.add("i.submitted_by = pup.people_id")
         filters.add("pup.uuid = pro.uuid")
         filters.add("pro.country_code = cou.code")
@@ -1568,14 +1568,24 @@ class SCRQuery(DSQuery):
 
         return filters
 
+    def GetSQLNotSummaryFrom(self):
+        tables = Set([])
+
+        tables.add("issues i")
+
+        return tables
+
+    def GetSQLNotSummaryWhere(self, value):
+        """ Remove issues with summary including value """
+        filters = Set([]) 
+
+        filters.add("i.summary not like '%"+value+"%'")
+        return filters
+
     ##########
     #Generic functions to obtain FROM and WHERE clauses per type of report
     ##########
-    def GetSQLReportFrom (self, type_analysis):
-        #generic function to generate 'from' clauses
-        #"type" is a list of two values: type of analysis and value of
-        #such analysis
-
+    def _get_from_type_analysis_set(self, type_analysis):
         From = Set([])
 
         if type_analysis is not None:
@@ -1589,13 +1599,40 @@ class SCRQuery(DSQuery):
                 elif analysis == 'project': From.union_update(self.GetSQLProjectFrom())
                 elif analysis == 'people2': From.union_update(self.GetSQLPeopleFrom())
                 elif analysis == 'autoreviews': From.union_update(self.GetSQLAutoReviewsFrom())
+                elif analysis == 'notsummary': From.union_update(self.GetSQLNotSummaryFrom())
                 else: raise Exception( analysis + " not supported in From")
 
         return From
 
-    def GetSQLReportWhere (self, type_analysis):
-        #generic function to generate 'where' clauses
 
+    def GetSQLReportFrom (self, filters):
+        #generic function to generate 'from' clauses
+        #"type" is a list of two values: type of analysis and value of
+        #such analysis
+
+        From = self._get_from_type_analysis_set(filters.type_analysis)
+
+        if filters.global_filter is not None:
+            From.union_update(self._get_from_type_analysis_set(filters.global_filter))
+
+        return From
+
+    def _get_where_global_filter_set(self, global_filter):
+        if len(global_filter) == 2:
+            fields = global_filter[0].split(MetricFilters.DELIMITER)
+            values = global_filter[1].split(MetricFilters.DELIMITER)
+            if len(fields) > 1:
+                if fields.count(fields[0]) == len(fields):
+                    # Same fields, different values, use OR
+                    global_filter = [fields[0],values]
+
+        global_where = self._get_where_type_analysis_set(global_filter)
+
+        return global_where
+
+
+    def _get_where_type_analysis_set(self, type_analysis):
+        #generic function to generate 'where' clauses
         #"type" is a list of two values: type of analysis and value of
         #such analysis
 
@@ -1632,6 +1669,7 @@ class SCRQuery(DSQuery):
                 elif analysis == 'country': where.union_update(self.GetSQLCountriesWhere(value))
                 elif analysis == 'people2': where.union_update(self.GetSQLPeopleWhere(value, "issues"))
                 elif analysis == 'autoreviews': where.union_update(self.GetSQLAutoReviewsWhere(value))
+                elif analysis == 'notsummary': where.union_update(self.GetSQLNotSummaryWhere(value))
                 elif analysis == 'project':
                     if (self.identities_db is None):
                         logging.error("project filter not supported without identities_db")
@@ -1640,17 +1678,31 @@ class SCRQuery(DSQuery):
                         where.union_update(self.GetSQLProjectWhere(value))
         return where
 
-    def GetReviewsSQL (self, period, startdate, enddate, type_, type_analysis, evolutionary):
+    def GetSQLReportWhere (self, filters):
+        #generic function to generate 'where' clauses
+
+        where = self._get_where_type_analysis_set(filters.type_analysis)
+
+        if filters.global_filter is not None:
+            where.union_update(self._get_where_global_filter_set(filters.global_filter))
+
+        return where
+
+    def GetReviewsSQL (self, type_, mfilter, evolutionary):
         #Building the query
         fields = Set([])
         tables = Set([])
         filters = Set([])
+        period =  mfilter.period
+        startdate = mfilter.startdate
+        enddate = mfilter.enddate
+        type_analysis = mfilter.type_analysis
 
         fields.add("count(distinct(i.issue)) as " + type_)
 
         tables.add("issues i")
         tables.add("issues_ext_gerrit ie")
-        tables.union_update(self.GetSQLReportFrom(type_analysis))
+        tables.union_update(self.GetSQLReportFrom(mfilter))
 
         if type_ == "submitted": filters = Set([])
         elif type_ == "opened": filters.add("(i.status = 'NEW' or i.status = 'WORKINPROGRESS')")
@@ -1659,7 +1711,7 @@ class SCRQuery(DSQuery):
         elif type_ == "closed": filters.add("(i.status = 'MERGED' or i.status = 'ABANDONED')")
         elif type_ == "merged": filters.add("i.status = 'MERGED'")
         elif type_ == "abandoned": filters.add("i.status = 'ABANDONED'")
-        filters.union_update(self.GetSQLReportWhere(type_analysis))
+        filters.union_update(self.GetSQLReportWhere(mfilter))
         filters.add("i.id = ie.issue_id")
 
         if (self.GetIssuesFiltered() != ""): filters.add(self.GetIssuesFiltered())
@@ -1693,20 +1745,25 @@ class SCRQuery(DSQuery):
         return q
 
     # Reviews status using changes table
-    def GetReviewsChangesSQL (self, period, startdate, enddate, type_, type_analysis, 
-                              evolutionary):
+    def GetReviewsChangesSQL (self, type_, mfilter, evolutionary):
         fields = Set([])
         tables = Set([])
         filters = Set([])
+
+        period =  mfilter.period
+        startdate = mfilter.startdate
+        enddate = mfilter.enddate
+        type_analysis = mfilter.type_analysis
+
 
         fields.add("count(issue_id) as "+ type_+ "_changes")
         # TODO: warning -> using the same acronym "c" as in organizations or countries
         tables.add("changes c")
         tables.add("issues i")
-        tables.union_update(self.GetSQLReportFrom(type_analysis))
+        tables.union_update(self.GetSQLReportFrom(mfilter))
         filters.add("c.issue_id = i.id")
         filters.add("new_value = '"+type_+"'")
-        filters.union_update(self.GetSQLReportWhere(type_analysis))
+        filters.union_update(self.GetSQLReportWhere(mfilter))
 
         q = self.BuildQuery (period, startdate, enddate, "changed_on", fields, tables, filters, evolutionary)
 
@@ -1714,7 +1771,7 @@ class SCRQuery(DSQuery):
 
         return q
 
-    def GetEvaluationsSQL (self, period, startdate, enddate, type_, type_analysis, evolutionary):
+    def GetEvaluationsSQL (self, type_, mfilter, evolutionary):
         # verified - VRIF
         # approved - APRV
         # code review - CRVW
@@ -1725,25 +1782,36 @@ class SCRQuery(DSQuery):
         tables = Set([])
         filters = Set([])
 
+        period =  mfilter.period
+        startdate = mfilter.startdate
+        enddate = mfilter.enddate
+        type_analysis = mfilter.type_analysis
+
         fields.add("count(distinct(c.id)) as " + type_)
         tables.add("changes c")
         tables.add("issues i")
-        tables.union_update(self.GetSQLReportFrom(type_analysis))
+        tables.union_update(self.GetSQLReportFrom(mfilter))
         if type_ == "verified": filters.add("(c.field = 'VRIF' OR c.field = 'Verified')")
         elif type_ == "approved": filters.add("c.field = 'APRV'")
         elif type_ == "codereview": filters.add("(c.field = 'CRVW' OR c.field = 'Code-Review')")
         elif type_ == "sent": filters.add("c.field = 'SUBM'")
         filters.add("i.id = c.issue_id")
-        filters.union_update(self.GetSQLReportWhere(type_analysis))
+        filters.union_update(self.GetSQLReportWhere(mfilter))
 
         q = self.BuildQuery (period, startdate, enddate, "c.changed_on",
                              fields, tables, filters, evolutionary)
         return q
 
-    def GetWaiting4ReviewerSQL (self, period, startdate, enddate, type_analysis, evolutionary):
+    def GetWaiting4ReviewerSQL (self, mfilter, evolutionary):
         fields = Set([])
         tables = Set([])
         filters = Set([])
+
+        period =  mfilter.period
+        startdate = mfilter.startdate
+        enddate = mfilter.enddate
+        type_analysis = mfilter.type_analysis
+
 
         fields.add("count(distinct(c.id)) as WaitingForReviewer")
         tables.add("changes c")
@@ -1756,22 +1824,27 @@ class SCRQuery(DSQuery):
                        where c.issue_id = i.id and
                              i.status='NEW'
                        group by c.issue_id, c.old_value) t1""")
-        tables.union_update(self.GetSQLReportFrom(type_analysis))
+        tables.union_update(self.GetSQLReportFrom(mfilter))
 
         filters.add("i.id = c.issue_id")
         filters.add("t1.id = c.id")
         filters.add("(c.field='CRVW' or c.field='Code-Review' or c.field='Verified' or c.field='VRIF')")
         filters.add("(c.new_value=1 or c.new_value=2)")
-        filters.union_update(self.GetSQLReportWhere(type_analysis))
+        filters.union_update(self.GetSQLReportWhere(mfilter))
 
         q = self.BuildQuery (period, startdate, enddate, "c.changed_on",
                              fields, tables, filters, evolutionary)
         return q
 
-    def GetWaiting4SubmitterSQL (self, period, startdate, enddate, type_analysis, evolutionary):
+    def GetWaiting4SubmitterSQL (self, mfilter, evolutionary):
         fields = Set([])
         tables = Set([])
         filters = Set([])
+
+        period =  mfilter.period
+        startdate = mfilter.startdate
+        enddate = mfilter.enddate
+        type_analysis = mfilter.type_analysis
 
         fields.add("count(distinct(c.id)) as WaitingForSubmitter")
         tables.add("changes c")
@@ -1784,22 +1857,28 @@ class SCRQuery(DSQuery):
                        where c.issue_id = i.id and
                              i.status='NEW'
                        group by c.issue_id, c.old_value) t1""")
-        tables.union_update(self.GetSQLReportFrom(type_analysis))
+        tables.union_update(self.GetSQLReportFrom(mfilter))
         filters.add("i.id = c.issue_id")
         filters.add("t1.id = c.id")
         filters.add("(c.field='CRVW' or c.field='Code-Review' or c.field='Verified' or c.field='VRIF')")
         filters.add("(c.new_value=-1 or c.new_value=-2)")
-        filters.union_update(self.GetSQLReportWhere(type_analysis))
+        filters.union_update(self.GetSQLReportWhere(mfilter))
 
         q = self.BuildQuery (period, startdate, enddate, "c.changed_on",
                              fields, tables, filters, evolutionary)
         return q
 
     # Real reviews spend >1h, are not autoreviews, and bots are filtered out.
-    def GetTimeToReviewQuerySQL (self, startdate, enddate, type_analysis = [], bots = []):
+    def GetTimeToReviewQuerySQL (self, mfilter, bots = []):
         fields = Set([])
         tables = Set([])
         filters = Set([])
+
+        period =  mfilter.period
+        startdate = mfilter.startdate
+        enddate = mfilter.enddate
+        type_analysis = mfilter.type_analysis
+
 
         filter_bots = ''
         for bot in bots:
@@ -1811,18 +1890,18 @@ class SCRQuery(DSQuery):
         # be close to the actual changeset submission
         fields.add("TIMESTAMPDIFF(SECOND, ch_ext.changed_on, ch.changed_on)/(24*3600) AS revtime")
         fields.add("ch.changed_on")
-        
+
         tables.add("issues i")
         tables.add("changes ch")
         tables.add("changes ch_ext, people")
-        tables.union_update(self.GetSQLReportFrom(type_analysis))
+        tables.union_update(self.GetSQLReportFrom(mfilter))
 
         filters.add("i.id = ch.issue_id")
         filters.add("people.id = ch.changed_by")
         filters.add("i.id = ch_ext.issue_id")
         filters.add("ch_ext.field = 'Upload'")
         filters.add("ch_ext.old_value = 1")
-        filters.union_update(self.GetSQLReportWhere(type_analysis))
+        filters.union_update(self.GetSQLReportWhere(mfilter))
         filters.add("ch.field = 'status'")
         filters.add("ch.new_value='MERGED'")
         filters.add("summary not like '%WIP%'")
@@ -1841,9 +1920,12 @@ class SCRQuery(DSQuery):
         return q
 
     # Time to review accumulated for pending submissions using submit date or update date
-    def GetTimeToReviewPendingQuerySQL (self, startdate, enddate, identities_db = None,
-                                        type_analysis = [], bots = [],
+    def GetTimeToReviewPendingQuerySQL (self, mfilter, identities_db = None, bots = [],
                                         reviewers = False, uploaded = False):
+        period =  mfilter.period
+        startdate = mfilter.startdate
+        enddate = mfilter.enddate
+        type_analysis = mfilter.type_analysis
 
         filter_bots = ''
         for bot in bots:

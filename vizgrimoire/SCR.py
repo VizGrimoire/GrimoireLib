@@ -135,6 +135,7 @@ class SCR(DataSource):
         for item in all_metrics:
             if item.id not in metrics_on: continue
             mfilter_orig = item.filters
+            mfilter.global_filter = mfilter_orig.global_filter
             item.filters = mfilter
             if not evol: mvalue = item.get_agg()
             else:        mvalue = item.get_ts()
