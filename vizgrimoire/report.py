@@ -246,6 +246,7 @@ class Report(object):
                 Report._on_studies.append(study_class)
         #  logging.info("Total studies: " + str(len(Report._on_studies)))
 
+
     @staticmethod
     def get_config():
         return Report._automator

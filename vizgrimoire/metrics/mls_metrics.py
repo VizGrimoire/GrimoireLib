@@ -175,7 +175,7 @@ class EmailsSenders(Metrics):
             "  m.first_date >= "+startdate+" AND "+\
             "  m.first_date < "+enddate+\
             " GROUP BY up.identifier "+\
-            " ORDER BY COUNT(DISTINCT(m.message_ID)) DESC LIMIT "+ str(limit)
+            " ORDER BY COUNT(DISTINCT(m.message_ID)) DESC, senders LIMIT "+ str(limit)
         data = self.db.ExecuteQuery(q)
         return (data)
 
@@ -604,7 +604,6 @@ class Countries(Metrics):
                 "  m.first_date < "+self.filters.enddate+" "+\
                 "GROUP BY cou.name "+\
                 "ORDER BY COUNT((m.message_ID)) DESC, cou.name "
-        print q
         data = self.db.ExecuteQuery(q)
         return(data['name'])
 

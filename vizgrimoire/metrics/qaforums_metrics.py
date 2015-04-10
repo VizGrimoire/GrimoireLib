@@ -268,6 +268,7 @@ class Participants(Metrics):
 
         return self.db.ExecuteQuery(query)
 
+
 class Tags(Metrics):
     """Tags used in QAForum """
 

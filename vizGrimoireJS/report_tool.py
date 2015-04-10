@@ -192,7 +192,6 @@ def create_people_identifiers(startdate, enddate, destdir, npeople, identities_d
         people_data[upeople_id] = People.GetPersonIdentifiers(identities_db, upeople_id)
 
     all_top_min_ds = get_top_people(startdate, enddate, identities_db)
-    # print(all_top_min_ds)
 
     db = automator['generic']['db_cvsanaly']
     SetDBChannel (database=db, user=opts.dbuser, password=opts.dbpassword)

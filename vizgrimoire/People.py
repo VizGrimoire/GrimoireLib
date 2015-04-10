@@ -20,18 +20,27 @@
 from vizgrimoire.GrimoireSQL import ExecuteQuery
 
 def GetPersonIdentifiers (identities_db, upeople_id):
+    """ Get people, company and country information """
+    res = None
     q = """
-        SELECT i.name, email, username, cou.name as country, org.name as affiliation, up.identifier
-        FROM %s.uidentities up, %s.identities i,
-             %s.organizations org, %s.enrollments enr,
-             %s.countries cou, %s.nationalities nat
-        WHERE up.uuid ='%s' AND
-            up.uuid = i.uuid AND
-            enr.uuid= up.uuid AND
-            org.id = enr.organization_id AND
-            nat.uuid= up.uuid AND
-            cou.id = nat.country_id
-        """ % (identities_db, identities_db, identities_db,
-               identities_db, identities_db, identities_db, 
+        SELECT pro.uuid, pro.name, pro.email, cou.name as country,
+               org.name as affiliation
+        FROM %s.profiles pro
+        JOIN %s.enrollments enr ON enr.uuid= pro.uuid
+        JOIN %s.organizations org ON org.id = enr.organization_id
+        LEFT JOIN %s.countries cou ON cou.code = pro.country_code
+        WHERE pro.uuid ='%s'
+        """ % (identities_db, identities_db, identities_db, identities_db,
                upeople_id)
-    return (ExecuteQuery(q))
+    try:
+        res = ExecuteQuery(q)
+    except:
+        # No organizations. Just people data and country data.
+        q = """
+            SELECT pro.uuid, pro.name, pro.email, cou.name as country
+            FROM %s.profiles pro
+            LEFT JOIN %s.countries cou ON cou.code = pro.country_code
+            WHERE pro.uuid ='%s'
+            """ % (identities_db, identities_db, upeople_id)
+        res = ExecuteQuery(q)
+    return res

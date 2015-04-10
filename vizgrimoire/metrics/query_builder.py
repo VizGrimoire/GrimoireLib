@@ -246,6 +246,12 @@ class DSQuery(object):
     def get_subprojects(self, project):
         """ Return all subprojects ids for a project in a string join by comma """
 
+        if project[0] == "'" and project[len(project) - 1] == "'":
+            # TODO: this method shouldn't care this issue.
+            #       This needs to be checked in the type_analysis builder
+            #       or in the final query builder
+            project = project.replace("'", "")
+
         q = "SELECT project_id from %s.projects WHERE id='%s'" % (self.projects_db, project)
         project_id = self.ExecuteQuery(q)['project_id']
 
@@ -2095,15 +2101,15 @@ class IRCQuery(DSQuery):
         fields = Set([])
         # TODO: channels c should be changed to channels ch
         #       c is typically used for organizations table
-        fields.add("channels c")
+        fields.add("channels chan")
 
         return fields
 
     def GetSQLRepositoriesWhere(self, repository):
         # filters necessaries for repositories
         filters = Set([])
-        filters.add("i.channel_id = c.id")
-        filters.add("c.name = " + repository)
+        filters.add("i.channel_id = chan.id")
+        filters.add("chan.name = " + repository)
 
         return filters
 
@@ -2166,6 +2172,28 @@ class IRCQuery(DSQuery):
 
         return filters
 
+    def GetSQLPublicFrom(self):
+        # tables necessary to public channels analysis
+        tables = Set([])
+        tables.add("channels chan")
+        return tables
+
+    def GetSQLPublicWhere(self, value):
+        # filters necessary to public channels analysis
+        filters = Set([])
+        filters.add("i.channel_id = chan.id")
+        filters.add("chan.public = " + value)
+
+        return filters
+
+    def GetSQLPeople2From(self):
+        # tables necessary to countries analysis
+        tables = Set([])
+        tables.add("people_uidentities pup")
+        tables.add(self.identities_db + ".uidentities up")
+
+        return tables
+
     def GetSQLPeople2From(self):
         # tables necessary to countries analysis
         tables = Set([])
@@ -2195,42 +2223,96 @@ class IRCQuery(DSQuery):
 
         return filters
 
-    def GetSQLReportFrom(self, type_analysis):
-        #generic function to generate 'from' clauses
-        #"type" is a list of two values: type of analysis and value of 
-        #such analysis
-
+    def _get_from_type_analysis_set(self, type_analysis):
         From = Set([])
 
-        if (type_analysis is None or len(type_analysis) != 2): return From
+        if type_analysis is not None and len(type_analysis)>1:
+            # To be improved... not a very smart way of doing this
+            list_analysis = type_analysis[0].split(MetricFilters.DELIMITER)
 
-        analysis = type_analysis[0]
+            # Retrieving tables based on the required type of analysis.
+            for analysis in list_analysis:
+                if analysis == 'repository': From.union_update(self.GetSQLRepositoriesFrom())
+                elif analysis == 'company': From.union_update(self.GetSQLCompaniesFrom())
+                elif analysis == 'country': From.union_update(self.GetSQLCountriesFrom())
+                elif analysis == 'domain': From.union_update(self.GetSQLDomainsFrom())
+                elif analysis == 'people2': From.union_update(self.GetSQLPeople2From())
+                elif analysis == 'public': From.union_update(self.GetSQLPublicFrom())
+        return From
 
-        if analysis == 'repository': From.union_update(self.GetSQLRepositoriesFrom())
-        elif analysis == 'company': From.union_update(self.GetSQLCompaniesFrom())
-        elif analysis == 'country': From.union_update(self.GetSQLCountriesFrom())
-        elif analysis == 'domain': From.union_update(self.GetSQLDomainsFrom())
-        elif analysis == 'people2': From.union_update(self.GetSQLPeople2From())
+
+    def GetSQLReportFrom (self, filters):
+        #generic function to generate 'from' clauses
+        #"type" is a list of two values: type of analysis and value of
+        #such analysis
+
+        From = self._get_from_type_analysis_set(filters.type_analysis)
+
+        if filters.global_filter is not None:
+            From.union_update(self._get_from_type_analysis_set(filters.global_filter))
 
         return From
 
-    def GetSQLReportWhere (self, type_analysis):
-        #generic function to generate 'where' clauses
-        #"type" is a list of two values: type of analysis and value of 
-        #such analysis
+    def _get_where_global_filter_set(self, global_filter):
+        if len(global_filter) == 2:
+            fields = global_filter[0].split(MetricFilters.DELIMITER)
+            values = global_filter[1].split(MetricFilters.DELIMITER)
+            if len(fields) > 1:
+                if fields.count(fields[0]) == len(fields):
+                    # Same fields, different values, use OR
+                    global_filter = [fields[0],values]
 
+        global_where = self._get_where_type_analysis_set(global_filter)
+
+        return global_where
+
+
+    def _get_where_type_analysis_set(self, type_analysis):
+        #"type" is a list of two values: type of analysis and value of
+        #such analysis
         where = Set([])
 
-        if (type_analysis is None or len(type_analysis) != 2): return where
+        if type_analysis is not None and len(type_analysis)>1:
+            analysis = type_analysis[0]
+            values = type_analysis[1]
 
-        analysis = type_analysis[0]
-        value = type_analysis[1]
+            if values is not None:
+                if type(values) is str:
+                    # To be improved... not a very smart way of doing this...
+                    list_values = values.split(MetricFilters.DELIMITER)
+                elif type(values) is list:
+                    # On item or list of lists. Unify to list of lists
+                    list_values = values
+                    if list_values[0] is not list:
+                        list_values = [list_values]
+            else:
+                list_values = None
 
-        if analysis == 'repository': where.union_update(self.GetSQLRepositoriesWhere(value))
-        elif analysis == 'company': where.union_update(self.GetSQLCompaniesWhere(value))
-        elif analysis == 'country': where.union_update(self.GetSQLCountriesWhere(value))
-        elif analysis == 'domain': where.union_update(self.GetSQLDomainsWhere(value))
-        elif analysis == 'people2': where.union_update(self.GetSQLPeople2Where(value))
+            list_analysis = type_analysis[0].split(MetricFilters.DELIMITER)
+
+            pos = 0
+            for analysis in list_analysis:
+                if list_values is not None:
+                    value = list_values[pos]
+                else:
+                    value = None
+
+                if analysis == 'repository': where.union_update(self.GetSQLRepositoriesWhere(value))
+                elif analysis == 'company': where.union_update(self.GetSQLCompaniesWhere(value))
+                elif analysis == 'country': where.union_update(self.GetSQLCountriesWhere(value))
+                elif analysis == 'domain': where.union_update(self.GetSQLDomainsWhere(value))
+                elif analysis == 'people2': where.union_update(self.GetSQLPeople2Where(value))
+                elif analysis == 'public': where.union_update(self.GetSQLPublicWhere(value))
+                pos += 1
+        return where
+
+    def GetSQLReportWhere (self, filters):
+        #generic function to generate 'where' clauses
+
+        where = self._get_where_type_analysis_set(filters.type_analysis)
+
+        if filters.global_filter is not None:
+            where.union_update(self._get_where_global_filter_set(filters.global_filter))
 
         return where
 
@@ -2687,7 +2769,7 @@ class PullpoQuery(DSQuery):
         filters = Set([])
 
         repos = """re.url IN (
-               SELECT re.name
+               SELECT prep.repository_name
                FROM   %s.projects p, %s.project_repositories prep
                WHERE  p.project_id = prep.project_id AND p.project_id IN (%s)
                    AND prep.data_source='pullpo'
@@ -2869,4 +2951,82 @@ class PullpoQuery(DSQuery):
             startdate = enddate
 
         return data
+
+
+class EventizerQuery(DSQuery):
+
+    # Groups conditions
+    def GetSQLGroupsFrom(self):
+        tables = Set([])
+        tables.add("events eve")
+        tables.add("groups gro")
+        return tables
+
+    def GetSQLGroupsWhere(self, value):
+        filters = Set([])
+        filters.add("eve.group_id = gro.id")
+        filters.add("gro.name = " + value)
+        return filters
+
+    # Categories conditions
+    def GetSQLCategoriesFrom(self):
+        tables = Set([])
+        tables.add("events eve")
+        tables.add("groups gro")
+        tables.add("categories cat")
+        return tables
+
+    def GetSQLCategoriesWhere(self, value):
+        filters = Set([])
+        filters.add("eve.group_id = gro.id")
+        filters.add("gro.category_id = cat.id")
+        filters.add("cat.name = " + value)
+        return filters
+
+    # Cities conditions
+    def GetSQLCitiesFrom(self):
+        tables = Set([])
+        tables.add("events eve")
+        tables.add("cities cit")
+        return tables
+
+    def GetSQLCitiesWhere(self, value):
+        filters = Set([])
+        filters.add("eve.city_id = cit.id")
+        filters.add("cit.city = " + value)
+        return filters
+
+    # Generic query builders
+    def GetSQLReportFrom(self, filters):
+        type_analysis = filters.type_analysis
+        From = Set([])
+
+        if type_analysis is not None:
+            # To be improved... not a very smart way of doing this
+            list_analysis = type_analysis[0].split(MetricFilters.DELIMITER)
+            analysis = type_analysis[0]
+            # Retrieving tables based on the required type of analysis.
+            for analysis in list_analysis:
+                if analysis == 'group': From.union_update(self.GetSQLGroupsFrom())
+                elif analysis == 'category': From.union_update(self.GetSQLCategoriesFrom())
+                elif analysis == 'city': From.union_update(self.GetSQLCitiesFrom())
+
+        return From
+
+    def GetSQLReportWhere(self, filters):
+        type_analysis = filters.type_analysis
+        where = Set([])
+
+        if type_analysis is not None:
+            # To be improved... not a very smart way of doing this
+            list_analysis = type_analysis[0].split(MetricFilters.DELIMITER)
+            list_values = type_analysis[1].split(MetricFilters.DELIMITER)
+            # Retrieving tables based on the required type of analysis.
+            for analysis in list_analysis:
+                value = list_values[list_analysis.index(analysis)]
+                if analysis == 'group': where.union_update(self.GetSQLGroupsWhere(value))
+                elif analysis == 'category': where.union_update(self.GetSQLCategoriesWhere(value))
+                elif analysis == 'city': where.union_update(self.GetSQLCitiesWhere(value))
+
+        return where
 
