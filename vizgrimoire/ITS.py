@@ -33,7 +33,6 @@ from vizgrimoire.GrimoireUtils import createJSON
 from vizgrimoire.metrics.metrics_filter import MetricFilters
 
 from vizgrimoire.metrics.query_builder import ITSQuery
-import vizgrimoire.report
 from vizgrimoire.data_source import DataSource
 from vizgrimoire.filter import Filter
 
