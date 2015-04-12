@@ -207,7 +207,7 @@ class Query (GrimoireQuery):
         """
 
         query = self.add_columns (label("person_id", DB.UIdentities.uuid),
-                                  label("name", DB.UIdentities.uuid))
+                                  label("name", DB.UIdentities.identifier))
         self.joined.append (DB.UIdentities)
         if kind == "senders":
             if DB.PeopleUIdentities not in self.joined:
