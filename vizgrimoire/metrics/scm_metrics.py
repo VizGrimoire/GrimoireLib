@@ -42,6 +42,62 @@ from vizgrimoire.SCM import SCM
 from sets import Set
 
 
+class InitialActivity(Metrics):
+    """ For the given dates of activity, this returns the first trace found
+    """
+
+    id = "first_date"
+    name = "First activity date"
+    desc = "First commit between the two provided dates"
+    data_source = SCM
+
+    def get_agg(self):
+        fields = Set([])
+        tables = Set([])
+        filters = Set([])
+
+        fields.add("DATE_FORMAT(min(s.author_date),'%Y-%m-%d') as first_date")
+
+        tables.add("scmlog s")
+        tables.union_update(self.db.GetSQLReportFrom(self.filters))
+
+        filters.union_update(self.db.GetSQLReportWhere(self.filters))
+
+        query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
+                                   self.filters.enddate, "s.author_date", fields,
+                                   tables, filters, False,
+                                   self.filters.type_analysis)
+        return self.db.ExecuteQuery(query)
+
+class EndOfActivity(Metrics):
+    """ For the given dates of activity, this returns the last trace found
+    """
+
+    id = "last_date"
+    name = "Last activity date"
+    desc = "Last commit between the two provided dates"
+    data_source = SCM
+
+    def get_agg(self):
+        fields = Set([])
+        tables = Set([])
+        filters = Set([])
+
+        fields.add("DATE_FORMAT(max(s.author_date),'%Y-%m-%d') as last_date")
+
+        tables.add("scmlog s")
+        tables.union_update(self.db.GetSQLReportFrom(self.filters))
+
+        filters.union_update(self.db.GetSQLReportWhere(self.filters))
+
+        query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
+                                   self.filters.enddate, "s.author_date", fields,
+                                   tables, filters, False,
+                                   self.filters.type_analysis)
+
+        return self.db.ExecuteQuery(query)
+
+
 class Commits(Metrics):
     """ Commits metric class for source code management systems """
 
