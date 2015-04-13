@@ -78,16 +78,26 @@ class DataSource(object):
     @classmethod
     def get_date_init(cls, startdate, enddate, identities_db, type_analysis):
         """Get the date of the first activity in the data source"""
+        dinit = None
         first_date = cls.get_metrics("first_date", cls)
-        if first_date is None: return None
-        return first_date.get_agg()
+        if first_date is not None:
+            type_analysis_orig = first_date.filters.type_analysis
+            first_date.filters.type_analysis = type_analysis
+            dinit = first_date.get_agg()
+            first_date.filters.type_analysis = type_analysis_orig
+        return dinit
 
     @classmethod
     def get_date_end(cls, startdate, enddate, identities_db, type_analysis):
         """Get the date of the last activity in the data source"""
+        dlast = None
         last_date = cls.get_metrics("last_date", cls)
-        if last_date is None: return None
-        return last_date.get_agg()
+        if last_date is not None:
+            type_analysis_orig = last_date.filters.type_analysis
+            last_date.filters.type_analysis = type_analysis
+            dlast = last_date.get_agg()
+            last_date.filters.type_analysis = type_analysis_orig
+        return dlast
 
     @staticmethod
     def get_url():
@@ -419,7 +429,12 @@ class DataSource(object):
             init_date = DS.get_date_init(startdate, enddate, identities_db, type_analysis)
             end_date = DS.get_date_end(startdate, enddate, identities_db, type_analysis)
 
-            # TODO: grouped items metrics support
+            if type_analysis and type_analysis[1] is None:
+                init_date = fill_and_order_items(items, init_date, "name",
+                                                 evol, period, startdate, enddate)
+                end_date = fill_and_order_items(items, end_date, "name",
+                                                evol, period, startdate, enddate)
+
             data = dict(data.items() + init_date.items() + end_date.items())
 
             # Tendencies

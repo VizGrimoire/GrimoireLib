@@ -286,6 +286,33 @@ class SCM(DataSource):
 
 
     @staticmethod
+    def create_filter_report_top(filter_, period, startdate, enddate, destdir, npeople, identities_db):
+        from vizgrimoire.report import Report
+        items = Report.get_items()
+        if items is None:
+            items = SCM.get_filter_items(filter_, startdate, enddate, identities_db)
+            if (items == None): return
+            items = items['name']
+
+        filter_name = filter_.get_name()
+
+        if not isinstance(items, (list)):
+            items = [items]
+
+        fn = os.path.join(destdir, filter_.get_filename(SCM()))
+        createJSON(items, fn)
+
+        for item in items :
+            item_name = "'"+ item+ "'"
+            logging.info (item_name)
+            filter_item = Filter(filter_name, item)
+
+            if filter_name in ("company","project","repository"):
+                top_authors = SCM.get_top_data(startdate, enddate, identities_db, filter_item, npeople)
+                fn = os.path.join(destdir, filter_item.get_top_filename(SCM()))
+                createJSON(top_authors, fn)
+
+    @staticmethod
     def create_filter_report(filter_, period, startdate, enddate, destdir, npeople, identities_db):
         from vizgrimoire.report import Report
         items = Report.get_items()
@@ -325,10 +352,7 @@ class SCM(DataSource):
                 items_list['commits_365'].append(agg['commits_365'])
                 items_list['authors_365'].append(agg['authors_365'])
 
-            if filter_name in ("company","project","repository"):
-                top_authors = SCM.get_top_data(startdate, enddate, identities_db, filter_item, npeople)
-                fn = os.path.join(destdir, filter_item.get_top_filename(SCM()))
-                createJSON(top_authors, fn)
+        SCM.create_filter_report_top(filter_, period, startdate, enddate, destdir, npeople, identities_db)
 
         fn = os.path.join(destdir, filter_.get_filename(SCM()))
         createJSON(items_list, fn)
@@ -382,26 +406,32 @@ class SCM(DataSource):
     @staticmethod
     def convert_all_to_single(data, filter_, destdir, evolutionary):
         """ Convert a GROUP BY result to follow tradition individual JSON files """
-        # First create the JSON with the list of items
-        item_list = {}
-        fn = os.path.join(destdir, filter_.get_filename(SCM))
-        fields = ["authors_365","name","commits_365"]
-        for field in fields:
-            item_list[field] = data[field]
-        createJSON(item_list, fn)
-        if evolutionary:
-            pass
-        else:
-            for i in range(0,len(data['name'])):
-                item_metrics = {}
-                for metric in data:
-                    if metric == "name": continue
-                    print metric
-                    print data[metric]
-                    item_metrics[metric] = data[metric][i]
-                print item_metrics
-        raise
-        # Then generate per item JSON files
+        if not evolutionary:
+            # First create the JSON with the list of items
+            item_list = {}
+            fn = os.path.join(destdir, filter_.get_filename(SCM))
+            fields = ["authors_365","name","commits_365"]
+            for field in fields:
+                item_list[field] = data[field]
+            createJSON(item_list, fn)
+        # Items files
+        ts_fields = ['unixtime','id','date','month']
+        for i in range(0,len(data['name'])):
+            item_metrics = {}
+            item = data['name'][i]
+            for metric in data:
+                if metric == "name": continue
+                if metric in ts_fields: continue
+                item_metrics[metric] = data[metric][i]
+            filter_item = Filter(filter_.get_name(), item)
+            if evolutionary:
+                for field in ts_fields:
+                    # Shared time series fields
+                    item_metrics[field] = data[field]
+                fn = os.path.join(destdir, filter_item.get_evolutionary_filename(SCM()))
+            else:
+                fn = os.path.join(destdir, filter_item.get_static_filename(SCM()))
+            createJSON(item_metrics, fn)
 
     @staticmethod
     def create_filter_report_all(filter_, period, startdate, enddate, destdir, npeople, identities_db):
@@ -412,6 +442,19 @@ class SCM(DataSource):
         # Change filter to GrimoireLib notation
         filter_name = filter_name.replace("+", MetricFilters.DELIMITER)
 
+        # This report is created per item, not using GROUP BY yet
+        SCM.create_filter_report_top(filter_, period, startdate, enddate, destdir, npeople, identities_db)
+
+        # Studies report for filters
+        if (filter_name == "company"):
+            ds = SCM
+            summary =  SCM.get_filter_summary(filter_, period, startdate, enddate, identities_db, 10)
+            createJSON (summary, destdir+"/"+ filter_.get_summary_filename(SCM))
+            # Perform ages study, if it is specified in Report
+            SCM.ages_study_com (Report, ds, items, period,
+                                startdate, enddate, destdir)
+
+        # Filters metrics computed using GROUP BY queries
         if filter_name in ["people2","company","company"+MetricFilters.DELIMITER+"country",
                            "country","repository","domain"] :
             filter_all = Filter(filter_name, None)
@@ -425,6 +468,7 @@ class SCM(DataSource):
                                                  identities_db, filter_all)
             fn = os.path.join(destdir, filter_.get_evolutionary_filename_all(SCM()))
             createJSON(evol_all, fn)
+            SCM.convert_all_to_single(evol_all, filter_, destdir, True)
 
             # check is only done fpr basic filters. Composed should work if basic does.
             if check and not "," in filter_name:

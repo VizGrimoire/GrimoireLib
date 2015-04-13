@@ -72,7 +72,6 @@ class InitialActivity(Metrics):
 class EndOfActivity(Metrics):
     """ For the given dates of activity, this returns the last trace found
     """
-
     id = "last_date"
     name = "Last activity date"
     desc = "Last commit between the two provided dates"
