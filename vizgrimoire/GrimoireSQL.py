@@ -24,6 +24,7 @@
 import MySQLdb
 import logging
 import re, sys
+from vizgrimoire.metrics.query_builder import DSQuery
 
 
 # global vars to be moved to specific classes
@@ -38,57 +39,16 @@ dbpool = {}
 # TODO: regexpr not adapted yet from R to Python
 
 
-def GetSQLGlobal(date, fields, tables, filters, start, end):
-    sql = 'SELECT '+ fields
-    sql += ' FROM '+ tables
-    sql += ' WHERE '+date+'>='+start+' AND '+date+'<'+end
-    reg_and = re.compile("^[ ]*and", re.IGNORECASE)
-    if (filters != ""):
-        if (reg_and.match (filters.lower())) is not None: sql += " " + filters
-        else: sql += ' AND '+filters
+def GetSQLGlobal(date, fields, tables, filters, start, end,
+                 type_analysis = None):
+    all_items = DSQuery.get_all_items(type_analysis)
+    return DSQuery.GetSQLGlobal(date, fields, tables, filters, start, end, all_items)
     return(sql)
 
-def GetSQLPeriod(period, date, fields, tables, filters, start, end):
-    # kind = ['year','month','week','day']
-    iso_8601_mode = 3
-    if (period == 'day'):
-        # Remove time so unix timestamp is start of day    
-        sql = 'SELECT UNIX_TIMESTAMP(DATE('+date+')) AS unixtime, '
-    elif (period == 'week'):
-        sql = 'SELECT YEARWEEK('+date+','+str(iso_8601_mode)+') AS week, '
-    elif (period == 'month'):
-        sql = 'SELECT YEAR('+date+')*12+MONTH('+date+') AS month, '
-    elif (period == 'year'):
-        sql = 'SELECT YEAR('+date+')*12 AS year, '
-    else:
-        logging.error("PERIOD: "+period+" not supported")
-        sys.exit(1)
-    # sql = paste(sql, 'DATE_FORMAT (',date,', \'%d %b %Y\') AS date, ')
-    sql += fields
-    sql += ' FROM ' + tables
-    sql = sql + ' WHERE '+date+'>='+start+' AND '+date+'<'+end
-    reg_and = re.compile("^[ ]*and", re.IGNORECASE)
-
-    if (filters != ""):
-        if (reg_and.match (filters.lower())) is not None: sql += " " + filters
-        else: sql += ' AND ' + filters
-
-    if (period == 'year'):
-        sql += ' GROUP BY YEAR('+date+')'
-        sql += ' ORDER BY YEAR('+date+')'
-    elif (period == 'month'):
-        sql += ' GROUP BY YEAR('+date+'),MONTH('+date+')'
-        sql += ' ORDER BY YEAR('+date+'),MONTH('+date+')'
-    elif (period == 'week'):
-        sql += ' GROUP BY YEARWEEK('+date+','+str(iso_8601_mode)+')'
-        sql += ' ORDER BY YEARWEEK('+date+','+str(iso_8601_mode)+')'
-    elif (period == 'day'):
-        sql += ' GROUP BY YEAR('+date+'),DAYOFYEAR('+date+')'
-        sql += ' ORDER BY YEAR('+date+'),DAYOFYEAR('+date+')'
-    else:
-        logging.error("PERIOD: "+period+" not supported")
-        sys.exit(1)
-    return(sql)
+def GetSQLPeriod(period, date, fields, tables, filters, start, end,
+                 type_analysis = None):
+    all_items = DSQuery.get_all_items(type_analysis)
+    return DSQuery.GetSQLPeriod(period, date, fields, tables, filters, start, end, all_items)
 
 ############
 #Generic functions to check evolutionary or static info and for the execution of the final query
