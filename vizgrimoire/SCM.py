@@ -47,22 +47,6 @@ class SCM(DataSource):
         return "scm"
 
     @staticmethod
-    def get_date_init(startdate, enddate, identities_db = None, type_analysis = None):
-        fields = "DATE_FORMAT (min(s.author_date), '%Y-%m-%d') as first_date"
-        tables = "scmlog s"
-        filters = ""
-        q = GetSQLGlobal('s.author_date',fields, tables, filters, startdate, enddate)
-        return ExecuteQuery(q)
-
-    @staticmethod
-    def get_date_end(startdate, enddate, identities_db = None, type_analysis = None):
-        fields = "DATE_FORMAT (max(s.author_date), '%Y-%m-%d') as last_date"
-        tables = "scmlog s"
-        filters = ""
-        q = GetSQLGlobal('s.author_date',fields, tables, filters, startdate, enddate)
-        return ExecuteQuery(q)
-
-    @staticmethod
     def get_url():
         q = "select uri as url,type from repositories limit 1"
         return (ExecuteQuery(q))
@@ -396,6 +380,30 @@ class SCM(DataSource):
                 assert ts['commits'] == data['commits'][pos]
 
     @staticmethod
+    def convert_all_to_single(data, filter_, destdir, evolutionary):
+        """ Convert a GROUP BY result to follow tradition individual JSON files """
+        # First create the JSON with the list of items
+        item_list = {}
+        fn = os.path.join(destdir, filter_.get_filename(SCM))
+        fields = ["authors_365","name","commits_365"]
+        for field in fields:
+            item_list[field] = data[field]
+        createJSON(item_list, fn)
+        if evolutionary:
+            pass
+        else:
+            for i in range(0,len(data['name'])):
+                item_metrics = {}
+                for metric in data:
+                    if metric == "name": continue
+                    print metric
+                    print data[metric]
+                    item_metrics[metric] = data[metric][i]
+                print item_metrics
+        raise
+        # Then generate per item JSON files
+
+    @staticmethod
     def create_filter_report_all(filter_, period, startdate, enddate, destdir, npeople, identities_db):
         # New API for getting all metrics with one query
         check = False # activate to debug issues
@@ -411,6 +419,7 @@ class SCM(DataSource):
                                        identities_db, filter_all)
             fn = os.path.join(destdir, filter_.get_static_filename_all(SCM()))
             createJSON(agg_all, fn)
+            SCM.convert_all_to_single(agg_all, filter_, destdir, False)
 
             evol_all = SCM.get_evolutionary_data(period, startdate, enddate,
                                                  identities_db, filter_all)
@@ -566,7 +575,7 @@ class SCM(DataSource):
 
     @staticmethod
     def get_metrics_core_trends():
-        return ['commits','authors','files','lines','newauthors']
+        return ['commits','authors','files','added_lines','removed_lines','newauthors']
 
 #
 # People

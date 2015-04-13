@@ -75,15 +75,19 @@ class DataSource(object):
         """Get the name of the database with the data"""
         raise NotImplementedError
 
-    @staticmethod
-    def get_date_init(startdate, enddate, identities_db, type_analysis):
-        """Get the date of the first activity in the data source in the window time analysis """
-        pass
+    @classmethod
+    def get_date_init(cls, startdate, enddate, identities_db, type_analysis):
+        """Get the date of the first activity in the data source"""
+        first_date = cls.get_metrics("first_date", cls)
+        if first_date is None: return None
+        return first_date.get_agg()
 
-    @staticmethod
-    def get_date_end(startdate, enddate, identities_db, type_analysis):
-        """Get the date of the last activity in the data source in the window time analysis """
-        pass
+    @classmethod
+    def get_date_end(cls, startdate, enddate, identities_db, type_analysis):
+        """Get the date of the last activity in the data source"""
+        last_date = cls.get_metrics("last_date", cls)
+        if last_date is None: return None
+        return last_date.get_agg()
 
     @staticmethod
     def get_url():

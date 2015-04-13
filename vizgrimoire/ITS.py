@@ -51,18 +51,6 @@ class ITS(DataSource):
 
     @staticmethod
     def get_name(): return "its"
-
-    @staticmethod
-    def get_date_init(startdate, enddate, identities_db, type_analysis):
-        """Get the date of the first activity in the data source"""
-        first_date = ITS.get_metrics("first_date", ITS)
-        return first_date.get_agg()
-
-    @staticmethod
-    def get_date_end(startdate, enddate, identities_db, type_analysis):
-        """Get the date of the last activity in the data source"""
-        last_date = ITS.get_metrics("last_date", ITS)
-        return last_date.get_agg()
  
     @staticmethod
     def get_url():
