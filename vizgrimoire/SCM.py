@@ -222,69 +222,6 @@ class SCM(DataSource):
             summary =  GetCommitsSummaryCompanies(period, startdate, enddate, identities_db, limit)
         return summary
 
-
-    @staticmethod
-    def ages_study_com (Report, ds, items, period,
-                        startdate, enddate, destdir):
-        """Perform ages study for companies, if it is specified in Report.
-
-        Produces JSON files for those studies.
-
-        Parameters
-        ----------
-
-        Report: Report object
-           Configuration about the report being produced.
-        ds: { SCM | ITS | MLS }
-           Data source
-        items: ??
-           Items
-        period: ??
-           Period
-        startdate: ??
-           Start date
-        enddate: ??
-           End date
-        destdir: string
-           Directory for writing the JSON files
-        """
-
-        filter_name = "company"
-        studies = Report.get_studies()
-        ages = None
-        for study in studies:
-            if study.id == "ages":
-                ages = study
-
-        if ages is not None:
-            # Get config parameters for producing a connection
-            # to the database
-            config = Report.get_config()
-            db_identities = config['generic']['db_identities']
-            dbuser = config['generic']['db_user']
-            dbpass = config['generic']['db_password']
-
-            start_string = ds.get_name() + "_start_date"
-            end_string = ds.get_name() + "_end_date"
-            if start_string in config['r']:
-                startdate = "'" + config['r'][start_string] + "'"
-            if end_string in config['r']:
-                enddate = "'" + config['r'][end_string] + "'"
-            ds_dbname = ds.get_db_name()
-            dbname = config['generic'][ds_dbname]
-            dsquery = ds.get_query_builder()
-            dbcon = dsquery(dbuser, dbpass, dbname, db_identities)
-
-            for item in items :
-                filter_item = Filter(filter_name, item)
-                metric_filters = MetricFilters(
-                    period, startdate, enddate,
-                    filter_item.get_type_analysis()
-                    )
-                obj = ages(dbcon, metric_filters)
-                res = obj.create_report(ds, destdir)
-
-
     @staticmethod
     def create_filter_report_top(filter_, period, startdate, enddate, destdir, npeople, identities_db):
         from vizgrimoire.report import Report
@@ -362,8 +299,7 @@ class SCM(DataSource):
             summary =  SCM.get_filter_summary(filter_, period, startdate, enddate, identities_db, 10)
             createJSON (summary, destdir+"/"+ filter_.get_summary_filename(SCM))
             # Perform ages study, if it is specified in Report
-            SCM.ages_study_com (Report, ds, items, period,
-                                startdate, enddate, destdir)
+            SCM.ages_study_com (items, period, startdate, enddate, destdir)
 
 
     @staticmethod
@@ -445,15 +381,6 @@ class SCM(DataSource):
         # This report is created per item, not using GROUP BY yet
         SCM.create_filter_report_top(filter_, period, startdate, enddate, destdir, npeople, identities_db)
 
-        # Studies report for filters
-        if (filter_name == "company"):
-            ds = SCM
-            summary =  SCM.get_filter_summary(filter_, period, startdate, enddate, identities_db, 10)
-            createJSON (summary, destdir+"/"+ filter_.get_summary_filename(SCM))
-            # Perform ages study, if it is specified in Report
-            SCM.ages_study_com (Report, ds, items, period,
-                                startdate, enddate, destdir)
-
         # Filters metrics computed using GROUP BY queries
         if filter_name in ["people2","company","company"+MetricFilters.DELIMITER+"country",
                            "country","repository","domain"] :
@@ -469,6 +396,14 @@ class SCM(DataSource):
             fn = os.path.join(destdir, filter_.get_evolutionary_filename_all(SCM()))
             createJSON(evol_all, fn)
             SCM.convert_all_to_single(evol_all, filter_, destdir, True)
+
+            # Studies report for filters
+            if (filter_name == "company"):
+                ds = SCM
+                summary =  SCM.get_filter_summary(filter_, period, startdate, enddate, identities_db, 10)
+                createJSON (summary, destdir+"/"+ filter_.get_summary_filename(SCM))
+                # Perform ages study, if it is specified in Report
+                SCM.ages_study_com (agg_all['name'], period, startdate, enddate, destdir)
 
             # check is only done fpr basic filters. Composed should work if basic does.
             if check and not "," in filter_name:
