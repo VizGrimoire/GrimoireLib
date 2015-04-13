@@ -213,13 +213,17 @@ class Metrics(object):
         self.filters.global_filter = filters.global_filter
         self.filters.closed_condition = filters.closed_condition
         last = self.get_agg()
-        last = int(last[self.id])
+        if last[self.id] is not None:
+            last = int(last[self.id])
+        else: last = 0
         self.filters = MetricFilters(filters.period,
                                      chardates[2], chardates[1], filters.type_analysis)
         self.filters.global_filter = filters.global_filter
         self.filters.closed_condition = filters.closed_condition
         prev = self.get_agg()
-        prev = int(prev[self.id])
+        if prev[self.id] is not None:
+            prev = int(prev[self.id])
+        else: prev = 0
 
         data = {}
         data['diff_net'+self.id+'_'+str(days)] = last - prev
