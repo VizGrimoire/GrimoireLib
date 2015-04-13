@@ -65,12 +65,13 @@ class DSQuery(object):
         """ Basic indexes used in each data source """
         pass
 
-    def GetSQLGlobal(self, date, fields, tables, filters, start, end, all_items = None):
+    @classmethod
+    def GetSQLGlobal(cls, date, fields, tables, filters, start, end, all_items = None):
         group_field = None
         count_field = None
         if all_items:
-            group_field = self.get_group_field(all_items, self)
-            # Expected format: "count(distinct(pup.uuid)) AS authors"
+            group_field = cls.get_group_field(all_items, cls)
+            # Format: "count(distinct(pup.uuid)) AS authors"
             count_field = fields.split(" ")[2]
             fields = group_field + ", " + fields
 
@@ -88,11 +89,12 @@ class DSQuery(object):
 
         return(sql)
 
-    def GetSQLPeriod(self, period, date, fields, tables, filters, start, end,
+    @classmethod
+    def GetSQLPeriod(cls, period, date, fields, tables, filters, start, end,
                      all_items = None):
         group_field = None
         if all_items :
-            group_field = self.get_group_field(all_items, self)
+            group_field = cls.get_group_field(all_items, cls)
             fields = group_field + ", " + fields
 
         iso_8601_mode = 3
@@ -193,12 +195,7 @@ class DSQuery(object):
             filters = self._get_filters_query(filters)
 
         # if all_items build a query for getting all items in one query
-        all_items = None
-        if type_analysis:
-            all_items = type_analysis[0]
-            if type_analysis[1] is not None:
-                # all_items only used for global filter, not for items filter
-                all_items = None 
+        all_items = self.get_all_items(type_analysis)
 
         if (evolutionary):
             q = self.GetSQLPeriod(period, date_field, fields, tables, filters,
@@ -291,6 +288,17 @@ class DSQuery(object):
             field = "CONCAT(com.name,'_',cou.name)"
 
         return field
+
+    @staticmethod
+    def get_all_items(type_analysis):
+        # if all_items is true build a query for getting all items in one query
+        all_items = None
+        if type_analysis:
+            all_items = type_analysis[0]
+            if type_analysis[1] is not None:
+                # all_items only used for global filter, not for items filter
+                all_items = None
+        return all_items
 
     @staticmethod
     def get_bots_filter_sql (data_source, metric_filters = None):
