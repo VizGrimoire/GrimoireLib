@@ -1591,7 +1591,6 @@ class SCRQuery(DSQuery):
         if type_analysis is not None:
 
             list_analysis = type_analysis[0].split(MetricFilters.DELIMITER)
-
             for analysis in list_analysis:
                 if analysis == 'repository': From.union_update(self.GetSQLRepositoriesFrom())
                 elif analysis == 'company': From.union_update(self.GetSQLCompaniesFrom())
@@ -1939,11 +1938,11 @@ class SCRQuery(DSQuery):
             fields = "TIMESTAMPDIFF(SECOND, ch.changed_on, NOW())/(24*3600) AS revtime, i.submitted_on as submitted_on "
         tables = "issues i, people, issues_ext_gerrit ie "
         if (uploaded): tables += " , changes ch, ("+sql_max_patchset+") last_patch "
-        if self._get_tables_query(self.GetSQLReportFrom(type_analysis)) != "":
-            tables += ", " + self._get_tables_query(self.GetSQLReportFrom(type_analysis))
+        if self._get_tables_query(self.GetSQLReportFrom(mfilter)) != "":
+            tables += ", " + self._get_tables_query(self.GetSQLReportFrom(mfilter))
         filters = filter_bots + " people.id = i.submitted_by "
-        if self._get_filters_query(self.GetSQLReportWhere(type_analysis)) != "":
-            filters += " AND " + self._get_filters_query(self.GetSQLReportWhere(type_analysis))
+        if self._get_filters_query(self.GetSQLReportWhere(mfilter)) != "":
+            filters += " AND " + self._get_filters_query(self.GetSQLReportWhere(mfilter))
         filters += " AND status<>'MERGED' AND status<>'ABANDONED' "
         filters += " AND ie.issue_id  = i.id "
         if (uploaded):
