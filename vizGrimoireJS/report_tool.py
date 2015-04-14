@@ -90,7 +90,7 @@ def create_reports_filters(period, startdate, enddate, destdir, npeople, identit
                          }
             supported_on = {
                          "scm":["people2","company","company+country","country","repository","domain"],
-                         "its":[],
+                         "its":["people2","company","company+country","country","repository","domain"],
                          "its_1":[],
                          "mls":[],
                          "scr":[],

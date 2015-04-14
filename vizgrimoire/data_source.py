@@ -499,6 +499,50 @@ class DataSource(object):
         raise NotImplementedError
 
     @classmethod
+    def convert_all_to_single(cls, data, filter_, destdir, evolutionary):
+        """ Convert a GROUP BY result to follow tradition individual JSON files """
+        from vizgrimoire.SCM import SCM
+        from vizgrimoire.ITS import ITS
+        from vizgrimoire.filter import Filter
+
+        if cls == ITS:
+            if 'url' in data.keys():
+                data['name'] = data.pop('url')
+                data['name'] = [item.replace('/', '_') for item in data['name']]
+
+        if not evolutionary:
+            # First create the JSON with the list of items
+            item_list = {}
+            fn = os.path.join(destdir, filter_.get_filename(cls))
+            if cls == SCM:
+                fields = ["authors_365","name","commits_365"]
+            elif cls == ITS:
+                fields = ["closed_365","closers_365", "name"]
+            else:
+                fields = ["name"]
+            for field in fields:
+                item_list[field] = data[field]
+            createJSON(item_list, fn)
+        # Items files
+        ts_fields = ['unixtime','id','date','month']
+        for i in range(0,len(data['name'])):
+            item_metrics = {}
+            item = data['name'][i]
+            for metric in data:
+                if metric == "name": continue
+                if metric in ts_fields: continue
+                item_metrics[metric] = data[metric][i]
+            filter_item = Filter(filter_.get_name(), item)
+            if evolutionary:
+                for field in ts_fields:
+                    # Shared time series fields
+                    item_metrics[field] = data[field]
+                fn = os.path.join(destdir, filter_item.get_evolutionary_filename(cls()))
+            else:
+                fn = os.path.join(destdir, filter_item.get_static_filename(cls()))
+            createJSON(item_metrics, fn)
+
+    @classmethod
     def ages_study_com (ds, items, period,
                         startdate, enddate, destdir):
         """Perform ages study for companies, if it is specified in Report.
