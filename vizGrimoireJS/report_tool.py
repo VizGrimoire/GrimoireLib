@@ -138,15 +138,15 @@ def get_top_people (startdate, enddate, idb):
 
     # SCR and SCM are the same. Don't use both for Tops
     mopeners = DataSource.get_metrics("submitters", SCR)
-    tops["scr"] =  mopeners.get_list(mfilter, 0)
+    if mopeners: tops["scr"] =  mopeners.get_list(mfilter, 0)
     msenders = DataSource.get_metrics("senders", MLS)
-    tops["mls"] =  msenders.get_list(mfilter, 0)
+    if msenders: tops["mls"] =  msenders.get_list(mfilter, 0)
     mopeners = DataSource.get_metrics("openers", ITS)
-    tops["its"] =  mopeners.get_list(mfilter, 0)
+    if mopeners: tops["its"] =  mopeners.get_list(mfilter, 0)
     msenders = DataSource.get_metrics("senders", IRC)
-    tops["irc"] =  msenders.get_list(mfilter, 0)
+    if msenders: tops["irc"] =  msenders.get_list(mfilter, 0)
     mauthors = DataSource.get_metrics("authors", Mediawiki)
-    tops["mediawiki"] = mauthors.get_list(mfilter, 0)
+    if mauthors: tops["mediawiki"] = mauthors.get_list(mfilter, 0)
 
     # Build the consolidated top list using all data sources data
     # Only people in all data sources is used
