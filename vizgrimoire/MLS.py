@@ -74,7 +74,7 @@ class MLS(DataSource):
         evolutionary = True
         evol = {}
 
-        metrics = DataSource.get_metrics_data(MLS, period, startdate, enddate, identities_db, filter_, evolutionary)
+        metrics = MLS.get_metrics_data(period, startdate, enddate, identities_db, filter_, evolutionary)
         if filter_ is not None: studies = {}
         else:
             studies = DataSource.get_studies_data(MLS, period, startdate, enddate, evolutionary)
@@ -93,7 +93,7 @@ class MLS(DataSource):
         rfield = MLS.get_repo_field()
         evolutionary = False
 
-        metrics = DataSource.get_metrics_data(MLS, period, startdate, enddate, identities_db, filter_, evolutionary)
+        metrics = MLS.get_metrics_data(period, startdate, enddate, identities_db, filter_, evolutionary)
         if filter_ is not None: studies = {}
         else:
             studies = DataSource.get_studies_data(MLS, period, startdate, enddate, evolutionary)

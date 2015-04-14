@@ -86,7 +86,7 @@ class ITS(DataSource):
     def get_evolutionary_data (cls, period, startdate, enddate, identities_db, filter_ = None):
         closed_condition = cls._get_closed_condition()
 
-        metrics = DataSource.get_metrics_data(cls, period, startdate, enddate, identities_db, filter_, True)
+        metrics = cls.get_metrics_data(period, startdate, enddate, identities_db, filter_, True)
         if filter_ is not None: studies = {}
         else:
             studies = DataSource.get_studies_data(cls, period, startdate, enddate, True)
@@ -102,7 +102,7 @@ class ITS(DataSource):
     def get_agg_data (cls, period, startdate, enddate, identities_db, filter_ = None):
         closed_condition = cls._get_closed_condition()
 
-        metrics = DataSource.get_metrics_data(cls, period, startdate, enddate, identities_db, filter_, False)
+        metrics = cls.get_metrics_data(period, startdate, enddate, identities_db, filter_, False)
         if filter_ is not None: studies = {}
         else:
             studies = DataSource.get_studies_data(cls, period, startdate, enddate, False)

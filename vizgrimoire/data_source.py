@@ -345,7 +345,7 @@ class DataSource(object):
 
         return data
 
-    @staticmethod
+    @classmethod
     def get_metrics_data(DS, period, startdate, enddate, identities_db, 
                          filter_ = None, evol = False):
         """ Get basic data from all core metrics """
@@ -408,7 +408,7 @@ class DataSource(object):
             if evol: mvalue = item.get_ts()
             else:    mvalue = item.get_agg()
 
-            if type_analysis and type_analysis[1] is None:
+            if type_analysis and type_analysis[1] is None and mvalue:
                 logging.info(item.id)
                 id_field = None
                 # Support for combined filters

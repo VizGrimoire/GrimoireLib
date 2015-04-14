@@ -74,7 +74,7 @@ class Pullpo(DataSource):
 
     @staticmethod
     def get_evolutionary_data (period, startdate, enddate, identities_db, filter_ = None):
-        metrics = DataSource.get_metrics_data(Pullpo, period, startdate, enddate, identities_db, filter_, True)
+        metrics = Pullpo.get_metrics_data(period, startdate, enddate, identities_db, filter_, True)
         if filter_ is not None: studies = {}
         else:
             studies = DataSource.get_studies_data(Pullpo, period, startdate, enddate, True)
@@ -90,8 +90,7 @@ class Pullpo(DataSource):
 
     @staticmethod
     def get_agg_data (period, startdate, enddate, identities_db, filter_= None):
-        metrics = DataSource.get_metrics_data(Pullpo, period, startdate, enddate, 
-                                              identities_db, filter_, False)
+        metrics = Pullpo.get_metrics_data(period, startdate, enddate, identities_db, filter_, False)
         if filter_ is not None: studies = {}
         else:
             studies = DataSource.get_studies_data(Pullpo, period, startdate, enddate, False)

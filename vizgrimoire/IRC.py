@@ -52,7 +52,7 @@ class IRC(DataSource):
 
     @staticmethod
     def get_evolutionary_data (period, startdate, enddate, identities_db, filter_ = None):
-        metrics = DataSource.get_metrics_data(IRC, period, startdate, enddate, identities_db, filter_, True)
+        metrics = IRC.get_metrics_data(period, startdate, enddate, identities_db, filter_, True)
         if filter_ is not None: studies = {}
         else:
             studies = DataSource.get_studies_data(IRC, period, startdate, enddate, True)
@@ -66,10 +66,10 @@ class IRC(DataSource):
 
     @staticmethod
     def get_agg_data (period, startdate, enddate, identities_db, filter_ = None):
-        metrics = DataSource.get_metrics_data(IRC, period, startdate, enddate, identities_db, filter_, False)
+        metrics = IRC.get_metrics_data(period, startdate, enddate, identities_db, filter_, False)
         if filter_ is not None: studies = {}
         else:
-            studies = DataSource.get_metrics_data(IRC, period, startdate, enddate, True)
+            studies = IRC.get_metrics_data(period, startdate, enddate, True)
         return dict(metrics.items()+studies.items())
 
     @staticmethod
