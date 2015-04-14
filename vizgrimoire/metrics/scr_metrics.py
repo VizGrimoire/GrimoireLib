@@ -1191,7 +1191,9 @@ class Submitters(Metrics):
         """ First we get the submitters then join with unique identities """
 
         tpeople_sql  = "SELECT  distinct(submitted_by) as submitted_by, submitted_on  "
-        tpeople_sql += " FROM " + self.db._get_tables_query(self.db.GetSQLReportFrom(self.filters))
+        tables = self.db.GetSQLReportFrom(self.filters)
+        tables.add("issues i")
+        tpeople_sql += " FROM " + self.db._get_tables_query(tables)
         filters_ext = self.db._get_filters_query(self.db.GetSQLReportWhere(self.filters))
         if (filters_ext != ""):
             tpeople_sql += " WHERE " + filters_ext
