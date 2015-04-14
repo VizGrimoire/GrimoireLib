@@ -60,16 +60,6 @@ class SCR(DataSource):
         return metrics_not_filters
 
     @staticmethod
-    def get_date_init(startdate = None, enddate = None, identities_db = None, type_analysis = None):
-        q = " SELECT DATE_FORMAT (MIN(submitted_on), '%Y-%m-%d') as first_date FROM issues"
-        return(ExecuteQuery(q))
-
-    @staticmethod
-    def get_date_end(startdate = None, enddate = None, identities_db = None, type_analysis = None):
-        q = " SELECT DATE_FORMAT (MAX(changed_on), '%Y-%m-%d') as last_date FROM changes"
-        return(ExecuteQuery(q))
-
-    @staticmethod
     def get_evolutionary_data (period, startdate, enddate, identities_db, filter_ = None):
         return SCR.__get_data__ (period, startdate, enddate, identities_db, filter_, True)
 
@@ -350,17 +340,20 @@ class SCR(DataSource):
         check = False # activate to debug issues
         filter_name = filter_.get_name()
 
-        if filter_name == "people2" or filter_name == "company":
+        if filter_name in ["people2","company"] :
             filter_all = Filter(filter_name, None)
             agg_all = SCR.get_agg_data(period, startdate, enddate,
                                        identities_db, filter_all)
             fn = os.path.join(destdir, filter_.get_static_filename_all(SCR()))
             createJSON(agg_all, fn)
+            SCR.convert_all_to_single(agg_all, filter_, destdir, False)
 
             evol_all = SCR.get_evolutionary_data(period, startdate, enddate,
                                                  identities_db, filter_all)
             fn = os.path.join(destdir, filter_.get_evolutionary_filename_all(SCR()))
             createJSON(evol_all, fn)
+            SCR.convert_all_to_single(evol_all, filter_, destdir, True)
+
 
             if check:
                 SCR._check_report_all_data(evol_all, filter_, startdate, enddate,

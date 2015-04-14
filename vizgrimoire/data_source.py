@@ -531,6 +531,9 @@ class DataSource(object):
             for metric in data:
                 if metric == "name": continue
                 if metric in ts_fields: continue
+                if len(data[metric])<len(data['name']):
+                    logging.error(cls.get_name()+" "+metric + " not supported in GROUP BY. Not included")
+                    continue
                 item_metrics[metric] = data[metric][i]
             filter_item = Filter(filter_.get_name(), item)
             if evolutionary:
