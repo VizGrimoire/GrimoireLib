@@ -193,7 +193,7 @@ class Pending(Metrics):
         items = items.pop('name')
 
         from vizgrimoire.GrimoireUtils import fill_and_order_items
-        id_field = DSQuery.get_group_field(self.filters.type_analysis[0])
+        id_field = self.db.get_group_field(self.filters.type_analysis[0])
         id_field = id_field.split('.')[1] # remove table name
         submitted = check_array_values(submitted)
         merged = check_array_values(merged)
@@ -222,7 +222,7 @@ class Pending(Metrics):
     def get_agg_all(self):
         evol = False
         metrics = self._get_metrics_for_pending_all(evol)
-        id_field = DSQuery.get_group_field(self.filters.type_analysis[0])
+        id_field = self.db.get_group_field(self.filters.type_analysis[0])
         id_field = id_field.split('.')[1] # remove table name
         data= \
             [metrics['submitted'][i]-metrics['merged'][i]-metrics['abandoned'][i] \
@@ -232,7 +232,7 @@ class Pending(Metrics):
     def get_ts_all(self):
         evol = True
         metrics = self._get_metrics_for_pending_all(evol)
-        id_field = DSQuery.get_group_field(self.filters.type_analysis[0])
+        id_field = self.db.get_group_field(self.filters.type_analysis[0])
         id_field = id_field.split('.')[1] # remove table name
         pending = {"pending":[]}
         for i in range(0, len(metrics['submitted'])):

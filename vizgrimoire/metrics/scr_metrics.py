@@ -475,7 +475,7 @@ class Participants(Metrics):
         tables = Set([])
         filters = Set([])
 
-        
+
         fields.add("count(distinct(u.uuid)) as participants")
 
         # issues table is needed given that this is used to
@@ -487,7 +487,7 @@ class Participants(Metrics):
         filters.add("t.submitted_by = pup.people_id")
         filters.add("pup.uuid = u.uuid")
         filters.add("i.id = t.issue_id")
-        
+
         # Comments people
         fields_c = Set([])
         tables_c = Set([])
@@ -523,7 +523,7 @@ class Participants(Metrics):
         startdate = self.filters.startdate
         enddate = self.filters.enddate
         evol = False
-    
+
         comments_query = self.db.BuildQuery(period, startdate, enddate,
                                             "comments.submitted_on",
                                             fields_c, tables_c, filters_c,
@@ -544,9 +544,8 @@ class Participants(Metrics):
 
         query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                    self.filters.enddate, "t.submitted_on",
-                                   fields, tables, filters, evolutionary)
+                                   fields, tables, filters, evolutionary, self.filters.type_analysis)
         return query
- 
 
     def get_list(self, metric_filters = None, days = 0):
         fields = Set([])
@@ -1192,7 +1191,7 @@ class Submitters(Metrics):
         """ First we get the submitters then join with unique identities """
 
         tpeople_sql  = "SELECT  distinct(submitted_by) as submitted_by, submitted_on  "
-        tpeople_sql += " FROM issues i, " + self.db._get_tables_query(self.db.GetSQLReportFrom(self.filters))
+        tpeople_sql += " FROM " + self.db._get_tables_query(self.db.GetSQLReportFrom(self.filters))
         filters_ext = self.db._get_filters_query(self.db.GetSQLReportWhere(self.filters))
         if (filters_ext != ""):
             tpeople_sql += " WHERE " + filters_ext

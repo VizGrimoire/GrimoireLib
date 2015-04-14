@@ -70,7 +70,7 @@ class DSQuery(object):
         group_field = None
         count_field = None
         if all_items:
-            group_field = cls.get_group_field(all_items, cls)
+            group_field = cls.get_group_field(all_items)
             # Format: "count(distinct(pup.uuid)) AS authors"
             count_field = fields.split(" ")[2]
             fields = group_field + ", " + fields
@@ -94,7 +94,7 @@ class DSQuery(object):
                      all_items = None):
         group_field = None
         if all_items :
-            group_field = cls.get_group_field(all_items, cls)
+            group_field = cls.get_group_field(all_items)
             fields = group_field + ", " + fields
 
         iso_8601_mode = 3
@@ -267,8 +267,8 @@ class DSQuery(object):
 
         return  project_with_children_str
 
-    @staticmethod
-    def get_group_field (filter_type, ds_query = None):
+    @classmethod
+    def get_group_field (ds_query, filter_type):
         """ Return the name of the field to group by in filter all queries """
         field = None
         supported = ['people2','company','country','domain','project','repository','company'+MetricFilters.DELIMITER+'country']
@@ -283,7 +283,7 @@ class DSQuery(object):
         elif analysis == "domain": field = "d.name"
         elif analysis == "repository":
             field = "r.name"
-            if type(ds_query) == ITSQuery: field = "t.url"
+            if ds_query == ITSQuery: field = "t.url"
         elif analysis == "company"+MetricFilters.DELIMITER+"country":
             field = "CONCAT(com.name,'_',cou.name)"
 

@@ -25,7 +25,7 @@
     support for Grimoire supported data sources """ 
 
 import logging, os
-from vizgrimoire.metrics.query_builder import DSQuery
+from vizgrimoire.metrics.query_builder import DSQuery, ITSQuery
 from vizgrimoire.GrimoireUtils import createJSON
 from vizgrimoire.metrics.metrics_filter import MetricFilters
 
@@ -350,7 +350,10 @@ class DataSource(object):
                          filter_ = None, evol = False):
         """ Get basic data from all core metrics """
         from vizgrimoire.GrimoireUtils import fill_and_order_items
+        from vizgrimoire.ITS import ITS
         data = {}
+        dsquery = DSQuery
+        if DS == ITS: dsquery = ITSQuery
 
         from vizgrimoire.report import Report
         automator = Report.get_config()
@@ -417,7 +420,7 @@ class DataSource(object):
                         id_field = idf
                         break
                 if id_field is None:
-                    id_field = DSQuery.get_group_field(type_analysis[0])
+                    id_field = dsquery.get_group_field(type_analysis[0])
                     id_field = id_field.split('.')[1] # remove table name
                 mvalue = fill_and_order_items(items, mvalue, id_field,
                                               evol, period, startdate, enddate)
@@ -430,9 +433,12 @@ class DataSource(object):
             end_date = DS.get_date_end(startdate, enddate, identities_db, type_analysis)
 
             if type_analysis and type_analysis[1] is None:
-                init_date = fill_and_order_items(items, init_date, "name",
+                if id_field is None:
+                    id_field = dsquery.get_group_field(type_analysis[0])
+                    id_field = id_field.split('.')[1] # remove table name
+                init_date = fill_and_order_items(items, init_date, id_field,
                                                  evol, period, startdate, enddate)
-                end_date = fill_and_order_items(items, end_date, "name",
+                end_date = fill_and_order_items(items, end_date, id_field,
                                                 evol, period, startdate, enddate)
 
             data = dict(data.items() + init_date.items() + end_date.items())
@@ -453,7 +459,7 @@ class DataSource(object):
                     item.filters = mfilter_orig
 
                     if type_analysis and type_analysis[1] is None:
-                        group_field = DSQuery.get_group_field(type_analysis[0])
+                        group_field = dsquery.get_group_field(type_analysis[0])
                         if 'CONCAT' not in group_field:
                             group_field = group_field.split('.')[1] # remove table name
                         period_data = fill_and_order_items(items, period_data, group_field)

@@ -662,7 +662,6 @@ class Changed(Metrics):
 
         #Action needed to replace issues filters by changed one
         query = query.replace("i.submitted", "ch.changed")
-        print query
         return query
 
     def _get_sql(self, evolutionary, close = False):
