@@ -682,14 +682,15 @@ class ReviewsWaitingForReviewerTS(Metrics):
 
             fields = "COUNT(DISTINCT(i.id)) as pending"
 
-            tables = " issues i "
-            if self.db._get_tables_query(self.db.GetSQLReportFrom(type_analysis)) != "":
-                tables += ", " + self.db._get_tables_query(self.db.GetSQLReportFrom(type_analysis))
+            tables_set = Set([])
+            tables_set.add("issues i")
+            tables_set.union_update(self.db.GetSQLReportFrom(self.filters))
+            tables = self.db._get_tables_query(tables_set)
 
             # Pending (NEW = submitted-merged-abandoned) REVIEWS
             filters = " i.submitted_on <= '"+current+"' "
-            if self.db._get_filters_query(self.db.GetSQLReportWhere(type_analysis)) != "":
-                filters += " AND " + self.db._get_filters_query(self.db.GetSQLReportWhere(type_analysis))
+            if self.db._get_filters_query(self.db.GetSQLReportWhere(self.filters)) != "":
+                filters += " AND " + self.db._get_filters_query(self.db.GetSQLReportWhere(self.filters))
             # remove closed reviews
             filters += " AND i.id NOT IN ("+ sql_reviews_closed +")"
 
@@ -747,15 +748,18 @@ class ReviewsWaitingForReviewer(Metrics):
         sql_reviews_reviewed = self.db.get_sql_reviews_reviewed(self.filters.startdate)
 
         fields = "COUNT(DISTINCT(i.id)) as ReviewsWaitingForReviewer"
-        tables = "issues i "
 
-        if self.db._get_tables_query(self.db.GetSQLReportFrom(self.filters.type_analysis)) != "":
-            tables += ", " + self.db._get_tables_query(self.db.GetSQLReportFrom(self.filters.type_analysis))
-        filters = " i.status = 'NEW' AND i.id NOT IN (%s) " % (sql_reviews_reviewed)
-        filters += " AND i.summary not like '%WIP%' "
+        tables_set = Set([]) #tables in a set
+        tables_set.add("issues i")
+        tables_set.union_update(self.db.GetSQLReportFrom(self.filters))
+        tables = self.db._get_tables_query(tables_set)
 
-        if self.db._get_filters_query(self.db.GetSQLReportWhere(self.filters.type_analysis)) != "":
-            filters = filters + " AND " + self.db._get_filters_query(self.db.GetSQLReportWhere(self.filters.type_analysis))
+        filters_set = Set([])
+        filters_set.add("i.status = 'NEW'")
+        filters_set.add("i.id NOT IN (%s)" % (sql_reviews_reviewed))
+        filters_set.add("i.summary not like '%WIP%'") #To be removed
+        filters_set.union_update(self.db.GetSQLReportWhere(self.filters))
+        filters = self.db._get_filters_query(filters_set)
 
         q = self.db.BuildQuery (self.filters.period, self.filters.startdate,
                                 self.filters.enddate, "i.submitted_on",
@@ -774,21 +778,25 @@ class ReviewsWaitingForSubmitter(Metrics):
         q_last_change = self.db.get_sql_last_change_for_reviews()
 
         fields = "COUNT(DISTINCT(i.id)) as ReviewsWaitingForSubmitter"
-        tables = "changes c, issues i, (%s) t1 " % q_last_change
-        if self.db._get_tables_query(self.db.GetSQLReportFrom(self.filters.type_analysis)) != "":
-            tables += ", " + self.db._get_tables_query(self.db.GetSQLReportFrom(self.filters.type_analysis))
-        filters = """
-            i.id = c.issue_id  AND t1.id = c.id
-            AND (c.field='CRVW' or c.field='Code-Review' or c.field='Verified' or c.field='VRIF')
-            AND (c.new_value=-1 or c.new_value=-2)
-        """
-        if self.db._get_filters_query(self.db.GetSQLReportWhere(self.filters.type_analysis)) != "":
-            filters = filters + " AND " + self.db._get_filters_query(self.db.GetSQLReportWhere(self.filters.type_analysis))
+
+        tables_set = Set([])
+        tables_set.add("changes c")
+        tables_set.add("issues i")
+        tables_set.add("(%s) t1" % q_last_change)
+        tables_set.union_update(self.db.GetSQLReportFrom(self.filters))
+        tables = self.db._get_tables_query(tables_set)
+
+        filters_set = Set([])
+        filters_set.add("i.id = c.issue_id")
+        filters_set.add("t1.id = c.id")
+        filters_set.add("(c.field='CRVW' or c.field='Code-Review' or c.field='Verified' or c.field='VRIF')")
+        filters_set.add("(c.new_value=-1 or c.new_value=-2)")
+        filters_set.union_update(self.db.GetSQLReportWhere(self.filters))
+        filters = self.db._get_filters_query(filters_set)
 
         q = self.db.BuildQuery (self.filters.period, self.filters.startdate,
                                 self.filters.enddate, " c.changed_on",
                                 fields, tables, filters, evolutionary, self.filters.type_analysis)
-        print q
         return q
 
 class Companies(Metrics):
