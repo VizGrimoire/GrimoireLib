@@ -284,6 +284,7 @@ class DSQuery(object):
         elif analysis == "repository":
             field = "r.name"
             if ds_query == ITSQuery: field = "t.url"
+            elif ds_query == SCRQuery: field = "t.url"
         elif analysis == "company"+MetricFilters.DELIMITER+"country":
             field = "CONCAT(com.name,'_',cou.name)"
 
@@ -1424,7 +1425,8 @@ class SCRQuery(DSQuery):
     def GetSQLRepositoriesWhere (self, repository):
         #fields necessaries to match info among tables
         filters = Set([])
-        filters.add("t.url = '"+ repository + "'")
+        if repository is not None:
+            filters.add("t.url = '"+ repository + "'")
         filters.add("t.id = i.tracker_id")
 
         return filters

@@ -503,9 +503,10 @@ class DataSource(object):
         """ Convert a GROUP BY result to follow tradition individual JSON files """
         from vizgrimoire.SCM import SCM
         from vizgrimoire.ITS import ITS
+        from vizgrimoire.SCR import SCR
         from vizgrimoire.filter import Filter
 
-        if cls == ITS:
+        if cls == ITS or cls == SCR:
             if 'url' in data.keys():
                 data['name'] = data.pop('url')
                 data['name'] = [item.replace('/', '_') for item in data['name']]
@@ -534,6 +535,10 @@ class DataSource(object):
                 if len(data[metric])<len(data['name']):
                     logging.error(cls.get_name()+" "+metric + " not supported in GROUP BY. Not included")
                     continue
+                if evolutionary:
+                    if not isinstance(data[metric][i], list):
+                        logging.error(cls.get_name()+" "+metric + " evol not supported in GROUP BY. Not included")
+                        continue
                 item_metrics[metric] = data[metric][i]
             filter_item = Filter(filter_.get_name(), item)
             if evolutionary:

@@ -216,7 +216,7 @@ class BMISCR(Metrics):
         merged_data = merged["merged"]
         submitted = submitted_reviews.get_agg()
         submitted_data = submitted["submitted"]
-        
+
         if submitted_data == 0:
             # We should probably add a NaN value.
             bmi_data= 0
@@ -277,7 +277,7 @@ class Pending(Metrics):
         items = items.pop('name')
 
         from vizgrimoire.GrimoireUtils import fill_and_order_items
-        id_field = DSQuery.get_group_field(self.filters.type_analysis[0])
+        id_field = SCRQuery.get_group_field(self.filters.type_analysis[0])
         id_field = id_field.split('.')[1] # remove table name
         submitted = check_array_values(submitted)
         merged = check_array_values(merged)
@@ -292,6 +292,7 @@ class Pending(Metrics):
         abandoned = fill_and_order_items(items, abandoned, id_field,
                                          evol, self.filters.period,
                                          self.filters.startdate, self.filters.enddate)
+
         metrics_for_pendig_all = {
           id_field: submitted[id_field],
           "submitted": submitted["submitted"],
@@ -306,7 +307,7 @@ class Pending(Metrics):
     def get_agg_all(self):
         evol = False
         metrics = self._get_metrics_for_pending_all(evol)
-        id_field = DSQuery.get_group_field(self.filters.type_analysis[0])
+        id_field = SCRQuery.get_group_field(self.filters.type_analysis[0])
         id_field = id_field.split('.')[1] # remove table name
         data= \
             [metrics['submitted'][i]-metrics['merged'][i]-metrics['abandoned'][i] \
@@ -316,7 +317,7 @@ class Pending(Metrics):
     def get_ts_all(self):
         evol = True
         metrics = self._get_metrics_for_pending_all(evol)
-        id_field = DSQuery.get_group_field(self.filters.type_analysis[0])
+        id_field = SCRQuery.get_group_field(self.filters.type_analysis[0])
         id_field = id_field.split('.')[1] # remove table name
         pending = {"pending":[]}
         for i in range(0, len(metrics['submitted'])):
@@ -835,7 +836,6 @@ class ReviewsWaitingForSubmitter(Metrics):
         q = self.db.BuildQuery (self.filters.period, self.filters.startdate,
                                 self.filters.enddate, " c.changed_on",
                                 fields, tables, filters, evolutionary, self.filters.type_analysis)
-        print q
         return q
 
 class Companies(Metrics):
@@ -1255,19 +1255,20 @@ class Submitters(Metrics):
             tpeople_sql += " WHERE " + filters_ext
 
         fields = Set([])
-        tables = Set([])
-        filters = Set([])
+        tables = self.db.GetSQLReportFrom(self.filters)
+        filters = self.db.GetSQLReportWhere(self.filters)
 
         fields.add("count(distinct(uuid)) as submitters")
         tables.add("people_uidentities pup")
+        tables.add("issues i")
         tables.add("(%s) tpeople" % (tpeople_sql))
         filters.add("tpeople.submitted_by = pup.people_id")
+        filters.add("i.submitted_by = pup.people_id")
 
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                self.filters.enddate, " tpeople.submitted_on ",
                                fields, tables, filters, evolutionary, self.filters.type_analysis)
         return q
-
 
     def __get_sql_default__(self, evolutionary):
         """ This function returns the evolution or agg number of people opening issues """

@@ -36,7 +36,7 @@ from vizgrimoire.GrimoireUtils import GetPercentageDiff, GetDates, completePerio
 from vizgrimoire.GrimoireUtils import checkListArray, removeDecimals
 from vizgrimoire.GrimoireUtils import getPeriod, createJSON, checkFloatArray, medianAndAvgByPeriod, check_array_values
 from vizgrimoire.metrics.metrics_filter import MetricFilters
-from vizgrimoire.metrics.query_builder import DSQuery
+from vizgrimoire.metrics.query_builder import SCRQuery
 
 
 from vizgrimoire.data_source import DataSource
@@ -96,7 +96,7 @@ class SCR(DataSource):
         if automator_metrics in automator['r']:
             metrics_on = automator['r'][automator_metrics].split(",")
             logging.info(automator_metrics + " found ")
-            print(metrics_on)
+            # print(metrics_on)
 
         metrics_reports = SCR.get_metrics_core_reports()
         if filter_ is None:
@@ -137,7 +137,7 @@ class SCR(DataSource):
 
             if type_analysis and type_analysis[1] is None:
                 logging.info(item.id)
-                id_field = DSQuery.get_group_field(type_analysis[0])
+                id_field = SCRQuery.get_group_field(type_analysis[0])
                 id_field = id_field.split('.')[1] # remove table name
                 mvalue = check_array_values(mvalue)
                 mvalue = fill_and_order_items(items, mvalue, id_field,
@@ -183,7 +183,7 @@ class SCR(DataSource):
                     data = dict(data.items() +  period_data.items())
 
                     if type_analysis and type_analysis[1] is None:
-                        id_field = DSQuery.get_group_field(type_analysis[0])
+                        id_field = SCRQuery.get_group_field(type_analysis[0])
                         id_field = id_field.split('.')[1] # remove table name
                         period_data = fill_and_order_items(items, period_data, id_field)
 
@@ -340,7 +340,7 @@ class SCR(DataSource):
         check = False # activate to debug issues
         filter_name = filter_.get_name()
 
-        if filter_name in ["people2","company"] :
+        if filter_name in ["people2","company","repository"] :
             filter_all = Filter(filter_name, None)
             agg_all = SCR.get_agg_data(period, startdate, enddate,
                                        identities_db, filter_all)
