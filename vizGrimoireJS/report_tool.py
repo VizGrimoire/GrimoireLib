@@ -74,7 +74,8 @@ def create_reports_filters(period, startdate, enddate, destdir, npeople, identit
         for filter_ in Report.get_filters():
             logging.info("-> " + filter_.get_name())
             # Tested in all this filters the group by
-            supported = {"scm":["people2","company","company+country","country","repository","domain"],
+            supported_all = {
+                         "scm":["people2","company","company+country","country","repository","domain"],
                          "its":["people2","company","company+country","country","repository","domain"],
                          "its_1":["people2"],
                          "mls":["people2","company"],
@@ -87,7 +88,22 @@ def create_reports_filters(period, startdate, enddate, destdir, npeople, identit
                          "pullpo":["people2"],
                          "events":[]
                          }
-            if filter_.get_name() in supported[ds.get_name()]:
+            supported_on = {
+                         "scm":["people2","company","company+country","country","repository","domain"],
+                         "its":[],
+                         "its_1":[],
+                         "mls":[],
+                         "scr":[],
+                         "mediawiki":[],
+                         "irc":[],
+                         "downloads":[],
+                         "qaforums":[],
+                         "releases":[],
+                         "pullpo":[],
+                         "events":[]
+                         }
+
+            if filter_.get_name() in supported_on[ds.get_name()]:
             # if filter_.get_name() in ["people2","company+country","repository","company"]:
                 logging.info("---> Using new filter API")
                 ds.create_filter_report_all(filter_, period, startdate, enddate, 
