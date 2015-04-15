@@ -1342,6 +1342,42 @@ class TimeToReview(Metrics):
         q = self.db.GetTimeToReviewQuerySQL (self.filters, bots)
         return q
 
+    def _get_agg_all(self, data):
+        from numpy import median, average
+        from vizgrimoire.GrimoireUtils import removeDecimals
+
+        data_all = {}
+
+        # First, we need to group by the filter field the data
+        all_items = self.db.get_all_items(self.filters.type_analysis)
+        group_field = self.db.get_group_field(all_items)
+        id_field = group_field.split('.')[1] # remove table name
+
+        items =  list(Set(data[id_field]))
+        data_all[id_field] = items
+        for id in ["review_time_days_median", "review_time_days_avg"]:
+            data_all[id] = []
+
+        for item in items:
+            # First, extract the data for the item
+            data_item = {"changed_on":[],"revtime":[]}
+            for i in range(0,len(data[id_field])):
+                if data[id_field][i] == item:
+                    data_item["changed_on"].append(data["changed_on"][i])
+                    data_item["revtime"].append(data["revtime"][i])
+            data_revtime = data_item['revtime']
+            if (isinstance(data, list) == False): data_revtime = [data_revtime]
+            # ttr_median = sorted(data)[len(data)//2]
+            if (len(data_revtime) == 0):
+                ttr_median = float("nan")
+                ttr_avg = float("nan")
+            else:
+                ttr_median = float(median(removeDecimals(data_revtime)))
+                ttr_avg = float(average(removeDecimals(data_revtime)))
+            data_all["review_time_days_median"].append(ttr_median)
+            data_all["review_time_days_avg"].append(ttr_avg)
+        return data_all
+
     def get_agg(self):
         from numpy import median, average
         from vizgrimoire.GrimoireUtils import removeDecimals
@@ -1349,6 +1385,11 @@ class TimeToReview(Metrics):
         q = self._get_sql()
         if q is None: return {}
         data = self.db.ExecuteQuery(q)
+
+        if self.filters.type_analysis and self.filters.type_analysis[1] is None:
+            # Support for GROUP BY queries
+            return self._get_agg_all(data)
+
         data = data['revtime']
         if (isinstance(data, list) == False): data = [data]
         # ttr_median = sorted(data)[len(data)//2]
@@ -1360,14 +1401,62 @@ class TimeToReview(Metrics):
             ttr_avg = float(average(removeDecimals(data)))
         return {"review_time_days_median":ttr_median, "review_time_days_avg":ttr_avg}
 
+    def _get_ts_all(self, data):
+        from numpy import median, average
+        from vizgrimoire.GrimoireUtils import removeDecimals
+
+        data_all = {}
+
+        # First, we need to group by the filter field the data
+        all_items = self.db.get_all_items(self.filters.type_analysis)
+        group_field = self.db.get_group_field(all_items)
+        id_field = group_field.split('.')[1] # remove table name
+
+        items =  list(Set(data[id_field]))
+        data_all[id_field] = items
+        for id in ["review_time_days_median", "review_time_days_avg"]:
+            data_all[id] = []
+
+        for item in items:
+            # First, extract the data for the item
+            data_item = {"changed_on":[],"revtime":[]}
+            for i in range(0,len(data[id_field])):
+                if data[id_field][i] == item:
+                    data_item["changed_on"].append(data["changed_on"][i])
+                    data_item["revtime"].append(data["revtime"][i])
+
+            med_avg_list = medianAndAvgByPeriod(self.filters.period,
+                                                data_item['changed_on'], data_item['revtime'])
+            metrics_list = {}
+            if (med_avg_list != None):
+                metrics_list['review_time_days_median'] = med_avg_list['median']
+                metrics_list['review_time_days_avg'] = med_avg_list['avg']
+                metrics_list['month'] = med_avg_list['month']
+            else:
+                metrics_list['review_time_days_median'] = []
+                metrics_list['review_time_days_avg'] = []
+                metrics_list['month'] = []
+
+            metrics_list = completePeriodIds(metrics_list, self.filters.period,
+                                            self.filters.startdate, self.filters.enddate)
+
+            data_all['review_time_days_median'].append(metrics_list['review_time_days_median'])
+            data_all['review_time_days_avg'].append(metrics_list['review_time_days_avg'])
+            data_all['month'] = metrics_list['month']
+
+        return data_all
+
     def get_ts(self):
         q = self._get_sql()
         if q is None: return {}
         review_list = self.db.ExecuteQuery(q)
         checkListArray(review_list)
+
+        if self.filters.type_analysis and self.filters.type_analysis[1] is None:
+            # Support for GROUP BY queries
+            return self._get_ts_all(review_list)
+
         metrics_list = {}
-
-
         med_avg_list = medianAndAvgByPeriod(self.filters.period, review_list['changed_on'], review_list['revtime'])
         if (med_avg_list != None):
             metrics_list['review_time_days_median'] = med_avg_list['median']
@@ -1616,7 +1705,7 @@ if __name__ == '__main__':
     submitted = Submitted(dbcon, filters)
     print submitted.get_ts()
     print submitted.get_agg()
-    
+
     print "Merged info:"
     merged = Merged(dbcon, filters)
     print merged.get_ts()

@@ -1890,7 +1890,7 @@ class SCRQuery(DSQuery):
         # Initially we can not trust the i.submitted_on date. 
         # Thus, we're retrieving the first Upload patch date that should
         # be close to the actual changeset submission
-        fields.add("TIMESTAMPDIFF(SECOND, ch_ext.changed_on, ch.changed_on)/(24*3600) AS revtime")
+        fields.add("TIMESTAMPDIFF(SECOND,ch_ext.changed_on,ch.changed_on)/(24*3600) AS revtime")
         fields.add("ch.changed_on")
 
         tables.add("issues i")
@@ -1910,12 +1910,20 @@ class SCRQuery(DSQuery):
         filters.add("i.submitted_by<>ch.changed_by")
         #filters.add("ORDER BY ch_ext.changed_on")
 
+        all_items = self.get_all_items(mfilter.type_analysis)
+
+        if all_items:
+            group_field = self.get_group_field(all_items)
+            fields.add(group_field)
+
         fields_str = self._get_fields_query(fields)
         tables_str = self._get_tables_query(tables)
         filters_str = self._get_filters_query(filters)
-        filters_str = filters_str + " ORDER BY ch_ext.changed_on"
+
+        filters_str += " ORDER BY ch_ext.changed_on"
+
         q = self.GetSQLGlobal('ch.changed_on', fields_str, tables_str, filters_str,
-                        startdate, enddate)
+                              startdate, enddate)
         # min_days_for_review = 0.042 # one hour
         # q = "SELECT revtime, changed_on FROM ("+q+") qrevs WHERE revtime>"+str(min_days_for_review)
         return q
