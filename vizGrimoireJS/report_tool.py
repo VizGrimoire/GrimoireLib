@@ -93,7 +93,7 @@ def create_reports_filters(period, startdate, enddate, destdir, npeople, identit
                          "its":["people2","company","company+country","country","repository","domain"],
                          "its_1":[],
                          "mls":[],
-                         "scr":[],
+                         "scr":["people2","country","company","repository"],
                          "mediawiki":[],
                          "irc":[],
                          "downloads":[],
