@@ -166,6 +166,7 @@ class TimeToReviewPendingSCR(Metrics):
             if reviewers:
                 filters.add("i.id NOT IN (%s) " % (sql_reviews_reviewed))
 
+            filters.union_update(self.db.GetSQLReportWhere(self.filters))
             filters = self.db._get_filters_query(filters)
             # All reviews before the month: accumulated key point
             filters += " HAVING month<=" + str(month)
