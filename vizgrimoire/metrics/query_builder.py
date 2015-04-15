@@ -1944,29 +1944,42 @@ class SCRQuery(DSQuery):
         sql_reviews_reviewed = self.get_sql_reviews_reviewed(startdate)
 
         fields = "TIMESTAMPDIFF(SECOND, submitted_on, NOW())/(24*3600) AS revtime, submitted_on "
+
+        tables = Set([])
+        filters = Set([])
+
         if (uploaded):
             fields = "TIMESTAMPDIFF(SECOND, ch.changed_on, NOW())/(24*3600) AS revtime, i.submitted_on as submitted_on "
-        tables = "issues i, people, issues_ext_gerrit ie "
-        if (uploaded): tables += " , changes ch, ("+sql_max_patchset+") last_patch "
-        tables += self._get_tables_query(self.GetSQLReportFrom(mfilter))
-        filters = filter_bots + " people.id = i.submitted_by "
-        filters += self._get_filters_query(self.GetSQLReportWhere(mfilter))
-        filters += " AND status<>'MERGED' AND status<>'ABANDONED' "
-        filters += " AND ie.issue_id  = i.id "
+        tables.add("issues i")
+        tables.add("people")
+        tables.add("issues_ext_gerrit ie")
         if (uploaded):
-            filters += " AND ch.issue_id  = i.id AND i.id = last_patch.issue_id "
-            filters += " AND ch.old_value = last_patch.maxPatchset  AND ch.field = 'Upload'"
-        if reviewers:
-                filters += """ AND i.id NOT IN (%s)
-                """ % (sql_reviews_reviewed)
+            tables.add("changes ch")
+            tables.add("("+sql_max_patchset+") last_patch")
+        tables.union_update(self.GetSQLReportFrom(mfilter))
+        tables = self._get_tables_query(tables)
 
-        if (self.GetIssuesFiltered() != ""): filters += " AND " + self.GetIssuesFiltered()
+        filters.add(filter_bots)
+        filters.add("people.id = i.submitted_by")
+        filters.add("status<>'MERGED'")
+        filters.add("status<>'ABANDONED'")
+        filters.add("ie.issue_id  = i.id")
+        filters.union_update(self.GetSQLReportWhere(mfilter))
+        if (uploaded):
+            filters.add("ch.issue_id  = i.id")
+            filters.add("i.id = last_patch.issue_id")
+            filters.add("ch.old_value = last_patch.maxPatchset")
+            filters.add("ch.field = 'Upload'")
+        if reviewers:
+                filters.add("i.id NOT IN (%s)" % (sql_reviews_reviewed))
 
         # if (uploaded): filters += " GROUP BY comm.issue_id "
+
+        filters = self._get_filters_query(filters)
         filters += " ORDER BY  i.submitted_on"
+
         q = self.GetSQLGlobal('i.submitted_on', fields, tables, filters,
                               startdate, enddate)
-
         return(q)
 
     def get_sql_last_change_for_reviews(self, before = None):
