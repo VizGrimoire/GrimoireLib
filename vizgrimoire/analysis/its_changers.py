@@ -20,6 +20,7 @@
 # Authors:
 #     Daniel Izquierdo Cortazar <dizquierdo@bitergia.com>
 
+from sets import Set
 
 from vizgrimoire.analysis.analyses import Analyses
 
@@ -29,7 +30,7 @@ from vizgrimoire.metrics.metrics_filter import MetricFilters
 
 from vizgrimoire.ITS import ITS
 
-from sets import Set
+from vizgrimoire.GrimoireUtils import completePeriodIds, createJSON
 
 
 class StatusChangers(Analyses):
@@ -67,8 +68,11 @@ class StatusChangers(Analyses):
 
         query = query + " group by name, state "
         query = query + " order by state, count(distinct(ch.id)) desc, name "
-        print query
+        #print query
         data = self.db.ExecuteQuery(query)
+
+        # TODO: Hardcoded creation of file
+        #createJSON(data, "../../../../json/its-changers.json")
 
         return data
 
@@ -79,12 +83,11 @@ class StatusChanges(Analyses):
     desc = "Changes per status"
     data_source = ITS
 
-    def _sql(self, evolutionary = False, status = None):
+    def _sql(self, status):
         fields = Set([])
         tables = Set([])
         filters = Set([])
 
-        fields.add("new_value as state")
         fields.add("count(distinct(ch.id)) as changes")
 
         tables.add("issues i")
@@ -93,13 +96,12 @@ class StatusChanges(Analyses):
 
         filters.add("ch.issue_id = i.id")
         filters.add("ch.field = 'Status'")
-        if status:
-            filters.add("ch.new_value = '" + status + "'")
+        filters.add("ch.new_value = '" + status + "'")
         filters.union_update(self.db.GetSQLReportWhere(self.filters))
 
         query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                    self.filters.enddate, " ch.changed_on ", fields,
-                                   tables, filters, evolutionary, self.filters.type_analysis)
+                                   tables, filters, True, self.filters.type_analysis)
 
         return query
 
@@ -109,24 +111,33 @@ class StatusChanges(Analyses):
         tables = Set([])
         filters = Set([])
 
-        query = """select distinct(new_value) as state
+        query = """select distinct(new_value) as states
                    from changes
                    where field = 'Status' """
         states = self.db.ExecuteQuery(query)
 
-        #states = data["state"]
-        states = ["Closed", "In Progress", "Open"]
         data = {}
-        for state in states:
-            query = self._sql(True, state)
+        for state in states["states"]:
+            query = self._sql(state)
             state_data = self.db.ExecuteQuery(query)
-            data[state] = state_data
+            state_data = completePeriodIds(state_data, self.filters.period,
+                                           self.filters.startdate, self.filters.enddate)
+            if not data:
+                data = state_data
+                data[state] = data["changes"]
+                data.pop("changes") # remove not needed data
+            else:
+                data[state] = state_data["changes"]
+
+        # TODO: Hardcoded creation of file
+        #createJSON(data, "../../../../json/its-changes.json")
+
         return data
 
 if __name__ == '__main__':
 
     filters = MetricFilters("month", "'2014-04-01'", "'2015-01-01'", [])
-    dbcon = ITSQuery("root", "", "openstack_2015q1_tickets", "openstack_2015q1_git")
+    dbcon = ITSQuery("root", "", "cp_bicho_cloudera", "cp_cvsanaly_cloudera")
 
     all_people_changing = StatusChangers(dbcon, filters)
     print all_people_changing.result()
