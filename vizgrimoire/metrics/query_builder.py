@@ -220,6 +220,7 @@ class DSQuery(object):
         return db
 
     def ExecuteQuery (self, sql):
+        # print sql
         if sql is None: return {}
         result = {}
         self.cursor.execute(sql)
@@ -1582,6 +1583,37 @@ class SCRQuery(DSQuery):
         filters.add("i.summary not like '%"+value+"%'")
         return filters
 
+    def GetSQLBotFrom(self):
+        # Bots are removed from the upeople table, using the upeople.identifier table.
+        # Another option is to remove those bots directly in the people table.
+        tables = Set([])
+        tables.add("issues i")
+        tables.add("people p")
+        tables.add("people_uidentities pup")
+        tables.add(self.identities_db + ".uidentities u")
+
+        return tables
+
+    def GetSQLBotWhere(self, bots_str):
+        # Based on the tables provided in GetSQLBotFrom method, 
+        # this method provides the clauses to join the several tables
+
+        bots = bots_str
+        if not isinstance(bots_str, list):
+            bots = bots_str.split(",")
+        where = Set([])
+        where.add("i.submitted_by = p.id")
+        where.add("p.id = pup.people_id")
+        where.add("pup.uuid = u.uuid")
+        for bot in bots:
+            # This code only ignores bots provided in raw_bots.
+            # This should add the other way around, u.identifier = 'xxx'
+            where.add("u.identifier <> '" + bot + "'")
+
+        return where
+
+
+
     ##########
     #Generic functions to obtain FROM and WHERE clauses per type of report
     ##########
@@ -1611,6 +1643,8 @@ class SCRQuery(DSQuery):
 
         From = self._get_from_type_analysis_set(filters.type_analysis)
 
+        #if filters.people_out is not None:
+        #    From.union_update(self.GetSQLBotFrom())
         if filters.global_filter is not None:
             From.union_update(self._get_from_type_analysis_set(filters.global_filter))
 
@@ -1682,6 +1716,8 @@ class SCRQuery(DSQuery):
 
         where = self._get_where_type_analysis_set(filters.type_analysis)
 
+        #if filters.people_out is not None:
+        #    where.union_update(self.GetSQLBotWhere(filters.people_out))
         if filters.global_filter is not None:
             where.union_update(self._get_where_global_filter_set(filters.global_filter))
 
@@ -1936,27 +1972,40 @@ class SCRQuery(DSQuery):
         fields = "TIMESTAMPDIFF(SECOND, submitted_on, NOW())/(24*3600) AS revtime, submitted_on "
         if (uploaded):
             fields = "TIMESTAMPDIFF(SECOND, ch.changed_on, NOW())/(24*3600) AS revtime, i.submitted_on as submitted_on "
-        tables = "issues i, people, issues_ext_gerrit ie "
-        if (uploaded): tables += " , changes ch, ("+sql_max_patchset+") last_patch "
-        if self._get_tables_query(self.GetSQLReportFrom(mfilter)) != "":
-            tables += ", " + self._get_tables_query(self.GetSQLReportFrom(mfilter))
-        filters = filter_bots + " people.id = i.submitted_by "
-        if self._get_filters_query(self.GetSQLReportWhere(mfilter)) != "":
-            filters += " AND " + self._get_filters_query(self.GetSQLReportWhere(mfilter))
-        filters += " AND status<>'MERGED' AND status<>'ABANDONED' "
-        filters += " AND ie.issue_id  = i.id "
+
+        tables = Set([])
+        filters = Set([])
+
+        tables.add("issues i")
+        tables.add("people")
+        tables.add("issues_ext_gerrit ie")
         if (uploaded):
-            filters += " AND ch.issue_id  = i.id AND i.id = last_patch.issue_id "
-            filters += " AND ch.old_value = last_patch.maxPatchset  AND ch.field = 'Upload'"
+            tables.add("changes ch")
+            tables.add("("+sql_max_patchset+") last_patch")
+        tables.union_update(self.GetSQLReportFrom(mfilter))
+        tables = self._get_tables_query(tables)
+
+        filters.add(filter_bots)
+        filters.add("people.id = i.submitted_by")
+        filters.add("status<>'MERGED'")
+        filters.add("status<>'ABANDONED'")
+        filters.add("ie.issue_id  = i.id")
+        filters.union_update(self.GetSQLReportWhere(mfilter))
+        if (uploaded):
+            filters.add("ch.issue_id  = i.id")
+            filters.add("i.id = last_patch.issue_id")
+            filters.add("ch.old_value = last_patch.maxPatchset")
+            filters.add("ch.field = 'Upload'")
         if reviewers:
-                filters += " AND i.summary not like '%WIP%' "
-                filters += """ AND i.id NOT IN (%s)
-                """ % (sql_reviews_reviewed)
+            filters.add("i.summary not like '%WIP%'")
+            filters.add("i.id NOT IN (%s)" % (sql_reviews_reviewed))
 
+
+        filters = self._get_filters_query(filters)
         if (self.GetIssuesFiltered() != ""): filters += " AND " + self.GetIssuesFiltered()
-
         # if (uploaded): filters += " GROUP BY comm.issue_id "
         filters += " ORDER BY  i.submitted_on"
+
         q = self.GetSQLGlobal('i.submitted_on', fields, tables, filters,
                               startdate, enddate)
 
