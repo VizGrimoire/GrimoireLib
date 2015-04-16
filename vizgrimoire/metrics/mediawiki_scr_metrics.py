@@ -27,6 +27,7 @@ from datetime import datetime, timedelta
 import logging
 import MySQLdb
 from numpy import median, average
+from sets import Set
 
 from vizgrimoire.GrimoireUtils import completePeriodIds, checkListArray, medianAndAvgByPeriod, removeDecimals
 from vizgrimoire.metrics.metrics import Metrics
@@ -142,14 +143,23 @@ class TimeToReviewPendingSCR(Metrics):
                 fields = "TIMESTAMPDIFF(SECOND, ch.changed_on, '"+current+"')/(24*3600) AS uploadtime,"
             fields += " YEAR(i.submitted_on)*12+MONTH(i.submitted_on) as month"
 
-            tables = "issues i, people, issues_ext_gerrit ie "
-            if (uploaded): tables += ", changes ch, ("+sql_max_patchset+") last_patch "
-            gtables = self.db._get_tables_query(self.db.GetSQLReportFrom(type_analysis))
-            if gtables is not None and gtables != "":
-                tables += ", " + gtables
+            gtables = Set([])
+            gtables.add("issues i")
+            gtables.add("people p")
+            gtables.add("issues_ext_gerrit ie")
+            #tables = "issues i, people, issues_ext_gerrit ie "
+            #if (uploaded): tables += ", changes ch, ("+sql_max_patchset+") last_patch "
+            if uploaded:
+                gtables.add("changes ch")
+                gtables.add("("+sql_max_patchset+") last_patch")
+            gtables.union_update(self.db.GetSQLReportFrom(self.filters))
+            #gtables = self.db._get_tables_query(self.db.GetSQLReportFrom(self.filters))
+            #if gtables is not None and gtables != "":
+            #    tables += ", " + gtables
+            tables = self.db._get_tables_query(gtables)
 
-            filters = " people.id = i.submitted_by "
-            gfilters = self.db._get_filters_query(self.db.GetSQLReportWhere(type_analysis))
+            filters = " p.id = i.submitted_by "
+            gfilters = self.db._get_filters_query(self.db.GetSQLReportWhere(self.filters))
             if gfilters is not None and gfilters != "":
                 filters += " AND " + gfilters
             filters += " AND ie.issue_id  = i.id "
