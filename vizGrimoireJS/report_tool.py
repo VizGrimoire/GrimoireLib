@@ -89,11 +89,11 @@ def create_reports_filters(period, startdate, enddate, destdir, npeople, identit
                          "events":[]
                          }
             supported_on = {
-                         "scm":[],
+                         "scm":["people2","company","company+country","country","repository","domain"],
                          "its":[],
                          "its_1":[],
                          "mls":[],
-                         "scr":[],
+                         "scr":["people2","company","country","repository"],
                          "mediawiki":[],
                          "irc":[],
                          "downloads":[],
@@ -150,8 +150,8 @@ def get_top_people (startdate, enddate, idb):
         tops["its"] =  mopeners.get_list(mfilter, 0)
         tops["its"]["identifier"] = tops["its"].pop("openers")
     msenders = DataSource.get_metrics("senders", IRC)
-    if msenders: tops["irc"] =  
-        msenders.get_list(mfilter, 0)
+    if msenders: 
+        tops["irc"] =  msenders.get_list(mfilter, 0)
         tops["irc"]["identifier"] = tops["irc"].pop("senders")
     mauthors = DataSource.get_metrics("authors", Mediawiki)
     if mauthors: 
