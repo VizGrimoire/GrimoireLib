@@ -169,6 +169,9 @@ class TimeToReviewPendingSCR(Metrics):
             time_to["review_time_pending_upload_ReviewsWaitingForReviewer_days_median"].append(ttr_reviewers_median_upload)
             time_to["review_time_pending_upload_ReviewsWaitingForReviewer_days_avg"].append(ttr_reviewers_avg_upload)
 
+        # In SCR the item field name must be url
+        time_to['url'] = time_to.pop('name')
+
         return time_to
 
 
@@ -398,6 +401,7 @@ class TimeToReviewPendingSCR(Metrics):
                     nreviews = len(data_item)
                     acc_pending_time_median_month['review_time_pending_reviews'][i].append(nreviews)
                     acc_pending_time_median_month['review_time_pending_days_acc_median'][i].append(values)
+
                 # upload time
                 for item in all_items_month_ids:
                     data_item = []
@@ -454,15 +458,38 @@ class TimeToReviewPendingSCR(Metrics):
                         for metric in metrics:
                             # 0 reviews, 0 review time
                             acc_pending_time_median[metric][i].append(0)
+
             # Now we need to completePeriods to add time series fields
             # All the time series are already complete because the way they are built
+            # but we miss some time series fields
+            ts_fields = ['unixtime','date','month','id']
+            ts_aux = {}
+            ts_aux['month'] =  acc_pending_time_median['month']
+            ts_aux = completePeriodIds(ts_aux, self.filters.period,
+                                       self.filters.startdate, self.filters.enddate)
+            for field in ts_fields:
+                acc_pending_time_median[field] = ts_aux[field]
 
-            acc_pending_time_median = completePeriodIds(acc_pending_time_median, self.filters.period,
-                                                        self.filters.startdate, self.filters.enddate)
-            # After completing the time series, add the name series
-            acc_pending_time_median["name"] = all_items
+            # After completing the time series, add the name/url series
+            acc_pending_time_median["url"] = all_items
 
-            return acc_pending_time_median
+            # And now we need to adjust the format from
+            # month:[M1, M2, M3], url:[URL1, URL2. ...], metric:[[URL1_M1,URL2_M1], [URL1_M2, URL2_M2],[URL1_M3...]...]
+            # to
+            # month:[M1, M2, M3], url:[URL1, URL2. ...], metric:[[URL1_M1, URL1_M2, URL1_M3],[URL2_M1...]...]
+            time_to = {}
+            for field in acc_pending_time_median:
+                if field not in metrics:
+                    time_to[field] = acc_pending_time_median[field]
+                else:
+                    # The new metric field will have an array per item with the time series
+                    time_to[field] = []
+                    for i in range(0,len(all_items)):
+                        time_to[field].append([])
+                    for metrics_month in acc_pending_time_median[field]:
+                        for j in range(0,len(all_items)):
+                            time_to[field][j].append(metrics_month[j])
+            return time_to
 
         startdate = self.filters.startdate
         enddate = self.filters.enddate
