@@ -285,6 +285,7 @@ class DSQuery(object):
             field = "r.name"
             if ds_query == ITSQuery: field = "t.url"
             elif ds_query == SCRQuery: field = "t.url"
+            elif ds_query == MLSQuery: field = "ml.mailing_list_url"
         elif analysis == "company"+MetricFilters.DELIMITER+"country":
             field = "CONCAT(com.name,'_',cou.name)"
 
@@ -1089,12 +1090,15 @@ class MLSQuery(DSQuery):
         # tables necessary for repositories
         #return (" messages m ") 
         tables = Set([])
+        tables.add("mailing_lists ml")
         return tables
 
     def GetSQLRepositoriesWhere (self, repository):
         # fields necessary to match info among tables
         filters = Set([])
-        filters.add("m.mailing_list_url = " + repository)
+        filters.add("m.mailing_list_url = ml.mailing_list_url")
+        if repository is not None:
+            filters.add("m.mailing_list_url = " + repository)
 
         return filters
 
@@ -1141,7 +1145,7 @@ class MLSQuery(DSQuery):
         filters.add("mp.type_of_recipient = \'From\'")
         filters.add("pup.uuid = pro.uuid")
         filters.add("pro.country_code = cou.code")
-        if name <> "":
+        if name not in  (None,""):
             filters.add("cou.name = " + name)
 
         return filters
@@ -1164,7 +1168,7 @@ class MLSQuery(DSQuery):
         filters.add("upd.domain_id = d.id")
         filters.add("m.first_date >= upd.init")
         filters.add("m.first_date < upd.end")
-        if name <> "":
+        if name is not None and name <> "":
             filters.add("d.name = " + name)
 
         return filters
@@ -2253,7 +2257,8 @@ class IRCQuery(DSQuery):
         filters.add("i.nick = pup.people_id")
         filters.add("pup.uuid = pro.uuid")
         filters.add("pro.country_code = cou.code")
-        filters.add("cou.name = " + name)
+        if name is not None:
+            filters.add("cou.name = " + name)
 
         return filters
 

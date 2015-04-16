@@ -53,22 +53,6 @@ class MLS(DataSource):
     def get_name(): return "mls"
 
     @staticmethod
-    def get_date_init(startdate, enddate, identities_db = None, type_analysis = None):
-        fields = "DATE_FORMAT(MIN(m.first_date),'%Y-%m-%d') AS first_date"
-        tables = "messages m"
-        filters = ""
-        q = GetSQLGlobal('m.first_date',fields, tables, filters, startdate, enddate)
-        return ExecuteQuery(q)
-
-    @staticmethod
-    def get_date_end(startdate, enddate,  identities_db = None, type_analysis = None):
-        fields = "DATE_FORMAT(MAX(m.first_date),'%Y-%m-%d') AS last_date"
-        tables = "messages m"
-        filters = ""
-        q = GetSQLGlobal('m.first_date',fields, tables, filters, startdate, enddate)
-        return ExecuteQuery(q)
-
-    @staticmethod
     def get_evolutionary_data (period, startdate, enddate, identities_db, filter_ = None):
         # rfield = MLS.get_repo_field()
         evolutionary = True
@@ -296,17 +280,19 @@ class MLS(DataSource):
     def create_filter_report_all(filter_, period, startdate, enddate, destdir, npeople, identities_db):
         check = False # activate to debug issues
         filter_name = filter_.get_name()
-        if filter_name == "people2" or filter_name == "company":
+        if filter_name in ["people2","company","repository","country","domain"] :
             filter_all = Filter(filter_name, None)
             agg_all = MLS.get_agg_data(period, startdate, enddate,
                                        identities_db, filter_all)
             fn = os.path.join(destdir, filter_.get_static_filename_all(MLS()))
             createJSON(agg_all, fn)
+            MLS.convert_all_to_single(agg_all, filter_, destdir, False)
 
             evol_all = MLS.get_evolutionary_data(period, startdate, enddate,
                                                  identities_db, filter_all)
             fn = os.path.join(destdir, filter_.get_evolutionary_filename_all(MLS()))
             createJSON(evol_all, fn)
+            MLS.convert_all_to_single(evol_all, filter_, destdir, True)
 
             if check:
                 MLS._check_report_all_data(evol_all, filter_, startdate, enddate,

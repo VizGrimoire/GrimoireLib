@@ -25,7 +25,7 @@
     support for Grimoire supported data sources """ 
 
 import logging, os
-from vizgrimoire.metrics.query_builder import DSQuery, ITSQuery
+from vizgrimoire.metrics.query_builder import DSQuery, ITSQuery, MLSQuery
 from vizgrimoire.GrimoireUtils import createJSON
 from vizgrimoire.metrics.metrics_filter import MetricFilters
 
@@ -351,9 +351,11 @@ class DataSource(object):
         """ Get basic data from all core metrics """
         from vizgrimoire.GrimoireUtils import fill_and_order_items
         from vizgrimoire.ITS import ITS
+        from vizgrimoire.MLS import MLS
         data = {}
         dsquery = DSQuery
         if DS == ITS: dsquery = ITSQuery
+        if DS == MLS: dsquery = MLSQuery
 
         from vizgrimoire.report import Report
         automator = Report.get_config()
@@ -504,11 +506,16 @@ class DataSource(object):
         from vizgrimoire.SCM import SCM
         from vizgrimoire.ITS import ITS
         from vizgrimoire.SCR import SCR
+        from vizgrimoire.MLS import MLS
         from vizgrimoire.filter import Filter
 
         if cls == ITS or cls == SCR:
             if 'url' in data.keys():
                 data['name'] = data.pop('url')
+                data['name'] = [item.replace('/', '_') for item in data['name']]
+        elif cls == MLS:
+            if 'mailing_list_url' in data.keys():
+                data['name'] = data.pop('mailing_list_url')
                 data['name'] = [item.replace('/', '_') for item in data['name']]
 
         if not evolutionary:
@@ -519,6 +526,8 @@ class DataSource(object):
                 fields = ["authors_365","name","commits_365"]
             elif cls == ITS:
                 fields = ["closed_365","closers_365", "name"]
+            elif cls == MLS:
+                fields = ["sent_365","senders_365", "name"]
             else:
                 fields = ["name"]
             for field in fields:

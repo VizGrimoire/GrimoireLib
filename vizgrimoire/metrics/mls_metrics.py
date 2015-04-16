@@ -38,6 +38,60 @@ from vizgrimoire.MLS import MLS
 
 from sets import Set
 
+class InitialActivity(Metrics):
+    """ For the given dates of activity, this returns the first trace found
+    """
+
+    id = "first_date"
+    name = "First activity date"
+    desc = "First message sent the two provided dates"
+    data_source = MLS
+
+    def get_agg(self):
+        fields = Set([])
+        tables = Set([])
+        filters = Set([])
+
+        fields.add("DATE_FORMAT(MIN(m.first_date),'%Y-%m-%d') AS first_date")
+
+        tables.add("messages m")
+        tables.union_update(self.db.GetSQLReportFrom(self.filters))
+
+        filters.union_update(self.db.GetSQLReportWhere(self.filters))
+
+        query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
+                                   self.filters.enddate, "m.first_date", fields,
+                                   tables, filters, False,
+                                   self.filters.type_analysis)
+        return self.db.ExecuteQuery(query)
+
+class EndOfActivity(Metrics):
+    """ For the given dates of activity, this returns the last trace found
+    """
+    id = "last_date"
+    name = "Last activity date"
+    desc = "Last messages sent between the two provided dates"
+    data_source = MLS
+
+    def get_agg(self):
+        fields = Set([])
+        tables = Set([])
+        filters = Set([])
+
+        fields.add("DATE_FORMAT(MAX(m.first_date),'%Y-%m-%d') AS last_date")
+
+        tables.add("messages m")
+        tables.union_update(self.db.GetSQLReportFrom(self.filters))
+
+        filters.union_update(self.db.GetSQLReportWhere(self.filters))
+
+        query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
+                                   self.filters.enddate, "m.first_date", fields,
+                                   tables, filters, False,
+                                   self.filters.type_analysis)
+
+        return self.db.ExecuteQuery(query)
+
 
 class EmailsSent(Metrics):
     """ Emails metric class for mailing lists analysis """
@@ -242,6 +296,7 @@ class EmailsSenders(Metrics):
         query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                    self.filters.enddate, " m.first_date ", fields,
                                    tables, filters, evolutionary, self.filters.type_analysis)
+
         return query
 
 class People(Metrics):
@@ -385,7 +440,7 @@ class SendersInit(Metrics):
             filters.add("m.message_ID = mp.message_id")
             filters.add("mp.email_address = pup.people_id")
             filters.add("mp.type_of_recipient = \'From\'")
-            
+
         filters.add("m.is_response_of is null")
 
         query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
