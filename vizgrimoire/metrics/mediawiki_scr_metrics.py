@@ -43,7 +43,142 @@ class TimeToReviewPendingSCR(Metrics):
     desc = "Total time to review for pending reviews"
     data_source = SCR
 
+    def _get_agg_all(self):
+        # All items data is returned together
+
+        # Show review and upload time for all pending reviews
+        # and just for reviews pending for reviewers
+        reviewers_pending = True
+
+        startdate = self.filters.startdate
+        enddate = self.filters.enddate
+        identities_db = self.db.identities_db
+        type_analysis =  self.filters.type_analysis
+        bots = []
+
+        # First, we need to group by the filter field the data
+        all_items = self.db.get_all_items(self.filters.type_analysis)
+        group_field = self.db.get_group_field(all_items)
+        id_field = group_field.split('.')[1] # remove table name
+
+        time_to = {"review_time_pending_days_median":[],
+                   "review_time_pending_days_avg":[],
+                   "review_time_pending_ReviewsWaitingForReviewer_days_median":[],
+                   "review_time_pending_ReviewsWaitingForReviewer_days_avg":[],
+                   "review_time_pending_upload_days_median":[],
+                   "review_time_pending_upload_days_avg":[],
+                   "review_time_pending_upload_ReviewsWaitingForReviewer_days_median":[],
+                   "review_time_pending_upload_ReviewsWaitingForReviewer_days_avg":[]
+                   }
+
+        q = self.db.GetTimeToReviewPendingQuerySQL(self.filters, identities_db, bots)
+        ttr_data = self.db.ExecuteQuery(q)
+        checkListArray(ttr_data)
+
+
+        q = self.db.GetTimeToReviewPendingQuerySQL(self.filters, identities_db, bots, reviewers_pending)
+        ttr_reviewers_data = self.db.ExecuteQuery(q)
+        checkListArray(ttr_reviewers_data)
+
+
+        q = self.db.GetTimeToReviewPendingQuerySQL (self.filters, identities_db, bots, False, True)
+        ttr_upload_data = self.db.ExecuteQuery(q)
+        checkListArray(ttr_upload_data)
+
+        # This query is really slow.
+        q = self.db.GetTimeToReviewPendingQuerySQL (self.filters, identities_db, bots, reviewers_pending, True)
+        ttr_reviewers_upload_data = self.db.ExecuteQuery(q)
+        checkListArray(ttr_reviewers_upload_data)
+
+        all_items_ids = []
+        for items in [ttr_data,ttr_reviewers_data,ttr_upload_data,ttr_reviewers_upload_data]:
+            # Get the list of items and add them to the global list
+            all_items_ids = list(Set(items[id_field] + all_items_ids))
+
+        time_to['name'] = all_items_ids
+
+        # Review time
+        for item in time_to['name']:
+            data_item_revtime = []
+            # Get all values for the item
+            for i in range(0, len(ttr_data[id_field])):
+                if ttr_data[id_field][i] == item:
+                    data_item_revtime.append(ttr_data['revtime'][i])
+
+            if (len(data_item_revtime) == 0):
+                ttr_median = float("nan")
+                ttr_avg = float("nan")
+            else:
+                ttr_median = median(removeDecimals(data_item_revtime))
+                ttr_avg = average(removeDecimals(data_item_revtime))
+
+            time_to["review_time_pending_days_median"].append(ttr_median)
+            time_to["review_time_pending_days_avg"].append(ttr_avg)
+
+        # Review time for reviewers
+        for item in time_to['name']:
+            data_item_revtime = []
+            # Get all values for the item
+            for i in range(0, len(ttr_reviewers_data[id_field])):
+                if ttr_reviewers_data[id_field][i] == item:
+                    data_item_revtime.append(ttr_reviewers_data['revtime'][i])
+
+            if (len(data_item_revtime) == 0):
+                ttr_reviewers_median = float("nan")
+                ttr_reviewers_avg = float("nan")
+            else:
+                ttr_reviewers_median = median(removeDecimals(data_item_revtime))
+                ttr_reviewers_avg = average(removeDecimals(data_item_revtime))
+
+            time_to["review_time_pending_ReviewsWaitingForReviewer_days_median"].append(ttr_reviewers_median)
+            time_to["review_time_pending_ReviewsWaitingForReviewer_days_avg"].append(ttr_reviewers_avg)
+
+        # Upload time
+        for item in time_to['name']:
+            data_item_revtime = []
+            # Get all values for the item
+            for i in range(0, len(ttr_upload_data[id_field])):
+                if ttr_upload_data[id_field][i] == item:
+                    data_item_revtime.append(ttr_upload_data['revtime'][i])
+            print item
+            print data_item_revtime
+
+            if (len(data_item_revtime) == 0):
+                ttr_median_upload = float("nan")
+                ttr_avg_upload = float("nan")
+            else:
+                ttr_median_upload = median(removeDecimals(data_item_revtime))
+                ttr_avg_upload = average(removeDecimals(data_item_revtime))
+
+            time_to["review_time_pending_upload_days_median"].append(ttr_median_upload)
+            time_to["review_time_pending_upload_days_avg"].append(ttr_median_upload)
+
+        # Upload time for reviewers
+        for item in time_to['name']:
+            data_item_revtime = []
+            # Get all values for the item
+            for i in range(0, len(ttr_reviewers_upload_data[id_field])):
+                if ttr_reviewers_upload_data[id_field][i] == item:
+                    data_item_revtime.append(ttr_reviewers_upload_data['revtime'][i])
+
+            if (len(data_item_revtime) == 0):
+                ttr_reviewers_median_upload = float("nan")
+                ttr_reviewers_avg_upload = float("nan")
+            else:
+                ttr_reviewers_median_upload = median(removeDecimals(data_item_revtime))
+                ttr_reviewers_avg_upload = average(removeDecimals(data_item_revtime))
+
+            time_to["review_time_pending_upload_ReviewsWaitingForReviewer_days_median"].append(ttr_reviewers_median_upload)
+            time_to["review_time_pending_upload_ReviewsWaitingForReviewer_days_avg"].append(ttr_reviewers_avg_upload)
+
+        return time_to
+
+
     def get_agg(self):
+
+        if self.filters.type_analysis and self.filters.type_analysis[1] is None:
+            return self._get_agg_all()
+
         # Show review and upload time for all pending reviews
         # and just for reviews pending for reviewers
         reviewers_pending = True
@@ -142,6 +277,11 @@ class TimeToReviewPendingSCR(Metrics):
             if (uploaded):
                 fields = "TIMESTAMPDIFF(SECOND, ch.changed_on, '"+current+"')/(24*3600) AS uploadtime,"
             fields += " YEAR(i.submitted_on)*12+MONTH(i.submitted_on) as month"
+
+            all_items = self.db.get_all_items(self.filters.type_analysis)
+            if all_items:
+                group_field = self.db.get_group_field(all_items)
+                fields = group_field + ", " + fields
 
             tables = Set([])
             filters = Set([])

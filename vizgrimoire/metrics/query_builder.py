@@ -1893,6 +1893,11 @@ class SCRQuery(DSQuery):
         fields.add("TIMESTAMPDIFF(SECOND,ch_ext.changed_on,ch.changed_on)/(24*3600) AS revtime")
         fields.add("ch.changed_on")
 
+        all_items = self.get_all_items(mfilter.type_analysis)
+        if all_items:
+            group_field = self.get_group_field(all_items)
+            fields.add(group_field)
+
         tables.add("issues i")
         tables.add("changes ch")
         tables.add("changes ch_ext, people")
@@ -1909,12 +1914,6 @@ class SCRQuery(DSQuery):
         # remove autoreviews
         filters.add("i.submitted_by<>ch.changed_by")
         #filters.add("ORDER BY ch_ext.changed_on")
-
-        all_items = self.get_all_items(mfilter.type_analysis)
-
-        if all_items:
-            group_field = self.get_group_field(all_items)
-            fields.add(group_field)
 
         fields_str = self._get_fields_query(fields)
         tables_str = self._get_tables_query(tables)
@@ -1944,12 +1943,17 @@ class SCRQuery(DSQuery):
         sql_reviews_reviewed = self.get_sql_reviews_reviewed(startdate)
 
         fields = "TIMESTAMPDIFF(SECOND, submitted_on, NOW())/(24*3600) AS revtime, submitted_on "
+        if (uploaded):
+            fields = "TIMESTAMPDIFF(SECOND, ch.changed_on, NOW())/(24*3600) AS revtime, i.submitted_on as submitted_on "
+
+        all_items = self.get_all_items(mfilter.type_analysis)
+        if all_items:
+            group_field = self.get_group_field(all_items)
+            fields = group_field +" ," + fields
 
         tables = Set([])
         filters = Set([])
 
-        if (uploaded):
-            fields = "TIMESTAMPDIFF(SECOND, ch.changed_on, NOW())/(24*3600) AS revtime, i.submitted_on as submitted_on "
         tables.add("issues i")
         tables.add("people")
         tables.add("issues_ext_gerrit ie")
