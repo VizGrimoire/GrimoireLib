@@ -354,7 +354,7 @@ class TimeToReviewPendingSCR(Metrics):
                        "review_time_pending_upload_ReviewsWaitingForReviewer_reviews"]
 
             acc_pending_time_median_month = {"month":[],"name":[]} # Used to store each month all items data
-            acc_pending_time_median = {"month":[],"name":[]} # Used to store the final format
+            acc_pending_time_median = {"month":[]} # Used to store the final format
 
             for metric in metrics:
                 acc_pending_time_median_month[metric] = []
@@ -381,7 +381,8 @@ class TimeToReviewPendingSCR(Metrics):
                 # Build a common list for all items
                 all_items_month_ids = []
                 # for data_sql in [newtime, uploadtime, newtime_rev, uploadtime_rev]:
-                for data_sql in [newtime, uploadtime, newtime_rev]:
+                for data_sql in [newtime, uploadtime, newtime_rev, uploadtime_rev]:
+                    checkListArray(data_sql)
                     all_items_month_ids = list(Set(data_sql[id_field]+all_items_month_ids))
                 acc_pending_time_median_month["name"][i] = all_items_month_ids
 
@@ -437,7 +438,6 @@ class TimeToReviewPendingSCR(Metrics):
             for lnames in acc_pending_time_median_month['name']:
                 all_items = list(Set(lnames+all_items))
             # And now time to create the final version that should be completePeriod
-            acc_pending_time_median["name"] = all_items
             for item in all_items:
                 # Add the ts for the item to the final dict
                 for i in range(0, months+1):
@@ -456,8 +456,12 @@ class TimeToReviewPendingSCR(Metrics):
                             acc_pending_time_median[metric][i].append(0)
             # Now we need to completePeriods to add time series fields
             # All the time series are already complete because the way they are built
+
             acc_pending_time_median = completePeriodIds(acc_pending_time_median, self.filters.period,
                                                         self.filters.startdate, self.filters.enddate)
+            # After completing the time series, add the name series
+            acc_pending_time_median["name"] = all_items
+
             return acc_pending_time_median
 
         startdate = self.filters.startdate
