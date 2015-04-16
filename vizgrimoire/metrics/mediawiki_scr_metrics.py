@@ -330,6 +330,138 @@ class TimeToReviewPendingSCR(Metrics):
             else: values = median(values)
             return values
 
+        def _get_ts_all():
+            """ Get the metrics for all items at the same time """
+
+            all_items = self.db.get_all_items(self.filters.type_analysis)
+            group_field = self.db.get_group_field(all_items)
+            id_field = group_field.split('.')[1] # remove table name
+
+            metrics = ["review_time_pending_reviews",
+                       "review_time_pending_days_acc_median",
+                       "review_time_pending_upload_reviews",
+                       "review_time_pending_upload_days_acc_median",
+                       "review_time_pending_ReviewsWaitingForReviewer_days_acc_median",
+                       "review_time_pending_ReviewsWaitingForReviewer_reviews",
+                       "review_time_pending_upload_ReviewsWaitingForReviewer_days_acc_median",
+                       "review_time_pending_upload_ReviewsWaitingForReviewer_reviews"]
+
+            metrics = ["review_time_pending_reviews",
+                       "review_time_pending_days_acc_median",
+                       "review_time_pending_upload_reviews",
+                       "review_time_pending_upload_days_acc_median",
+                       "review_time_pending_ReviewsWaitingForReviewer_days_acc_median",
+                       "review_time_pending_ReviewsWaitingForReviewer_reviews",
+                       "review_time_pending_upload_ReviewsWaitingForReviewer_days_acc_median",
+                       "review_time_pending_upload_ReviewsWaitingForReviewer_reviews"]
+
+            acc_pending_time_median_month = {"month":[],"name":[]} # Used to store each month all items data
+            acc_pending_time_median = {"month":[],"name":[]} # Used to store the final format
+
+            for metric in metrics:
+                acc_pending_time_median_month[metric] = []
+                acc_pending_time_median[metric] = []
+
+            # months = 2 # to debug
+
+            for i in range(0, months+1):
+                # Complete the skeletom of the data dict
+                acc_pending_time_median_month["month"].append(start_month+i)
+                acc_pending_time_median["month"].append(start_month+i)
+                acc_pending_time_median_month["name"].append([])
+                for metric in metrics:
+                    acc_pending_time_median_month[metric].append([])
+                    acc_pending_time_median[metric].append([])
+
+            for i in range(0, months+1):
+                # First get all data from SQL
+                newtime = self.db.ExecuteQuery(get_sql(start_month+i))
+                uploadtime = self.db.ExecuteQuery(get_sql(start_month+i, False, True))
+                newtime_rev = self.db.ExecuteQuery(get_sql(start_month+i, True))
+                # This is the slow query
+                uploadtime_rev = self.db.ExecuteQuery(get_sql(start_month+i, True, True))
+                # Build a common list for all items
+                all_items_month_ids = []
+                # for data_sql in [newtime, uploadtime, newtime_rev, uploadtime_rev]:
+                for data_sql in [newtime, uploadtime, newtime_rev]:
+                    all_items_month_ids = list(Set(data_sql[id_field]+all_items_month_ids))
+                acc_pending_time_median_month["name"][i] = all_items_month_ids
+
+                # Now add the data in a common dict for all metrics in this month
+                # review time
+                for item in all_items_month_ids:
+                    data_item = []
+                    for j in range(0, len(newtime[id_field])):
+                        if newtime[id_field][j] == item:
+                            data_item.append(newtime['newtime'][j])
+                    values = get_values_median(data_item)
+                    # print start_month+i, "newtime", item, values
+                    nreviews = len(data_item)
+                    acc_pending_time_median_month['review_time_pending_reviews'][i].append(nreviews)
+                    acc_pending_time_median_month['review_time_pending_days_acc_median'][i].append(values)
+                # upload time
+                for item in all_items_month_ids:
+                    data_item = []
+                    for j in range(0, len(uploadtime[id_field])):
+                        if uploadtime[id_field][j] == item:
+                            data_item.append(uploadtime['uploadtime'][j])
+
+                    values = get_values_median(data_item)
+                    # print start_month+i, "upload", item, values
+                    nreviews = len(data_item)
+                    acc_pending_time_median_month['review_time_pending_upload_reviews'][i].append(nreviews)
+                    acc_pending_time_median_month['review_time_pending_upload_days_acc_median'][i].append(values)
+                # review time reviewers
+                for item in all_items_month_ids:
+                    # Now just for reviews waiting for Reviewer
+                    data_item = []
+                    for j in range(0, len(newtime_rev[id_field])):
+                        if newtime_rev[id_field][j] == item:
+                            data_item.append(newtime_rev['newtime'][j])
+                    values = get_values_median(data_item)
+                    nreviews = len(data_item)
+                    acc_pending_time_median_month['review_time_pending_ReviewsWaitingForReviewer_reviews'][i].append(nreviews)
+                    acc_pending_time_median_month['review_time_pending_ReviewsWaitingForReviewer_days_acc_median'][i].append(values)
+
+                # upload time reviewers
+                for item in all_items_month_ids:
+                    data_item = []
+                    for j in range(0, len(uploadtime_rev[id_field])):
+                        if uploadtime_rev[id_field][j] == item:
+                            data_item.append(uploadtime_rev['uploadtime'][j])
+                    values = get_values_median(data_item)
+                    nreviews = len(data_item)
+                    acc_pending_time_median_month['review_time_pending_upload_ReviewsWaitingForReviewer_reviews'][i].append(nreviews)
+                    acc_pending_time_median_month['review_time_pending_upload_ReviewsWaitingForReviewer_days_acc_median'][i].append(values)
+
+            # Now we need to consolidate all names in a single list
+            all_items = []
+            for lnames in acc_pending_time_median_month['name']:
+                all_items = list(Set(lnames+all_items))
+            # And now time to create the final version that should be completePeriod
+            acc_pending_time_median["name"] = all_items
+            for item in all_items:
+                # Add the ts for the item to the final dict
+                for i in range(0, months+1):
+                    mitems = acc_pending_time_median_month['name'][i]
+                    found_item = False
+                    for k in range(0, len(mitems)):
+                        if mitems[k] == item:
+                            # Found the item, get all metrics for this month
+                            found_item = True
+                            for metric in metrics:
+                                item_metric_month_value = acc_pending_time_median_month[metric][i][k]
+                                acc_pending_time_median[metric][i].append(item_metric_month_value)
+                    if not found_item:
+                        for metric in metrics:
+                            # 0 reviews, 0 review time
+                            acc_pending_time_median[metric][i].append(0)
+            # Now we need to completePeriods to add time series fields
+            # All the time series are already complete because the way they are built
+            acc_pending_time_median = completePeriodIds(acc_pending_time_median, self.filters.period,
+                                                        self.filters.startdate, self.filters.enddate)
+            return acc_pending_time_median
+
         startdate = self.filters.startdate
         enddate = self.filters.enddate
         identities_db = self.db.identities_db
@@ -347,6 +479,13 @@ class TimeToReviewPendingSCR(Metrics):
         start_month = start.year*12 + start.month
         end_month = end.year*12 + end.month
         months = end_month - start_month
+
+
+        all_items = self.db.get_all_items(self.filters.type_analysis)
+
+        if all_items:
+            return _get_ts_all()
+
         acc_pending_time_median = {"month":[],
                                    "review_time_pending_reviews":[],
                                    "review_time_pending_days_acc_median":[],
