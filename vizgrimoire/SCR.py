@@ -36,9 +36,12 @@ from vizgrimoire.GrimoireUtils import GetPercentageDiff, GetDates, completePerio
 from vizgrimoire.GrimoireUtils import checkListArray, removeDecimals
 from vizgrimoire.GrimoireUtils import getPeriod, createJSON, checkFloatArray, medianAndAvgByPeriod, check_array_values
 from vizgrimoire.metrics.metrics_filter import MetricFilters
-from vizgrimoire.metrics.query_builder import DSQuery, SCRQuery
+from vizgrimoire.metrics.query_builder import SCRQuery
+
+
 from vizgrimoire.data_source import DataSource
 from vizgrimoire.filter import Filter
+
 
 class SCR(DataSource):
     _metrics_set = []
@@ -52,18 +55,9 @@ class SCR(DataSource):
 
     @staticmethod
     def get_metrics_not_filters():
-        metrics_not_filters =  ['verified','codereview','sent','WaitingForReviewer','WaitingForSubmitter','approved','ReviewsWaitingForReviewer', 'ReviewsWaitingForSubmitter','repositories']
+        metrics_not_filters =  ['verified','codereview','sent','WaitingForReviewer',
+                                'WaitingForSubmitter','approved','repositories']
         return metrics_not_filters
-
-    @staticmethod
-    def get_date_init(startdate = None, enddate = None, identities_db = None, type_analysis = None):
-        q = " SELECT DATE_FORMAT (MIN(submitted_on), '%Y-%m-%d') as first_date FROM issues"
-        return(ExecuteQuery(q))
-
-    @staticmethod
-    def get_date_end(startdate = None, enddate = None, identities_db = None, type_analysis = None):
-        q = " SELECT DATE_FORMAT (MAX(changed_on), '%Y-%m-%d') as last_date FROM changes"
-        return(ExecuteQuery(q))
 
     @staticmethod
     def get_evolutionary_data (period, startdate, enddate, identities_db, filter_ = None):
@@ -102,7 +96,7 @@ class SCR(DataSource):
         if automator_metrics in automator['r']:
             metrics_on = automator['r'][automator_metrics].split(",")
             logging.info(automator_metrics + " found ")
-            print(metrics_on)
+            # print(metrics_on)
 
         metrics_reports = SCR.get_metrics_core_reports()
         if filter_ is None:
@@ -126,10 +120,11 @@ class SCR(DataSource):
         # SCR specific: remove some metrics from filters
         if filter_ is not None:
             metrics_not_filters =  SCR.get_metrics_not_filters()
-            metrics_on = list(set(metrics_on) - set(metrics_not_filters))
+            metrics_on_filters = list(set(metrics_on) - set(metrics_not_filters))
             if filter_.get_name() == "repository": 
-                metrics_on += ['review_time','submitted','ReviewsWaitingForReviewer', 'ReviewsWaitingForSubmitter']
-                metrics_on += ['review_time_pending_total']
+                if 'review_time' in metrics_on: metrics_on_filters+= ['review_time']
+                if 'submitted' in metrics_on: metrics_on_filters+= ['submitted']
+            metrics_on = metrics_on_filters
         # END SCR specific
 
         for item in all_metrics:
@@ -142,7 +137,7 @@ class SCR(DataSource):
 
             if type_analysis and type_analysis[1] is None:
                 logging.info(item.id)
-                id_field = DSQuery.get_group_field(type_analysis[0])
+                id_field = SCRQuery.get_group_field(type_analysis[0])
                 id_field = id_field.split('.')[1] # remove table name
                 mvalue = check_array_values(mvalue)
                 mvalue = fill_and_order_items(items, mvalue, id_field,
@@ -188,7 +183,7 @@ class SCR(DataSource):
                     data = dict(data.items() +  period_data.items())
 
                     if type_analysis and type_analysis[1] is None:
-                        id_field = DSQuery.get_group_field(type_analysis[0])
+                        id_field = SCRQuery.get_group_field(type_analysis[0])
                         id_field = id_field.split('.')[1] # remove table name
                         period_data = fill_and_order_items(items, period_data, id_field)
 
@@ -303,9 +298,7 @@ class SCR(DataSource):
 
         # For repos aggregated data. Include metrics to sort in javascript.
         if (filter_name == "repository"):
-            items_list = {"name":[],"review_time_days_median":[],"submitted":[],
-                          "review_time_pending_upload_ReviewsWaitingForReviewer_days_median":[],
-                          }
+            items_list = {"name":[],"review_time_days_median":[],"submitted":[]}
         else:
             items_list = items
 
@@ -327,7 +320,6 @@ class SCR(DataSource):
             fn = os.path.join(destdir, filter_item.get_static_filename(SCR()))
             createJSON(agg, fn)
             if (filter_name == "repository"):
-                items_list["review_time_pending_upload_ReviewsWaitingForReviewer_days_median"].append(agg['review_time_pending_upload_ReviewsWaitingForReviewer_days_median'])
                 if 'submitted' in agg: 
                     items_list["submitted"].append(agg["submitted"])
                 else: items_list["submitted"].append("NA")
@@ -348,17 +340,20 @@ class SCR(DataSource):
         check = False # activate to debug issues
         filter_name = filter_.get_name()
 
-        if filter_name == "people2" or filter_name == "company":
+        if filter_name in ["people2","company","repository","country"] :
             filter_all = Filter(filter_name, None)
             agg_all = SCR.get_agg_data(period, startdate, enddate,
                                        identities_db, filter_all)
             fn = os.path.join(destdir, filter_.get_static_filename_all(SCR()))
             createJSON(agg_all, fn)
+            SCR.convert_all_to_single(agg_all, filter_, destdir, False)
 
             evol_all = SCR.get_evolutionary_data(period, startdate, enddate,
                                                  identities_db, filter_all)
             fn = os.path.join(destdir, filter_.get_evolutionary_filename_all(SCR()))
             createJSON(evol_all, fn)
+            SCR.convert_all_to_single(evol_all, filter_, destdir, True)
+
 
             if check:
                 SCR._check_report_all_data(evol_all, filter_, startdate, enddate,
@@ -427,7 +422,7 @@ class SCR(DataSource):
         m =  ['submitted','opened','closed','merged','abandoned','new','inprogress',
               'pending','review_time','repositories']
         # patches metrics
-        m += ['verified','approved','codereview','sent','WaitingForReviewer','WaitingForSubmitter','review_time_pending_total']
+        m += ['verified','approved','codereview','sent','WaitingForReviewer','WaitingForSubmitter']
         m += ['submitters','reviewers','active_core_reviewers','participants']
 
         return m
@@ -445,6 +440,7 @@ class SCR(DataSource):
     @staticmethod
     def get_metrics_core_trends():
         return ['submitted','merged','pending','abandoned','closed','submitters','active_core_reviewers','participants']
+
 
 #########
 # PEOPLE: Pretty similar to ITS
@@ -524,10 +520,13 @@ def GetPeopleQuerySCRSubmissions (developer_id, period, startdate, enddate, evol
     return (q)
 
 
+
 def GetPeopleEvolSCR (developer_id, period, startdate, enddate):
+    # q = GetPeopleQuerySCRSubmissions(developer_id, period, startdate, enddate, True)
     q = GetPeopleQuerySCR(developer_id, period, startdate, enddate, True)
     return(ExecuteQuery(q))
 
 def GetPeopleStaticSCR (developer_id, startdate, enddate):
+    # q = GetPeopleQuerySCRSubmissions(developer_id, None, startdate, enddate, False)
     q = GetPeopleQuerySCR(developer_id, None, startdate, enddate, False)
     return(ExecuteQuery(q))

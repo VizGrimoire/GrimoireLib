@@ -1,4 +1,3 @@
-## Copyright (C) 2014 Bitergia
 ##
 ## This program is free software; you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -66,12 +65,13 @@ class DSQuery(object):
         """ Basic indexes used in each data source """
         pass
 
-    def GetSQLGlobal(self, date, fields, tables, filters, start, end, all_items = None):
+    @classmethod
+    def GetSQLGlobal(cls, date, fields, tables, filters, start, end, all_items = None):
         group_field = None
         count_field = None
         if all_items:
-            group_field = self.get_group_field(all_items, self)
-            # Expected format: "count(distinct(pup.uuid)) AS authors"
+            group_field = cls.get_group_field(all_items)
+            # Format: "count(distinct(pup.uuid)) AS authors"
             count_field = fields.split(" ")[2]
             fields = group_field + ", " + fields
 
@@ -89,11 +89,12 @@ class DSQuery(object):
 
         return(sql)
 
-    def GetSQLPeriod(self, period, date, fields, tables, filters, start, end,
+    @classmethod
+    def GetSQLPeriod(cls, period, date, fields, tables, filters, start, end,
                      all_items = None):
         group_field = None
         if all_items :
-            group_field = self.get_group_field(all_items, self)
+            group_field = cls.get_group_field(all_items)
             fields = group_field + ", " + fields
 
         iso_8601_mode = 3
@@ -194,12 +195,7 @@ class DSQuery(object):
             filters = self._get_filters_query(filters)
 
         # if all_items build a query for getting all items in one query
-        all_items = None
-        if type_analysis:
-            all_items = type_analysis[0]
-            if type_analysis[1] is not None:
-                # all_items only used for global filter, not for items filter
-                all_items = None 
+        all_items = self.get_all_items(type_analysis)
 
         if (evolutionary):
             q = self.GetSQLPeriod(period, date_field, fields, tables, filters,
@@ -220,7 +216,6 @@ class DSQuery(object):
         return db
 
     def ExecuteQuery (self, sql):
-        # print sql
         if sql is None: return {}
         result = {}
         self.cursor.execute(sql)
@@ -272,8 +267,8 @@ class DSQuery(object):
 
         return  project_with_children_str
 
-    @staticmethod
-    def get_group_field (filter_type, ds_query = None):
+    @classmethod
+    def get_group_field (ds_query, filter_type):
         """ Return the name of the field to group by in filter all queries """
         field = None
         supported = ['people2','company','country','domain','project','repository','company'+MetricFilters.DELIMITER+'country']
@@ -288,11 +283,24 @@ class DSQuery(object):
         elif analysis == "domain": field = "d.name"
         elif analysis == "repository":
             field = "r.name"
-            if type(ds_query) == ITSQuery: field = "t.url"
+            if ds_query == ITSQuery: field = "t.url"
+            elif ds_query == SCRQuery: field = "t.url"
+            elif ds_query == MLSQuery: field = "ml.mailing_list_url"
         elif analysis == "company"+MetricFilters.DELIMITER+"country":
             field = "CONCAT(com.name,'_',cou.name)"
 
         return field
+
+    @staticmethod
+    def get_all_items(type_analysis):
+        # if all_items is true build a query for getting all items in one query
+        all_items = None
+        if type_analysis:
+            all_items = type_analysis[0]
+            if type_analysis[1] is not None:
+                # all_items only used for global filter, not for items filter
+                all_items = None
+        return all_items
 
     @staticmethod
     def get_bots_filter_sql (data_source, metric_filters = None):
@@ -1082,12 +1090,15 @@ class MLSQuery(DSQuery):
         # tables necessary for repositories
         #return (" messages m ") 
         tables = Set([])
+        tables.add("mailing_lists ml")
         return tables
 
     def GetSQLRepositoriesWhere (self, repository):
         # fields necessary to match info among tables
         filters = Set([])
-        filters.add("m.mailing_list_url = " + repository)
+        filters.add("m.mailing_list_url = ml.mailing_list_url")
+        if repository is not None:
+            filters.add("m.mailing_list_url = " + repository)
 
         return filters
 
@@ -1134,7 +1145,7 @@ class MLSQuery(DSQuery):
         filters.add("mp.type_of_recipient = \'From\'")
         filters.add("pup.uuid = pro.uuid")
         filters.add("pro.country_code = cou.code")
-        if name <> "":
+        if name not in  (None,""):
             filters.add("cou.name = " + name)
 
         return filters
@@ -1157,7 +1168,7 @@ class MLSQuery(DSQuery):
         filters.add("upd.domain_id = d.id")
         filters.add("m.first_date >= upd.init")
         filters.add("m.first_date < upd.end")
-        if name <> "":
+        if name is not None and name <> "":
             filters.add("d.name = " + name)
 
         return filters
@@ -1418,7 +1429,8 @@ class SCRQuery(DSQuery):
     def GetSQLRepositoriesWhere (self, repository):
         #fields necessaries to match info among tables
         filters = Set([])
-        filters.add("t.url = '"+ repository + "'")
+        if repository is not None:
+            filters.add("t.url = '"+ repository + "'")
         filters.add("t.id = i.tracker_id")
 
         return filters
@@ -1583,37 +1595,6 @@ class SCRQuery(DSQuery):
         filters.add("i.summary not like '%"+value+"%'")
         return filters
 
-    def GetSQLBotFrom(self):
-        # Bots are removed from the upeople table, using the upeople.identifier table.
-        # Another option is to remove those bots directly in the people table.
-        tables = Set([])
-        tables.add("issues i")
-        tables.add("people p")
-        tables.add("people_uidentities pup")
-        tables.add(self.identities_db + ".uidentities u")
-
-        return tables
-
-    def GetSQLBotWhere(self, bots_str):
-        # Based on the tables provided in GetSQLBotFrom method, 
-        # this method provides the clauses to join the several tables
-
-        bots = bots_str
-        if not isinstance(bots_str, list):
-            bots = bots_str.split(",")
-        where = Set([])
-        where.add("i.submitted_by = p.id")
-        where.add("p.id = pup.people_id")
-        where.add("pup.uuid = u.uuid")
-        for bot in bots:
-            # This code only ignores bots provided in raw_bots.
-            # This should add the other way around, u.identifier = 'xxx'
-            where.add("u.identifier <> '" + bot + "'")
-
-        return where
-
-
-
     ##########
     #Generic functions to obtain FROM and WHERE clauses per type of report
     ##########
@@ -1623,6 +1604,7 @@ class SCRQuery(DSQuery):
         if type_analysis is not None:
 
             list_analysis = type_analysis[0].split(MetricFilters.DELIMITER)
+
             for analysis in list_analysis:
                 if analysis == 'repository': From.union_update(self.GetSQLRepositoriesFrom())
                 elif analysis == 'company': From.union_update(self.GetSQLCompaniesFrom())
@@ -1643,8 +1625,6 @@ class SCRQuery(DSQuery):
 
         From = self._get_from_type_analysis_set(filters.type_analysis)
 
-        #if filters.people_out is not None:
-        #    From.union_update(self.GetSQLBotFrom())
         if filters.global_filter is not None:
             From.union_update(self._get_from_type_analysis_set(filters.global_filter))
 
@@ -1716,8 +1696,6 @@ class SCRQuery(DSQuery):
 
         where = self._get_where_type_analysis_set(filters.type_analysis)
 
-        #if filters.people_out is not None:
-        #    where.union_update(self.GetSQLBotWhere(filters.people_out))
         if filters.global_filter is not None:
             where.union_update(self._get_where_global_filter_set(filters.global_filter))
 
@@ -1749,19 +1727,12 @@ class SCRQuery(DSQuery):
         filters.union_update(self.GetSQLReportWhere(mfilter))
         filters.add("i.id = ie.issue_id")
 
-        if (self.GetIssuesFiltered() != ""): filters.add(self.GetIssuesFiltered())
+        if (self.GetIssuesFiltered() != ""): filters.union_update(self.GetIssuesFiltered())
 
         date_field = "i.submitted_on"
         if type_ in ["closed", "merged", "abandoned"]: date_field = "ie.mod_date"
         # Not include reviews before startdate no matter mod_date is after startdate
         filters.add("i.submitted_on >= " + startdate)
-
-        # TODO: query builder should not depend on report_tool
-        from vizgrimoire.report import Report
-        start_analysis = Report.get_start_date()
-        if 'scr_start_date' in Report.get_config()['r']:
-            start_analysis = Report.get_config()['r']['scr_start_date']
-            filters.add("i.submitted_on >= '" + start_analysis  + "'")
 
         #Hack to use the Upload date of the first patchset and not the
         #submission date. This is needed given that in some cases the creation
@@ -1923,8 +1894,13 @@ class SCRQuery(DSQuery):
         # Initially we can not trust the i.submitted_on date. 
         # Thus, we're retrieving the first Upload patch date that should
         # be close to the actual changeset submission
-        fields.add("TIMESTAMPDIFF(SECOND, ch_ext.changed_on, ch.changed_on)/(24*3600) AS revtime")
+        fields.add("TIMESTAMPDIFF(SECOND,ch_ext.changed_on,ch.changed_on)/(24*3600) AS revtime")
         fields.add("ch.changed_on")
+
+        all_items = self.get_all_items(mfilter.type_analysis)
+        if all_items:
+            group_field = self.get_group_field(all_items)
+            fields.add(group_field)
 
         tables.add("issues i")
         tables.add("changes ch")
@@ -1939,7 +1915,6 @@ class SCRQuery(DSQuery):
         filters.union_update(self.GetSQLReportWhere(mfilter))
         filters.add("ch.field = 'status'")
         filters.add("ch.new_value='MERGED'")
-        filters.add("summary not like '%WIP%'")
         # remove autoreviews
         filters.add("i.submitted_by<>ch.changed_by")
         #filters.add("ORDER BY ch_ext.changed_on")
@@ -1947,9 +1922,11 @@ class SCRQuery(DSQuery):
         fields_str = self._get_fields_query(fields)
         tables_str = self._get_tables_query(tables)
         filters_str = self._get_filters_query(filters)
-        filters_str = filters_str + " ORDER BY ch_ext.changed_on"
+
+        filters_str += " ORDER BY ch_ext.changed_on"
+
         q = self.GetSQLGlobal('ch.changed_on', fields_str, tables_str, filters_str,
-                        startdate, enddate)
+                              startdate, enddate)
         # min_days_for_review = 0.042 # one hour
         # q = "SELECT revtime, changed_on FROM ("+q+") qrevs WHERE revtime>"+str(min_days_for_review)
         return q
@@ -1972,6 +1949,11 @@ class SCRQuery(DSQuery):
         fields = "TIMESTAMPDIFF(SECOND, submitted_on, NOW())/(24*3600) AS revtime, submitted_on "
         if (uploaded):
             fields = "TIMESTAMPDIFF(SECOND, ch.changed_on, NOW())/(24*3600) AS revtime, i.submitted_on as submitted_on "
+
+        all_items = self.get_all_items(mfilter.type_analysis)
+        if all_items:
+            group_field = self.get_group_field(all_items)
+            fields = group_field +" ," + fields
 
         tables = Set([])
         filters = Set([])
@@ -1997,18 +1979,15 @@ class SCRQuery(DSQuery):
             filters.add("ch.old_value = last_patch.maxPatchset")
             filters.add("ch.field = 'Upload'")
         if reviewers:
-            filters.add("i.summary not like '%WIP%'")
-            filters.add("i.id NOT IN (%s)" % (sql_reviews_reviewed))
+                filters.add("i.id NOT IN (%s)" % (sql_reviews_reviewed))
 
+        # if (uploaded): filters += " GROUP BY comm.issue_id "
 
         filters = self._get_filters_query(filters)
-        if (self.GetIssuesFiltered() != ""): filters += " AND " + self.GetIssuesFiltered()
-        # if (uploaded): filters += " GROUP BY comm.issue_id "
         filters += " ORDER BY  i.submitted_on"
 
         q = self.GetSQLGlobal('i.submitted_on', fields, tables, filters,
                               startdate, enddate)
-
         return(q)
 
     def get_sql_last_change_for_reviews(self, before = None):
@@ -2074,10 +2053,8 @@ class SCRQuery(DSQuery):
 
     def GetPeopleQuerySubmissions (self, developer_id, period, startdate, enddate, evol):
         fields = "COUNT(i.id) AS submissions"
-
-        tables = self._get_tables_query(self.GetTablesOwnUniqueIds('issues'))
-        filters = self._get_filters_query(self.GetFiltersOwnUniqueIds('issues'))
-        filters += " AND pup.uuid  = '"+ str(developer_id) +  "'"
+        tables = self.GetTablesOwnUniqueIds('issues')
+        filters = self.GetFiltersOwnUniqueIds('issues')+ " AND pup.uuid = "+ str(developer_id)
 
         if (evol):
             q = self.GetSQLPeriod(period,'submitted_on', fields, tables, filters,
@@ -2209,12 +2186,13 @@ class SCRQuery(DSQuery):
         people_userid = 'l10n-bot'
         q = "SELECT id FROM people WHERE user_id = '%s'" % (people_userid)
         self._filter_submitter_id = self.ExecuteQuery(q)['id']
+        self._filter_submitter_id = None # don't filter in general
 
     # To be used for issues table
     def GetIssuesFiltered(self):
         filters = ""
         if self._filter_submitter_id is not None:
-            filters = " i.submitted_by <> %s" % (self._filter_submitter_id)
+            filters = " submitted_by <> %s" % (self._filter_submitter_id)
         return filters
 
     # To be used for changes table
@@ -2279,7 +2257,8 @@ class IRCQuery(DSQuery):
         filters.add("i.nick = pup.people_id")
         filters.add("pup.uuid = pro.uuid")
         filters.add("pro.country_code = cou.code")
-        filters.add("cou.name = " + name)
+        if name is not None:
+            filters.add("cou.name = " + name)
 
         return filters
 

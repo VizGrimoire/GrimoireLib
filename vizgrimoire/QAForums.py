@@ -67,7 +67,7 @@ class QAForums(DataSource):
 
     @staticmethod
     def __get_data (period, startdate, enddate, i_db, filter_, evol):
-        metrics =  DataSource.get_metrics_data(QAForums, period, startdate, enddate, i_db, filter_, evol)
+        metrics =  QAForums.get_metrics_data(period, startdate, enddate, i_db, filter_, evol)
         if filter_ is not None: studies = {}
         else:
             studies =  DataSource.get_studies_data(QAForums, period, startdate, enddate, evol)

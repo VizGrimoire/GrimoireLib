@@ -531,13 +531,13 @@ class BMIIndex(Metrics):
         closed_tickets = Closed(self.db, self.filters)
         opened_tickets = Opened(self.db, self.filters)
 
-        closed = closed_tickets.get_agg()
-        opened = opened_tickets.get_agg()
-
-        if type(opened["opened"]) is list:
+        if self.filters.type_analysis and self.filters.type_analysis[1] is None:
             # GROUP BY not supported
             logging.info("agg BMI metric does NOT support GROUP BY queries")
             return data
+
+        closed = closed_tickets.get_agg()
+        opened = opened_tickets.get_agg()
 
         if int(opened["opened"]) <= 0:
             # a value is needed when there's a division by 0

@@ -74,8 +74,37 @@ def create_reports_filters(period, startdate, enddate, destdir, npeople, identit
         for filter_ in Report.get_filters():
             logging.info("-> " + filter_.get_name())
             # Tested in all this filters the group by
-            # if filter_.get_name() in ["people2","company","company+country","country","repository","domain"]:
-            if filter_.get_name() in ["people2","company+country"]:
+            supported_all = {
+                         "scm":["people2","company","company+country","country","repository","domain"],
+                         "its":["people2","company","company+country","country","repository","domain"],
+                         "its_1":["people2"],
+                         "mls":["people2","company","country","repository","domain"],
+                         "scr":["people2","company","country","repository"],
+                         "mediawiki":["people2","company"],
+                         "irc":["people2"],
+                         "downloads":["people2"],
+                         "qaforums":["people2"],
+                         "releases":["people2"],
+                         "pullpo":["people2"],
+                         "events":[]
+                         }
+            supported_on = {
+                         "scm":[],
+                         "its":[],
+                         "its_1":[],
+                         "mls":[],
+                         "scr":[],
+                         "mediawiki":[],
+                         "irc":[],
+                         "downloads":[],
+                         "qaforums":[],
+                         "releases":[],
+                         "pullpo":[],
+                         "events":[]
+                         }
+
+            if filter_.get_name() in supported_on[ds.get_name()]:
+            # if filter_.get_name() in ["people2","company+country","repository","company"]:
                 logging.info("---> Using new filter API")
                 ds.create_filter_report_all(filter_, period, startdate, enddate, 
                                             destdir, npeople, identities_db)
@@ -109,20 +138,25 @@ def get_top_people (startdate, enddate, idb):
 
     # SCR and SCM are the same. Don't use both for Tops
     mopeners = DataSource.get_metrics("submitters", SCR)
-    tops["scr"] =  mopeners.get_list(mfilter, 0)
-    tops["scr"]["identifier"] = tops["scr"].pop("openers")
+    if mopeners: 
+        tops["scr"] =  mopeners.get_list(mfilter, 0)
+        tops["scr"]["identifier"] = tops["scr"].pop("openers")
     msenders = DataSource.get_metrics("senders", MLS)
-    tops["mls"] =  msenders.get_list(mfilter, 0)
-    tops["mls"]["identifier"] = tops["mls"].pop("senders")
+    if msenders: 
+        tops["mls"] =  msenders.get_list(mfilter, 0)
+        tops["mls"]["identifier"] = tops["mls"].pop("senders")
     mopeners = DataSource.get_metrics("openers", ITS)
-    tops["its"] =  mopeners.get_list(mfilter, 0)
-    tops["its"]["identifier"] = tops["its"].pop("openers")
+    if mopeners: 
+        tops["its"] =  mopeners.get_list(mfilter, 0)
+        tops["its"]["identifier"] = tops["its"].pop("openers")
     msenders = DataSource.get_metrics("senders", IRC)
-    tops["irc"] =  msenders.get_list(mfilter, 0)
-    tops["irc"]["identifier"] = tops["irc"].pop("senders")
+    if msenders: tops["irc"] =  
+        msenders.get_list(mfilter, 0)
+        tops["irc"]["identifier"] = tops["irc"].pop("senders")
     mauthors = DataSource.get_metrics("authors", Mediawiki)
-    tops["mediawiki"] = mauthors.get_list(mfilter, 0)
-    tops["mediawiki"]["identifier"] = tops["mediawiki"].pop("reviews")
+    if mauthors: 
+        tops["mediawiki"] = mauthors.get_list(mfilter, 0)
+        tops["mediawiki"]["identifier"] = tops["mediawiki"].pop("reviews")
 
     # Build the consolidated top list using all data sources data
     # Only people in all data sources is used

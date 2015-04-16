@@ -25,7 +25,7 @@
     support for Grimoire supported data sources """ 
 
 import logging, os
-from vizgrimoire.metrics.query_builder import DSQuery
+from vizgrimoire.metrics.query_builder import DSQuery, ITSQuery, MLSQuery
 from vizgrimoire.GrimoireUtils import createJSON
 from vizgrimoire.metrics.metrics_filter import MetricFilters
 
@@ -75,15 +75,29 @@ class DataSource(object):
         """Get the name of the database with the data"""
         raise NotImplementedError
 
-    @staticmethod
-    def get_date_init(startdate, enddate, identities_db, type_analysis):
-        """Get the date of the first activity in the data source in the window time analysis """
-        pass
+    @classmethod
+    def get_date_init(cls, startdate, enddate, identities_db, type_analysis):
+        """Get the date of the first activity in the data source"""
+        dinit = None
+        first_date = cls.get_metrics("first_date", cls)
+        if first_date is not None:
+            type_analysis_orig = first_date.filters.type_analysis
+            first_date.filters.type_analysis = type_analysis
+            dinit = first_date.get_agg()
+            first_date.filters.type_analysis = type_analysis_orig
+        return dinit
 
-    @staticmethod
-    def get_date_end(startdate, enddate, identities_db, type_analysis):
-        """Get the date of the last activity in the data source in the window time analysis """
-        pass
+    @classmethod
+    def get_date_end(cls, startdate, enddate, identities_db, type_analysis):
+        """Get the date of the last activity in the data source"""
+        dlast = None
+        last_date = cls.get_metrics("last_date", cls)
+        if last_date is not None:
+            type_analysis_orig = last_date.filters.type_analysis
+            last_date.filters.type_analysis = type_analysis
+            dlast = last_date.get_agg()
+            last_date.filters.type_analysis = type_analysis_orig
+        return dlast
 
     @staticmethod
     def get_url():
@@ -331,12 +345,17 @@ class DataSource(object):
 
         return data
 
-    @staticmethod
+    @classmethod
     def get_metrics_data(DS, period, startdate, enddate, identities_db, 
                          filter_ = None, evol = False):
         """ Get basic data from all core metrics """
         from vizgrimoire.GrimoireUtils import fill_and_order_items
+        from vizgrimoire.ITS import ITS
+        from vizgrimoire.MLS import MLS
         data = {}
+        dsquery = DSQuery
+        if DS == ITS: dsquery = ITSQuery
+        if DS == MLS: dsquery = MLSQuery
 
         from vizgrimoire.report import Report
         automator = Report.get_config()
@@ -394,7 +413,7 @@ class DataSource(object):
             if evol: mvalue = item.get_ts()
             else:    mvalue = item.get_agg()
 
-            if type_analysis and type_analysis[1] is None:
+            if type_analysis and type_analysis[1] is None and mvalue:
                 logging.info(item.id)
                 id_field = None
                 # Support for combined filters
@@ -403,7 +422,7 @@ class DataSource(object):
                         id_field = idf
                         break
                 if id_field is None:
-                    id_field = DSQuery.get_group_field(type_analysis[0])
+                    id_field = dsquery.get_group_field(type_analysis[0])
                     id_field = id_field.split('.')[1] # remove table name
                 mvalue = fill_and_order_items(items, mvalue, id_field,
                                               evol, period, startdate, enddate)
@@ -415,7 +434,15 @@ class DataSource(object):
             init_date = DS.get_date_init(startdate, enddate, identities_db, type_analysis)
             end_date = DS.get_date_end(startdate, enddate, identities_db, type_analysis)
 
-            # TODO: grouped items metrics support
+            if type_analysis and type_analysis[1] is None:
+                if id_field is None:
+                    id_field = dsquery.get_group_field(type_analysis[0])
+                    id_field = id_field.split('.')[1] # remove table name
+                init_date = fill_and_order_items(items, init_date, id_field,
+                                                 evol, period, startdate, enddate)
+                end_date = fill_and_order_items(items, end_date, id_field,
+                                                evol, period, startdate, enddate)
+
             data = dict(data.items() + init_date.items() + end_date.items())
 
             # Tendencies
@@ -434,7 +461,7 @@ class DataSource(object):
                     item.filters = mfilter_orig
 
                     if type_analysis and type_analysis[1] is None:
-                        group_field = DSQuery.get_group_field(type_analysis[0])
+                        group_field = dsquery.get_group_field(type_analysis[0])
                         if 'CONCAT' not in group_field:
                             group_field = group_field.split('.')[1] # remove table name
                         period_data = fill_and_order_items(items, period_data, group_field)
@@ -472,3 +499,122 @@ class DataSource(object):
     def get_query_builder():
         """Class used to build queries to get metrics"""
         raise NotImplementedError
+
+    @classmethod
+    def convert_all_to_single(cls, data, filter_, destdir, evolutionary):
+        """ Convert a GROUP BY result to follow tradition individual JSON files """
+        from vizgrimoire.SCM import SCM
+        from vizgrimoire.ITS import ITS
+        from vizgrimoire.SCR import SCR
+        from vizgrimoire.MLS import MLS
+        from vizgrimoire.filter import Filter
+
+        if cls == ITS or cls == SCR:
+            if 'url' in data.keys():
+                data['name'] = data.pop('url')
+                data['name'] = [item.replace('/', '_') for item in data['name']]
+        elif cls == MLS:
+            if 'mailing_list_url' in data.keys():
+                data['name'] = data.pop('mailing_list_url')
+                data['name'] = [item.replace('/', '_') for item in data['name']]
+
+        if not evolutionary:
+            # First create the JSON with the list of items
+            item_list = {}
+            fn = os.path.join(destdir, filter_.get_filename(cls))
+            if cls == SCM:
+                fields = ["authors_365","name","commits_365"]
+            elif cls == ITS:
+                fields = ["closed_365","closers_365", "name"]
+            elif cls == MLS:
+                fields = ["sent_365","senders_365", "name"]
+            else:
+                fields = ["name"]
+            for field in fields:
+                item_list[field] = data[field]
+            createJSON(item_list, fn)
+        # Items files
+        ts_fields = ['unixtime','id','date','month']
+        for i in range(0,len(data['name'])):
+            item_metrics = {}
+            item = data['name'][i]
+            for metric in data:
+                if metric == "name": continue
+                if metric in ts_fields: continue
+                if len(data[metric])<len(data['name']):
+                    logging.error(cls.get_name()+" "+metric + " not supported in GROUP BY. Not included")
+                    continue
+                if evolutionary:
+                    if not isinstance(data[metric][i], list):
+                        logging.error(cls.get_name()+" "+metric + " evol not supported in GROUP BY. Not included")
+                        continue
+                item_metrics[metric] = data[metric][i]
+            filter_item = Filter(filter_.get_name(), item)
+            if evolutionary:
+                for field in ts_fields:
+                    # Shared time series fields
+                    item_metrics[field] = data[field]
+                fn = os.path.join(destdir, filter_item.get_evolutionary_filename(cls()))
+            else:
+                fn = os.path.join(destdir, filter_item.get_static_filename(cls()))
+            createJSON(item_metrics, fn)
+
+    @classmethod
+    def ages_study_com (ds, items, period,
+                        startdate, enddate, destdir):
+        """Perform ages study for companies, if it is specified in Report.
+
+        Produces JSON files for those studies.
+
+        Parameters
+        ----------
+
+        ds: { SCM | ITS | MLS }
+           Data source
+        items: ??
+           Items
+        period: ??
+           Period
+        startdate: ??
+           Start date
+        enddate: ??
+           End date
+        destdir: string
+           Directory for writing the JSON files
+        """
+
+        from vizgrimoire.report import Report
+        filter_name = "company"
+        studies = Report.get_studies()
+        ages = None
+        for study in studies:
+            if study.id == "ages":
+                ages = study
+
+        if ages is not None:
+            # Get config parameters for producing a connection
+            # to the database
+            config = Report.get_config()
+            db_identities = config['generic']['db_identities']
+            dbuser = config['generic']['db_user']
+            dbpass = config['generic']['db_password']
+
+            start_string = ds.get_name() + "_start_date"
+            end_string = ds.get_name() + "_end_date"
+            if start_string in config['r']:
+                startdate = "'" + config['r'][start_string] + "'"
+            if end_string in config['r']:
+                enddate = "'" + config['r'][end_string] + "'"
+            ds_dbname = ds.get_db_name()
+            dbname = config['generic'][ds_dbname]
+            dsquery = ds.get_query_builder()
+            dbcon = dsquery(dbuser, dbpass, dbname, db_identities)
+
+            for item in items :
+                filter_item = Filter(filter_name, item)
+                metric_filters = MetricFilters(
+                    period, startdate, enddate,
+                    filter_item.get_type_analysis()
+                    )
+                obj = ages(dbcon, metric_filters)
+                res = obj.create_report(ds, destdir)

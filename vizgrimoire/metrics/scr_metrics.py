@@ -43,6 +43,62 @@ from vizgrimoire.SCR import SCR
 
 from sets import Set
 
+class InitialActivity(Metrics):
+    """ For the given dates of activity, this returns the first trace found
+    """
+
+    id = "first_date"
+    name = "First activity date"
+    desc = "First commit between the two provided dates"
+    data_source = SCR
+
+    def get_agg(self):
+        fields = Set([])
+        tables = Set([])
+        filters = Set([])
+
+        fields.add("DATE_FORMAT(MIN(submitted_on),'%Y-%m-%d') as first_date")
+
+        tables.add("issues i")
+        tables.union_update(self.db.GetSQLReportFrom(self.filters))
+
+        filters.union_update(self.db.GetSQLReportWhere(self.filters))
+
+        query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
+                                   self.filters.enddate, "i.submitted_on", fields,
+                                   tables, filters, False,
+                                   self.filters.type_analysis)
+        return self.db.ExecuteQuery(query)
+
+class EndOfActivity(Metrics):
+    """ For the given dates of activity, this returns the last trace found
+    """
+    id = "last_date"
+    name = "Last activity date"
+    desc = "Last commit between the two provided dates"
+    data_source = SCR
+
+    def get_agg(self):
+        fields = Set([])
+        tables = Set([])
+        filters = Set([])
+
+        fields.add("DATE_FORMAT(MAX(changed_on),'%Y-%m-%d') as last_date")
+
+        tables.add("changes c")
+        tables.add("issues i")
+        tables.union_update(self.db.GetSQLReportFrom(self.filters))
+
+        filters.union_update(self.db.GetSQLReportWhere(self.filters))
+        filters.add("c.issue_id = i.id")
+
+        query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
+                                   self.filters.enddate, "c.changed_on", fields,
+                                   tables, filters, False,
+                                   self.filters.type_analysis)
+
+        return self.db.ExecuteQuery(query)
+
 class Submitted(Metrics):
     id = "submitted"
     name = "Submitted reviews"
@@ -160,7 +216,7 @@ class BMISCR(Metrics):
         merged_data = merged["merged"]
         submitted = submitted_reviews.get_agg()
         submitted_data = submitted["submitted"]
-        
+
         if submitted_data == 0:
             # We should probably add a NaN value.
             bmi_data= 0
@@ -221,7 +277,7 @@ class Pending(Metrics):
         items = items.pop('name')
 
         from vizgrimoire.GrimoireUtils import fill_and_order_items
-        id_field = DSQuery.get_group_field(self.filters.type_analysis[0])
+        id_field = SCRQuery.get_group_field(self.filters.type_analysis[0])
         id_field = id_field.split('.')[1] # remove table name
         submitted = check_array_values(submitted)
         merged = check_array_values(merged)
@@ -236,6 +292,7 @@ class Pending(Metrics):
         abandoned = fill_and_order_items(items, abandoned, id_field,
                                          evol, self.filters.period,
                                          self.filters.startdate, self.filters.enddate)
+
         metrics_for_pendig_all = {
           id_field: submitted[id_field],
           "submitted": submitted["submitted"],
@@ -250,7 +307,7 @@ class Pending(Metrics):
     def get_agg_all(self):
         evol = False
         metrics = self._get_metrics_for_pending_all(evol)
-        id_field = DSQuery.get_group_field(self.filters.type_analysis[0])
+        id_field = SCRQuery.get_group_field(self.filters.type_analysis[0])
         id_field = id_field.split('.')[1] # remove table name
         data= \
             [metrics['submitted'][i]-metrics['merged'][i]-metrics['abandoned'][i] \
@@ -260,7 +317,7 @@ class Pending(Metrics):
     def get_ts_all(self):
         evol = True
         metrics = self._get_metrics_for_pending_all(evol)
-        id_field = DSQuery.get_group_field(self.filters.type_analysis[0])
+        id_field = SCRQuery.get_group_field(self.filters.type_analysis[0])
         id_field = id_field.split('.')[1] # remove table name
         pending = {"pending":[]}
         for i in range(0, len(metrics['submitted'])):
@@ -475,7 +532,7 @@ class Participants(Metrics):
         tables = Set([])
         filters = Set([])
 
-        
+
         fields.add("count(distinct(u.uuid)) as participants")
 
         # issues table is needed given that this is used to
@@ -487,7 +544,7 @@ class Participants(Metrics):
         filters.add("t.submitted_by = pup.people_id")
         filters.add("pup.uuid = u.uuid")
         filters.add("i.id = t.issue_id")
-        
+
         # Comments people
         fields_c = Set([])
         tables_c = Set([])
@@ -523,7 +580,7 @@ class Participants(Metrics):
         startdate = self.filters.startdate
         enddate = self.filters.enddate
         evol = False
-    
+
         comments_query = self.db.BuildQuery(period, startdate, enddate,
                                             "comments.submitted_on",
                                             fields_c, tables_c, filters_c,
@@ -544,9 +601,8 @@ class Participants(Metrics):
 
         query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                    self.filters.enddate, "t.submitted_on",
-                                   fields, tables, filters, evolutionary)
+                                   fields, tables, filters, evolutionary, self.filters.type_analysis)
         return query
- 
 
     def get_list(self, metric_filters = None, days = 0):
         fields = Set([])
@@ -1208,25 +1264,28 @@ class Submitters(Metrics):
         """ First we get the submitters then join with unique identities """
 
         tpeople_sql  = "SELECT  distinct(submitted_by) as submitted_by, submitted_on  "
-        tpeople_sql += " FROM issues i, " + self.db._get_tables_query(self.db.GetSQLReportFrom(self.filters))
+        tables = self.db.GetSQLReportFrom(self.filters)
+        tables.add("issues i")
+        tpeople_sql += " FROM " + self.db._get_tables_query(tables)
         filters_ext = self.db._get_filters_query(self.db.GetSQLReportWhere(self.filters))
         if (filters_ext != ""):
             tpeople_sql += " WHERE " + filters_ext
 
         fields = Set([])
-        tables = Set([])
-        filters = Set([])
+        tables = self.db.GetSQLReportFrom(self.filters)
+        filters = self.db.GetSQLReportWhere(self.filters)
 
         fields.add("count(distinct(uuid)) as submitters")
         tables.add("people_uidentities pup")
+        tables.add("issues i")
         tables.add("(%s) tpeople" % (tpeople_sql))
         filters.add("tpeople.submitted_by = pup.people_id")
+        filters.add("i.submitted_by = pup.people_id")
 
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                self.filters.enddate, " tpeople.submitted_on ",
                                fields, tables, filters, evolutionary, self.filters.type_analysis)
         return q
-
 
     def __get_sql_default__(self, evolutionary):
         """ This function returns the evolution or agg number of people opening issues """
@@ -1300,6 +1359,42 @@ class TimeToReview(Metrics):
         q = self.db.GetTimeToReviewQuerySQL (self.filters, bots)
         return q
 
+    def _get_agg_all(self, data):
+        from numpy import median, average
+        from vizgrimoire.GrimoireUtils import removeDecimals
+
+        data_all = {}
+
+        # First, we need to group by the filter field the data
+        all_items = self.db.get_all_items(self.filters.type_analysis)
+        group_field = self.db.get_group_field(all_items)
+        id_field = group_field.split('.')[1] # remove table name
+
+        items =  list(Set(data[id_field]))
+        data_all[id_field] = items
+        for id in ["review_time_days_median", "review_time_days_avg"]:
+            data_all[id] = []
+
+        for item in items:
+            # First, extract the data for the item
+            data_item = {"changed_on":[],"revtime":[]}
+            for i in range(0,len(data[id_field])):
+                if data[id_field][i] == item:
+                    data_item["changed_on"].append(data["changed_on"][i])
+                    data_item["revtime"].append(data["revtime"][i])
+            data_revtime = data_item['revtime']
+            if (isinstance(data, list) == False): data_revtime = [data_revtime]
+            # ttr_median = sorted(data)[len(data)//2]
+            if (len(data_revtime) == 0):
+                ttr_median = float("nan")
+                ttr_avg = float("nan")
+            else:
+                ttr_median = float(median(removeDecimals(data_revtime)))
+                ttr_avg = float(average(removeDecimals(data_revtime)))
+            data_all["review_time_days_median"].append(ttr_median)
+            data_all["review_time_days_avg"].append(ttr_avg)
+        return data_all
+
     def get_agg(self):
         from numpy import median, average
         from vizgrimoire.GrimoireUtils import removeDecimals
@@ -1307,6 +1402,11 @@ class TimeToReview(Metrics):
         q = self._get_sql()
         if q is None: return {}
         data = self.db.ExecuteQuery(q)
+
+        if self.filters.type_analysis and self.filters.type_analysis[1] is None:
+            # Support for GROUP BY queries
+            return self._get_agg_all(data)
+
         data = data['revtime']
         if (isinstance(data, list) == False): data = [data]
         # ttr_median = sorted(data)[len(data)//2]
@@ -1318,14 +1418,62 @@ class TimeToReview(Metrics):
             ttr_avg = float(average(removeDecimals(data)))
         return {"review_time_days_median":ttr_median, "review_time_days_avg":ttr_avg}
 
+    def _get_ts_all(self, data):
+        from numpy import median, average
+        from vizgrimoire.GrimoireUtils import removeDecimals
+
+        data_all = {}
+
+        # First, we need to group by the filter field the data
+        all_items = self.db.get_all_items(self.filters.type_analysis)
+        group_field = self.db.get_group_field(all_items)
+        id_field = group_field.split('.')[1] # remove table name
+
+        items =  list(Set(data[id_field]))
+        data_all[id_field] = items
+        for id in ["review_time_days_median", "review_time_days_avg"]:
+            data_all[id] = []
+
+        for item in items:
+            # First, extract the data for the item
+            data_item = {"changed_on":[],"revtime":[]}
+            for i in range(0,len(data[id_field])):
+                if data[id_field][i] == item:
+                    data_item["changed_on"].append(data["changed_on"][i])
+                    data_item["revtime"].append(data["revtime"][i])
+
+            med_avg_list = medianAndAvgByPeriod(self.filters.period,
+                                                data_item['changed_on'], data_item['revtime'])
+            metrics_list = {}
+            if (med_avg_list != None):
+                metrics_list['review_time_days_median'] = med_avg_list['median']
+                metrics_list['review_time_days_avg'] = med_avg_list['avg']
+                metrics_list['month'] = med_avg_list['month']
+            else:
+                metrics_list['review_time_days_median'] = []
+                metrics_list['review_time_days_avg'] = []
+                metrics_list['month'] = []
+
+            metrics_list = completePeriodIds(metrics_list, self.filters.period,
+                                            self.filters.startdate, self.filters.enddate)
+
+            data_all['review_time_days_median'].append(metrics_list['review_time_days_median'])
+            data_all['review_time_days_avg'].append(metrics_list['review_time_days_avg'])
+            data_all['month'] = metrics_list['month']
+
+        return data_all
+
     def get_ts(self):
         q = self._get_sql()
         if q is None: return {}
         review_list = self.db.ExecuteQuery(q)
         checkListArray(review_list)
+
+        if self.filters.type_analysis and self.filters.type_analysis[1] is None:
+            # Support for GROUP BY queries
+            return self._get_ts_all(review_list)
+
         metrics_list = {}
-
-
         med_avg_list = medianAndAvgByPeriod(self.filters.period, review_list['changed_on'], review_list['revtime'])
         if (med_avg_list != None):
             metrics_list['review_time_days_median'] = med_avg_list['median']
@@ -1574,7 +1722,7 @@ if __name__ == '__main__':
     submitted = Submitted(dbcon, filters)
     print submitted.get_ts()
     print submitted.get_agg()
-    
+
     print "Merged info:"
     merged = Merged(dbcon, filters)
     print merged.get_ts()

@@ -64,7 +64,7 @@ class Mediawiki(DataSource):
                 logging.warn("Mediawiki only supports people2 filter.")
                 return {}
 
-        metrics =  DataSource.get_metrics_data(Mediawiki, period, startdate, enddate, i_db, filter_, True)
+        metrics =  Mediawiki.get_metrics_data(period, startdate, enddate, i_db, filter_, True)
         if filter_ is not None: studies = {}
         else:
             studies =  DataSource.get_studies_data(Mediawiki, period, startdate, enddate, True)
@@ -83,7 +83,7 @@ class Mediawiki(DataSource):
                 logging.warn("Mediawiki only supports people2 filter.")
                 return {}
 
-        metrics =  DataSource.get_metrics_data(Mediawiki, period, startdate, enddate, identities_db, filter_, False)
+        metrics =  Mediawiki.get_metrics_data(period, startdate, enddate, identities_db, filter_, False)
         if filter_ is not None: studies = {}
         else:
             studies =  DataSource.get_studies_data(Mediawiki, period, startdate, enddate, False)

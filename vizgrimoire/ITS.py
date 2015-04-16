@@ -50,18 +50,6 @@ class ITS(DataSource):
 
     @staticmethod
     def get_name(): return "its"
-
-    @staticmethod
-    def get_date_init(startdate, enddate, identities_db, type_analysis):
-        """Get the date of the first activity in the data source"""
-        first_date = ITS.get_metrics("first_date", ITS)
-        return first_date.get_agg()
-
-    @staticmethod
-    def get_date_end(startdate, enddate, identities_db, type_analysis):
-        """Get the date of the last activity in the data source"""
-        last_date = ITS.get_metrics("last_date", ITS)
-        return last_date.get_agg()
  
     @staticmethod
     def get_url():
@@ -97,7 +85,7 @@ class ITS(DataSource):
     def get_evolutionary_data (cls, period, startdate, enddate, identities_db, filter_ = None):
         closed_condition = cls._get_closed_condition()
 
-        metrics = DataSource.get_metrics_data(cls, period, startdate, enddate, identities_db, filter_, True)
+        metrics = cls.get_metrics_data(period, startdate, enddate, identities_db, filter_, True)
         if filter_ is not None: studies = {}
         else:
             studies = DataSource.get_studies_data(cls, period, startdate, enddate, True)
@@ -113,7 +101,7 @@ class ITS(DataSource):
     def get_agg_data (cls, period, startdate, enddate, identities_db, filter_ = None):
         closed_condition = cls._get_closed_condition()
 
-        metrics = DataSource.get_metrics_data(cls, period, startdate, enddate, identities_db, filter_, False)
+        metrics = cls.get_metrics_data(period, startdate, enddate, identities_db, filter_, False)
         if filter_ is not None: studies = {}
         else:
             studies = DataSource.get_studies_data(cls, period, startdate, enddate, False)
@@ -247,69 +235,6 @@ class ITS(DataSource):
             summary =  GetClosedSummaryCompanies(period, startdate, enddate, identities_db, closed_condition, limit)
         return summary
 
-
-    @staticmethod
-    def ages_study_com (Report, ds, items, period,
-                        startdate, enddate, destdir):
-        """Perform ages study for companies, if it is specified in Report.
-
-        Produces JSON files for those studies.
-
-        Parameters
-        ----------
-
-        Report: Report object
-           Configuration about the report being produced.
-        ds: { SCM | ITS | MLS }
-           Data source
-        items: ??
-           Items
-        period: ??
-           Period
-        startdate: ??
-           Start date
-        enddate: ??
-           End date
-        destdir: string
-           Directory for writing the JSON files
-        """
-
-        filter_name = "company"
-        studies = Report.get_studies()
-        ages = None
-        for study in studies:
-            if study.id == "ages":
-                ages = study
-
-        if ages is not None:
-            # Get config parameters for producing a connection
-            # to the database
-            config = Report.get_config()
-            db_identities = config['generic']['db_identities']
-            dbuser = config['generic']['db_user']
-            dbpass = config['generic']['db_password']
-
-            start_string = ds.get_name() + "_start_date"
-            end_string = ds.get_name() + "_end_date"
-            if start_string in config['r']:
-                startdate = "'" + config['r'][start_string] + "'"
-            if end_string in config['r']:
-                enddate = "'" + config['r'][end_string] + "'"
-            ds_dbname = ds.get_db_name()
-            dbname = config['generic'][ds_dbname]
-            dsquery = ds.get_query_builder()
-            dbcon = dsquery(dbuser, dbpass, dbname, db_identities)
-
-            for item in items :
-                filter_item = Filter(filter_name, item)
-                metric_filters = MetricFilters(
-                    period, startdate, enddate,
-                    filter_item.get_type_analysis()
-                    )
-                obj = ages(dbcon, metric_filters)
-                res = obj.create_report(ds, destdir)
-
-
     @classmethod
     def create_filter_report(cls, filter_, period, startdate, enddate, destdir, npeople, identities_db):
         from vizgrimoire.report import Report
@@ -368,8 +293,7 @@ class ITS(DataSource):
                         destdir + "/" + filter_.get_summary_filename(cls))
 
             # Perform ages study, if it is specified in Report
-            cls.ages_study_com (Report, ds, items, period,
-                                startdate, enddate, destdir)
+            cls.ages_study_com (items, period, startdate, enddate, destdir)
 
 
     @staticmethod
@@ -392,11 +316,13 @@ class ITS(DataSource):
                                        identities_db, filter_all)
             fn = os.path.join(destdir, filter_.get_static_filename_all(cls()))
             createJSON(agg_all, fn)
+            ITS.convert_all_to_single(agg_all, filter_, destdir, False)
 
             evol_all = cls.get_evolutionary_data(period, startdate, enddate,
                                                  identities_db, filter_all)
             fn = os.path.join(destdir, filter_.get_evolutionary_filename_all(cls()))
             createJSON(evol_all, fn)
+            ITS.convert_all_to_single(evol_all, filter_, destdir, True)
 
             if check:
                 cls._check_report_all_data(evol_all, filter_, startdate, enddate,
