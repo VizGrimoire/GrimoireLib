@@ -78,7 +78,7 @@ def create_reports_filters(period, startdate, enddate, destdir, npeople, identit
                          "scm":["people2","company","company+country","country","repository","domain"],
                          "its":["people2","company","company+country","country","repository","domain"],
                          "its_1":["people2"],
-                         "mls":["people2","company"],
+                         "mls":["people2","company","country","repository","domain"],
                          "scr":["people2","company","country","repository"],
                          "mediawiki":["people2","company"],
                          "irc":["people2"],
@@ -89,11 +89,11 @@ def create_reports_filters(period, startdate, enddate, destdir, npeople, identit
                          "events":[]
                          }
             supported_on = {
-                         "scm":["people2","company","company+country","country","repository","domain"],
-                         "its":["people2","company","company+country","country","repository","domain"],
+                         "scm":[],
+                         "its":[],
                          "its_1":[],
-                         "mls":["people2","company","country","repository","domain"],
-                         "scr":["people2","company","country","repository"],
+                         "mls":[],
+                         "scr":[],
                          "mediawiki":[],
                          "irc":[],
                          "downloads":[],
