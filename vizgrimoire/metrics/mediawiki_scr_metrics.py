@@ -140,8 +140,6 @@ class TimeToReviewPendingSCR(Metrics):
             for i in range(0, len(ttr_upload_data[id_field])):
                 if ttr_upload_data[id_field][i] == item:
                     data_item_revtime.append(ttr_upload_data['revtime'][i])
-            print item
-            print data_item_revtime
 
             if (len(data_item_revtime) == 0):
                 ttr_median_upload = float("nan")
