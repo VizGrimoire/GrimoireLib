@@ -470,7 +470,10 @@ class TimeToReviewPendingSCR(Metrics):
                 acc_pending_time_median[field] = ts_aux[field]
 
             # After completing the time series, add the name/url series
-            acc_pending_time_median["url"] = all_items
+            if self.filters.type_analysis[0] != "repository":
+                acc_pending_time_median["name"] = all_items
+            else:
+                acc_pending_time_median["url"] = all_items
 
             # And now we need to adjust the format from
             # month:[M1, M2, M3], url:[URL1, URL2. ...], metric:[[URL1_M1,URL2_M1], [URL1_M2, URL2_M2],[URL1_M3...]...]
