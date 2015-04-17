@@ -75,11 +75,9 @@ class TimeToReviewPendingSCR(Metrics):
         ttr_data = self.db.ExecuteQuery(q)
         checkListArray(ttr_data)
 
-
         q = self.db.GetTimeToReviewPendingQuerySQL(self.filters, identities_db, bots, reviewers_pending)
         ttr_reviewers_data = self.db.ExecuteQuery(q)
         checkListArray(ttr_reviewers_data)
-
 
         q = self.db.GetTimeToReviewPendingQuerySQL (self.filters, identities_db, bots, False, True)
         ttr_upload_data = self.db.ExecuteQuery(q)
@@ -169,8 +167,9 @@ class TimeToReviewPendingSCR(Metrics):
             time_to["review_time_pending_upload_ReviewsWaitingForReviewer_days_median"].append(ttr_reviewers_median_upload)
             time_to["review_time_pending_upload_ReviewsWaitingForReviewer_days_avg"].append(ttr_reviewers_avg_upload)
 
-        # In SCR the item field name must be url
-        time_to['url'] = time_to.pop('name')
+        # In SCR the item field name must be url for repository
+        if self.filters.type_analysis[0] == 'repository':
+            time_to['url'] = time_to.pop('name')
 
         return time_to
 
