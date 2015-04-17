@@ -163,6 +163,12 @@ class SCR(DataSource):
             init_date = DS.get_date_init(startdate, enddate, identities_db, type_analysis)
             end_date = DS.get_date_end(startdate, enddate, identities_db, type_analysis)
 
+            if type_analysis and type_analysis[1] is None:
+                init_date = fill_and_order_items(items, init_date, id_field,
+                                                 evol, period, startdate, enddate)
+                end_date = fill_and_order_items(items, end_date, id_field,
+                                                evol, period, startdate, enddate)
+
             data = dict(data.items() + init_date.items() + end_date.items())
 
             # Tendencies
