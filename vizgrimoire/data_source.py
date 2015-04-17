@@ -28,6 +28,7 @@ import logging, os
 from vizgrimoire.metrics.query_builder import DSQuery, ITSQuery, MLSQuery
 from vizgrimoire.GrimoireUtils import createJSON
 from vizgrimoire.metrics.metrics_filter import MetricFilters
+from vizgrimoire.filter import Filter
 
 class DataSource(object):
     _bots = []
