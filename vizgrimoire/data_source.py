@@ -442,7 +442,8 @@ class DataSource(object):
                                                  evol, period, startdate, enddate)
                 end_date = fill_and_order_items(items, end_date, id_field,
                                                 evol, period, startdate, enddate)
-
+            if init_date is None: init_date = {}
+            if end_date is None: end_date = {}
             data = dict(data.items() + init_date.items() + end_date.items())
 
             # Tendencies

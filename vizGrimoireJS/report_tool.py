@@ -86,7 +86,7 @@ def create_reports_filters(period, startdate, enddate, destdir, npeople, identit
                          "qaforums":["people2"],
                          "releases":["people2"],
                          "pullpo":["people2"],
-                         "events":[]
+                         "eventizer":[]
                          }
             supported_on = {
                          "scm":[],
@@ -100,7 +100,7 @@ def create_reports_filters(period, startdate, enddate, destdir, npeople, identit
                          "qaforums":[],
                          "releases":[],
                          "pullpo":[],
-                         "events":[]
+                         "eventizer":[]
                          }
 
             if filter_.get_name() in supported_on[ds.get_name()]:
