@@ -198,7 +198,7 @@ class Query (GrimoireQuery):
         """
 
         query = self.add_columns (label("person_id", DB.UIdentities.uuid),
-                                  label("name", DB.UIdentities.uuid))
+                                  label("name", DB.UIdentities.identifier))
         if kind == "openers":
             person = DB.Issues.submitted_by
             table = DB.Issues
