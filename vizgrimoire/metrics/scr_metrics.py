@@ -24,6 +24,7 @@
 
 """ Metrics for the source code review system """
 
+from datetime import datetime
 import logging
 import MySQLdb
 import numpy
@@ -715,51 +716,135 @@ class ReviewsWaitingForReviewerTS(Metrics):
     desc = "Number of preview processes waiting for reviewer"
     data_source = SCR
 
+    def _get_date_from_month(self, monthid):
+        # month format: year*12+month
+        year = (monthid-1) / 12
+        month = monthid - year*12
+        # We need the last day of the month
+        import calendar
+        last_day = calendar.monthrange(year, month)[1]
+        current = str(year)+"-"+str(month)+"-"+str(last_day)
+        return (current)
+
+
+    def _get_pending(self, month, reviewers = False):
+        startdate = self.filters.startdate
+        enddate = self.filters.enddate
+        identities_db = self.db.identities_db
+        type_analysis =  self.filters.type_analysis
+
+        current = self._get_date_from_month(month)
+
+        sql_max_patchset = self.db.get_sql_max_patchset_for_reviews (current)
+        sql_reviews_reviewed = self.db.get_sql_reviews_reviewed(self.filters.startdate, current)
+        sql_reviews_closed = self.db.get_sql_reviews_closed(self.filters.startdate, current)
+
+        fields = Set([])
+
+
+        fields.add("COUNT(DISTINCT(i.id)) as pending")
+        fields = self.db._get_fields_query(fields)
+
+        tables = Set([])
+        tables.add("issues i")
+        tables.union_update(self.db.GetSQLReportFrom(self.filters))
+        tables = self.db._get_tables_query(tables)
+
+        # Pending (NEW = submitted-merged-abandoned) REVIEWS
+        filters = Set([])
+        filters.add(" i.submitted_on <= '"+current+"'")
+        filters.union_update(self.db.GetSQLReportWhere(self.filters))
+        # remove closed reviews
+        filters.add("i.id NOT IN ("+ sql_reviews_closed +")")
+
+        if reviewers:
+            filters.add("i.id NOT IN (%s)" % (sql_reviews_reviewed))
+
+        filters = self.db._get_filters_query(filters)
+
+        all_items = self.db.get_all_items(self.filters.type_analysis)
+
+        q = self.db.GetSQLGlobal('i.submitted_on', fields, tables, filters,
+                                 startdate, enddate, all_items)
+
+        rs = self.db.ExecuteQuery(q)
+        return rs
+
+
+    def _get_ts_all(self):
+        startdate = self.filters.startdate
+        enddate = self.filters.enddate
+        period = self.filters.period
+        start = datetime.strptime(startdate, "'%Y-%m-%d'")
+        end = datetime.strptime(enddate, "'%Y-%m-%d'")
+
+        if (period != "month"):
+            logging.error("Period not supported in " + self.id  + " " + period)
+            return {}
+
+        start_month = start.year*12 + start.month
+        end_month = end.year*12 + end.month
+        months = end_month - start_month
+
+        # First, we need to group by the filter field the data
+        all_items = self.db.get_all_items(self.filters.type_analysis)
+        group_field = self.db.get_group_field(all_items)
+        id_field = group_field.split('.')[1] # remove table name
+
+        # First we get all the data from db
+        pending_data = {'month':[],'pending':[],id_field:[]}
+        pending_reviewers_data = {'month':[],'pending':[],id_field:[]}
+        for i in range(0, months+1):
+            # total pending this month
+            pending_month = self._get_pending(start_month+i)
+            pending_data['month'].append(start_month+i)
+            pending_data[id_field].append(pending_month[id_field])
+            pending_data['pending'].append(pending_month['pending'])
+            # total pending waiting for reviewers this month
+            pending_reviewers_month = self._get_pending(start_month+i, True)
+            pending_reviewers_data['month'].append(start_month+i)
+            pending_reviewers_data[id_field].append(pending_reviewers_month[id_field])
+            pending_reviewers_data['pending'].append(pending_reviewers_month['pending'])
+        # print pending_review_data
+        # Get the complete list of items
+        all_items = []
+        for data in pending_data[id_field]:
+            all_items = list(Set(all_items+data))
+        # Build the final dict with format [[months],[itens],[[item1_ts],...]
+        pending = {"month":[]}
+        pending['month'] = pending_data['month']
+        pending = completePeriodIds(pending, self.filters.period,
+                                    self.filters.startdate, self.filters.enddate)
+        pending["ReviewsWaiting_ts"] = []
+        pending["ReviewsWaitingForReviewer_ts"] = []
+        pending[id_field] = all_items
+        # For each item build the tme series and append it
+        for item in all_items:
+            item_ts = []
+            for i in range(0, months+1):
+                if item in pending_data[id_field][i]:
+                    pos = pending_data[id_field][i].index(item)
+                    item_ts.append(pending_data['pending'][i][pos])
+                else:
+                    # No pendings reviews for this item
+                    item_ts.append(0)
+            pending['ReviewsWaiting_ts'].append(item_ts)
+            item_reviewers_ts = []
+            for i in range(0, months+1):
+                if item in pending_reviewers_month[id_field][i]:
+                    pos = pending_reviewers_data[id_field][i].index(item)
+                    item_reviewers_ts.append(pending_reviewers_data['pending'][i][pos])
+                else:
+                    # No pendings reviews for this item
+                    item_reviewers_ts.append(0)
+            pending['ReviewsWaitingForReviewer_ts'].append(item_reviewers_ts)
+        return pending
+
     def get_ts(self):
-        from datetime import datetime
 
-        def get_date_from_month(monthid):
-            # month format: year*12+month
-            year = (monthid-1) / 12
-            month = monthid - year*12
-            # We need the last day of the month
-            import calendar
-            last_day = calendar.monthrange(year, month)[1]
-            current = str(year)+"-"+str(month)+"-"+str(last_day)
-            return (current)
-
-
-        def get_pending(month, reviewers = False):
-            current = get_date_from_month(month)
-
-            sql_max_patchset = self.db.get_sql_max_patchset_for_reviews (current)
-            sql_reviews_reviewed = self.db.get_sql_reviews_reviewed(self.filters.startdate, current)
-            sql_reviews_closed = self.db.get_sql_reviews_closed(self.filters.startdate, current)
-
-            fields = "COUNT(DISTINCT(i.id)) as pending"
-
-            tables_set = Set([])
-            tables_set.add("issues i")
-            tables_set.union_update(self.db.GetSQLReportFrom(self.filters))
-            tables = self.db._get_tables_query(tables_set)
-
-            # Pending (NEW = submitted-merged-abandoned) REVIEWS
-            filters = " i.submitted_on <= '"+current+"' "
-            if self.db._get_filters_query(self.db.GetSQLReportWhere(self.filters)) != "":
-                filters += " AND " + self.db._get_filters_query(self.db.GetSQLReportWhere(self.filters))
-            # remove closed reviews
-            filters += " AND i.id NOT IN ("+ sql_reviews_closed +")"
-
-            if reviewers:
-                filters += " AND i.summary not like '%WIP%' "
-                filters += """ AND i.id NOT IN (%s)
-                """ % (sql_reviews_reviewed)
-
-            q = self.db.GetSQLGlobal('i.submitted_on', fields, tables, filters,
-                                     startdate, enddate)
-
-            rs = self.db.ExecuteQuery(q)
-            return rs['pending']
+        if self.filters.type_analysis and self.filters.type_analysis[1] is None:
+            # Support for GROUP BY queries
+            return self._get_ts_all()
 
         pending = {"month":[],
                    "ReviewsWaiting_ts":[],
@@ -768,9 +853,6 @@ class ReviewsWaitingForReviewerTS(Metrics):
         startdate = self.filters.startdate
         enddate = self.filters.enddate
         period = self.filters.period
-        identities_db = self.db.identities_db
-        type_analysis =  self.filters.type_analysis
-
         start = datetime.strptime(startdate, "'%Y-%m-%d'")
         end = datetime.strptime(enddate, "'%Y-%m-%d'")
 
@@ -784,12 +866,13 @@ class ReviewsWaitingForReviewerTS(Metrics):
 
         for i in range(0, months+1):
             pending['month'].append(start_month+i)
-            pending_month = get_pending(start_month+i)
-            pending_reviewers_month = get_pending(start_month+i, True)
+            pending_month = self._get_pending(start_month+i)
+            pending_reviewers_month = self._get_pending(start_month+i, True)
             pending['ReviewsWaiting_ts'].append(pending_month)
             pending['ReviewsWaitingForReviewer_ts'].append(pending_reviewers_month)
 
         return pending
+
 
 class ReviewsWaitingForReviewer(Metrics):
     id = "ReviewsWaitingForReviewer"
@@ -803,19 +886,18 @@ class ReviewsWaitingForReviewer(Metrics):
         sql_max_patchset = self.db.get_sql_max_patchset_for_reviews ()
         sql_reviews_reviewed = self.db.get_sql_reviews_reviewed(self.filters.startdate)
 
-        fields = "COUNT(DISTINCT(i.id)) as ReviewsWaitingForReviewer"
+        fields = Set([])
+        fields.add("COUNT(DISTINCT(i.id)) as ReviewsWaitingForReviewer")
 
-        tables_set = Set([]) #tables in a set
-        tables_set.add("issues i")
-        tables_set.union_update(self.db.GetSQLReportFrom(self.filters))
-        tables = self.db._get_tables_query(tables_set)
-
-        filters_set = Set([])
-        filters_set.add("i.status = 'NEW'")
-        filters_set.add("i.id NOT IN (%s)" % (sql_reviews_reviewed))
-        filters_set.add("i.summary not like '%WIP%'") #To be removed
-        filters_set.union_update(self.db.GetSQLReportWhere(self.filters))
-        filters = self.db._get_filters_query(filters_set)
+        tables = Set([])
+        tables.add("issues i")
+        tables.union_update(self.db.GetSQLReportFrom(self.filters))
+        
+        filters = Set([])
+        filters.add("i.status = 'NEW'")
+        filters.add("i.id NOT IN (%s) " % (sql_reviews_reviewed))
+        filters.union_update(self.db.GetSQLReportWhere(self.filters))
+        
 
         q = self.db.BuildQuery (self.filters.period, self.filters.startdate,
                                 self.filters.enddate, "i.submitted_on",
@@ -834,21 +916,14 @@ class ReviewsWaitingForSubmitter(Metrics):
         q_last_change = self.db.get_sql_last_change_for_reviews()
 
         fields = "COUNT(DISTINCT(i.id)) as ReviewsWaitingForSubmitter"
-
-        tables_set = Set([])
-        tables_set.add("changes c")
-        tables_set.add("issues i")
-        tables_set.add("(%s) t1" % q_last_change)
-        tables_set.union_update(self.db.GetSQLReportFrom(self.filters))
-        tables = self.db._get_tables_query(tables_set)
-
-        filters_set = Set([])
-        filters_set.add("i.id = c.issue_id")
-        filters_set.add("t1.id = c.id")
-        filters_set.add("(c.field='CRVW' or c.field='Code-Review' or c.field='Verified' or c.field='VRIF')")
-        filters_set.add("(c.new_value=-1 or c.new_value=-2)")
-        filters_set.union_update(self.db.GetSQLReportWhere(self.filters))
-        filters = self.db._get_filters_query(filters_set)
+        tables = "changes c, issues i, (%s) t1 " % q_last_change
+        tables += self.db._get_tables_query(self.db.GetSQLReportFrom(self.filters))
+        filters = """
+            i.id = c.issue_id  AND t1.id = c.id
+            AND (c.field='CRVW' or c.field='Code-Review' or c.field='Verified' or c.field='VRIF')
+            AND (c.new_value=-1 or c.new_value=-2)
+        """
+        filters = filters + self.db._get_filters_query(self.db.GetSQLReportWhere(self.filters))
 
         q = self.db.BuildQuery (self.filters.period, self.filters.startdate,
                                 self.filters.enddate, " c.changed_on",
