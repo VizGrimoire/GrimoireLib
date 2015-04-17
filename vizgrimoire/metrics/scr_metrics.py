@@ -1455,11 +1455,13 @@ class TimeToReview(Metrics):
                 metrics_list['month'] = []
 
             metrics_list = completePeriodIds(metrics_list, self.filters.period,
-                                            self.filters.startdate, self.filters.enddate)
+                                             self.filters.startdate, self.filters.enddate)
 
             data_all['review_time_days_median'].append(metrics_list['review_time_days_median'])
             data_all['review_time_days_avg'].append(metrics_list['review_time_days_avg'])
-            data_all['month'] = metrics_list['month']
+            ts_fields = ['unixtime','date','month','id']
+            for ts_field in ts_fields:
+                data_all[ts_field] = metrics_list[ts_field]
 
         return data_all
 
