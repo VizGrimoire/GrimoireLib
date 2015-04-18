@@ -738,18 +738,22 @@ class ReviewsWaitingForReviewerTS(Metrics):
 
             fields = "COUNT(DISTINCT(i.id)) as pending"
 
-            tables = " issues i "
-            tables = tables + self.db._get_tables_query(self.db.GetSQLReportFrom(type_analysis))
+            tables = Set([])
+            tables.add("issues i")
+            tables.union_update(self.db.GetSQLReportFrom(self.filters))
+            tables = self.db._get_tables_query(tables)
 
             # Pending (NEW = submitted-merged-abandoned) REVIEWS
-            filters = " i.submitted_on <= '"+current+"' "
-            filters += self.db._get_filters_query(self.db.GetSQLReportWhere(type_analysis))
+            filters = Set([])
+            filters.add(" i.submitted_on <= '"+current+"'")
+            filters.union_update(self.db.GetSQLReportWhere(self.filters))
             # remove closed reviews
-            filters += " AND i.id NOT IN ("+ sql_reviews_closed +")"
+            filters.add("i.id NOT IN ("+ sql_reviews_closed +")")
 
             if reviewers:
-                filters += """ AND i.id NOT IN (%s)
-                """ % (sql_reviews_reviewed)
+                filters.add("i.id NOT IN (%s)" % (sql_reviews_reviewed))
+
+            filters = self.db._get_filters_query(filters)
 
             q = self.db.GetSQLGlobal('i.submitted_on', fields, tables, filters,
                                      startdate, enddate)
