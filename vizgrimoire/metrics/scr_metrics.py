@@ -768,6 +768,7 @@ class ReviewsWaitingForReviewerTS(Metrics):
                                  startdate, enddate, all_items)
 
         rs = self.db.ExecuteQuery(q)
+        checkListArray(rs)
         return rs
 
 
@@ -822,7 +823,8 @@ class ReviewsWaitingForReviewerTS(Metrics):
         for item in all_items:
             item_ts = []
             for i in range(0, months+1):
-                if item in pending_data[id_field][i]:
+                if len(pending_data[id_field])>0 and \
+                   item in pending_data[id_field][i]:
                     pos = pending_data[id_field][i].index(item)
                     item_ts.append(pending_data['pending'][i][pos])
                 else:
@@ -831,7 +833,8 @@ class ReviewsWaitingForReviewerTS(Metrics):
             pending['ReviewsWaiting_ts'].append(item_ts)
             item_reviewers_ts = []
             for i in range(0, months+1):
-                if item in pending_reviewers_month[id_field][i]:
+                if len(pending_reviewers_month[id_field])>0 and \
+                   item in pending_reviewers_month[id_field][i]:
                     pos = pending_reviewers_data[id_field][i].index(item)
                     item_reviewers_ts.append(pending_reviewers_data['pending'][i][pos])
                 else:
