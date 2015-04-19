@@ -895,12 +895,12 @@ class ReviewsWaitingForReviewer(Metrics):
         tables = Set([])
         tables.add("issues i")
         tables.union_update(self.db.GetSQLReportFrom(self.filters))
-        
+
         filters = Set([])
         filters.add("i.status = 'NEW'")
         filters.add("i.id NOT IN (%s) " % (sql_reviews_reviewed))
         filters.union_update(self.db.GetSQLReportWhere(self.filters))
-        
+
 
         q = self.db.BuildQuery (self.filters.period, self.filters.startdate,
                                 self.filters.enddate, "i.submitted_on",
@@ -918,15 +918,21 @@ class ReviewsWaitingForSubmitter(Metrics):
     def _get_sql(self, evolutionary):
         q_last_change = self.db.get_sql_last_change_for_reviews()
 
-        fields = "COUNT(DISTINCT(i.id)) as ReviewsWaitingForSubmitter"
-        tables = "changes c, issues i, (%s) t1 " % q_last_change
-        tables += self.db._get_tables_query(self.db.GetSQLReportFrom(self.filters))
-        filters = """
-            i.id = c.issue_id  AND t1.id = c.id
-            AND (c.field='CRVW' or c.field='Code-Review' or c.field='Verified' or c.field='VRIF')
-            AND (c.new_value=-1 or c.new_value=-2)
-        """
-        filters = filters + self.db._get_filters_query(self.db.GetSQLReportWhere(self.filters))
+        fields = Set([])
+        fields.add("COUNT(DISTINCT(i.id)) as ReviewsWaitingForSubmitter")
+
+        tables = Set([])
+        tables.add("issues i")
+        tables.add("changes c")
+        tables.add("(%s) t1 " % q_last_change)
+        tables.union_update(self.db.GetSQLReportFrom(self.filters))
+
+        filters = Set([])
+        filters.add("i.id = c.issue_id")
+        filters.add("t1.id = c.id")
+        filters.add("(c.field='CRVW' or c.field='Code-Review' or c.field='Verified' or c.field='VRIF')")
+        filters.add("(c.new_value=-1 or c.new_value=-2)")
+        filters.union_update(self.db.GetSQLReportWhere(self.filters))
 
         q = self.db.BuildQuery (self.filters.period, self.filters.startdate,
                                 self.filters.enddate, " c.changed_on",
