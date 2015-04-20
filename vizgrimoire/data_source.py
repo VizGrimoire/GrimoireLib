@@ -503,7 +503,7 @@ class DataSource(object):
         raise NotImplementedError
 
     @classmethod
-    def convert_all_to_single(cls, data, filter_, destdir, evolutionary):
+    def convert_all_to_single(cls, data, filter_, destdir, evolutionary, period='month'):
         """ Convert a GROUP BY result to follow tradition individual JSON files """
         from vizgrimoire.SCM import SCM
         from vizgrimoire.ITS import ITS
@@ -536,7 +536,7 @@ class DataSource(object):
                 item_list[field] = data[field]
             createJSON(item_list, fn)
         # Items files
-        ts_fields = ['unixtime','id','date','month']
+        ts_fields = ['unixtime','id','date',period]
         for i in range(0,len(data['name'])):
             item_metrics = {}
             item = data['name'][i]

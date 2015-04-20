@@ -312,7 +312,7 @@ class ContributorsNewGoneSCM(ContributorsNewGone):
 
         evol = {}
         data = completePeriodIds(self.db.GetPeopleIntake(0,1), period, startdate, enddate)
-        evol['month'] = data['month']
+        evol[period] = data[period]
         evol['id'] = data['id']
         evol['date'] = data['date']
         evol['num_people_1'] = data['people']
@@ -611,7 +611,7 @@ class ContributorsNewGoneSCR(ContributorsNewGone):
 
         evol = {}
         data = completePeriodIds(self.db.GetPeopleIntake(0,1), period, startdate, enddate)
-        evol['month'] = data['month']
+        evol[period] = data[period]
         evol['id'] = data['id']
         evol['date'] = data['date']
         evol['num_people_1'] = data['people']

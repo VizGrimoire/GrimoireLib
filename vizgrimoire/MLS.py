@@ -286,13 +286,13 @@ class MLS(DataSource):
                                        identities_db, filter_all)
             fn = os.path.join(destdir, filter_.get_static_filename_all(MLS()))
             createJSON(agg_all, fn)
-            MLS.convert_all_to_single(agg_all, filter_, destdir, False)
+            MLS.convert_all_to_single(agg_all, filter_, destdir, False, period)
 
             evol_all = MLS.get_evolutionary_data(period, startdate, enddate,
                                                  identities_db, filter_all)
             fn = os.path.join(destdir, filter_.get_evolutionary_filename_all(MLS()))
             createJSON(evol_all, fn)
-            MLS.convert_all_to_single(evol_all, filter_, destdir, True)
+            MLS.convert_all_to_single(evol_all, filter_, destdir, True, period)
 
             if check:
                 MLS._check_report_all_data(evol_all, filter_, startdate, enddate,

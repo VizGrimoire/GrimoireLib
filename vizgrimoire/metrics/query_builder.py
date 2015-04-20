@@ -891,6 +891,33 @@ class ITSQuery(DSQuery):
 
         return filters
 
+    def GetSQLBotsFrom (self):
+        tables = Set([])
+        tables.add("people_uidentities pup")
+        tables.add(self.identities_db + ".uidentities u")
+
+        return tables
+
+    def GetSQLBotsWhere (self, bots_str, table = "changes"):
+        filters = Set([])
+
+        bots = bots_str
+        if not isinstance(bots_str, list):
+            bots = bots_str.split(",")
+
+        field = "ch.changed_by"
+
+        if table == "issues": field = "i.submitted_by"
+
+        filters.add(field + " = pup.people_id")
+        filters.add("u.uuid = pup.uuid")
+        for bot in bots:
+            # This code only ignores bots provided in raw_bots.
+            # This should add the other way around, u.identifier = 'xxx'
+            filters.add("u.identifier <> '" + bot + "'")
+
+        return filters
+
     def _get_from_type_analysis_set(self, type_analysis):
 
         From = Set([])
@@ -920,6 +947,8 @@ class ITSQuery(DSQuery):
 
         From = self._get_from_type_analysis_set(filters.type_analysis)
 
+        if filters.people_out is not None:
+            From.union_update(self.GetSQLBotsFrom())
         if filters.global_filter is not None:
             From.union_update(self._get_from_type_analysis_set(filters.global_filter))
 
@@ -985,6 +1014,8 @@ class ITSQuery(DSQuery):
 
         where = self._get_where_type_analysis_set(filters.type_analysis)
 
+        if filters.people_out is not None:
+            where.union_update(self.GetSQLBotsWhere(filters.people_out, table))
         if filters.global_filter is not None:
             where.union_update(self._get_where_global_filter_set(filters.global_filter))
 
@@ -1009,7 +1040,7 @@ class ITSQuery(DSQuery):
         mtype_analysis = mfilters.type_analysis
         mfilters.type_analysis = type_analysis
         tables.union_update(self.GetSQLReportFrom(mfilters))
-        filters.union_update(self.GetSQLReportWhere(mfilters))
+        filters.union_update(self.GetSQLReportWhere(mfilters,"issues"))
         mfilters.type_analysis = mtype_analysis
 
         #Filtering last part of the query, not used in this case
@@ -1595,6 +1626,33 @@ class SCRQuery(DSQuery):
         filters.add("i.summary not like '%"+value+"%'")
         return filters
 
+    def GetSQLBotsFrom (self):
+        tables = Set([])
+        tables.add("people_uidentities pup")
+        tables.add(self.identities_db + ".uidentities u")
+
+        return tables
+
+    def GetSQLBotsWhere (self, bots_str, table = "changes"):
+        filters = Set([])
+
+        bots = bots_str
+        if not isinstance(bots_str, list):
+            bots = bots_str.split(",")
+
+        field = "ch.changed_by"
+
+        if table == "issues": field = "i.submitted_by"
+
+        filters.add(field + " = pup.people_id")
+        filters.add("u.uuid = pup.uuid")
+        for bot in bots:
+            # This code only ignores bots provided in raw_bots.
+            # This should add the other way around, u.identifier = 'xxx'
+            filters.add("u.identifier <> '" + bot + "'")
+
+        return filters
+
     ##########
     #Generic functions to obtain FROM and WHERE clauses per type of report
     ##########
@@ -1625,6 +1683,8 @@ class SCRQuery(DSQuery):
 
         From = self._get_from_type_analysis_set(filters.type_analysis)
 
+        if filters.people_out is not None:
+            From.union_update(self.GetSQLBotsFrom())
         if filters.global_filter is not None:
             From.union_update(self._get_from_type_analysis_set(filters.global_filter))
 
@@ -1691,11 +1751,13 @@ class SCRQuery(DSQuery):
                         where.union_update(self.GetSQLProjectWhere(value))
         return where
 
-    def GetSQLReportWhere (self, filters):
+    def GetSQLReportWhere (self, filters, table = "changes"):
         #generic function to generate 'where' clauses
 
         where = self._get_where_type_analysis_set(filters.type_analysis)
 
+        if filters.people_out is not None:
+            where.union_update(self.GetSQLBotsWhere(filters.people_out, table))
         if filters.global_filter is not None:
             where.union_update(self._get_where_global_filter_set(filters.global_filter))
 

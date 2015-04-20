@@ -346,13 +346,13 @@ class SCR(DataSource):
                                        identities_db, filter_all)
             fn = os.path.join(destdir, filter_.get_static_filename_all(SCR()))
             createJSON(agg_all, fn)
-            SCR.convert_all_to_single(agg_all, filter_, destdir, False)
+            SCR.convert_all_to_single(agg_all, filter_, destdir, False, period)
 
             evol_all = SCR.get_evolutionary_data(period, startdate, enddate,
                                                  identities_db, filter_all)
             fn = os.path.join(destdir, filter_.get_evolutionary_filename_all(SCR()))
             createJSON(evol_all, fn)
-            SCR.convert_all_to_single(evol_all, filter_, destdir, True)
+            SCR.convert_all_to_single(evol_all, filter_, destdir, True, period)
 
 
             if check:
