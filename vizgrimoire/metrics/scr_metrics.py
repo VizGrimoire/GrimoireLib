@@ -768,7 +768,10 @@ class ReviewsWaitingForReviewerTS(Metrics):
                                  startdate, enddate, all_items)
 
         rs = self.db.ExecuteQuery(q)
-        checkListArray(rs)
+        if all_items is not None:
+            checkListArray(rs)
+        else:
+            rs = rs['pending']
         return rs
 
 
