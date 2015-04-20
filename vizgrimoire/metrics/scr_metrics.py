@@ -833,8 +833,8 @@ class ReviewsWaitingForReviewerTS(Metrics):
             pending['ReviewsWaiting_ts'].append(item_ts)
             item_reviewers_ts = []
             for i in range(0, months+1):
-                if len(pending_reviewers_month[id_field])>0 and \
-                   item in pending_reviewers_month[id_field][i]:
+                if len(pending_reviewers_data[id_field])>0 and \
+                   item in pending_reviewers_data[id_field][i]:
                     pos = pending_reviewers_data[id_field][i].index(item)
                     item_reviewers_ts.append(pending_reviewers_data['pending'][i][pos])
                 else:
@@ -1393,7 +1393,7 @@ class Submitters(Metrics):
         return q
 
     def _get_sql(self, evolutionary):
-        if (self.filters.type_analysis is not None and (self.filters.type_analysis[0] in  ["repository","project"])):
+        if (self.filters.type_analysis is not None and (self.filters.type_analysis[0] in  ["repository1","project"])):
             return self.__get_sql_trk_prj__(evolutionary)
         else:
             return self.__get_sql_default__(evolutionary)
