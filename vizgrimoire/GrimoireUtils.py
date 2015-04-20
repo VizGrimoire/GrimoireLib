@@ -637,7 +637,7 @@ def fill_items(items, data, id_field, evol = False,
     from vizgrimoire.GrimoireUtils import completePeriodIds
 
     # This fields should not be modified
-    ts_fields = [period, 'unixtime', 'date']
+    ts_fields = [period, 'unixtime', 'date','id']
 
     if evol:
         zero_ts = completePeriodIds({id_field:[],period:[]},
