@@ -2958,7 +2958,10 @@ class PullpoQuery(DSQuery):
 
         From = Set([])
 
-        if (type_analysis is None or len(type_analysis) != 2): return From
+        if type_analysis is None:
+            return From
+        elif len(type_analysis) != 2:
+            return From
 
         analysis = type_analysis[0]
 
@@ -2977,7 +2980,11 @@ class PullpoQuery(DSQuery):
         #such analysis
 
         where = Set([])
-        if (type_analysis is None or len(type_analysis) != 2): return where
+
+        if type_analysis is None:
+            return where
+        elif len(type_analysis) != 2:
+            return where
 
         analysis = type_analysis[0]
         value = type_analysis[1]
@@ -3013,13 +3020,18 @@ class PullpoQuery(DSQuery):
         elif type_ == "abandoned": filters.add("pr.state = 'closed' and merged_at is NULL")
         filters.union_update(self.GetSQLReportWhere(type_analysis))
 
-        date_field = "pr.created_at"
-        if type_ in ["closed", "merged", "abandoned"]: date_field = "pr.updated_at"
-        # Not include reviews before startdate no matter mod_date is after startdate
-        filters.add("pr.created_at >= " + startdate)
+        if type_ in ["closed", "abandoned"]:
+            date_field = "pr.closed_at"
+        elif type == "merged":
+            date_field = "pr.merged_at"
+        else:
+            date_field = "pr.created_at"
 
-        q = self.BuildQuery (period, startdate, enddate, date_field, fields, tables,
-                             filters, evolutionary, type_analysis)
+        # Uncomment to include reviews before startdate no matter mod_date is after startdate
+        # filters.add("pr.created_at >= " + startdate)
+
+        q = self.BuildQuery(period, startdate, enddate, date_field, fields, tables,
+                            filters, evolutionary, type_analysis)
         return q
 
     def GetTimeToSQL(self, metric_filters, closed_field, metric_name):
