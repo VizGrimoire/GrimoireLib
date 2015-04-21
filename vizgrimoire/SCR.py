@@ -98,6 +98,11 @@ class SCR(DataSource):
             logging.info(automator_metrics + " found ")
             # print(metrics_on)
 
+        people_out = []
+        if "people_out" in Report.get_config()['r']:
+            people_out = Report.get_config()['r']["people_out"]
+            people_out = people_out.split(",")
+
         metrics_reports = SCR.get_metrics_core_reports()
         if filter_ is None:
             from vizgrimoire.report import Report
@@ -114,7 +119,7 @@ class SCR(DataSource):
         if DS.get_name()+"_end_date" in Report.get_config()['r']:
             enddate = "'"+Report.get_config()['r'][DS.get_name()+"_end_date"]+"'"
 
-        mfilter = MetricFilters(period, startdate, enddate, type_analysis)
+        mfilter = MetricFilters(period, startdate, enddate, type_analysis, 10, people_out, None)
         all_metrics = SCR.get_metrics_set(SCR)
 
         # SCR specific: remove some metrics from filters

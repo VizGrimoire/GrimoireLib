@@ -1786,7 +1786,7 @@ class SCRQuery(DSQuery):
         elif type_ == "closed": filters.add("(i.status = 'MERGED' or i.status = 'ABANDONED')")
         elif type_ == "merged": filters.add("i.status = 'MERGED'")
         elif type_ == "abandoned": filters.add("i.status = 'ABANDONED'")
-        filters.union_update(self.GetSQLReportWhere(mfilter))
+        filters.union_update(self.GetSQLReportWhere(mfilter,"issues"))
         filters.add("i.id = ie.issue_id")
 
         if (self.GetIssuesFiltered() != ""): filters.union_update(self.GetIssuesFiltered())
@@ -1831,7 +1831,7 @@ class SCRQuery(DSQuery):
         tables.union_update(self.GetSQLReportFrom(mfilter))
         filters.add("c.issue_id = i.id")
         filters.add("new_value = '"+type_+"'")
-        filters.union_update(self.GetSQLReportWhere(mfilter))
+        filters.union_update(self.GetSQLReportWhere(mfilter,"issues"))
 
         q = self.BuildQuery (period, startdate, enddate, "changed_on", fields, tables, filters, evolutionary)
 
@@ -1864,7 +1864,7 @@ class SCRQuery(DSQuery):
         elif type_ == "codereview": filters.add("(c.field = 'CRVW' OR c.field = 'Code-Review')")
         elif type_ == "sent": filters.add("c.field = 'SUBM'")
         filters.add("i.id = c.issue_id")
-        filters.union_update(self.GetSQLReportWhere(mfilter))
+        filters.union_update(self.GetSQLReportWhere(mfilter,"issues"))
 
         q = self.BuildQuery (period, startdate, enddate, "c.changed_on",
                              fields, tables, filters, evolutionary)
@@ -1898,7 +1898,7 @@ class SCRQuery(DSQuery):
         filters.add("t1.id = c.id")
         filters.add("(c.field='CRVW' or c.field='Code-Review' or c.field='Verified' or c.field='VRIF')")
         filters.add("(c.new_value=1 or c.new_value=2)")
-        filters.union_update(self.GetSQLReportWhere(mfilter))
+        filters.union_update(self.GetSQLReportWhere(mfilter,"issues"))
 
         q = self.BuildQuery (period, startdate, enddate, "c.changed_on",
                              fields, tables, filters, evolutionary)
@@ -1930,7 +1930,7 @@ class SCRQuery(DSQuery):
         filters.add("t1.id = c.id")
         filters.add("(c.field='CRVW' or c.field='Code-Review' or c.field='Verified' or c.field='VRIF')")
         filters.add("(c.new_value=-1 or c.new_value=-2)")
-        filters.union_update(self.GetSQLReportWhere(mfilter))
+        filters.union_update(self.GetSQLReportWhere(mfilter,"issues"))
 
         q = self.BuildQuery (period, startdate, enddate, "c.changed_on",
                              fields, tables, filters, evolutionary)
@@ -2034,7 +2034,7 @@ class SCRQuery(DSQuery):
         filters.add("status<>'MERGED'")
         filters.add("status<>'ABANDONED'")
         filters.add("ie.issue_id  = i.id")
-        filters.union_update(self.GetSQLReportWhere(mfilter))
+        filters.union_update(self.GetSQLReportWhere(mfilter,"issues"))
         if (uploaded):
             filters.add("ch.issue_id  = i.id")
             filters.add("i.id = last_patch.issue_id")

@@ -347,7 +347,7 @@ class DataSource(object):
         return data
 
     @classmethod
-    def get_metrics_data(DS, period, startdate, enddate, identities_db, 
+    def get_metrics_data(DS, period, startdate, enddate, identities_db,
                          filter_ = None, evol = False):
         """ Get basic data from all core metrics """
         from vizgrimoire.GrimoireUtils import fill_and_order_items

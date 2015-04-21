@@ -598,7 +598,7 @@ class Participants(Metrics):
         tables_query = "(" + comments_query + ") union (" + changes_query + ") union (" + issues_query + ")"
         tables.add("(" + tables_query + ") t")
         tables.union_update(self.db.GetSQLReportFrom(self.filters))
-        filters.union_update(self.db.GetSQLReportWhere(self.filters))
+        filters.union_update(self.db.GetSQLReportWhere(self.filters,"issues"))
 
         query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                    self.filters.enddate, "t.submitted_on",
@@ -752,7 +752,7 @@ class ReviewsWaitingForReviewerTS(Metrics):
         # Pending (NEW = submitted-merged-abandoned) REVIEWS
         filters = Set([])
         filters.add(" i.submitted_on <= '"+current+"'")
-        filters.union_update(self.db.GetSQLReportWhere(self.filters))
+        filters.union_update(self.db.GetSQLReportWhere(self.filters,"issues"))
         # remove closed reviews
         filters.add("i.id NOT IN ("+ sql_reviews_closed +")")
 
@@ -901,8 +901,7 @@ class ReviewsWaitingForReviewer(Metrics):
         filters = Set([])
         filters.add("i.status = 'NEW'")
         filters.add("i.id NOT IN (%s) " % (sql_reviews_reviewed))
-        filters.union_update(self.db.GetSQLReportWhere(self.filters))
-
+        filters.union_update(self.db.GetSQLReportWhere(self.filters,"issues"))
 
         q = self.db.BuildQuery (self.filters.period, self.filters.startdate,
                                 self.filters.enddate, "i.submitted_on",
@@ -934,7 +933,7 @@ class ReviewsWaitingForSubmitter(Metrics):
         filters.add("t1.id = c.id")
         filters.add("(c.field='CRVW' or c.field='Code-Review' or c.field='Verified' or c.field='VRIF')")
         filters.add("(c.new_value=-1 or c.new_value=-2)")
-        filters.union_update(self.db.GetSQLReportWhere(self.filters))
+        filters.union_update(self.db.GetSQLReportWhere(self.filters,"issues"))
 
         q = self.db.BuildQuery (self.filters.period, self.filters.startdate,
                                 self.filters.enddate, " c.changed_on",
@@ -1085,7 +1084,7 @@ class Repositories(Metrics):
         tables.add("trackers t")
         tables.union_update(self.db.GetSQLReportFrom(self.filters))
         filters.add("i.tracker_id = t.id")
-        filters.union_update(self.db.GetSQLReportWhere(self.filters))
+        filters.union_update(self.db.GetSQLReportWhere(self.filters,"issues"))
         q = self.db.BuildQuery (self.filters.period, self.filters.startdate,
                                 self.filters.enddate, " i.submitted_on",
                                 fields, tables, filters, evolutionary, self.filters.type_analysis)
@@ -1353,15 +1352,15 @@ class Submitters(Metrics):
         tables = self.db.GetSQLReportFrom(self.filters)
         tables.add("issues i")
         tpeople_sql += " FROM " + self.db._get_tables_query(tables)
-        filters_ext = self.db._get_filters_query(self.db.GetSQLReportWhere(self.filters))
+        filters_ext = self.db._get_filters_query(self.db.GetSQLReportWhere(self.filters,"issues"))
         if (filters_ext != ""):
             tpeople_sql += " WHERE " + filters_ext
 
         fields = Set([])
         tables = self.db.GetSQLReportFrom(self.filters)
-        filters = self.db.GetSQLReportWhere(self.filters)
+        filters = self.db.GetSQLReportWhere(self.filters,"issues")
 
-        fields.add("count(distinct(uuid)) as submitters")
+        fields.add("count(distinct(u.uuid)) as submitters")
         tables.add("people_uidentities pup")
         tables.add("issues i")
         tables.add("(%s) tpeople" % (tpeople_sql))
@@ -1382,7 +1381,7 @@ class Submitters(Metrics):
         fields.add("count(distinct(pup.uuid)) as submitters")
         tables.add("issues i")
         tables.union_update(self.db.GetSQLReportFrom(self.filters))
-        filters.union_update(self.db.GetSQLReportWhere(self.filters))
+        filters.union_update(self.db.GetSQLReportWhere(self.filters,"issues"))
 
         #Specific case for the basic option where people_upeople table is needed
         #and not taken into account in the initial part of the query
