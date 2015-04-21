@@ -1170,9 +1170,9 @@ class Reviewers(Metrics):
         # Add orgs information
         q_orgs = """
             SELECT top.id, reviewers, reviewed, org.name as organization FROM (%s) top
-            LEFT JOIN cp_sortinghat_GrimoireLibTests.enrollments enr ON top.id = enr.uuid
-            LEFT JOIN cp_sortinghat_GrimoireLibTests.organizations org ON org.id = enr.organization_id;
-            """ % (q)
+            LEFT JOIN %s.enrollments enr ON top.id = enr.uuid
+            LEFT JOIN %s.organizations org ON org.id = enr.organization_id;
+            """ % (q, self.db.identities_db, self.db.identities_db)
 
         return(self.db.ExecuteQuery(q_orgs))
 
@@ -1341,9 +1341,9 @@ class Closers(Metrics):
         # Add orgs information
         q_orgs = """
             SELECT top.id, %s, %s, org.name as organization FROM (%s) top
-            LEFT JOIN cp_sortinghat_GrimoireLibTests.enrollments enr ON top.id = enr.uuid
-            LEFT JOIN cp_sortinghat_GrimoireLibTests.organizations org ON org.id = enr.organization_id;
-            """ % (rol, action, q)
+            LEFT JOIN %s.enrollments enr ON top.id = enr.uuid
+            LEFT JOIN %s.organizations org ON org.id = enr.organization_id;
+            """ % (rol, action, q, self.db.identities_db, self.db.identities_db)
 
         return(self.db.ExecuteQuery(q_orgs))
 
@@ -1447,9 +1447,9 @@ class Submitters(Metrics):
         # Add orgs information
         q_orgs = """
             SELECT top.id, %s, %s, org.name as organization FROM (%s) top
-            LEFT JOIN cp_sortinghat_GrimoireLibTests.enrollments enr ON top.id = enr.uuid
-            LEFT JOIN cp_sortinghat_GrimoireLibTests.organizations org ON org.id = enr.organization_id;
-            """ % (rol, action, q)
+            LEFT JOIN %s.enrollments enr ON top.id = enr.uuid
+            LEFT JOIN %s.organizations org ON org.id = enr.organization_id;
+            """ % (rol, action, q, self.db.identities_db, self.db.identities_db)
 
         return(self.db.ExecuteQuery(q_orgs))
 
