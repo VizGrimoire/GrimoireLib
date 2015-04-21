@@ -107,6 +107,4 @@ class Members(Metrics):
         query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                    self.filters.enddate, " p.joined ", fields,
                                    tables, filters, evolutionary, self.filters.type_analysis)
-
         return query
-

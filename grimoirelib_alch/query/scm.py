@@ -241,7 +241,7 @@ class Query (GrimoireQuery):
         """
         
         query = self.add_columns (label("id", func.distinct(DB.UIdentities.uuid)),
-                                  label("name", DB.UIdentities.uuid)) \
+                                  label("name", DB.UIdentities.identifier)) \
                 .join (DB.PeopleUIdentities,
                        DB.UIdentities.uuid == DB.PeopleUIdentities.uuid)
         if kind == "authors":
@@ -357,7 +357,7 @@ class Query (GrimoireQuery):
             raise Exception ("select_personsdata_uid: Unknown kind %s." \
                              % kind)
         query = self.add_columns (label("person_id", DB.UIdentities.uuid),
-                                  label("name", DB.UIdentities.uuid))
+                                  label("name", DB.UIdentities.identifier))
         if not self.joined:
             # First table, UIdentities is in FROM
             self.joined.append (DB.UIdentities)

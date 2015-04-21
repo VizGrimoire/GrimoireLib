@@ -316,13 +316,13 @@ class ITS(DataSource):
                                        identities_db, filter_all)
             fn = os.path.join(destdir, filter_.get_static_filename_all(cls()))
             createJSON(agg_all, fn)
-            ITS.convert_all_to_single(agg_all, filter_, destdir, False)
+            ITS.convert_all_to_single(agg_all, filter_, destdir, False, period)
 
             evol_all = cls.get_evolutionary_data(period, startdate, enddate,
                                                  identities_db, filter_all)
             fn = os.path.join(destdir, filter_.get_evolutionary_filename_all(cls()))
             createJSON(evol_all, fn)
-            ITS.convert_all_to_single(evol_all, filter_, destdir, True)
+            ITS.convert_all_to_single(evol_all, filter_, destdir, True, period)
 
             if check:
                 cls._check_report_all_data(evol_all, filter_, startdate, enddate,

@@ -63,7 +63,7 @@ class InitialActivity(Metrics):
         tables.add("issues i")
         tables.union_update(self.db.GetSQLReportFrom(self.filters))
 
-        filters.union_update(self.db.GetSQLReportWhere(self.filters))
+        filters.union_update(self.db.GetSQLReportWhere(self.filters,"issues"))
 
         query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                    self.filters.enddate, "i.submitted_on", fields,
@@ -90,7 +90,7 @@ class EndOfActivity(Metrics):
         tables.add("issues i")
         tables.union_update(self.db.GetSQLReportFrom(self.filters))
 
-        filters.union_update(self.db.GetSQLReportWhere(self.filters))
+        filters.union_update(self.db.GetSQLReportWhere(self.filters,"issues"))
         filters.add("c.issue_id = i.id")
 
         query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
@@ -677,7 +677,7 @@ class Participants(Metrics):
         tables_query = "(" + comments_query + ") union (" + changes_query + ") union (" + issues_query + ")"
         tables.add("(" + tables_query + ") t")
         tables.union_update(self.db.GetSQLReportFrom(self.filters))
-        filters.union_update(self.db.GetSQLReportWhere(self.filters))
+        filters.union_update(self.db.GetSQLReportWhere(self.filters,"issues"))
 
         query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                    self.filters.enddate, "t.submitted_on",
@@ -725,7 +725,6 @@ class ReviewsWaitingForReviewerTS(Metrics):
         last_day = calendar.monthrange(year, month)[1]
         current = str(year)+"-"+str(month)+"-"+str(last_day)
         return (current)
-
 
     def _get_pending(self, month, reviewers = False):
         startdate = self.filters.startdate

@@ -149,7 +149,7 @@ class Openers(Metrics):
         tables.add("issues i")
         tables.union_update(self.db.GetSQLReportFrom(self.filters))
 
-        filters.union_update(self.db.GetSQLReportWhere(self.filters))
+        filters.union_update(self.db.GetSQLReportWhere(self.filters,"issues"))
 
         tpeople_sql = "select " + self.db._get_fields_query(fields)
         tpeople_sql = tpeople_sql + " from " + self.db._get_tables_query(tables)
@@ -597,7 +597,7 @@ class Changed(Metrics):
         fields.add("i.id as id")
         tables.add("issues i")
         tables.union_update(self.db.GetSQLReportFrom(self.filters))
-        filters.union_update(self.db.GetSQLReportWhere(self.filters))
+        filters.union_update(self.db.GetSQLReportWhere(self.filters,"issues"))
 
         issues_sql = "select " + self.db._get_fields_query(fields)
         issues_sql = issues_sql + " from " + self.db._get_tables_query(tables)

@@ -358,13 +358,13 @@ class SCM(DataSource):
                                        identities_db, filter_all)
             fn = os.path.join(destdir, filter_.get_static_filename_all(SCM()))
             createJSON(agg_all, fn)
-            SCM.convert_all_to_single(agg_all, filter_, destdir, False)
+            SCM.convert_all_to_single(agg_all, filter_, destdir, False, period)
 
             evol_all = SCM.get_evolutionary_data(period, startdate, enddate,
                                                  identities_db, filter_all)
             fn = os.path.join(destdir, filter_.get_evolutionary_filename_all(SCM()))
             createJSON(evol_all, fn)
-            SCM.convert_all_to_single(evol_all, filter_, destdir, True)
+            SCM.convert_all_to_single(evol_all, filter_, destdir, True, period)
 
             # Studies report for filters
             if (filter_name == "company"):

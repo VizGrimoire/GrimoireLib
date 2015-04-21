@@ -129,9 +129,6 @@ class Mediawiki(DataSource):
         items = None
         filter_name = filter_.get_name()
 
-        items = None
-        filter_name = filter_.get_name()
-
         if (filter_name == "people2"):
             metric = DataSource.get_metrics("authors", Mediawiki)
             items = metric.get_list()

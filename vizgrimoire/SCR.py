@@ -302,16 +302,12 @@ class SCR(DataSource):
         if not isinstance(items, (list)):
             items = [items]
 
-        # For repos aggregated data. Include metrics to sort in javascript.
-        if (filter_name == "repository"):
-            items_list = {"name":[],"review_time_days_median":[],"submitted":[]}
-        else:
-            items_list = items
+        # Include metrics to sort in javascript.
+        items_list = {"name":[],"review_time_days_median":[],"submitted":[]}
 
         for item in items :
             item_file = item.replace("/","_")
-            if (filter_name == "repository"):
-                items_list["name"].append(item_file)
+            items_list["name"].append(item_file)
 
             logging.info (item)
             filter_item = Filter(filter_name, item)
@@ -325,13 +321,13 @@ class SCR(DataSource):
             agg = SCR.get_agg_data(period, startdate, enddate, identities_db, filter_item)
             fn = os.path.join(destdir, filter_item.get_static_filename(SCR()))
             createJSON(agg, fn)
-            if (filter_name == "repository"):
-                if 'submitted' in agg: 
-                    items_list["submitted"].append(agg["submitted"])
-                else: items_list["submitted"].append("NA")
-                if 'review_time_days_median' in agg: 
-                    items_list["review_time_days_median"].append(agg['review_time_days_median'])
-                else: items_list["submitted"].append("NA")
+
+            if 'submitted' in agg:
+                items_list["submitted"].append(agg["submitted"])
+            else: items_list["submitted"].append("NA")
+            if 'review_time_days_median' in agg:
+                items_list["review_time_days_median"].append(agg['review_time_days_median'])
+            else: items_list["review_time_days_median"].append("NA")
 
         fn = os.path.join(destdir, filter_.get_filename(SCR()))
         createJSON(items_list, fn)
@@ -352,13 +348,13 @@ class SCR(DataSource):
                                        identities_db, filter_all)
             fn = os.path.join(destdir, filter_.get_static_filename_all(SCR()))
             createJSON(agg_all, fn)
-            SCR.convert_all_to_single(agg_all, filter_, destdir, False)
+            SCR.convert_all_to_single(agg_all, filter_, destdir, False, period)
 
             evol_all = SCR.get_evolutionary_data(period, startdate, enddate,
                                                  identities_db, filter_all)
             fn = os.path.join(destdir, filter_.get_evolutionary_filename_all(SCR()))
             createJSON(evol_all, fn)
-            SCR.convert_all_to_single(evol_all, filter_, destdir, True)
+            SCR.convert_all_to_single(evol_all, filter_, destdir, True, period)
 
 
             if check:
