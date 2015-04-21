@@ -190,15 +190,12 @@ class Pullpo(DataSource):
             items = [items]
 
         # For repos aggregated data. Include metrics to sort in javascript.
-        if (filter_name == "repository"):
-            items_list = {"name":[],"review_time_days_median":[],"submitted":[]}
-        else:
-            items_list = items
+
+        items_list = {"name":[],"review_time_days_median":[],"submitted":[]}
 
         for item in items :
             item_file = item.replace("/","_")
-            if (filter_name == "repository"):
-                items_list["name"].append(item_file)
+            items_list["name"].append(item_file)
 
             logging.info (item)
             filter_item = Filter(filter_name, item)
@@ -212,13 +209,12 @@ class Pullpo(DataSource):
             agg = Pullpo.get_agg_data(period, startdate, enddate, identities_db, filter_item)
             fn = os.path.join(destdir, filter_item.get_static_filename(Pullpo()))
             createJSON(agg, fn)
-            if (filter_name == "repository"):
-                if 'submitted' in agg: 
-                    items_list["submitted"].append(agg["submitted"])
-                else: items_list["submitted"].append("NA")
-                if 'review_time_days_median' in agg: 
-                    items_list["review_time_days_median"].append(agg['review_time_days_median'])
-                else: items_list["submitted"].append("NA")
+            if 'submitted' in agg:
+                items_list["submitted"].append(agg["submitted"])
+            else: items_list["submitted"].append("NA")
+            if 'review_time_days_median' in agg:
+                items_list["review_time_days_median"].append(agg['review_time_days_median'])
+            else: items_list["review_time_days_median"].append("NA")
 
         fn = os.path.join(destdir, filter_.get_filename(Pullpo()))
         createJSON(items_list, fn)

@@ -28,6 +28,7 @@ import logging, os
 from vizgrimoire.metrics.query_builder import DSQuery, ITSQuery, MLSQuery
 from vizgrimoire.GrimoireUtils import createJSON
 from vizgrimoire.metrics.metrics_filter import MetricFilters
+from vizgrimoire.filter import Filter
 
 class DataSource(object):
     _bots = []
@@ -442,7 +443,8 @@ class DataSource(object):
                                                  evol, period, startdate, enddate)
                 end_date = fill_and_order_items(items, end_date, id_field,
                                                 evol, period, startdate, enddate)
-
+            if init_date is None: init_date = {}
+            if end_date is None: end_date = {}
             data = dict(data.items() + init_date.items() + end_date.items())
 
             # Tendencies
@@ -501,7 +503,7 @@ class DataSource(object):
         raise NotImplementedError
 
     @classmethod
-    def convert_all_to_single(cls, data, filter_, destdir, evolutionary):
+    def convert_all_to_single(cls, data, filter_, destdir, evolutionary, period='month'):
         """ Convert a GROUP BY result to follow tradition individual JSON files """
         from vizgrimoire.SCM import SCM
         from vizgrimoire.ITS import ITS
@@ -534,7 +536,7 @@ class DataSource(object):
                 item_list[field] = data[field]
             createJSON(item_list, fn)
         # Items files
-        ts_fields = ['unixtime','id','date','month']
+        ts_fields = ['unixtime','id','date',period]
         for i in range(0,len(data['name'])):
             item_metrics = {}
             item = data['name'][i]

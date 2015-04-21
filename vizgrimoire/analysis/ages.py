@@ -58,6 +58,7 @@ from datetime import datetime, timedelta
 from jsonpickle import encode, set_encoder_options
 import codecs
 import logging
+import os.path
 
 def produce_json (filename, data, compact = True):
 
@@ -282,12 +283,21 @@ class Ages(Analyses):
             " (done!)"
         if self.filters.COMPANY in self.analysis_dict:
             org = self.analysis_dict[self.filters.COMPANY]
-            file_birth = destdir + "/" + org + "-" + prefix + "-com-demographics-birth.json"
-            file_aging = destdir + "/" + org + "-" + prefix + "-com-demographics-aging.json"
+            org = org.replace("/", "_")
+            file_birth = os.path.join (
+                destdir,
+                org + "-" + prefix + "-com-demographics-birth.json"
+                )
+            file_aging = os.path.join (
+                destdir,
+                org + "-" + prefix + "-com-demographics-aging.json"
+                )
             log_message = log_message + " Organization: " + org
         else:
-            file_birth = destdir + "/" + prefix + "-demographics-birth.json"
-            file_aging = destdir + "/" + prefix + "-demographics-aging.json"
+            file_birth = os.path.join (destdir,
+                                       prefix + "-demographics-birth.json")
+            file_aging = os.path.join (destdir,
+                                       prefix + "-demographics-aging.json")
         produce_json (file_birth, demos["birth"])
         produce_json (file_aging, demos["aging"])
         logging.info(log_message)
