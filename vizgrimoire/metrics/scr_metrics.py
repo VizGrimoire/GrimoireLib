@@ -1167,7 +1167,14 @@ class Reviewers(Metrics):
             "        ORDER BY reviewed desc, reviewers "+\
             "        LIMIT " + str(limit)
 
-        return(self.db.ExecuteQuery(q))
+        # Add orgs information
+        q_orgs = """
+            SELECT top.id, reviewers, reviewed, org.name as organization FROM (%s) top
+            LEFT JOIN cp_sortinghat_GrimoireLibTests.enrollments enr ON top.id = enr.uuid
+            LEFT JOIN cp_sortinghat_GrimoireLibTests.organizations org ON org.id = enr.organization_id;
+            """ % (q)
+
+        return(self.db.ExecuteQuery(q_orgs))
 
 
 
@@ -1330,8 +1337,15 @@ class Closers(Metrics):
             "        GROUP BY up.identifier "+\
             "        ORDER BY "+action+" desc, id "+\
             "        LIMIT "+ str(limit)
-        return(self.db.ExecuteQuery(q))
 
+        # Add orgs information
+        q_orgs = """
+            SELECT top.id, %s, %s, org.name as organization FROM (%s) top
+            LEFT JOIN cp_sortinghat_GrimoireLibTests.enrollments enr ON top.id = enr.uuid
+            LEFT JOIN cp_sortinghat_GrimoireLibTests.organizations org ON org.id = enr.organization_id;
+            """ % (rol, action, q)
+
+        return(self.db.ExecuteQuery(q_orgs))
 
     def _get_sql(self, evolutionary):
         pass
@@ -1429,7 +1443,15 @@ class Submitters(Metrics):
             "        GROUP BY up.identifier "+\
             "        ORDER BY "+action+" desc, id "+\
             "        LIMIT "+ str(limit)
-        return(self.db.ExecuteQuery(q))
+
+        # Add orgs information
+        q_orgs = """
+            SELECT top.id, %s, %s, org.name as organization FROM (%s) top
+            LEFT JOIN cp_sortinghat_GrimoireLibTests.enrollments enr ON top.id = enr.uuid
+            LEFT JOIN cp_sortinghat_GrimoireLibTests.organizations org ON org.id = enr.organization_id;
+            """ % (rol, action, q)
+
+        return(self.db.ExecuteQuery(q_orgs))
 
 class TimeToReview(Metrics):
     id = "review_time"
