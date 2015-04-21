@@ -67,7 +67,7 @@ class QuartersData(Analyses):
 
         quarters = (end.year - start.year) * 4 + (end_quarter - start_quarter)
 
-        for i in range(0, quarters):
+        for i in range(0, quarters+1):
             year = start.year
             quarter = (i%4)+1
             # logging.info("Analyzing organizations and people quarter " + str(year) + " " +  str(quarter))
