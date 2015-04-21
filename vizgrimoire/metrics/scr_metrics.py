@@ -686,7 +686,14 @@ class Participants(Metrics):
         query = query + " group by u.identifier "
         query = query + " order by count(*) desc "
 
-        return self.db.ExecuteQuery(query)
+        # Add orgs information
+        q_orgs = """
+            SELECT top.id, identifier, events, org.name as organization FROM (%s) top
+            LEFT JOIN %s.enrollments enr ON top.id = enr.uuid
+            LEFT JOIN %s.organizations org ON org.id = enr.organization_id;
+            """ % (query, self.db.identities_db, self.db.identities_db)
+
+        return self.db.ExecuteQuery(q_orgs)
 
 
 class PatchesWaitingForReviewer(Metrics):
@@ -1294,7 +1301,14 @@ class ActiveCoreReviewers(Metrics):
         query = query + " group by up.uuid, up.identifier"
         query = query + " order by count(distinct(ch.id)) desc, up.uuid "
 
-        return self.db.ExecuteQuery(query)
+        # Add orgs information
+        q_orgs = """
+            SELECT top.id, identifier, reviews, org.name as organization FROM (%s) top
+            LEFT JOIN %s.enrollments enr ON top.id = enr.uuid
+            LEFT JOIN %s.organizations org ON org.id = enr.organization_id;
+            """ % (query, self.db.identities_db, self.db.identities_db)
+
+        return self.db.ExecuteQuery(q_orgs)
 
 
 class Closers(Metrics):
