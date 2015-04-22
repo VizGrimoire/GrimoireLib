@@ -89,11 +89,11 @@ def create_reports_filters(period, startdate, enddate, destdir, npeople, identit
                          "eventizer":[]
                          }
             supported_on = {
-                         "scm":["people2","company","company+country","country","repository","domain"],
+                         "scm":[],
                          "its":[],
                          "its_1":[],
                          "mls":[],
-                         "scr":["people2","company","country","repository"],
+                         "scr":[],
                          "mediawiki":[],
                          "irc":[],
                          "downloads":[],
@@ -138,23 +138,23 @@ def get_top_people (startdate, enddate, idb):
 
     # SCR and SCM are the same. Don't use both for Tops
     mopeners = DataSource.get_metrics("submitters", SCR)
-    if mopeners: 
+    if mopeners:
         tops["scr"] =  mopeners.get_list(mfilter, 0)
         tops["scr"]["identifier"] = tops["scr"].pop("openers")
     msenders = DataSource.get_metrics("senders", MLS)
-    if msenders: 
+    if msenders:
         tops["mls"] =  msenders.get_list(mfilter, 0)
         tops["mls"]["identifier"] = tops["mls"].pop("senders")
     mopeners = DataSource.get_metrics("openers", ITS)
-    if mopeners: 
+    if mopeners:
         tops["its"] =  mopeners.get_list(mfilter, 0)
         tops["its"]["identifier"] = tops["its"].pop("openers")
     msenders = DataSource.get_metrics("senders", IRC)
-    if msenders: 
+    if msenders:
         tops["irc"] =  msenders.get_list(mfilter, 0)
         tops["irc"]["identifier"] = tops["irc"].pop("senders")
     mauthors = DataSource.get_metrics("authors", Mediawiki)
-    if mauthors: 
+    if mauthors:
         tops["mediawiki"] = mauthors.get_list(mfilter, 0)
         tops["mediawiki"]["identifier"] = tops["mediawiki"].pop("reviews")
 

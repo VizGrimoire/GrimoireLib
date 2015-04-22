@@ -1422,7 +1422,9 @@ class Submitters(Metrics):
         return q
 
     def _get_sql(self, evolutionary):
-        if (self.filters.type_analysis is not None and (self.filters.type_analysis[0] in  ["repository1","project"])):
+#         if (self.filters.type_analysis is not None and (self.filters.type_analysis[0] in  ["repository","project"])):
+        if (self.filters.type_analysis is not None and (self.filters.type_analysis[0] in  ["project"])):
+            # repository filter does not work with prj SQL using GROUP BY queries
             return self.__get_sql_trk_prj__(evolutionary)
         else:
             return self.__get_sql_default__(evolutionary)
