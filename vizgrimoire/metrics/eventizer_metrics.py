@@ -110,6 +110,41 @@ class Members(Metrics):
         return query
 
 
+class Attendees(Metrics):
+    """ Attendees are members that confirmed their assistance to the event
+
+        However, it is not possible to confirm that all of the confirmed people
+        attended the event.
+    """
+
+    id = "attendees"
+    name = "Attendees"
+    desc = "Number of people that confirmed their assistance"
+    data_source = EventsDS
+
+    def _get_sql(self, evolutionary):
+        fields = Set([])
+        tables = Set([])
+        filters = Set([])
+
+        fields.add("count(distinct(p.id)) as attendees")
+
+        tables.add("events eve")
+        tables.add("rsvps")
+        tables.add("people p")
+        tables.union_update(self.db.GetSQLReportFrom(self.filters))
+
+        filters.add("eve.id = rsvps.event_id")
+        filters.add("rsvps.member_id = p.id")
+        filters.union_update(self.db.GetSQLReportWhere(self.filters))
+
+        query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
+                                   self.filters.enddate, " eve.time ", fields,
+                                   tables, filters, evolutionary, self.filters.type_analysis)
+        return query
+
+
+
 class Cities(Metrics):
     """ Cities that are part of each event
     """
@@ -147,4 +182,9 @@ if __name__ == '__main__':
     cities = Cities(dbcon, filters)
     print cities.get_agg()
     print cities.get_ts()
+
+    attendees = Attendees(dbcon, filters)
+    print attendees.get_agg()
+    print attendees.get_ts()
+
 
