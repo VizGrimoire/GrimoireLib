@@ -122,12 +122,16 @@ class Attendees(Metrics):
     desc = "Number of people that confirmed their assistance"
     data_source = EventsDS
 
-    def _get_sql(self, evolutionary):
+    def _get_sql(self, evolutionary, islist = False):
         fields = Set([])
         tables = Set([])
         filters = Set([])
 
-        fields.add("count(distinct(p.id)) as attendees")
+        if islist:
+            fields.add("p.name")
+            fields.add("count(distinct(eve.id))")
+        else:
+            fields.add("count(distinct(p.id)) as attendees")
 
         tables.add("events eve")
         tables.add("rsvps")
@@ -135,15 +139,26 @@ class Attendees(Metrics):
         tables.union_update(self.db.GetSQLReportFrom(self.filters))
 
         filters.add("eve.id = rsvps.event_id")
+        filters.add("rsvps.response = 'yes'")
         filters.add("rsvps.member_id = p.id")
         filters.union_update(self.db.GetSQLReportWhere(self.filters))
 
         query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                    self.filters.enddate, " eve.time ", fields,
                                    tables, filters, evolutionary, self.filters.type_analysis)
+
+        if islist:
+            query = query + " group by p.name "
+            query = query + " order by count(distinct(eve.id)) desc "
+            query = query + " limit %d " % self.filters.npeople
+
         return query
 
-
+    def get_list(self):
+        query = self._get_sql(None, True) # evolutionary value is not used
+        data = self.db.ExecuteQuery(query)
+        return data
+        
 
 class Cities(Metrics):
     """ Cities that are part of each event
@@ -186,5 +201,6 @@ if __name__ == '__main__':
     attendees = Attendees(dbcon, filters)
     print attendees.get_agg()
     print attendees.get_ts()
+    print attendees.get_list()
 
 
