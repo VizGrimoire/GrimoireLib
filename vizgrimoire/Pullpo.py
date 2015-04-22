@@ -110,15 +110,17 @@ class Pullpo(DataSource):
 
     @staticmethod
     def get_top_metrics ():
-        return ["reviewers","submitters","mergers"]
+        return ["reviewers","submitters","mergers","closers"]
 
     @staticmethod
     def get_top_data (startdate, enddate, identities_db, filter_, npeople):
         bots = Pullpo.get_bots()
         top_all = None
         mreviewers = DataSource.get_metrics("reviewers", Pullpo)
-        mopeners = DataSource.get_metrics("submitters", Pullpo)
-        mmergers = DataSource.get_metrics("closers", Pullpo)
+        msubmitters = DataSource.get_metrics("submitters", Pullpo)
+        mclosers = DataSource.get_metrics("closers", Pullpo)
+        mmergers = DataSource.get_metrics("mergers", Pullpo)
+        mparticipants = DataSource.get_metrics("participants", Pullpo)
         period = None
         type_analysis = None
         if filter_ is not None:
@@ -131,18 +133,30 @@ class Pullpo(DataSource):
             top_reviewers['reviewers.last month']= mreviewers.get_list(mfilter, 31)
             top_reviewers['reviewers.last year']= mreviewers.get_list(mfilter, 365)
 
-            top_openers = {}
-            top_openers['openers.'] = mopeners.get_list(mfilter, 0)
-            top_openers['openers.last month']= mopeners.get_list(mfilter, 31)
-            top_openers['openers.last year'] = mopeners.get_list(mfilter, 365)
+            top_submitters = {}
+            top_submitters['submitters.'] = msubmitters.get_list(mfilter, 0)
+            top_submitters['submitters.last month']= msubmitters.get_list(mfilter, 31)
+            top_submitters['submitters.last year'] = msubmitters.get_list(mfilter, 365)
+
+            top_closers = {}
+            top_closers['closers.'] = mclosers.get_list(mfilter, 0)
+            top_closers['closers.last month'] = mclosers.get_list(mfilter, 31)
+            top_closers['closers.last year'] = mclosers.get_list(mfilter, 365)
 
             top_mergers = {}
             top_mergers['mergers.'] = mmergers.get_list(mfilter, 0)
             top_mergers['mergers.last month'] = mmergers.get_list(mfilter, 31)
             top_mergers['mergers.last year'] = mmergers.get_list(mfilter, 365)
 
+            top_participants = {}
+            top_participants['participants.'] = mparticipants.get_list(mfilter, 0)
+            top_participants['participants.last month'] = mparticipants.get_list(mfilter, 31)
+            top_participants['participants.last year'] = mparticipants.get_list(mfilter, 365)
+
             # The order of the list item change so we can not check it
-            top_all = dict(top_reviewers.items() +  top_openers.items() + top_mergers.items())
+            top_all = dict(top_reviewers.items() +  top_submitters.items() +
+                           top_closers.items() + top_mergers.items() +
+                           top_participants.items())
         else:
             logging.info("Pullpo does not support yet top for filters.")
 
@@ -266,14 +280,20 @@ class Pullpo(DataSource):
         top  = Pullpo._safeTopIds(top_data['reviewers'])
         top += Pullpo._safeTopIds(top_data['reviewers.last year'])
         top += Pullpo._safeTopIds(top_data['reviewers.last month'])
-        top += Pullpo._safeTopIds(top_data['openers.'])
-        top += Pullpo._safeTopIds(top_data['openers.last year'])
-        top += Pullpo._safeTopIds(top_data['openers.last month'])
+        top += Pullpo._safeTopIds(top_data['submitters.'])
+        top += Pullpo._safeTopIds(top_data['submitters.last year'])
+        top += Pullpo._safeTopIds(top_data['submitters.last month'])
+        top += Pullpo._safeTopIds(top_data['closers.'])
+        top += Pullpo._safeTopIds(top_data['closers.last year'])
+        top += Pullpo._safeTopIds(top_data['closers.last month'])
         top += Pullpo._safeTopIds(top_data['mergers.'])
         top += Pullpo._safeTopIds(top_data['mergers.last year'])
         top += Pullpo._safeTopIds(top_data['mergers.last month'])
+        top += Pullpo._safeTopIds(top_data['participants.'])
+        top += Pullpo._safeTopIds(top_data['participants.last month'])
+        top += Pullpo._safeTopIds(top_data['participants.last year'])
         # remove duplicates
-        people = list(set(top)) 
+        people = list(set(top))
 
         return people
 
@@ -319,17 +339,20 @@ class Pullpo(DataSource):
 
     @staticmethod
     def get_metrics_core_agg():
-        m =  ['submitted','merged','mergers','abandoned','pending','closed',
-              'timeto_merge','timeto_close', 'repositories', 'submitters']
+        m =  ['submitted','merged','abandoned','pending','closed',
+              'timeto_merge','timeto_close', 'repositories', 'submitters',
+              'mergers', 'closers', 'participants']
         return m
 
     @staticmethod
     def get_metrics_core_ts():
         m  = ['submitted','merged','abandoned','pending','closed',
-             'timeto_merge', 'timeto_close', 'repositories', 'submitters']
+              'timeto_merge', 'timeto_close', 'repositories', 'submitters',
+              'mergers', 'closers', 'participants']
         return m
 
     @staticmethod
     def get_metrics_core_trends():
-        return ['submitted','merged','abandoned','bmiscr','submitters']
+        return ['submitted','merged','abandoned','bmiscr','submitters',
+                'mergers','closers','participants']
 

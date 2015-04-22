@@ -63,14 +63,67 @@ class Merged(Metrics):
                                   self.filters.type_analysis, evolutionary)
         return q
 
+
 class Mergers(Metrics):
     id = "mergers"
-    name = "Successful submitters"
-    desc = "Number of persons submitting changes that got accepted"
+    name = "People merging pull requests"
+    desc = "Number of persons merging pull requests"
     data_source = Pullpo
 
+    def _get_top_global(self, days=0, metric_filters=None):
+        if metric_filters == None:
+            metric_filters = self.filters
+
+        startdate = metric_filters.startdate
+        enddate = metric_filters.enddate
+        limit = metric_filters.npeople
+        filter_bots = self.db.get_bots_filter_sql(self.data_source, metric_filters)
+        if filter_bots != "": filter_bots += " AND "
+        date_limit = ""
+
+        if (days != 0 ):
+            q = "SELECT @maxdate:=max(merged_at) from pull_requests limit 1"
+            self.db.ExecuteQuery(q)
+            date_limit = " AND DATEDIFF(@maxdate, merged_at)<"+str(days)
+
+        # TODO: warning-> not using GetSQLReportFrom/Where
+        merged_sql = " AND merged_at IS NOT NULL"
+        rol = "mergers"
+        action = "merged"
+
+        q = "SELECT up.uuid as id, up.identifier as "+rol+", "+\
+            "            count(distinct(pr.id)) as "+action+" "+\
+            "        FROM people_uidentities pup, pull_requests pr, "+self.db.identities_db+".uidentities up "+\
+            "        WHERE "+ filter_bots+ " "+\
+            "            pr.user_id = pup.people_id and "+\
+            "            pup.uuid = up.uuid and "+\
+            "            pr.merged_at >= "+ startdate+ " and "+\
+            "            pr.merged_at < "+ enddate+ " "+\
+            "            "+date_limit+ merged_sql+ " "+\
+            "        GROUP BY up.identifier "+\
+            "        ORDER BY "+action+" desc, id "+\
+            "        LIMIT "+ str(limit)
+
+        return(self.db.ExecuteQuery(q))
+
     def _get_sql(self, evolutionary):
-        pass
+        fields = Set([])
+        tables = Set([])
+        filters = Set([])
+
+        fields.add("count(distinct(merged_by_id)) as mergers")
+        tables.add("pull_requests pr")
+        tables.union_update(self.db.GetSQLReportFrom(self.filters.type_analysis))
+        filters.union_update(self.db.GetSQLReportWhere(self.filters.type_analysis))
+
+        tables.add("people_uidentities pup")
+        filters.add("pr.merged_by_id  = pup.people_id")
+
+        q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
+                               self.filters.enddate, " pr.merged_at",
+                               fields, tables, filters, evolutionary, self.filters.type_analysis)
+        return q
+
 
 class Abandoned(Metrics):
     id = "abandoned"
@@ -470,14 +523,14 @@ class Closers(Metrics):
         date_limit = ""
 
         if (days != 0 ):
-            q = "SELECT @maxdate:=max(created_at) from pull_requests limit 1"
+            q = "SELECT @maxdate:=max(closed_at) from pull_requests limit 1"
             self.db.ExecuteQuery(q)
-            date_limit = " AND DATEDIFF(@maxdate, created_at)<"+str(days)
+            date_limit = " AND DATEDIFF(@maxdate, closed_at)<"+str(days)
 
         # TODO: warning-> not using GetSQLReportFrom/Where
-        merged_sql = " AND closed_at IS NOT NULL"
-        rol = "mergers"
-        action = "merged"
+        closed_sql = " AND closed_at IS NOT NULL"
+        rol = "closers"
+        action = "closed"
 
         q = "SELECT up.uuid as id, up.identifier as "+rol+", "+\
             "            count(distinct(pr.id)) as "+action+" "+\
@@ -485,9 +538,9 @@ class Closers(Metrics):
             "        WHERE "+ filter_bots+ " "+\
             "            pr.user_id = pup.people_id and "+\
             "            pup.uuid = up.uuid and "+\
-            "            pr.created_at >= "+ startdate+ " and "+\
-            "            pr.created_at < "+ enddate+ " "+\
-            "            "+date_limit+ merged_sql+ " "+\
+            "            pr.closed_at >= "+ startdate+ " and "+\
+            "            pr.closed_at < "+ enddate+ " "+\
+            "            "+date_limit+ closed_sql+ " "+\
             "        GROUP BY up.identifier "+\
             "        ORDER BY "+action+" desc, id "+\
             "        LIMIT "+ str(limit)
@@ -608,6 +661,212 @@ class Submitters(Metrics):
             "        ORDER BY "+action+" desc, id "+\
             "        LIMIT "+ str(limit)
         return(self.db.ExecuteQuery(q))
+
+
+class Participants(Metrics):
+    """ A participant in Pullpo is a person with any trace in the system
+
+    A trace is defined in the case of pullpo as a comment, a change or a new
+    pull request.
+    """
+    id = "participants"
+    name = "Participants in Pullpo"
+    desc = "A participant is defined as any person with any type of activity in Pullpo"
+    data_source = Pullpo
+
+    def _get_sql(self, evolutionary):
+        # Participants creating pull requests
+        tables_pr = Set([])
+        fields_pr = Set([])
+        filters_pr = Set([])
+
+        tables_pr.add("pull_requests")
+        fields_pr.add("pull_requests.id as pr_id")
+        fields_pr.add("pull_requests.user_id as user_id")
+        fields_pr.add("pull_requests.created_at as date")
+
+        # Comments
+        tables_c = Set([])
+        fields_c = Set([])
+        filters_c = Set([])
+
+        tables_c.add("comments")
+        fields_c.add("comments.pull_request_id as pr_id")
+        fields_c.add("comments.user_id as user_id")
+        fields_c.add("comments.updated_at as date")
+
+        # Review comments
+        tables_rc = Set([])
+        fields_rc = Set([])
+        filters_rc = Set([])
+
+        tables_rc.add("review_comments")
+        fields_rc.add("review_comments.pull_request_id as pr_id")
+        fields_rc.add("review_comments.user_id as user_id")
+        fields_rc.add("review_comments.updated_at as date")
+
+        # Events
+        tables_ev = Set([])
+        fields_ev = Set([])
+        filters_ev = Set([])
+
+        tables_ev.add("events")
+        fields_ev.add("events.pull_request_id as pr_id")
+        fields_ev.add("events.actor_id as user_id")
+        fields_ev.add("events.created_at as date")
+        #filters_ev.add("events.event <> 'mentioned'")
+
+        # Union table
+        tables = Set([])
+        fields = Set([])
+        filters = Set([])
+        fields.add("count(distinct(u.uuid)) as participants")
+
+        # issues table is needed given that this is used to
+        # filter by extra conditions such as trackers
+        tables.add("people_uidentities pup")
+        tables.add(self.db.identities_db + ".uidentities u")
+        tables.add("pull_requests pr")
+
+        filters.add("t.user_id = pup.people_id")
+        filters.add("pup.uuid = u.uuid")
+        filters.add("pr.id = t.pr_id")
+
+        #Building queries
+        period = self.filters.period
+        startdate = self.filters.startdate
+        enddate = self.filters.enddate
+        evol = False
+
+        pr_query = self.db.BuildQuery(period, startdate, enddate,
+                                      "pull_requests.created_at",
+                                      fields_pr, tables_pr, filters_pr,
+                                      evol)
+        comments_query = self.db.BuildQuery(period, startdate, enddate,
+                                            "comments.updated_at",
+                                            fields_c, tables_c, filters_c,
+                                            evol)
+        review_comments_query = self.db.BuildQuery(period, startdate, enddate,
+                                                   "review_comments.updated_at",
+                                                   fields_rc, tables_rc, filters_rc,
+                                                   evol)
+        events_query = self.db.BuildQuery(period, startdate, enddate,
+                                          "events.created_at",
+                                          fields_ev, tables_ev, filters_ev,
+                                          evol)
+
+        tables_query = "(" + pr_query + ") union (" + comments_query + ") union (" + \
+            review_comments_query + ") union (" + events_query + ")"
+        tables.add("(" + tables_query + ") t")
+        tables.union_update(self.db.GetSQLReportFrom(self.filters.type_analysis))
+        filters.union_update(self.db.GetSQLReportWhere(self.filters.type_analysis))
+
+        query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
+                                   self.filters.enddate, "t.date",
+                                   fields, tables, filters, evolutionary, self.filters.type_analysis)
+        return query
+
+    def get_list(self, metric_filters = None, days = 0):
+        # Participants creating pull requests
+        tables_pr = Set([])
+        fields_pr = Set([])
+        filters_pr = Set([])
+
+        tables_pr.add("pull_requests")
+        fields_pr.add("pull_requests.id as pr_id")
+        fields_pr.add("pull_requests.user_id as user_id")
+        fields_pr.add("pull_requests.created_at as date")
+
+        # Comments
+        tables_c = Set([])
+        fields_c = Set([])
+        filters_c = Set([])
+
+        tables_c.add("comments")
+        fields_c.add("comments.pull_request_id as pr_id")
+        fields_c.add("comments.user_id as user_id")
+        fields_c.add("comments.updated_at as date")
+
+        # Review comments
+        tables_rc = Set([])
+        fields_rc = Set([])
+        filters_rc = Set([])
+
+        tables_rc.add("review_comments")
+        fields_rc.add("review_comments.pull_request_id as pr_id")
+        fields_rc.add("review_comments.user_id as user_id")
+        fields_rc.add("review_comments.updated_at as date")
+
+        # Events
+        tables_ev = Set([])
+        fields_ev = Set([])
+        filters_ev = Set([])
+
+        tables_ev.add("events")
+        fields_ev.add("events.pull_request_id as pr_id")
+        fields_ev.add("events.actor_id as user_id")
+        fields_ev.add("events.created_at as date")
+        #filters_ev.add("events.event <> 'mentioned'")
+
+        # Union table
+        tables = Set([])
+        fields = Set([])
+        filters = Set([])
+
+        # issues table is needed given that this is used to
+        # filter by extra conditions such as trackers
+        tables.add("people_uidentities pup")
+        tables.add(self.db.identities_db + ".uidentities u")
+        tables.add("pull_requests pr")
+
+        fields.add("u.uuid as id")
+        fields.add("u.identifier")
+        fields.add("count(*) as events")
+
+        if days > 0:
+            filters.add("DATEDIFF (%s, t.date) < %s " % (self.filters.enddate, days))
+
+        filters.add("t.user_id = pup.people_id")
+        filters.add("pup.uuid = u.uuid")
+        filters.add("pr.id = t.pr_id")
+
+        #Building queries
+        period = self.filters.period
+        startdate = self.filters.startdate
+        enddate = self.filters.enddate
+        evol = False
+
+        pr_query = self.db.BuildQuery(period, startdate, enddate,
+                                      "pull_requests.created_at",
+                                      fields_pr, tables_pr, filters_pr,
+                                      evol)
+        comments_query = self.db.BuildQuery(period, startdate, enddate,
+                                            "comments.updated_at",
+                                            fields_c, tables_c, filters_c,
+                                            evol)
+        review_comments_query = self.db.BuildQuery(period, startdate, enddate,
+                                                   "review_comments.updated_at",
+                                                   fields_rc, tables_rc, filters_rc,
+                                                   evol)
+        events_query = self.db.BuildQuery(period, startdate, enddate,
+                                          "events.created_at",
+                                          fields_ev, tables_ev, filters_ev,
+                                          evol)
+
+        tables_query = "(" + pr_query + ") union (" + comments_query + ") union (" + \
+            review_comments_query + ") union (" + events_query + ")"
+        tables.add("(" + tables_query + ") t")
+        tables.union_update(self.db.GetSQLReportFrom(self.filters.type_analysis))
+        filters.union_update(self.db.GetSQLReportWhere(self.filters.type_analysis))
+
+        query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
+                                   self.filters.enddate, "t.date",
+                                   fields, tables, filters, False)
+
+        query = query + " group by u.identifier "
+        query = query + " order by count(*) desc "
+
+        return self.db.ExecuteQuery(query)
 
 #################
 # FILTERS metrics
