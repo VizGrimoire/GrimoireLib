@@ -108,3 +108,43 @@ class Members(Metrics):
                                    self.filters.enddate, " p.joined ", fields,
                                    tables, filters, evolutionary, self.filters.type_analysis)
         return query
+
+
+class Cities(Metrics):
+    """ Cities that are part of each event
+    """
+
+    id = "cities"
+    name = "Cities"
+    desc = "Cities where events are celebrated"
+    data_source = EventsDS
+
+    def _get_sql(self, evolutionary):
+        fields = Set([])
+        tables = Set([])
+        filters = Set([])
+
+        fields.add("count(distinct(cit.id)) as cities")
+
+        tables.add("events eve")
+        tables.add("cities cit")
+        tables.union_update(self.db.GetSQLReportFrom(self.filters))
+
+        filters.add("eve.city_id = cit.id")
+        filters.union_update(self.db.GetSQLReportWhere(self.filters))
+
+        query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
+                                  self.filters.enddate, " eve.time ", fields,
+                                  tables, filters, evolutionary, self.filters.type_analysis)
+
+        return query
+
+
+if __name__ == '__main__':
+    filters = MetricFilters("month", "'2014-04-01'", "'2015-01-01'")
+    dbcon = EventizerQuery("root", "", "test_eventizer", "test_eventizer")
+
+    cities = Cities(dbcon, filters)
+    print cities.get_agg()
+    print cities.get_ts()
+
