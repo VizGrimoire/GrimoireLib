@@ -530,10 +530,13 @@ class DataSource(object):
                 fields = ["closed_365","closers_365", "name"]
             elif cls == MLS:
                 fields = ["sent_365","senders_365", "name"]
+            elif cls == SCR:
+                fields = ["submitted","review_time_days_median","review_time_pending_upload_ReviewsWaitingForReviewer_days_median", "name"]
             else:
                 fields = ["name"]
             for field in fields:
-                item_list[field] = data[field]
+                if field in data:
+                    item_list[field] = data[field]
             createJSON(item_list, fn)
         # Items files
         ts_fields = ['unixtime','id','date',period]
