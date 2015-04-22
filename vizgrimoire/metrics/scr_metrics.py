@@ -600,6 +600,10 @@ class Participants(Metrics):
         tables.union_update(self.db.GetSQLReportFrom(self.filters))
         filters.union_update(self.db.GetSQLReportWhere(self.filters,"issues"))
 
+        # We want participants in commetns, changes and issues, not just issues
+        if "i.submitted_by = pup.people_id" in filters:
+            filters.remove("i.submitted_by = pup.people_id")
+
         query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                    self.filters.enddate, "t.submitted_on",
                                    fields, tables, filters, evolutionary, self.filters.type_analysis)
@@ -678,6 +682,9 @@ class Participants(Metrics):
         tables.add("(" + tables_query + ") t")
         tables.union_update(self.db.GetSQLReportFrom(self.filters))
         filters.union_update(self.db.GetSQLReportWhere(self.filters,"issues"))
+        # We want participants in commetns, changes and issues, not just issues
+        if "i.submitted_by = pup.people_id" in filters:
+            filters.remove("i.submitted_by = pup.people_id")
 
         query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                    self.filters.enddate, "t.submitted_on",
@@ -1388,7 +1395,7 @@ class Submitters(Metrics):
         tables = self.db.GetSQLReportFrom(self.filters)
         filters = self.db.GetSQLReportWhere(self.filters,"issues")
 
-        fields.add("count(distinct(u.uuid)) as submitters")
+        fields.add("count(distinct(pup.uuid)) as submitters")
         tables.add("people_uidentities pup")
         tables.add("issues i")
         tables.add("(%s) tpeople" % (tpeople_sql))
