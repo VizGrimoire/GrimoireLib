@@ -49,15 +49,15 @@ class EventsDS(DataSource):
 
     @staticmethod
     def get_metrics_core_agg():
-        return ['events','members']
+        return ['events','members','cities','attendees']
 
     @staticmethod
     def get_metrics_core_ts():
-        return ['events','members']
+        return ['events','members','cities','attendees']
 
     @staticmethod
     def get_metrics_core_trends():
-        return ['events','members']
+        return ['events','members','cities','attendees']
 
     @staticmethod
     def get_evolutionary_data (period, startdate, enddate, i_db, filter_ = None):
@@ -117,21 +117,21 @@ class EventsDS(DataSource):
 
     @staticmethod
     def get_top_metrics ():
-        return ["members"]
+        return ["attendes"]
 
     @staticmethod
     def get_top_data (startdate, enddate, identities_db, filter_, npeople):
         top = {}
-        members = DataSource.get_metrics("members", EventsDS)
+        attendees = DataSource.get_metrics("attendees", EventsDS)
         period = None
         type_analysis = None
         if filter_ is not None:
             logging.info("Mediawiki does not support yet top for filters.")
             return top
 
-        top['members.'] = members.get_list(None, 0)
-        top['members.last month'] = members.get_list(None, 31)
-        top['members.last year'] = members.get_list(None, 365)
+        top['attendees.'] = attendees.get_list(None, 0)
+        top['attendees.last month'] = attendees.get_list(None, 31)
+        top['attendees.last year'] = attendees.get_list(None, 365)
 
         return(top)
 
@@ -147,9 +147,10 @@ class EventsDS(DataSource):
 
         top_data = EventsDS.get_top_data (startdate, enddate, identities_db, None, npeople)
 
-        top = top_data['members.']["id"]
-        top += top_data['members.last year']["id"]
-        top += top_data['members.last month']["id"]
+        top = top_data['attendees.']["id"]
+        top += top_data['attendees.last year']["id"]
+        top += top_data['attendees.last month']["id"]
         # remove duplicates
         people = list(set(top))
         return people
+
