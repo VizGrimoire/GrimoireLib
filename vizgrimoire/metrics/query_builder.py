@@ -534,6 +534,7 @@ class SCMQuery(DSQuery):
         tables.add("people p")
         tables.add("people_uidentities pup")
         tables.add(self.identities_db + ".uidentities u")
+        tables.add(self.identities_db + ".profiles pro")
 
         return tables
 
@@ -548,10 +549,12 @@ class SCMQuery(DSQuery):
         where.add("s.author_id = p.id")
         where.add("p.id = pup.people_id")
         where.add("pup.uuid = u.uuid")
+        where.add("pup.uuid = pro.uuid")
+        where.add("pro.is_bot<>1")
         for bot in bots:
             # This code only ignores bots provided in raw_bots.
             # This should add the other way around, u.identifier = 'xxx'
-            where.add("u.identifier <> '" + bot + "'")
+            where.add("pro.name <> '" + bot + "'")
 
         return where
 
@@ -894,7 +897,7 @@ class ITSQuery(DSQuery):
     def GetSQLBotsFrom (self):
         tables = Set([])
         tables.add("people_uidentities pup")
-        tables.add(self.identities_db + ".uidentities u")
+        tables.add(self.identities_db + ".profiles pro")
 
         return tables
 
@@ -910,11 +913,12 @@ class ITSQuery(DSQuery):
         if table == "issues": field = "i.submitted_by"
 
         filters.add(field + " = pup.people_id")
-        filters.add("u.uuid = pup.uuid")
+        filters.add("pro.uuid = pup.uuid")
+        filters.add("pro.is_bot<>1")
         for bot in bots:
             # This code only ignores bots provided in raw_bots.
             # This should add the other way around, u.identifier = 'xxx'
-            filters.add("u.identifier <> '" + bot + "'")
+            filters.add("pro.name <> '" + bot + "'")
 
         return filters
 
@@ -1035,6 +1039,8 @@ class ITSQuery(DSQuery):
         filters = Set([])
 
         if study == "countries": fields.add("count(distinct(cou.name)) as " + study)
+        elif study == "organizations": fields.add("count(distinct(org.name)) as " + study)
+        elif study == "domains": fields.add("count(distinct(d.name)) as " + study)
         else: fields.add("count(distinct(name)) as " + study)
         tables.add("issues i")
         mtype_analysis = mfilters.type_analysis
@@ -1279,7 +1285,7 @@ class MLSQuery(DSQuery):
         tables.add("messages m")
         tables.add("messages_people mp")
         tables.add("people_uidentities pup")
-        tables.add(self.identities_db + ".uidentities u")
+        tables.add(self.identities_db + ".profiles pro")
 
         return tables
 
@@ -1318,9 +1324,9 @@ class MLSQuery(DSQuery):
         where.add("m.message_ID = mp.message_id")
         where.add("mp.email_address = pup.people_id")
         where.add("mp.type_of_recipient = \'From\'")
-        where.add("pup.uuid = u.uuid")
+        where.add("pup.uuid = pro.uuid")
         for bot in bots:
-            where.add("u.identifier <> '" + bot + "'")
+            where.add("pro.name <> '" + bot + "'")
 
         return where
 
@@ -1629,7 +1635,7 @@ class SCRQuery(DSQuery):
     def GetSQLBotsFrom (self):
         tables = Set([])
         tables.add("people_uidentities pup")
-        tables.add(self.identities_db + ".uidentities u")
+        tables.add(self.identities_db + ".profiles pro")
 
         return tables
 
@@ -1645,11 +1651,12 @@ class SCRQuery(DSQuery):
         if table == "issues": field = "i.submitted_by"
 
         filters.add(field + " = pup.people_id")
-        filters.add("u.uuid = pup.uuid")
+        filters.add("pro.uuid = pup.uuid")
+        filters.add("pro.is_bot<>1")
         for bot in bots:
             # This code only ignores bots provided in raw_bots.
             # This should add the other way around, u.identifier = 'xxx'
-            filters.add("u.identifier <> '" + bot + "'")
+            filters.add("pro.name <> '" + bot + "'")
 
         return filters
 

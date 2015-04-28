@@ -342,8 +342,8 @@ class Authors(Metrics):
             filters.add("DATEDIFF (last_date, date) < %s " % (days))
 
         #Building core part of the query.
-        fields.add(" u.uuid as id")
-        fields.add("u.identifier as authors")
+        fields.add("u.uuid as id")
+        fields.add("pro.name as authors")
         fields.add("count(distinct(s.id)) as commits")
 
         tables.add("scmlog s")
@@ -357,15 +357,17 @@ class Authors(Metrics):
         # an issue. Not repeated tables or filters will appear in the final query.
         tables.add("people_uidentities pup")
         tables.add(self.db.identities_db + ".uidentities u")
+        tables.add(self.db.identities_db + ".profiles pro")
         filters.add("s.author_id = pup.people_id")
         filters.add("pup.uuid = u.uuid")
+        filters.add("pup.uuid = pro.uuid")
 
         query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                    self.filters.enddate, " s.author_date ", fields,
                                    tables, filters, False, self.filters.type_analysis)
 
         query = query + " group by u.uuid "
-        query = query + " order by count(distinct(s.id)) desc, u.identifier "
+        query = query + " order by count(distinct(s.id)) desc, pro.name "
         query = query + " limit " + str(self.filters.npeople)
 
         data = self.db.ExecuteQuery(query)

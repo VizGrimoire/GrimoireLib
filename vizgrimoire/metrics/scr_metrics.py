@@ -618,15 +618,17 @@ class Participants(Metrics):
             filters.add("DATEDIFF (%s, t.submitted_on) < %s " % (self.filters.enddate, days))
 
         fields.add("u.uuid as id")
-        fields.add("u.identifier")
+        fields.add("pro.name as identifier")
         fields.add("count(*) as events")
 
         tables.add("people_uidentities pup")
         tables.add(self.db.identities_db + ".uidentities u")
+        tables.add(self.db.identities_db + ".profiles pro")
         tables.add("issues i")
 
         filters.add("t.submitted_by = pup.people_id")
         filters.add("pup.uuid = u.uuid")
+        filters.add("pup.uuid = pro.uuid")
         filters.add("i.id = t.issue_id")
 
         # Comments people
@@ -690,12 +692,12 @@ class Participants(Metrics):
                                    self.filters.enddate, "t.submitted_on",
                                    fields, tables, filters, False)
 
-        query = query + " group by u.identifier "
+        query = query + " group by pro.name "
         query = query + " order by count(*) desc "
 
         # Add orgs information
         q_orgs = """
-            SELECT top.id, identifier, events, org.name as organization FROM (%s) top
+            SELECT top.id, top.identifier as identifier, events, org.name as organization FROM (%s) top
             LEFT JOIN %s.enrollments enr ON top.id = enr.uuid
             LEFT JOIN %s.organizations org ON org.id = enr.organization_id;
             """ % (query, self.db.identities_db, self.db.identities_db)

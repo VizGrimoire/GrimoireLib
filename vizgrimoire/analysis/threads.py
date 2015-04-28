@@ -48,20 +48,22 @@ class Email(object):
                        m.subject, 
                        m.message_body,
                        m.first_date,
-                       u.identifier as initiator_name,
+                       pro.name as initiator_name,
                        u.uuid as initiator_id,
                        m.mailing_list_url as url
                 from messages m,
                      messages_people mp,
                      people_uidentities pup,
-                     %s.uidentities u
+                     %s.uidentities u,
+                     %s.profiles pro
                 where m.message_ID = '%s' and
                       m.message_ID = mp.message_id and
                       mp.type_of_recipient = 'From' and
                       mp.email_address = pup.people_id and
-                      pup.uuid = u.uuid
+                      pup.uuid = u.uuid and
+                      pup.uuid = pro.uuid
                 limit 1
-                """  % (self.i_db, self.message_id)
+                """  % (self.i_db, self.i_db, self.message_id)
         # WARNING: There may appear in some cases repeated emails.
         # This may be because the same email was sent to different
         # mailing lists. Forcing the query to 1 row, allows to 

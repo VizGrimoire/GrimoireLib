@@ -46,20 +46,20 @@ class StatusChangers(Analyses):
         tables = Set([])
         filters = Set([])
 
-        fields.add("u.identifier as name")
+        fields.add("pro.name as name")
         fields.add("new_value as state")
         fields.add("count(distinct(ch.id)) as changes")
 
         tables.add("issues i")
         tables.add("changes ch")
         tables.add("people_upeople pup")
-        tables.add(self.db.identities_db + ".upeople u")
+        tables.add(self.db.identities_db + ".profile pro")
         tables.union_update(self.db.GetSQLReportFrom(self.filters))
 
         filters.add("ch.issue_id = i.id")
         filters.add("ch.field = 'Status'")
         filters.add("ch.changed_by = pup.people_id")
-        filters.add("pup.upeople_id = u.id")
+        filters.add("pup.uuid = pro.uuid")
         filters.union_update(self.db.GetSQLReportWhere(self.filters))
 
         query = self.db.BuildQuery(self.filters.period, self.filters.startdate,

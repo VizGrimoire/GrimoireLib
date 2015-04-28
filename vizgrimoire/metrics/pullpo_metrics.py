@@ -817,10 +817,11 @@ class Participants(Metrics):
         # filter by extra conditions such as trackers
         tables.add("people_uidentities pup")
         tables.add(self.db.identities_db + ".uidentities u")
+        tables.add(self.db.identities_db + ".profiles pro")
         tables.add("pull_requests pr")
 
         fields.add("u.uuid as id")
-        fields.add("u.identifier")
+        fields.add("pro.name as identifier")
         fields.add("count(*) as events")
 
         if days > 0:
@@ -828,6 +829,7 @@ class Participants(Metrics):
 
         filters.add("t.user_id = pup.people_id")
         filters.add("pup.uuid = u.uuid")
+        filters.add("pup.uuid = pro.uuid")
         filters.add("pr.id = t.pr_id")
 
         #Building queries
@@ -863,7 +865,7 @@ class Participants(Metrics):
                                    self.filters.enddate, "t.date",
                                    fields, tables, filters, False)
 
-        query = query + " group by u.identifier "
+        query = query + " group by pro.name "
         query = query + " order by count(*) desc "
 
         return self.db.ExecuteQuery(query)
