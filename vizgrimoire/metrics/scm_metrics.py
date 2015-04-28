@@ -1021,7 +1021,6 @@ class Companies(Metrics):
                 query = query + " and org.name <> '" + company + "' "
 
         query = query + " GROUP by org.name ORDER BY company_commits DESC, org.name"
-        query = query + " limit " + str(self.filters.npeople)
 
         return self.db.ExecuteQuery(query)
 
