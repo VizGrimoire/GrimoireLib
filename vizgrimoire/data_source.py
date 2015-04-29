@@ -519,6 +519,9 @@ class DataSource(object):
             if 'mailing_list_url' in data.keys():
                 data['name'] = data.pop('mailing_list_url')
                 data['name'] = [item.replace('/', '_') for item in data['name']]
+        if cls == ITS or cls == SCM:
+            if filter_.get_name() == "company+country":
+                data['name'] = data.pop('filter')
 
         if not evolutionary:
             # First create the JSON with the list of items
@@ -540,12 +543,14 @@ class DataSource(object):
             createJSON(item_list, fn)
         # Items files
         ts_fields = ['unixtime','id','date',period]
+        # Not metrics fields
+        no_metrics_fields = ['filter_type']
         for i in range(0,len(data['name'])):
             item_metrics = {}
             item = data['name'][i]
             for metric in data:
                 if metric == "name": continue
-                if metric in ts_fields: continue
+                if metric in ts_fields+no_metrics_fields: continue
                 if len(data[metric])<len(data['name']):
                     logging.error(cls.get_name()+" "+metric + " not supported in GROUP BY. Not included")
                     continue

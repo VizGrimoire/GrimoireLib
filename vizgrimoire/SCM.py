@@ -201,7 +201,7 @@ class SCM(DataSource):
         elif (filter_name == "people2"):
             metric = DataSource.get_metrics("people2", SCM)
         elif (filter_name == "company"+MetricFilters.DELIMITER+"country"):
-            metric = DataSource.get_metrics("companies+countries", SCM)
+            metric = DataSource.get_metrics("organizations+countries", SCM)
         else:
             logging.error("SCM " + filter_name + " not supported")
             return items
