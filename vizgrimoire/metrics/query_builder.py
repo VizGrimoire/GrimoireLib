@@ -84,35 +84,41 @@ class DSQuery(object):
             else: sql += ' AND '+filters
 
         if all_items:
+            if len(group_field.split(" ")) == 3:
+                group_field = group_field.split(" ")[2]
             sql += " GROUP BY " + group_field
             sql += " ORDER BY " + count_field + " DESC," + group_field
 
         return(sql)
 
     @classmethod
-    def GetSQLPeriod(cls, period, date, fields, tables, filters, start, end,
+    def GetSQLPeriod(cls, period, date, qfields, tables, filters, start, end,
                      all_items = None):
         group_field = None
-        if all_items :
-            group_field = cls.get_group_field(all_items)
-            fields = group_field + ", " + fields
 
         iso_8601_mode = 3
         if (period == 'day'):
             # Remove time so unix timestamp is start of day    
-            sql = 'SELECT UNIX_TIMESTAMP(DATE('+date+')) AS unixtime, '
+            fields = 'UNIX_TIMESTAMP(DATE('+date+')) AS unixtime'
         elif (period == 'week'):
-            sql = 'SELECT YEARWEEK('+date+','+str(iso_8601_mode)+') AS week, '
+            fields = 'YEARWEEK('+date+','+str(iso_8601_mode)+') AS week'
         elif (period == 'month'):
-            sql = 'SELECT YEAR('+date+')*12+MONTH('+date+') AS month, '
+            fields = 'YEAR('+date+')*12+MONTH('+date+') AS month'
         elif (period == 'year'):
-            sql = 'SELECT YEAR('+date+')*12 AS year, '
+            fields = 'YEAR('+date+')*12 AS year'
         else:
             logging.error("PERIOD: "+period+" not supported")
             raise Exception
         # sql = paste(sql, 'DATE_FORMAT (',date,', \'%d %b %Y\') AS date, ')
-        sql += fields
-        if all_items: fields + ", " + group_field
+        if all_items:
+            group_field = cls.get_group_field(all_items)
+            if group_field.find("DISTINCT") > -1:
+                # DISTINCT field should be the first
+                fields = group_field + ", "+ fields
+            else:
+                fields += ", " + group_field
+        fields += ", " + qfields
+        sql = "SELECT " + fields
         sql += ' FROM ' + tables
         sql = sql + ' WHERE '+date+'>='+start+' AND '+date+'<'+end
         reg_and = re.compile("^[ ]*and", re.IGNORECASE)
@@ -123,7 +129,10 @@ class DSQuery(object):
 
         group_by = " GROUP BY "
 
-        if all_items: group_by += group_field + ", "
+        if all_items:
+            if len(group_field.split(" ")) == 3:
+                group_field = group_field.split(" ")[2]
+            group_by += group_field + ", "
 
         if (period == 'year'):
             sql += group_by + ' YEAR('+date+')'
@@ -140,11 +149,6 @@ class DSQuery(object):
         else:
             logging.error("PERIOD: "+period+" not supported")
             sys.exit(1)
-
-        if all_items:
-            sql += "," + group_field
-            # logging.info("GROUP sql")
-            # print sql
 
         return(sql)
 
@@ -217,6 +221,7 @@ class DSQuery(object):
 
     def ExecuteQuery (self, sql):
         if sql is None: return {}
+        # print sql
         result = {}
         self.cursor.execute(sql)
         rows = self.cursor.rowcount
@@ -267,6 +272,17 @@ class DSQuery(object):
 
         return  project_with_children_str
 
+
+    @classmethod
+    def get_group_field_alias (ds_query, filter_type):
+        # alias to be used in GROUP BY id_field and ORDER BY id_field
+        id_field = ds_query.get_group_field(filter_type)
+        if len(id_field.split(" ")) == 3:
+            id_field = id_field.split(" ")[2]
+        if id_field.find(".")>-1 and 'CONCAT' not in id_field:
+            id_field = id_field.split('.')[1] # remove table name
+        return id_field
+
     @classmethod
     def get_group_field (ds_query, filter_type):
         """ Return the name of the field to group by in filter all queries """
@@ -280,7 +296,11 @@ class DSQuery(object):
         if analysis == 'people2': field = "up.identifier"
         elif analysis == "company": field = "org.name"
         elif analysis == "country": field = "cou.name"
-        elif analysis == "domain": field = "d.name"
+        # elif analysis == "domain": field = "d.name"
+        elif analysis == "domain":
+            field = "DISTINCT(SUBSTR(people.email,LOCATE('@',people.email)+1)) as name"
+            if ds_query == MLSQuery:
+                field = "DISTINCT(SUBSTR(mp.email_address,LOCATE('@',mp.email_address)+1)) as name"
         elif analysis == "repository":
             field = "r.name"
             if ds_query == ITSQuery: field = "t.url"
@@ -1963,11 +1983,6 @@ class SCRQuery(DSQuery):
         fields.add("TIMESTAMPDIFF(SECOND,ch_ext.changed_on,ch.changed_on)/(24*3600) AS revtime")
         fields.add("ch.changed_on")
 
-        all_items = self.get_all_items(mfilter.type_analysis)
-        if all_items:
-            group_field = self.get_group_field(all_items)
-            fields.add(group_field)
-
         tables.add("issues i")
         tables.add("changes ch")
         tables.add("changes ch_ext")
@@ -1989,6 +2004,11 @@ class SCRQuery(DSQuery):
         fields_str = self._get_fields_query(fields)
         tables_str = self._get_tables_query(tables)
         filters_str = self._get_filters_query(filters)
+
+        all_items = self.get_all_items(mfilter.type_analysis)
+        if all_items:
+            group_field = self.get_group_field(all_items)
+            fields_str = group_field + "," + fields_str
 
         filters_str += " ORDER BY ch_ext.changed_on"
 

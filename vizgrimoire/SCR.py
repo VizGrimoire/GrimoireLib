@@ -143,8 +143,7 @@ class SCR(DataSource):
 
             if type_analysis and type_analysis[1] is None:
                 logging.info(item.id)
-                id_field = SCRQuery.get_group_field(type_analysis[0])
-                id_field = id_field.split('.')[1] # remove table name
+                id_field = SCRQuery.get_group_field_alias(type_analysis[0])
                 mvalue = check_array_values(mvalue)
                 mvalue = fill_and_order_items(items, mvalue, id_field,
                                               evol, period, startdate, enddate)
@@ -170,6 +169,8 @@ class SCR(DataSource):
             end_date = DS.get_date_end(startdate, enddate, identities_db, type_analysis)
 
             if type_analysis and type_analysis[1] is None:
+                if id_field is None:
+                    id_field = dsquery.get_group_field_alias(type_analysis[0])
                 init_date = fill_and_order_items(items, init_date, id_field,
                                                  evol, period, startdate, enddate)
                 end_date = fill_and_order_items(items, end_date, id_field,
@@ -195,8 +196,7 @@ class SCR(DataSource):
                     data = dict(data.items() +  period_data.items())
 
                     if type_analysis and type_analysis[1] is None:
-                        id_field = SCRQuery.get_group_field(type_analysis[0])
-                        id_field = id_field.split('.')[1] # remove table name
+                        id_field = SCRQuery.get_group_field_alias(type_analysis[0])
                         period_data = fill_and_order_items(items, period_data, id_field)
 
                     data = dict(data.items() +  period_data.items())
@@ -350,7 +350,7 @@ class SCR(DataSource):
         check = False # activate to debug issues
         filter_name = filter_.get_name()
 
-        if filter_name in ["people2","company","repository","country"] :
+        if filter_name in ["people2","company","repository","country","domain"] :
             filter_all = Filter(filter_name, None)
             agg_all = SCR.get_agg_data(period, startdate, enddate,
                                        identities_db, filter_all)

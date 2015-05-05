@@ -423,8 +423,7 @@ class DataSource(object):
                         id_field = idf
                         break
                 if id_field is None:
-                    id_field = dsquery.get_group_field(type_analysis[0])
-                    id_field = id_field.split('.')[1] # remove table name
+                    id_field = dsquery.get_group_field_alias(type_analysis[0])
                 mvalue = fill_and_order_items(items, mvalue, id_field,
                                               evol, period, startdate, enddate)
             data = dict(data.items() + mvalue.items())
@@ -437,8 +436,7 @@ class DataSource(object):
 
             if type_analysis and type_analysis[1] is None:
                 if id_field is None:
-                    id_field = dsquery.get_group_field(type_analysis[0])
-                    id_field = id_field.split('.')[1] # remove table name
+                    id_field = dsquery.get_group_field_alias(type_analysis[0])
                 init_date = fill_and_order_items(items, init_date, id_field,
                                                  evol, period, startdate, enddate)
                 end_date = fill_and_order_items(items, end_date, id_field,
@@ -463,9 +461,7 @@ class DataSource(object):
                     item.filters = mfilter_orig
 
                     if type_analysis and type_analysis[1] is None:
-                        group_field = dsquery.get_group_field(type_analysis[0])
-                        if 'CONCAT' not in group_field:
-                            group_field = group_field.split('.')[1] # remove table name
+                        group_field = dsquery.get_group_field_alias(type_analysis[0])
                         period_data = fill_and_order_items(items, period_data, group_field)
 
                     data = dict(data.items() + period_data.items())

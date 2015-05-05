@@ -278,8 +278,7 @@ class Pending(Metrics):
         items = items.pop('name')
 
         from vizgrimoire.GrimoireUtils import fill_and_order_items
-        id_field = SCRQuery.get_group_field(self.filters.type_analysis[0])
-        id_field = id_field.split('.')[1] # remove table name
+        id_field = SCRQuery.get_group_field_alias(self.filters.type_analysis[0])
         submitted = check_array_values(submitted)
         merged = check_array_values(merged)
         abandoned = check_array_values(abandoned)
@@ -308,8 +307,7 @@ class Pending(Metrics):
     def get_agg_all(self):
         evol = False
         metrics = self._get_metrics_for_pending_all(evol)
-        id_field = SCRQuery.get_group_field(self.filters.type_analysis[0])
-        id_field = id_field.split('.')[1] # remove table name
+        id_field = SCRQuery.get_group_field_alias(self.filters.type_analysis[0])
         data= \
             [metrics['submitted'][i]-metrics['merged'][i]-metrics['abandoned'][i] \
              for i in range(0, len(metrics['submitted']))]
@@ -318,8 +316,7 @@ class Pending(Metrics):
     def get_ts_all(self):
         evol = True
         metrics = self._get_metrics_for_pending_all(evol)
-        id_field = SCRQuery.get_group_field(self.filters.type_analysis[0])
-        id_field = id_field.split('.')[1] # remove table name
+        id_field = SCRQuery.get_group_field_alias(self.filters.type_analysis[0])
         pending = {"pending":[]}
         for i in range(0, len(metrics['submitted'])):
             pending["pending"].append([])
@@ -1527,8 +1524,7 @@ class TimeToReview(Metrics):
 
         # First, we need to group by the filter field the data
         all_items = self.db.get_all_items(self.filters.type_analysis)
-        group_field = self.db.get_group_field(all_items)
-        id_field = group_field.split('.')[1] # remove table name
+        id_field = self.db.get_group_field_alias(all_items)
 
         items =  list(Set(data[id_field]))
         data_all[id_field] = items
@@ -1586,8 +1582,7 @@ class TimeToReview(Metrics):
 
         # First, we need to group by the filter field the data
         all_items = self.db.get_all_items(self.filters.type_analysis)
-        group_field = self.db.get_group_field(all_items)
-        id_field = group_field.split('.')[1] # remove table name
+        id_field = self.db.get_group_field_alias(all_items)
 
         items =  list(Set(data[id_field]))
         data_all[id_field] = items
