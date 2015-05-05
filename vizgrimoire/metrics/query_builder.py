@@ -287,7 +287,7 @@ class DSQuery(object):
             elif ds_query == SCRQuery: field = "t.url"
             elif ds_query == MLSQuery: field = "ml.mailing_list_url"
         elif analysis == "company"+MetricFilters.DELIMITER+"country":
-            field = "CONCAT(com.name,'_',cou.name)"
+            field = "CONCAT(org.name,'_',cou.name)"
 
         return field
 

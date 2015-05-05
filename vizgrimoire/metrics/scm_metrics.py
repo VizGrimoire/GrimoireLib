@@ -269,7 +269,6 @@ class GoneAuthors(Metrics):
             query += " group by pup.uuid "
             query += " order by last_activity desc "
 
-        print query
         return query
 
     def get_agg(self):
@@ -1076,7 +1075,7 @@ class CompaniesCountries(Metrics):
 
     id = "organizations+countries"
     name = "Countries"
-    desc = "Countries in Companies participating in the source code management system"
+    desc = "Organizations per Countries participating in the source code management system"
     data_source = SCM
 
     def get_list(self):
@@ -1091,7 +1090,7 @@ class CompaniesCountries(Metrics):
             identities_db+".organizations org, "+identities_db+".enrollments enr "+\
             "WHERE pup.people_id = s."+rol+"_id AND "+\
             "      pup.uuid  = pro.uuid and "+\
-            "      pro.country_code = cou.uuid and "+\
+            "      pro.country_code = cou.code and "+\
             "      pup.uuid  = enr.uuid and "+\
             "      enr.organization_id = org.id and "+\
             "      s.author_date >= enr.start  and s.author_date < enr.end and "+\

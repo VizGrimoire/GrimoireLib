@@ -661,6 +661,8 @@ def fill_items(items, data, id_field, evol = False,
 
 def order_items(items, data, id_field, evol = False, period = None):
     """ Reorder data identities using items ordering """
+    data = check_array_values(data)
+    items = check_array_value(items)
     fields = data.keys()
     if id_field not in fields: return data
     data_ordered = {}

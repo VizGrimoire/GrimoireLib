@@ -215,7 +215,7 @@ class ITS(DataSource):
         elif (filter_name == "people2"):
             metric = DataSource.get_metrics("people2", cls)
         elif (filter_name == "company"+MetricFilters.DELIMITER+"country"):
-            metric = DataSource.get_metrics("companies+countries", cls)
+            metric = DataSource.get_metrics("organizations+countries", cls)
         else:
             logging.error(filter_name + " not supported")
             return items
