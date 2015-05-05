@@ -308,6 +308,7 @@ class Metrics(object):
         return {}
 
     def _get_top(self, metric_filters = None, days = 0):
+        alist = None
         if metric_filters.type_analysis and metric_filters.type_analysis is not None:
             if metric_filters.type_analysis[0] not in self._get_top_supported_filters():
                  return
@@ -317,8 +318,8 @@ class Metrics(object):
                 alist = self._get_top_company(metric_filters, days)
             if metric_filters.type_analysis[0] == "country":
                 alist = self._get_top_country(metric_filters, days)
-            if metric_filters.type_analysis[0] == "domain":
-                alist = self._get_top_domain(metric_filters, days)
+#             if metric_filters.type_analysis[0] == "domain":
+#                 alist = self._get_top_domain(metric_filters, days)
             if metric_filters.type_analysis[0] == "project":
                 alist = self._get_top_project(metric_filters, days)
         else:

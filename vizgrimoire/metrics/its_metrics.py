@@ -350,47 +350,6 @@ class Closers(Metrics):
         query = query + " GROUP BY up.identifier ORDER BY closed DESC, closers LIMIT " + str(limit)
         return self.db.ExecuteQuery(query)
 
-    def _get_top_domain (self, metric_filters, days = None):
-        startdate = metric_filters.startdate
-        enddate = metric_filters.enddate
-        domain_name = metric_filters.type_analysis[1]
-        limit = metric_filters.npeople
-        filter_bots = self.db.get_bots_filter_sql(self.data_source, metric_filters)
-        closed_condition =  ITS._get_closed_condition()
-        if self.filters.closed_condition is not None:
-             closed_condition = self.filters.closed_condition
-
-
-        fields = Set([])
-        tables = Set([])
-        filters = Set([])
-
-        fields.add("up.uuid as id")
-        fields.add("up.identifier as closers")
-        fields.add("COUNT(DISTINCT(c.id)) as closed")
-
-        tables.union_update(self.db.GetTablesDomains(self.db.identities_db))
-        tables.add(self.db.identities_db+".domains dom")
-        tables.add(self.db.identities_db+".uidentities up")
-
-        filters.union_update(self.db.GetFiltersDomains())
-        filters.add(closed_condition)
-        filters.add("pup.uuid = up.uuid")
-        filters.add("upd.domain_id = dom.id")
-        filters.add("dom.name = " + domain_name)
-        filters.add("dom.name = " + domain_name)
-        filters.add("changed_on >= " + startdate)
-        filters.add("changed_on < " + enddate)
-        if len(filter_bots) > 0:
-            filters.add(filter_bots)
-
-        query = "select " + self.db._get_fields_query(fields)
-        query = query + " from " + self.db._get_tables_query(tables)
-        query = query + " where " + self.db._get_filters_query(filters)
-        query = query + " GROUP BY up.identifier ORDER BY closed DESC, closers LIMIT " + str(limit)
-
-        return self.db.ExecuteQuery(query)
-
     def _get_top_repository (self, metric_filters, days = None):
         startdate = metric_filters.startdate
         enddate = metric_filters.enddate
@@ -482,8 +441,6 @@ class Closers(Metrics):
                 alist = self._get_top_repository(metric_filters, days)
             if metric_filters.type_analysis[0] == "company":
                 alist = self._get_top_company(metric_filters, days)
-            if metric_filters.type_analysis[0] == "domain":
-                alist = self._get_top_domain(metric_filters, days)
         else:
             alist = self._get_top(days)
 
@@ -1009,22 +966,21 @@ class Domains(Metrics):
         filters = Set([])
 
         tables.union_update(self.db.GetTablesDomains(self.db.identities_db))
-        tables.add(self.db.identities_db + ".domains dom")
         tables_str = self.db._get_tables_query(tables)
         filters.union_update(self.db.GetFiltersDomains())
         filters_str = self.db._get_filters_query(filters)
 
-        q = "SELECT dom.name "+\
+        q = "SELECT DISTINCT(SUBSTR(email,LOCATE('@',email)+1)) as domain "+\
             "FROM "+ tables_str + " "+\
             "WHERE " + filters_str +" AND "+\
-            "       dom.id = upd.domain_id and "+\
             "       "+ fbots +" "+\
             "       c.changed_on >= "+ startdate+ " AND "+\
             "       c.changed_on < "+ enddate+ " AND "+\
             "       "+ closed_condition+" "+\
-            "GROUP BY dom.name "+\
+            "GROUP BY domain "+\
             "ORDER BY COUNT(DISTINCT(c.issue_id)) DESC LIMIT " + str(Metrics.domains_limit)
         data = self.db.ExecuteQuery(q)
+        data['name'] = data.pop('domain')
         return (data)
 
 class Projects(Metrics):

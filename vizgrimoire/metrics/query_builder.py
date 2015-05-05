@@ -405,13 +405,14 @@ class SCMQuery(DSQuery):
 
         return tables
 
-    def GetSQLDomainsWhere (self, domain, role) :
+    def GetSQLDomainsWhere (self, name, role) :
         #fields necessaries to match info among tables
-        fields = Set([])
-        fields.add("s."+role+"_id = people.id")
-        if domain is not None: fields.add("people.email like '%"+domain.replace("'","")+"%'")
+        filters = Set([])
+        filters.add("s."+role+"_id = people.id")
+        if name is not None and name<>'':
+            filters.add("people.email like '%"+name.replace("'","")+"%'")
 
-        return fields
+        return filters
 
     def GetSQLBranchFrom(self):
         # tables necessary to limit the analysis to certain branches
@@ -832,19 +833,16 @@ class ITSQuery(DSQuery):
     def GetSQLDomainsFrom (self):
         # fields necessary for the domains analysis
         tables = Set([])
-        tables.add("people_uidentities pup")
-        tables.add(self.identities_db + ".domains d")
-        tables.add(self.identities_db + ".uidentities_domains upd")
+        tables.add("people")
 
         return tables
 
     def GetSQLDomainsWhere (self, name):
         # filters for the domains analysis
         filters = Set([])
-        filters.add("i.submitted_by = pup.people_id")
-        filters.add("pup.uuid = upd.uuid")
-        filters.add("upd.domain_id = d.id")
-        if name is not None: filters.add("d.name = " + name)
+        filters.add("i.submitted_by = people.id")
+        if name is not None and name<>'': 
+            filters.add("people.email like '%"+name.replace("'","")+"%'")
 
         return filters
 
@@ -1031,6 +1029,7 @@ class ITSQuery(DSQuery):
         filters = Set([])
 
         if study == "countries": fields.add("count(distinct(cou.name)) as " + study)
+        elif study == "domains": fields.add("COUNT(DISTINCT(SUBSTR(email,LOCATE('@',email)+1))) as " + study)
         else: fields.add("count(distinct(name)) as " + study)
         tables.add("issues i")
         mtype_analysis = mfilters.type_analysis
@@ -1098,16 +1097,18 @@ class ITSQuery(DSQuery):
     def GetTablesDomains (self, table='') :
         tables = Set([])
 
-        tables.union_update(self.GetTablesOwnUniqueIds(table))
-        tables.add(self.identities_db + ".uidentities_domains upd")
+        tables.add("people")
+        tables.add("issues i")
+        tables.add("changes c")
+
 
         return(tables)
 
     def GetFiltersDomains (self, table='') :
         filters = Set([])
 
-        filters.union_update(self.GetFiltersOwnUniqueIds(table))
-        filters.add("pup.uuid = upd.uuid")
+        filters.add("i.submitted_by = people.id")
+        filters.add("c.changed_by = people.id")
 
         return(filters)
 
@@ -1180,23 +1181,15 @@ class MLSQuery(DSQuery):
     def GetSQLDomainsFrom (self):
         tables = Set([])
         tables.add("messages_people mp")
-        tables.add("people_uidentities pup")
-        tables.add(self.identities_db + ".domains d")
-        tables.add(self.identities_db + ".uidentities_domains upd")
 
         return tables
 
     def GetSQLDomainsWhere (self, name):
         filters = Set([])
         filters.add("m.message_ID = mp.message_id")
-        filters.add("mp.email_address = pup.people_id")
         filters.add("mp.type_of_recipient = \'From\'")
-        filters.add("pup.uuid = upd.uuid")
-        filters.add("upd.domain_id = d.id")
-        filters.add("m.first_date >= upd.init")
-        filters.add("m.first_date < upd.end")
-        if name is not None and name <> "":
-            filters.add("d.name = " + name)
+        if name is not None and name<>'':
+            filters.add("mp.email_address like '%"+name.replace("'","")+"%'")
 
         return filters
 
@@ -1374,11 +1367,12 @@ class MLSQuery(DSQuery):
 
         metric_filters = MetricFilters(period, startdate, enddate, type_analysis, evolutionary)
         if study == "countries": fields.add("count(distinct(cou.name)) as " + study)
+        elif study == "domains": fields.add("COUNT(DISTINCT(SUBSTR(email_address,LOCATE('@',email_address)+1))) as " + study)
         else: fields.add("count(distinct(name)) as " + study)
         tables.add("messages m")
         tables.union_update(self.GetSQLReportFrom(metric_filters))
         filters.add("m.is_response_of is null")
-        filters.union_update(self.GetSQLReportWhere(metric_filters))        
+        filters.union_update(self.GetSQLReportWhere(metric_filters))
 
         #Filtering last part of the query, not used in this case
         #filters = gsub("and\n( )+(d|c|cou|com).name =.*$", "", filters)
@@ -1427,19 +1421,14 @@ class MLSQuery(DSQuery):
 
     def GetTablesDomains (self):
         tables = Set([])
-        tables.union_update(self.GetTablesOwnUniqueIds())
-        tables.add(self.identities_db + ".domains d")
-        tables.add(self.identities_db + ".uidentities_domains upd")
+        tables.add("messages_people mp")
+        tables.add("messages m")
 
         return tables
 
     def GetFiltersDomains (self) :
         filters = Set([])
-        filters.union_update(self.GetFiltersOwnUniqueIds())
-        filters.add("pup.uuid = upd.uuid")
-        filters.add("upd.domain_id = d.id")
-        filters.add("m.first_date >= upd.init")
-        filters.add("m.first_date < upd.end")
+        filters.add("mp.message_id = m.message_ID")
 
         return filters
 
@@ -2321,25 +2310,6 @@ class IRCQuery(DSQuery):
 
         return filters
 
-    def GetSQLDomainsFrom(self):
-        # tables necessary to domains analysis
-        tables = Set([])
-        tables.add("people_uidentities pup")
-        tables.add(self.identities_db + ".domains d")
-        tables.add(self.identities_db + ".uidentities_domains upd")
-
-        return tables
-
-    def GetSQLDomainsWhere(self, name):
-        # filters necessary to domains analysis
-        filters = Set([])
-        filters.add("i.nick = pup.people_id")
-        filters.add("pup.uuid = upd.uuid")
-        filters.add("upd.domain_id = d.id")
-        filters.add("d.name = " + name)
-
-        return filters
-
     def GetSQLPublicFrom(self):
         # tables necessary to public channels analysis
         tables = Set([])
@@ -2403,7 +2373,6 @@ class IRCQuery(DSQuery):
                 if analysis == 'repository': From.union_update(self.GetSQLRepositoriesFrom())
                 elif analysis == 'company': From.union_update(self.GetSQLCompaniesFrom())
                 elif analysis == 'country': From.union_update(self.GetSQLCountriesFrom())
-                elif analysis == 'domain': From.union_update(self.GetSQLDomainsFrom())
                 elif analysis == 'people2': From.union_update(self.GetSQLPeople2From())
                 elif analysis == 'public': From.union_update(self.GetSQLPublicFrom())
         return From
@@ -2468,7 +2437,6 @@ class IRCQuery(DSQuery):
                 if analysis == 'repository': where.union_update(self.GetSQLRepositoriesWhere(value))
                 elif analysis == 'company': where.union_update(self.GetSQLCompaniesWhere(value))
                 elif analysis == 'country': where.union_update(self.GetSQLCountriesWhere(value))
-                elif analysis == 'domain': where.union_update(self.GetSQLDomainsWhere(value))
                 elif analysis == 'people2': where.union_update(self.GetSQLPeople2Where(value))
                 elif analysis == 'public': where.union_update(self.GetSQLPublicWhere(value))
                 pos += 1
@@ -2909,19 +2877,17 @@ class PullpoQuery(DSQuery):
     def GetSQLDomainsFrom(self):
         # tables necessary to domains analysis
         tables = Set([])
-        tables.add("people_uidentities pup")
-        tables.add(self.identities_db + ".domains d")
-        tables.add(self.identities_db + ".uidentities_domains upd")
+        tables.add("people")
 
         return tables
 
     def GetSQLDomainsWhere(self, name):
         # filters necessary to domains analysis
         filters = Set([])
-        filters.add("pr.user_id = pup.people_id")
-        filters.add("pup.uuid = upd.uuid")
-        filters.add("upd.domain_id = d.id")
-        filters.add("d.name = " + name)
+        filters.add("pr.user_id = people.id")
+
+        if name is not None and name<>'':
+            filters.add("people.email like '%"+name.replace("'","")+"%'")
 
         return filters
 

@@ -210,29 +210,6 @@ class EmailsSenders(Metrics):
         data = self.db.ExecuteQuery(q)
         return (data)
 
-    def _get_top_domain (self, metric_filters, days = None):
-        startdate = metric_filters.startdate
-        enddate = metric_filters.enddate
-        domain_name = metric_filters.type_analysis[1]
-        limit = metric_filters.npeople
-        filter_bots = self.db.get_bots_filter_sql(self.data_source, metric_filters)
-
-        domains_tables = self.db._get_tables_query(self.db.GetSQLDomainsFrom())
-        domains_filters = self.db._get_filters_query(self.db.GetSQLDomainsWhere(domain_name))
-
-        q = "SELECT up.identifier as senders, "+\
-            " COUNT(DISTINCT(m.message_id)) as sent "+\
-            " FROM messages m, "+ domains_tables +\
-            " , "+self.db.identities_db+".uidentities up "+\
-            " WHERE "+ domains_filters + " AND "+\
-            "  up.uuid = upd.uuid AND "+\
-            "  m.first_date >= "+startdate+" AND "+\
-            "  m.first_date < "+enddate+\
-            " GROUP BY up.identifier "+\
-            " ORDER BY COUNT(DISTINCT(m.message_ID)) DESC, senders LIMIT "+ str(limit)
-        data = self.db.ExecuteQuery(q)
-        return (data)
-
 
     def _get_top_global (self, days = 0, metric_filters = None):
         if metric_filters == None:
@@ -611,23 +588,18 @@ class Domains(Metrics):
                                   self.filters.enddate, ['domain', ''], evolutionary, 'domains')
 
     def get_list  (self) :
-        filter_ = DataSource.get_filter_bots(Filter("domain"))
-        filter_domains = ""
-        for domain in filter_:
-            filter_domains += " d.name<>'"+ domain + "' AND "
-
         domains_tables = self.db._get_tables_query(self.db.GetTablesDomains())
         domains_filters = self.db._get_filters_query(self.db.GetFiltersDomains())
 
-        q = "SELECT d.name as name, COUNT(DISTINCT(m.message_ID)) as sent "+\
+        q = "SELECT DISTINCT(SUBSTR(email_address,LOCATE('@',email_address)+1)) as domain, COUNT(DISTINCT(m.message_ID)) as sent "+\
             "    FROM "+ domains_tables + " "+\
             "    WHERE "+ domains_filters + " AND "+\
-            "    "+ filter_domains+ " "+\
             "    m.first_date >= "+self.filters.startdate+" AND "+\
             "    m.first_date < "+self.filters.enddate+\
-            "    GROUP BY d.name "+\
-            "    ORDER BY COUNT(DISTINCT(m.message_ID)) DESC, d.name LIMIT " + str(Metrics.domains_limit)
+            "    GROUP BY domain "+\
+            "    ORDER BY COUNT(DISTINCT(m.message_ID)) DESC, domain LIMIT " + str(Metrics.domains_limit)
         data = self.db.ExecuteQuery(q)
+        data['name'] = data.pop('domain')
         return (data['name'])
 
 class Countries(Metrics):
