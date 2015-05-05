@@ -1541,6 +1541,23 @@ class SCRQuery(DSQuery):
 
         return filters
 
+    def GetSQLDomainsFrom (self) :
+        #tables necessaries for domains
+        tables = Set([])
+        tables.add("people")
+        tables.add("issues i")
+
+        return tables
+
+    def GetSQLDomainsWhere (self, name) :
+        #fields necessaries to match info among tables
+        filters = Set([])
+        filters.add("i.submitted_by = people.id")
+        if name is not None and name<>'':
+            filters.add("people.email like '%"+name.replace("'","")+"%'")
+
+        return filters
+
     def GetSQLPeopleFrom (self):
         tables = Set([])
         tables.add("people_uidentities pup")
@@ -1652,6 +1669,7 @@ class SCRQuery(DSQuery):
                 if analysis == 'repository': From.union_update(self.GetSQLRepositoriesFrom())
                 elif analysis == 'company': From.union_update(self.GetSQLCompaniesFrom())
                 elif analysis == 'country': From.union_update(self.GetSQLCountriesFrom())
+                elif analysis == 'domain': From.union_update(self.GetSQLDomainsFrom())
                 elif analysis == 'project': From.union_update(self.GetSQLProjectFrom())
                 elif analysis == 'people2': From.union_update(self.GetSQLPeopleFrom())
                 elif analysis == 'autoreviews': From.union_update(self.GetSQLAutoReviewsFrom())
@@ -1725,6 +1743,7 @@ class SCRQuery(DSQuery):
                 if analysis == 'repository': where.union_update(self.GetSQLRepositoriesWhere(value))
                 elif analysis == 'company': where.union_update(self.GetSQLCompaniesWhere(value))
                 elif analysis == 'country': where.union_update(self.GetSQLCountriesWhere(value))
+                elif analysis == 'domain': where.union_update(self.GetSQLDomainsWhere(value))
                 elif analysis == 'people2': where.union_update(self.GetSQLPeopleWhere(value, "issues"))
                 elif analysis == 'autoreviews': where.union_update(self.GetSQLAutoReviewsWhere(value))
                 elif analysis == 'notsummary': where.union_update(self.GetSQLNotSummaryWhere(value))
@@ -1951,7 +1970,8 @@ class SCRQuery(DSQuery):
 
         tables.add("issues i")
         tables.add("changes ch")
-        tables.add("changes ch_ext, people")
+        tables.add("changes ch_ext")
+        tables.add("people")
         tables.union_update(self.GetSQLReportFrom(mfilter))
 
         filters.add("i.id = ch.issue_id")

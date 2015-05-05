@@ -134,6 +134,7 @@ class SCR(DataSource):
 
         for item in all_metrics:
             if item.id not in metrics_on: continue
+            # logging.info(item.id)
             mfilter_orig = item.filters
             mfilter.global_filter = mfilter_orig.global_filter
             item.filters = mfilter
@@ -282,6 +283,8 @@ class SCR(DataSource):
             metric = DataSource.get_metrics("organizations", SCR)
         elif (filter_name == "country"):
             metric = DataSource.get_metrics("countries", SCR)
+        elif (filter_name == "domain"):
+            metric = DataSource.get_metrics("domains", SCR)
         elif (filter_name == "project"):
             metric = DataSource.get_metrics("projects", SCR)
         elif (filter_name == "people2"):

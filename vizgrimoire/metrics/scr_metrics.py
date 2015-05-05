@@ -1034,6 +1034,8 @@ class Countries(Metrics):
                "ORDER BY issues DESC "
         return(self.db.ExecuteQuery(q))
 
+
+
 class Domains(Metrics):
     id = "domains"
     name = "Domains"
@@ -1041,7 +1043,35 @@ class Domains(Metrics):
     data_source = SCR
 
     def _get_sql(self, evolutionary):
-        pass
+        fields = "COUNT(DISTINCT(SUBSTR(email,LOCATE('@',email)+1))) AS domains"
+        tables = "issues i, people p "
+        filters = "i.submitted_by = p.id"
+        q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
+                               self.filters.enddate, " i.submitted_on ", fields,
+                               tables, filters, evolutionary, self.filters.type_analysis)
+        return q
+
+    def get_list(self):
+        from vizgrimoire.data_source import DataSource
+        from vizgrimoire.filter import Filter
+        startdate = self.filters.startdate
+        enddate = self.filters.enddate
+
+        fields = "DISTINCT(SUBSTR(email,LOCATE('@',email)+1)) AS domain"
+        tables = "issues i, people p"
+        filters = "i.submitted_by = p.id"
+
+        q = """
+            SELECT %s
+            FROM %s
+            WHERE %s AND i.submitted_on >= %s AND i.submitted_on < %s
+            GROUP BY domain
+            ORDER BY COUNT(DISTINCT(i.id)) DESC LIMIT %i
+            """ % (fields, tables, filters, startdate, enddate,  + Metrics.domains_limit)
+
+        data = self.db.ExecuteQuery(q)
+        data['name'] = data.pop('domain')
+        return (data)
 
 class Projects(Metrics):
     id = "projects"
