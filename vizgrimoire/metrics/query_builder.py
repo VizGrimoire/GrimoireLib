@@ -401,19 +401,15 @@ class SCMQuery(DSQuery):
     def GetSQLDomainsFrom (self) :
         #tables necessaries for domains
         tables = Set([])
-        tables.add("people_uidentities pup")
-        tables.add(self.identities_db + ".uidentities_domains upd")
-        tables.add(self.identities_db + ".domains d")
+        tables.add("people")
 
         return tables
 
     def GetSQLDomainsWhere (self, domain, role) :
         #fields necessaries to match info among tables
         fields = Set([])
-        fields.add("s."+role+"_id = pup.people_id")
-        fields.add("pup.uuid = upd.uuid")
-        fields.add("upd.domain_id = d.id")
-        if domain is not None: fields.add("d.name ="+ domain)
+        fields.add("s."+role+"_id = people.id")
+        if domain is not None: fields.add("people.email like '%"+domain.replace("'","")+"%'")
 
         return fields
 

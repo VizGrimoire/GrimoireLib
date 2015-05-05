@@ -1111,10 +1111,9 @@ class Domains(Metrics):
     data_source = SCM
 
     def _get_sql(self, evol):
-        fields = "COUNT(DISTINCT(upd.domain_id)) AS domains"
-        tables = "scmlog s, people_uidentities pup, "
-        tables += self.db.identities_db+".uidentities_domains upd"
-        filters = "s.author_id = pup.people_id and pup.uuid = upd.uuid "
+        fields = "COUNT(DISTINCT(SUBSTR(email,LOCATE('@',email)+1))) AS domains"
+        tables = "scmlog s, people p "
+        filters = "s.author_id = p.id"
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                self.filters.enddate, " s.author_date ", fields,
                                tables, filters, evol, self.filters.type_analysis)
@@ -1126,20 +1125,21 @@ class Domains(Metrics):
         startdate = self.filters.startdate
         enddate = self.filters.enddate
 
-        q = "SELECT count(s.id) as commits, d.name as name "+\
-            "FROM scmlog s, "+\
-            "  people_uidentities pup, "+\
-            "  "+identities_db+".domains d, "+\
-            "  "+identities_db+".uidentities_domains upd "+\
-            "WHERE pup.uuid = s."+rol+"_id AND "+\
-            "  pup.uuid  = upd.uuid and "+\
-            "  upd.domain_id = d.id and "+\
-            "  s.author_date >="+ startdate+ " and "+\
-            "  s.author_date < "+ enddate+ " "+\
-            "GROUP BY d.name "+\
-            "ORDER BY commits desc  LIMIT " + str(Metrics.domains_limit)
+        q = """
+            SELECT DISTINCT(SUBSTR(email,LOCATE('@',email)+1)) AS domain,
+                   COUNT(DISTINCT(s.rev)) AS commits
+            FROM  people p, scmlog s
+            WHERE p.id = s.%s_id
+            AND  s.author_date >= %s
+            AND  s.author_date < %s
+            GROUP BY domain ORDER BY commits desc, domain
+            LIMIT %i
+            """ % (rol, startdate, enddate, Metrics.domains_limit)
 
-        return self.db.ExecuteQuery(q)
+        res = self.db.ExecuteQuery(q)
+        # Change the domain column id for name
+        res['name'] = res.pop('domain')
+        return res
 
 class Projects(Metrics):
     """ Projects in the source code management system """
