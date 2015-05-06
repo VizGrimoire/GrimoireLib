@@ -1127,7 +1127,7 @@ class ITSQuery(DSQuery):
     def GetFiltersDomains (self, table='') :
         filters = Set([])
 
-        filters.add("i.submitted_by = people.id")
+        filters.add("i.id  = c.issue_id")
         filters.add("c.changed_by = people.id")
 
         return(filters)
