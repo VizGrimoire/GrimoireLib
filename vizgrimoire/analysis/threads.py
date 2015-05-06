@@ -184,12 +184,12 @@ class Threads(object):
                               mp.email_address = pup.people_id
                         """ % (message)
                 result = ExecuteQuery(query)
-                upeople_id = int(result["upeople_id"])
+                upeople_id = result["upeople_id"]
                 people.add(upeople_id)
             top_threads.append((message, len(people)))
 
         sorted_threads = sorted(top_threads, key=lambda thread: thread[1], reverse = True)
-        
+
         top_threads_emails = []
         for top in sorted_threads[:numTop]:
             # Create a list of emails
