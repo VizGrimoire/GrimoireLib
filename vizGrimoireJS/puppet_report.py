@@ -275,7 +275,7 @@ def mls_report(dbcon, filters):
     createCSV(top_threads["threads"], "./release/mls_top_longest_threads.csv", ['initiator_id','message_id'])
 
     main_topics= Threads(filters.startdate, filters.enddate, dbcon.identities_db)
-    top_crowded = main_topics.topCrowdedThread(filters.npeople)
+    top_crowded = main_topics.topCrowdedThread(int(filters.npeople))
     l_threads = {}
     l_threads['message_id'] = []
     l_threads['people'] = []
@@ -359,7 +359,7 @@ if __name__ == '__main__':
     for release in releases:
         startdate = "'" + release[0] + "'"
         enddate = "'" + release[1] + "'"
-        filters = MetricFilters("month", startdate, enddate, [], opts.npeople)
+        filters = MetricFilters("month", startdate, enddate, None, opts.npeople)
         scm_dbcon = SCMQuery(opts.dbuser, opts.dbpassword, opts.dbcvsanaly, opts.dbidentities)
         #SCM report
         print("\n* SCM summary")
