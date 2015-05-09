@@ -239,7 +239,7 @@ class Pending(Metrics):
             merged = metrics['merged'].get_agg()
             abandoned = metrics['abandoned'].get_agg()
 
-        from report import Report
+        from vizgrimoire.report import Report
         filter = Report.get_filter(self.filters.type_analysis[0])
         items = Pullpo.get_filter_items(filter, self.filters.startdate,
                                      self.filters.enddate, self.db.identities_db)
