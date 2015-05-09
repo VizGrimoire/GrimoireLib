@@ -280,7 +280,7 @@ class MLS(DataSource):
     def create_filter_report_all(filter_, period, startdate, enddate, destdir, npeople, identities_db):
         check = False # activate to debug issues
         filter_name = filter_.get_name()
-        if filter_name in ["people2","company","repository","country","domain"] :
+        if filter_name in ["people2","company","repository","country","domain","project"] :
             filter_all = Filter(filter_name, None)
             agg_all = MLS.get_agg_data(period, startdate, enddate,
                                        identities_db, filter_all)

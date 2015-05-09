@@ -310,7 +310,7 @@ class ITS(DataSource):
         filter_name = filter_name.replace("+", MetricFilters.DELIMITER)
 
         if filter_name in ["people2","company","company"+MetricFilters.DELIMITER+"country",
-                           "country","repository","domain"] :
+                           "country","repository","domain","project"] :
             filter_all = Filter(filter_name, None)
             agg_all = cls.get_agg_data(period, startdate, enddate,
                                        identities_db, filter_all)
