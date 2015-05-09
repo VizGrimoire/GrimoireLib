@@ -221,6 +221,7 @@ class DSQuery(object):
 
     def ExecuteQuery (self, sql):
         if sql is None: return {}
+        # print sql
         result = {}
         self.cursor.execute(sql)
         rows = self.cursor.rowcount
@@ -305,6 +306,7 @@ class DSQuery(object):
             if ds_query == ITSQuery: field = "t.url"
             elif ds_query == SCRQuery: field = "t.url"
             elif ds_query == MLSQuery: field = "ml.mailing_list_url"
+        elif analysis == "project": field = "prj.name"
         elif analysis == "company"+MetricFilters.DELIMITER+"country":
             field = "CONCAT(org.name,'_',cou.name)"
 
@@ -371,7 +373,7 @@ class DSQuery(object):
             pc_filters = "(p.project_id = pc.project_id and pc.subproject_id = pr.project_id) or"
 
         q_proj_repo = """
-            SELECT distinct p.id, pr.repository_name
+            SELECT distinct p.id as name, pr.repository_name
             FROM  %s.projects p, %s.project_repositories pr %s
             WHERE (%s p.project_id = pr.project_id) and
                  pr.data_source='%s'
@@ -380,7 +382,7 @@ class DSQuery(object):
             if (project[0] == "'" and project[-1] == "'"):
                 project = project[1:-1]
             q_proj_repo += " AND p.id = '"+project+"'"
-        table_q_proj_repo = "(" + q_proj_repo +") tr"
+        table_q_proj_repo = "(" + q_proj_repo +") prj"
 
         tables.add(table_q_proj_repo)
 
@@ -394,19 +396,19 @@ class DSQuery(object):
 
         if type(self) == SCMQuery:
             filters.add("s.repository_id = r.id")
-            filters.add("r.uri = tr.repository_name")
+            filters.add("r.uri = prj.repository_name")
         elif type(self) == ITSQuery:
             filters.add("t.id = i.tracker_id")
-            filters.add("t.url = tr.repository_name")
+            filters.add("t.url = prj.repository_name")
         elif type(self) == SCRQuery:
             filters.add("t.id = i.tracker_id")
-            filters.add("t.url = tr.repository_name")
+            filters.add("t.url = prj.repository_name")
         elif type(self) == PullpoQuery:
             filters.add("re.id = pr.repo_id")
-            filters.add("re.url = tr.repository_name")
+            filters.add("re.url = prj.repository_name")
         elif type(self) == MLSQuery:
             filters.add("ml.mailing_list_url = m.mailing_list_url")
-            filters.add("ml.mailing_list_url = tr.repository_name")
+            filters.add("ml.mailing_list_url = prj.repository_name")
         else:
             raise("Project filter not supported by data source: ", self)
 

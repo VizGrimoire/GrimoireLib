@@ -352,7 +352,7 @@ class SCM(DataSource):
 
         # Filters metrics computed using GROUP BY queries
         if filter_name in ["people2","company","company"+MetricFilters.DELIMITER+"country",
-                           "country","repository","domain"] :
+                           "country","repository","domain","project"] :
             filter_all = Filter(filter_name, None)
             agg_all = SCM.get_agg_data(period, startdate, enddate,
                                        identities_db, filter_all)
