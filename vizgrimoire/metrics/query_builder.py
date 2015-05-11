@@ -287,7 +287,9 @@ class DSQuery(object):
     def get_group_field (ds_query, filter_type):
         """ Return the name of the field to group by in filter all queries """
         field = None
-        supported = ['people2','company','country','domain','project','repository','company'+MetricFilters.DELIMITER+'country']
+        supported = ['people2','company','country','domain','project','repository',
+                     'company'+MetricFilters.DELIMITER+'country',
+                     'company'+MetricFilters.DELIMITER+'project',]
 
         analysis = filter_type
 
@@ -309,6 +311,8 @@ class DSQuery(object):
         elif analysis == "project": field = "prj.name"
         elif analysis == "company"+MetricFilters.DELIMITER+"country":
             field = "CONCAT(org.name,'_',cou.name)"
+        elif analysis == "company"+MetricFilters.DELIMITER+"project":
+            field = "CONCAT(org.name,'_',prj.name)"
 
         return field
 
@@ -335,7 +339,7 @@ class DSQuery(object):
         if filter_bots != '': filter_bots = filter_bots[:-4]
         return filter_bots
 
-    def GetSQLProjectsFrom (self, project = None):
+    def get_projects_children_on (self):
         global project_children_on
         if 'project_children_on' not in globals():
             # Detect if project_children has contents. If not, don't use it
@@ -345,6 +349,10 @@ class DSQuery(object):
                 project_children_on = False
             else:
                 project_children_on = True
+        return project_children_on
+
+    def GetSQLProjectsFrom (self, project = None):
+        project_children_on = self.get_projects_children_on()
 
         tables = Set([])
         # TODO: ds_name should be obtained from DataSource
@@ -830,6 +838,7 @@ class ITSQuery(DSQuery):
         # fields necessary for the organizations analysis
         tables = Set([])
         tables.add("people_uidentities pup")
+        tables.add("issues i")
         tables.add(self.identities_db + ".organizations org")
         tables.add(self.identities_db + ".enrollments enr")
 

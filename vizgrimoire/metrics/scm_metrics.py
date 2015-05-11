@@ -1074,7 +1074,7 @@ class CompaniesCountries(Metrics):
     """ Countries in Companies participating in the source code management system """
 
     id = "organizations+countries"
-    name = "Countries"
+    name = "CompaniesCountries"
     desc = "Organizations per Countries participating in the source code management system"
     data_source = SCM
 
@@ -1098,6 +1098,40 @@ class CompaniesCountries(Metrics):
             "      s.author_date < "+enddate+ " "+\
             "group by org.name, cou.name "+\
             "order by commits desc, org.name, cou.name"
+        clist = self.db.ExecuteQuery(q)
+        return clist
+
+class CompaniesProjects(Metrics):
+    """ Projects in Companies participating in the source code management system """
+
+    id = "organizations+projects"
+    name = "CompaniesProjects"
+    desc = "Organizations per Projects participating in the source code management system"
+    data_source = SCM
+
+    def get_list(self):
+        rol = "author" #committer
+        identities_db = self.db.identities_db
+        startdate = self.filters.startdate
+        enddate = self.filters.enddate
+
+        prj_name = org_name = None # all projects and orgs
+        tables = self.db.GetSQLProjectsFrom(prj_name)
+        tables.union_update(self.db.GetSQLCompaniesFrom())
+        filters = self.db.GetSQLProjectsWhere()
+        filters.union_update(self.db.GetSQLCompaniesWhere(org_name,rol))
+
+        tables = self.db._get_tables_query(tables)
+        filters = self.db._get_filters_query(filters)
+
+        q = """
+            SELECT count(s.id) as commits, CONCAT(org.name, '_', prj.name) as name
+            FROM %s
+            WHERE %s
+            group by org.name, prj.name
+            order by commits desc, org.name, prj.name
+            """ % (tables, filters)
+
         clist = self.db.ExecuteQuery(q)
         return clist
 

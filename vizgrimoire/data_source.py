@@ -516,7 +516,7 @@ class DataSource(object):
                 data['name'] = data.pop('mailing_list_url')
                 data['name'] = [item.replace('/', '_') for item in data['name']]
         if cls == ITS or cls == SCM:
-            if filter_.get_name() == "company+country":
+            if filter_.get_name() in ["company+country","company+project"]:
                 data['name'] = data.pop('filter')
 
         if not evolutionary:
