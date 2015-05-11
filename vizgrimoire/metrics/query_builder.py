@@ -1087,7 +1087,7 @@ class ITSQuery(DSQuery):
 
         if study == "countries": fields.add("count(distinct(cou.name)) as " + study)
         elif study == "organizations": fields.add("count(distinct(org.name)) as " + study)
-        elif study == "domains": fields.add("COUNT(DISTINCT(SUBSTR(email,LOCATE('@',email)+1))) as " + study)
+        elif study == "domains": fields.add("COUNT(DISTINCT(SUBSTR(people.email,LOCATE('@',people.email)+1))) as " + study)
         else: fields.add("count(distinct(name)) as " + study)
         tables.add("issues i")
         mtype_analysis = mfilters.type_analysis
