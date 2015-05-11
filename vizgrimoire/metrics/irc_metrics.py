@@ -152,6 +152,20 @@ class Repositories(Metrics):
             "  GROUP BY name ORDER BY total DESC"
         return(self.db.ExecuteQuery(q)['name'])
 
+class RegisteredUsers(Metrics):
+    """Total number of registered users in the service (Slack supported)"""
+    id = "registered_users"
+    name = "Registered Users"
+    desc = "Total number of registered users in the service (Slack supported)"
+    data_source = IRC
+
+    def get_agg(self):
+        q = "SELECT COUNT(*) as registered_users FROM people"
+        return(self.db.ExecuteQuery(q))
+
+    def get_ts(self):
+        return {}
+
 # Examples of use
 if __name__ == '__main__':
     filters = MetricFilters("week", "'2010-01-01'", "'2014-01-01'", ["company", "'Red Hat'"])

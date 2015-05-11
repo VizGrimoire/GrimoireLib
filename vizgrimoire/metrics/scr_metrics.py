@@ -278,8 +278,7 @@ class Pending(Metrics):
         items = items.pop('name')
 
         from vizgrimoire.GrimoireUtils import fill_and_order_items
-        id_field = SCRQuery.get_group_field(self.filters.type_analysis[0])
-        id_field = id_field.split('.')[1] # remove table name
+        id_field = SCRQuery.get_group_field_alias(self.filters.type_analysis[0])
         submitted = check_array_values(submitted)
         merged = check_array_values(merged)
         abandoned = check_array_values(abandoned)
@@ -308,8 +307,7 @@ class Pending(Metrics):
     def get_agg_all(self):
         evol = False
         metrics = self._get_metrics_for_pending_all(evol)
-        id_field = SCRQuery.get_group_field(self.filters.type_analysis[0])
-        id_field = id_field.split('.')[1] # remove table name
+        id_field = SCRQuery.get_group_field_alias(self.filters.type_analysis[0])
         data= \
             [metrics['submitted'][i]-metrics['merged'][i]-metrics['abandoned'][i] \
              for i in range(0, len(metrics['submitted']))]
@@ -318,8 +316,7 @@ class Pending(Metrics):
     def get_ts_all(self):
         evol = True
         metrics = self._get_metrics_for_pending_all(evol)
-        id_field = SCRQuery.get_group_field(self.filters.type_analysis[0])
-        id_field = id_field.split('.')[1] # remove table name
+        id_field = SCRQuery.get_group_field_alias(self.filters.type_analysis[0])
         pending = {"pending":[]}
         for i in range(0, len(metrics['submitted'])):
             pending["pending"].append([])
@@ -1036,6 +1033,8 @@ class Countries(Metrics):
                "ORDER BY issues DESC "
         return(self.db.ExecuteQuery(q))
 
+
+
 class Domains(Metrics):
     id = "domains"
     name = "Domains"
@@ -1043,7 +1042,35 @@ class Domains(Metrics):
     data_source = SCR
 
     def _get_sql(self, evolutionary):
-        pass
+        fields = "COUNT(DISTINCT(SUBSTR(email,LOCATE('@',email)+1))) AS domains"
+        tables = "issues i, people p "
+        filters = "i.submitted_by = p.id"
+        q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
+                               self.filters.enddate, " i.submitted_on ", fields,
+                               tables, filters, evolutionary, self.filters.type_analysis)
+        return q
+
+    def get_list(self):
+        from vizgrimoire.data_source import DataSource
+        from vizgrimoire.filter import Filter
+        startdate = self.filters.startdate
+        enddate = self.filters.enddate
+
+        fields = "DISTINCT(SUBSTR(email,LOCATE('@',email)+1)) AS domain"
+        tables = "issues i, people p"
+        filters = "i.submitted_by = p.id"
+
+        q = """
+            SELECT %s
+            FROM %s
+            WHERE %s AND i.submitted_on >= %s AND i.submitted_on < %s
+            GROUP BY domain
+            ORDER BY COUNT(DISTINCT(i.id)) DESC LIMIT %i
+            """ % (fields, tables, filters, startdate, enddate,  + Metrics.domains_limit)
+
+        data = self.db.ExecuteQuery(q)
+        data['name'] = data.pop('domain')
+        return (data)
 
 class Projects(Metrics):
     id = "projects"
@@ -1499,8 +1526,7 @@ class TimeToReview(Metrics):
 
         # First, we need to group by the filter field the data
         all_items = self.db.get_all_items(self.filters.type_analysis)
-        group_field = self.db.get_group_field(all_items)
-        id_field = group_field.split('.')[1] # remove table name
+        id_field = self.db.get_group_field_alias(all_items)
 
         items =  list(Set(data[id_field]))
         data_all[id_field] = items
@@ -1558,8 +1584,7 @@ class TimeToReview(Metrics):
 
         # First, we need to group by the filter field the data
         all_items = self.db.get_all_items(self.filters.type_analysis)
-        group_field = self.db.get_group_field(all_items)
-        id_field = group_field.split('.')[1] # remove table name
+        id_field = self.db.get_group_field_alias(all_items)
 
         items =  list(Set(data[id_field]))
         data_all[id_field] = items

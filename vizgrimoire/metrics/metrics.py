@@ -181,9 +181,7 @@ class Metrics(object):
         query = self._get_sql(True)
         ts = self.db.ExecuteQuery(query)
         if self.filters.type_analysis and self.filters.type_analysis[1] is None:
-            id_field = self.db.get_group_field(self.filters.type_analysis[0])
-            if 'CONCAT' not in id_field:
-                id_field = id_field.split('.')[1] # remove table name
+            id_field = self.db.get_group_field_alias(self.filters.type_analysis[0])
             ts = Metrics._convert_group_to_ts(ts, id_field)
             ts = Metrics._complete_period_ids_items(ts, id_field, self.filters.period,
                                                     self.filters.startdate, self.filters.enddate)
@@ -262,9 +260,7 @@ class Metrics(object):
         self.filters.closed_condition = filters.closed_condition
         prev = check_array_values(self.get_agg())
 
-        group_field = self.db.get_group_field(self.filters.type_analysis[0])
-        if 'CONCAT' not in group_field:
-            group_field = group_field.split('.')[1] # remove table name when GROUP BY one field
+        group_field = self.db.get_group_field_alias(self.filters.type_analysis[0])
         field = prev.keys()[0]
         if field == group_field: field = prev.keys()[1]
 
@@ -308,6 +304,7 @@ class Metrics(object):
         return {}
 
     def _get_top(self, metric_filters = None, days = 0):
+        alist = None
         if metric_filters.type_analysis and metric_filters.type_analysis is not None:
             if metric_filters.type_analysis[0] not in self._get_top_supported_filters():
                  return
@@ -317,8 +314,8 @@ class Metrics(object):
                 alist = self._get_top_company(metric_filters, days)
             if metric_filters.type_analysis[0] == "country":
                 alist = self._get_top_country(metric_filters, days)
-            if metric_filters.type_analysis[0] == "domain":
-                alist = self._get_top_domain(metric_filters, days)
+#             if metric_filters.type_analysis[0] == "domain":
+#                 alist = self._get_top_domain(metric_filters, days)
             if metric_filters.type_analysis[0] == "project":
                 alist = self._get_top_project(metric_filters, days)
         else:
