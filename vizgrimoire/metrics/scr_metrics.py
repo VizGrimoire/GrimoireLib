@@ -694,9 +694,11 @@ class Participants(Metrics):
 
         # Add orgs information
         q_orgs = """
-            SELECT top.id, top.identifier as identifier, events, org.name as organization FROM (%s) top
+            SELECT DISTINCT(top.id), top.identifier as identifier, events, org.name as organization FROM (%s) top
             LEFT JOIN %s.enrollments enr ON top.id = enr.uuid
-            LEFT JOIN %s.organizations org ON org.id = enr.organization_id;
+            LEFT JOIN %s.organizations org ON org.id = enr.organization_id
+            GROUP BY top.id
+            ORDER BY events DESC, identifier
             """ % (query, self.db.identities_db, self.db.identities_db)
 
         return self.db.ExecuteQuery(q_orgs)
@@ -1213,9 +1215,11 @@ class Reviewers(Metrics):
 
         # Add orgs information
         q_orgs = """
-            SELECT top.id, reviewers, reviewed, org.name as organization FROM (%s) top
+            SELECT DISTINCT(top.id), reviewers, reviewed, org.name as organization FROM (%s) top
             LEFT JOIN %s.enrollments enr ON top.id = enr.uuid
-            LEFT JOIN %s.organizations org ON org.id = enr.organization_id;
+            LEFT JOIN %s.organizations org ON org.id = enr.organization_id
+            GROUP BY top.id
+            ORDER BY reviewed DESC, reviewers
             """ % (q, self.db.identities_db, self.db.identities_db)
 
         return(self.db.ExecuteQuery(q_orgs))
@@ -1339,10 +1343,13 @@ class ActiveCoreReviewers(Metrics):
 
         # Add orgs information
         q_orgs = """
-            SELECT top.id, identifier, reviews, org.name as organization FROM (%s) top
+            SELECT DISTINCT(top.id), identifier, reviews, org.name as organization FROM (%s) top
             LEFT JOIN %s.enrollments enr ON top.id = enr.uuid
-            LEFT JOIN %s.organizations org ON org.id = enr.organization_id;
+            LEFT JOIN %s.organizations org ON org.id = enr.organization_id
+            GROUP BY top.id
+            ORDER BY reviews DESC, identifier
             """ % (query, self.db.identities_db, self.db.identities_db)
+
 
         return self.db.ExecuteQuery(q_orgs)
 
@@ -1391,10 +1398,13 @@ class Closers(Metrics):
 
         # Add orgs information
         q_orgs = """
-            SELECT top.id, %s, %s, org.name as organization FROM (%s) top
+            SELECT DISTINCT(top.id), %s, %s, org.name as organization FROM (%s) top
             LEFT JOIN %s.enrollments enr ON top.id = enr.uuid
-            LEFT JOIN %s.organizations org ON org.id = enr.organization_id;
-            """ % (rol, action, q, self.db.identities_db, self.db.identities_db)
+            LEFT JOIN %s.organizations org ON org.id = enr.organization_id
+            GROUP BY top.id
+            ORDER BY %s DESC, %s
+            """ % (rol, action, q, self.db.identities_db, self.db.identities_db,
+                   action, rol)
 
         return(self.db.ExecuteQuery(q_orgs))
 
@@ -1499,10 +1509,13 @@ class Submitters(Metrics):
 
         # Add orgs information
         q_orgs = """
-            SELECT top.id, %s, %s, org.name as organization FROM (%s) top
+            SELECT DISTINCT(top.id), %s, %s, org.name as organization FROM (%s) top
             LEFT JOIN %s.enrollments enr ON top.id = enr.uuid
-            LEFT JOIN %s.organizations org ON org.id = enr.organization_id;
-            """ % (rol, action, q, self.db.identities_db, self.db.identities_db)
+            LEFT JOIN %s.organizations org ON org.id = enr.organization_id
+            GROUP BY top.id
+            ORDER BY %s DESC, %s
+            """ % (rol, action, q, self.db.identities_db, self.db.identities_db,
+                   action, rol)
 
         return(self.db.ExecuteQuery(q_orgs))
 
