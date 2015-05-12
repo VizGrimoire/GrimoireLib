@@ -78,7 +78,7 @@ class OnionTransitions(Analyses):
             #     " group by pup.uuid "+\
             #     " order by commits desc; "
             q0 = "select name, email from people, people_uidentities pup "+\
-                "where people.id = pup.people_id and pup.uuid = " + str(upeople_id) + " "+\
+                "where people.id = pup.people_id and pup.uuid = '" + str(upeople_id) + "' "+\
                 " LIMIT 1"
             
             q1 = " select pup.uuid as uid, p.name, p.email, "+\
@@ -92,7 +92,7 @@ class OnionTransitions(Analyses):
                 "       s.author_id = p.id and "+\
                 "       p.email <> '%gerrit@%' and "+\
                 "       p.email <> '%jenkins@%' and "+\
-                "       pup.uuid = " + str(upeople_id) +\
+                "       pup.uuid = '" + str(upeople_id) + "' " +\
                 " group by pup.uuid "+\
                 " order by commits desc; "
 

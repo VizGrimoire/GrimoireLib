@@ -269,7 +269,6 @@ class GoneAuthors(Metrics):
             query += " group by pup.uuid "
             query += " order by last_activity desc "
 
-        print query
         return query
 
     def get_agg(self):
@@ -342,8 +341,8 @@ class Authors(Metrics):
             filters.add("DATEDIFF (last_date, date) < %s " % (days))
 
         #Building core part of the query.
-        fields.add(" u.uuid as id")
-        fields.add("u.identifier as authors")
+        fields.add("u.uuid as id")
+        fields.add("pro.name as authors")
         fields.add("count(distinct(s.id)) as commits")
 
         tables.add("scmlog s")
@@ -357,15 +356,17 @@ class Authors(Metrics):
         # an issue. Not repeated tables or filters will appear in the final query.
         tables.add("people_uidentities pup")
         tables.add(self.db.identities_db + ".uidentities u")
+        tables.add(self.db.identities_db + ".profiles pro")
         filters.add("s.author_id = pup.people_id")
         filters.add("pup.uuid = u.uuid")
+        filters.add("pup.uuid = pro.uuid")
 
         query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                    self.filters.enddate, " s.author_date ", fields,
                                    tables, filters, False, self.filters.type_analysis)
 
         query = query + " group by u.uuid "
-        query = query + " order by count(distinct(s.id)) desc, u.identifier "
+        query = query + " order by count(distinct(s.id)) desc, pro.name "
         query = query + " limit " + str(self.filters.npeople)
 
         data = self.db.ExecuteQuery(query)
@@ -1021,7 +1022,6 @@ class Companies(Metrics):
                 query = query + " and org.name <> '" + company + "' "
 
         query = query + " GROUP by org.name ORDER BY company_commits DESC, org.name"
-        query = query + " limit " + str(self.filters.npeople)
 
         return self.db.ExecuteQuery(query)
 
@@ -1076,8 +1076,8 @@ class CompaniesCountries(Metrics):
     """ Countries in Companies participating in the source code management system """
 
     id = "organizations+countries"
-    name = "Countries"
-    desc = "Countries in Companies participating in the source code management system"
+    name = "CompaniesCountries"
+    desc = "Organizations per Countries participating in the source code management system"
     data_source = SCM
 
     def get_list(self):
@@ -1092,7 +1092,7 @@ class CompaniesCountries(Metrics):
             identities_db+".organizations org, "+identities_db+".enrollments enr "+\
             "WHERE pup.people_id = s."+rol+"_id AND "+\
             "      pup.uuid  = pro.uuid and "+\
-            "      pro.country_code = cou.uuid and "+\
+            "      pro.country_code = cou.code and "+\
             "      pup.uuid  = enr.uuid and "+\
             "      enr.organization_id = org.id and "+\
             "      s.author_date >= enr.start  and s.author_date < enr.end and "+\
@@ -1100,6 +1100,40 @@ class CompaniesCountries(Metrics):
             "      s.author_date < "+enddate+ " "+\
             "group by org.name, cou.name "+\
             "order by commits desc, org.name, cou.name"
+        clist = self.db.ExecuteQuery(q)
+        return clist
+
+class CompaniesProjects(Metrics):
+    """ Projects in Companies participating in the source code management system """
+
+    id = "organizations+projects"
+    name = "CompaniesProjects"
+    desc = "Organizations per Projects participating in the source code management system"
+    data_source = SCM
+
+    def get_list(self):
+        rol = "author" #committer
+        identities_db = self.db.identities_db
+        startdate = self.filters.startdate
+        enddate = self.filters.enddate
+
+        prj_name = org_name = None # all projects and orgs
+        tables = self.db.GetSQLProjectsFrom(prj_name)
+        tables.union_update(self.db.GetSQLCompaniesFrom())
+        filters = self.db.GetSQLProjectsWhere()
+        filters.union_update(self.db.GetSQLCompaniesWhere(org_name,rol))
+
+        tables = self.db._get_tables_query(tables)
+        filters = self.db._get_filters_query(filters)
+
+        q = """
+            SELECT count(s.id) as commits, CONCAT(org.name, '_', prj.name) as name
+            FROM %s
+            WHERE %s
+            group by org.name, prj.name
+            order by commits desc, org.name, prj.name
+            """ % (tables, filters)
+
         clist = self.db.ExecuteQuery(q)
         return clist
 
@@ -1113,10 +1147,9 @@ class Domains(Metrics):
     data_source = SCM
 
     def _get_sql(self, evol):
-        fields = "COUNT(DISTINCT(upd.domain_id)) AS domains"
-        tables = "scmlog s, people_uidentities pup, "
-        tables += self.db.identities_db+".uidentities_domains upd"
-        filters = "s.author_id = pup.people_id and pup.uuid = upd.uuid "
+        fields = "COUNT(DISTINCT(SUBSTR(email,LOCATE('@',email)+1))) AS domains"
+        tables = "scmlog s, people p "
+        filters = "s.author_id = p.id"
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                self.filters.enddate, " s.author_date ", fields,
                                tables, filters, evol, self.filters.type_analysis)
@@ -1128,20 +1161,21 @@ class Domains(Metrics):
         startdate = self.filters.startdate
         enddate = self.filters.enddate
 
-        q = "SELECT count(s.id) as commits, d.name as name "+\
-            "FROM scmlog s, "+\
-            "  people_uidentities pup, "+\
-            "  "+identities_db+".domains d, "+\
-            "  "+identities_db+".uidentities_domains upd "+\
-            "WHERE pup.uuid = s."+rol+"_id AND "+\
-            "  pup.uuid  = upd.uuid and "+\
-            "  upd.domain_id = d.id and "+\
-            "  s.author_date >="+ startdate+ " and "+\
-            "  s.author_date < "+ enddate+ " "+\
-            "GROUP BY d.name "+\
-            "ORDER BY commits desc  LIMIT " + str(Metrics.domains_limit)
+        q = """
+            SELECT DISTINCT(SUBSTR(email,LOCATE('@',email)+1)) AS domain,
+                   COUNT(DISTINCT(s.rev)) AS commits
+            FROM  people p, scmlog s
+            WHERE p.id = s.%s_id
+            AND  s.author_date >= %s
+            AND  s.author_date < %s
+            GROUP BY domain ORDER BY commits desc, domain
+            LIMIT %i
+            """ % (rol, startdate, enddate, Metrics.domains_limit)
 
-        return self.db.ExecuteQuery(q)
+        res = self.db.ExecuteQuery(q)
+        # Change the domain column id for name
+        res['name'] = res.pop('domain')
+        return res
 
 class Projects(Metrics):
     """ Projects in the source code management system """

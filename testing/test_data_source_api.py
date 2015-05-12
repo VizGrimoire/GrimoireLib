@@ -208,6 +208,9 @@ class DataSourceTest(unittest.TestCase):
             Report.connect_ds(ds)
             for filter_ in Report.get_filters():
                 filter_name = filter_.get_name()
+                if filter_name in ["company+country","company+project"]:
+                    # GROUP BY only filters
+                    continue
                 filter_name_short = filter_.get_name_short()
                 bots = ds.get_filter_bots(filter_)
                 items = ds.get_filter_items(filter_, startdate, enddate, identities_db)
@@ -218,15 +221,13 @@ class DataSourceTest(unittest.TestCase):
 
                 for item in items:
                     filter_item = Filter(filter_.get_name(), item)
-#                    item_name = item
-#                    if ds.get_name() not in ["irc","scr"]:
-#                        item_name = "'"+item+"'"
                     item_file = item
                     if ds.get_name() in ["its","scr","pullpo"] :
                         item_file = item.replace("/","_")
 
                     elif ds.get_name() == "mls":
                         item_file = item.replace("/","_").replace("<","__").replace(">","___")
+
 
                     logging.info(ds.get_name() +","+ filter_name+","+ item+","+ "agg")
                     agg = ds.get_agg_data(period, startdate, enddate, identities_db, filter_item)
@@ -239,6 +240,52 @@ class DataSourceTest(unittest.TestCase):
                     fn = item_file+"-"+ds.get_name()+"-"+filter_name_short+"-evolutionary.json"
                     test_json = os.path.join("json",fn)
                     self.assertTrue(self._compare_data(evol, test_json))
+
+
+    def test_create_agg_evol_filters_all_data(self):
+        opts = read_options()
+        npeople = opts.npeople
+        destdir = opts.destdir
+        period = getPeriod(opts.granularity)
+        automator = read_main_conf(opts.config_file)
+        identities_db = automator['generic']['db_identities']
+ 
+        supported_all = {
+                     "scm":["people2","company","country","repository","domain","projects","company+country","company+project"],
+                     "its":["people2","company","country","repository","domain","projects","company+country","company+project"],
+                     "its_1":["people2"],
+                     "mls":["people2","company","country","repository","domain","projects"],
+                     "scr":["people2","company","country","repository","domain","projects"],
+                     "mediawiki":["people2"],
+                     "irc":["people2"],
+                     "downloads":["people2"],
+                     "qaforums":["people2"],
+                     "releases":["people2"],
+                     "pullpo":["people2"],
+                     "eventizer":[]
+                     }
+
+        for ds in Report.get_data_sources():
+            for filter_ in Report.get_filters():
+                if filter_.get_name() in supported_all[ds.get_name()]:
+                    logging.info("---> Using new filter API")
+                    ds.create_filter_report_all(filter_, period, startdate, enddate, 
+                                                destdir, npeople, identities_db)
+                    # Static
+                    ds_json = filter_.get_static_filename_all(ds())
+                    if ds_json in ["scr-cou-all-evolutionary.json","scr-cou-all-static.json",
+                                   "scr-dom-all-evolutionary.json","scr-dom-all-static.json",
+                                   "its-dom-all-static.json"]:
+                        # The order of elements change in each execution
+                        continue
+                    f_test_json = os.path.join("json", ds_json)
+                    f_report_json = os.path.join(opts.destdir, ds_json)
+                    self.assertTrue(self.compareJSON(f_test_json, f_report_json))
+                    # Evol
+                    ds_json = filter_.get_evolutionary_filename_all(ds())
+                    f_test_json = os.path.join("json", ds_json)
+                    f_report_json = os.path.join(opts.destdir, ds_json)
+                    self.assertTrue(self.compareJSON(f_test_json, f_report_json))
 
     def test_get_filter_items(self):
         opts = read_options()

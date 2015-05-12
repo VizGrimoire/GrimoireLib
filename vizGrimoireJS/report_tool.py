@@ -75,8 +75,8 @@ def create_reports_filters(period, startdate, enddate, destdir, npeople, identit
             logging.info("-> " + filter_.get_name())
             # Tested in all this filters the group by
             supported_all = {
-                         "scm":["people2","company","company+country","country","repository","domain"],
-                         "its":["people2","company","company+country","country","repository","domain"],
+                         "scm":["people2","company","country","repository","domain","company+country","company+project"],
+                         "its":["people2","company","country","repository","domain","company+country","company+project"],
                          "its_1":["people2"],
                          "mls":["people2","company","country","repository","domain"],
                          "scr":["people2","company","country","repository"],
@@ -89,8 +89,8 @@ def create_reports_filters(period, startdate, enddate, destdir, npeople, identit
                          "eventizer":[]
                          }
             supported_on = {
-                         "scm":[],
-                         "its":[],
+                         "scm":["company+country","company+project"],
+                         "its":["company+country","company+project"],
                          "its_1":[],
                          "mls":[],
                          "scr":[],

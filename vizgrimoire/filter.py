@@ -31,7 +31,8 @@ class Filter(object):
                      ["project","prj","projects"], ["tag", "tag", "tags"],
                      ["people","people","people"],
                      ["people2","people2","people2"],
-                     ["company+country","com+cou","organizations+countries"]
+                     ["company+country","com+cou","organizations+countries"],
+                     ["company+project","com+prj","organizations+projects"]
                     ]
 
     def __init__(self, name, item = None):

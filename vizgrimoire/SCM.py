@@ -187,6 +187,9 @@ class SCM(DataSource):
     def get_filter_items(filter_, startdate, enddate, identities_db):
         items = None
         filter_name = filter_.get_name()
+        # Change filter to GrimoireLib notation
+        filter_name = filter_name.replace("+", MetricFilters.DELIMITER)
+
 
         if (filter_name == "repository"):
             metric = DataSource.get_metrics("repositories", SCM)
@@ -201,7 +204,9 @@ class SCM(DataSource):
         elif (filter_name == "people2"):
             metric = DataSource.get_metrics("people2", SCM)
         elif (filter_name == "company"+MetricFilters.DELIMITER+"country"):
-            metric = DataSource.get_metrics("companies+countries", SCM)
+            metric = DataSource.get_metrics("organizations+countries", SCM)
+        elif (filter_name == "company"+MetricFilters.DELIMITER+"project"):
+            metric = DataSource.get_metrics("organizations+projects", SCM)
         else:
             logging.error("SCM " + filter_name + " not supported")
             return items
@@ -351,8 +356,9 @@ class SCM(DataSource):
         SCM.create_filter_report_top(filter_, period, startdate, enddate, destdir, npeople, identities_db)
 
         # Filters metrics computed using GROUP BY queries
-        if filter_name in ["people2","company","company"+MetricFilters.DELIMITER+"country",
-                           "country","repository","domain"] :
+        if filter_name in ["people2","company", "country","repository","domain","project",
+                           "company"+MetricFilters.DELIMITER+"country",
+                           "company"+MetricFilters.DELIMITER+"project"]:
             filter_all = Filter(filter_name, None)
             agg_all = SCM.get_agg_data(period, startdate, enddate,
                                        identities_db, filter_all)

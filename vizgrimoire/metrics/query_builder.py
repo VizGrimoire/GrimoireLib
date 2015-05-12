@@ -84,35 +84,41 @@ class DSQuery(object):
             else: sql += ' AND '+filters
 
         if all_items:
+            if len(group_field.split(" ")) == 3:
+                group_field = group_field.split(" ")[2]
             sql += " GROUP BY " + group_field
             sql += " ORDER BY " + count_field + " DESC," + group_field
 
         return(sql)
 
     @classmethod
-    def GetSQLPeriod(cls, period, date, fields, tables, filters, start, end,
+    def GetSQLPeriod(cls, period, date, qfields, tables, filters, start, end,
                      all_items = None):
         group_field = None
-        if all_items :
-            group_field = cls.get_group_field(all_items)
-            fields = group_field + ", " + fields
 
         iso_8601_mode = 3
         if (period == 'day'):
             # Remove time so unix timestamp is start of day    
-            sql = 'SELECT UNIX_TIMESTAMP(DATE('+date+')) AS unixtime, '
+            fields = 'UNIX_TIMESTAMP(DATE('+date+')) AS unixtime'
         elif (period == 'week'):
-            sql = 'SELECT YEARWEEK('+date+','+str(iso_8601_mode)+') AS week, '
+            fields = 'YEARWEEK('+date+','+str(iso_8601_mode)+') AS week'
         elif (period == 'month'):
-            sql = 'SELECT YEAR('+date+')*12+MONTH('+date+') AS month, '
+            fields = 'YEAR('+date+')*12+MONTH('+date+') AS month'
         elif (period == 'year'):
-            sql = 'SELECT YEAR('+date+')*12 AS year, '
+            fields = 'YEAR('+date+')*12 AS year'
         else:
             logging.error("PERIOD: "+period+" not supported")
             raise Exception
         # sql = paste(sql, 'DATE_FORMAT (',date,', \'%d %b %Y\') AS date, ')
-        sql += fields
-        if all_items: fields + ", " + group_field
+        if all_items:
+            group_field = cls.get_group_field(all_items)
+            if group_field.find("DISTINCT") > -1:
+                # DISTINCT field should be the first
+                fields = group_field + ", "+ fields
+            else:
+                fields += ", " + group_field
+        fields += ", " + qfields
+        sql = "SELECT " + fields
         sql += ' FROM ' + tables
         sql = sql + ' WHERE '+date+'>='+start+' AND '+date+'<'+end
         reg_and = re.compile("^[ ]*and", re.IGNORECASE)
@@ -123,7 +129,10 @@ class DSQuery(object):
 
         group_by = " GROUP BY "
 
-        if all_items: group_by += group_field + ", "
+        if all_items:
+            if len(group_field.split(" ")) == 3:
+                group_field = group_field.split(" ")[2]
+            group_by += group_field + ", "
 
         if (period == 'year'):
             sql += group_by + ' YEAR('+date+')'
@@ -140,11 +149,6 @@ class DSQuery(object):
         else:
             logging.error("PERIOD: "+period+" not supported")
             sys.exit(1)
-
-        if all_items:
-            sql += "," + group_field
-            # logging.info("GROUP sql")
-            # print sql
 
         return(sql)
 
@@ -217,6 +221,7 @@ class DSQuery(object):
 
     def ExecuteQuery (self, sql):
         if sql is None: return {}
+        # print sql
         result = {}
         self.cursor.execute(sql)
         rows = self.cursor.rowcount
@@ -267,11 +272,24 @@ class DSQuery(object):
 
         return  project_with_children_str
 
+
+    @classmethod
+    def get_group_field_alias (ds_query, filter_type):
+        # alias to be used in GROUP BY id_field and ORDER BY id_field
+        id_field = ds_query.get_group_field(filter_type)
+        if len(id_field.split(" ")) == 3:
+            id_field = id_field.split(" ")[2]
+        if id_field.find(".")>-1 and 'CONCAT' not in id_field:
+            id_field = id_field.split('.')[1] # remove table name
+        return id_field
+
     @classmethod
     def get_group_field (ds_query, filter_type):
         """ Return the name of the field to group by in filter all queries """
         field = None
-        supported = ['people2','company','country','domain','project','repository','company'+MetricFilters.DELIMITER+'country']
+        supported = ['people2','company','country','domain','project','repository',
+                     'company'+MetricFilters.DELIMITER+'country',
+                     'company'+MetricFilters.DELIMITER+'project',]
 
         analysis = filter_type
 
@@ -280,14 +298,21 @@ class DSQuery(object):
         if analysis == 'people2': field = "up.identifier"
         elif analysis == "company": field = "org.name"
         elif analysis == "country": field = "cou.name"
-        elif analysis == "domain": field = "d.name"
+        # elif analysis == "domain": field = "d.name"
+        elif analysis == "domain":
+            field = "DISTINCT(SUBSTR(people.email,LOCATE('@',people.email)+1)) as name"
+            if ds_query == MLSQuery:
+                field = "DISTINCT(SUBSTR(mp.email_address,LOCATE('@',mp.email_address)+1)) as name"
         elif analysis == "repository":
             field = "r.name"
             if ds_query == ITSQuery: field = "t.url"
             elif ds_query == SCRQuery: field = "t.url"
             elif ds_query == MLSQuery: field = "ml.mailing_list_url"
+        elif analysis == "project": field = "prj.name"
         elif analysis == "company"+MetricFilters.DELIMITER+"country":
-            field = "CONCAT(com.name,'_',cou.name)"
+            field = "CONCAT(org.name,'_',cou.name)"
+        elif analysis == "company"+MetricFilters.DELIMITER+"project":
+            field = "CONCAT(org.name,'_',prj.name)"
 
         return field
 
@@ -314,6 +339,90 @@ class DSQuery(object):
         if filter_bots != '': filter_bots = filter_bots[:-4]
         return filter_bots
 
+    def get_projects_children_on (self):
+        global project_children_on
+        if 'project_children_on' not in globals():
+            # Detect if project_children has contents. If not, don't use it
+            q = "SELECT COUNT(*) as total FROM %s.project_children" % (self.projects_db)
+            res = self.ExecuteQuery(q)
+            if res['total'] == 0:
+                project_children_on = False
+            else:
+                project_children_on = True
+        return project_children_on
+
+    def GetSQLProjectsFrom (self, project = None):
+        project_children_on = self.get_projects_children_on()
+
+        tables = Set([])
+        # TODO: ds_name should be obtained from DataSource
+        if type(self) == SCMQuery:
+            tables.add("scmlog s")
+            tables.add("repositories r")
+            ds_name = "scm"
+        elif type(self) == ITSQuery:
+            tables.add("trackers t")
+            ds_name = "its"
+        elif type(self) == SCRQuery:
+            tables.add("trackers t")
+            ds_name = "scr"
+        elif type(self) == PullpoQuery:
+            tables.add("repositories re")
+            ds_name = "pullpo"
+        elif type(self) == MLSQuery:
+            tables.add("mailing_lists ml")
+            ds_name = "mls"
+        else:
+            raise("Project filter not supported by data source: ", self)
+
+        pc_table = pc_filters = ''
+        if project_children_on:
+            pc_table = ", " + self.projects_db+".project_children pc"
+            pc_filters = "(p.project_id = pc.project_id and pc.subproject_id = pr.project_id) or"
+
+        q_proj_repo = """
+            SELECT distinct p.id as name, pr.repository_name
+            FROM  %s.projects p, %s.project_repositories pr %s
+            WHERE (%s p.project_id = pr.project_id) and
+                 pr.data_source='%s'
+            """ % (self.projects_db, self.projects_db, pc_table, pc_filters, ds_name)
+        if project is not None:
+            if (project[0] == "'" and project[-1] == "'"):
+                project = project[1:-1]
+            q_proj_repo += " AND p.id = '"+project+"'"
+        table_q_proj_repo = "(" + q_proj_repo +") prj"
+
+        tables.add(table_q_proj_repo)
+
+        return tables
+
+
+    def GetSQLProjectsWhere (self):
+        # include all repositories for a project and its subprojects
+
+        filters = Set([])
+
+        if type(self) == SCMQuery:
+            filters.add("s.repository_id = r.id")
+            filters.add("r.uri = prj.repository_name")
+        elif type(self) == ITSQuery:
+            filters.add("t.id = i.tracker_id")
+            filters.add("t.url = prj.repository_name")
+        elif type(self) == SCRQuery:
+            filters.add("t.id = i.tracker_id")
+            filters.add("t.url = prj.repository_name")
+        elif type(self) == PullpoQuery:
+            filters.add("re.id = pr.repo_id")
+            filters.add("re.url = prj.repository_name")
+        elif type(self) == MLSQuery:
+            filters.add("ml.mailing_list_url = m.mailing_list_url")
+            filters.add("ml.mailing_list_url = prj.repository_name")
+        else:
+            raise("Project filter not supported by data source: ", self)
+
+        return filters
+
+
 class SCMQuery(DSQuery):
     """ Specific query builders for source code management system data source """
 
@@ -329,32 +438,6 @@ class SCMQuery(DSQuery):
         fields = Set([])
         fields.add("r.id = s.repository_id")
         if repository is not None: fields.add("r.name ="+ repository)
-
-        return fields
-
-    def GetSQLProjectFrom (self):
-        #tables necessaries for repositories
-        tables = Set([])
-        tables.add("repositories r")
-
-        return tables
-
-    def GetSQLProjectWhere (self, project):
-        # include all repositories for a project and its subprojects
-        # Remove '' from project name
-        if (project[0] == "'" and project[-1] == "'"):
-            project = project[1:-1]
-
-        fields = Set([])
-
-        repos = """r.uri IN (
-               SELECT repository_name
-               FROM   %s.projects p, %s.project_repositories pr
-               WHERE  p.project_id = pr.project_id AND p.project_id IN (%s)
-                     AND pr.data_source='scm'
-               )""" % (self.projects_db, self.projects_db, self.get_subprojects(project))
-        fields.add(repos)
-        fields.add("r.id = s.repository_id")
 
         return fields
 
@@ -401,21 +484,18 @@ class SCMQuery(DSQuery):
     def GetSQLDomainsFrom (self) :
         #tables necessaries for domains
         tables = Set([])
-        tables.add("people_uidentities pup")
-        tables.add(self.identities_db + ".uidentities_domains upd")
-        tables.add(self.identities_db + ".domains d")
+        tables.add("people")
 
         return tables
 
-    def GetSQLDomainsWhere (self, domain, role) :
+    def GetSQLDomainsWhere (self, name, role) :
         #fields necessaries to match info among tables
-        fields = Set([])
-        fields.add("s."+role+"_id = pup.people_id")
-        fields.add("pup.uuid = upd.uuid")
-        fields.add("upd.domain_id = d.id")
-        if domain is not None: fields.add("d.name ="+ domain)
+        filters = Set([])
+        filters.add("s."+role+"_id = people.id")
+        if name is not None and name<>'':
+            filters.add("people.email like '%"+name.replace("'","")+"%'")
 
-        return fields
+        return filters
 
     def GetSQLBranchFrom(self):
         # tables necessary to limit the analysis to certain branches
@@ -534,6 +614,7 @@ class SCMQuery(DSQuery):
         tables.add("people p")
         tables.add("people_uidentities pup")
         tables.add(self.identities_db + ".uidentities u")
+        tables.add(self.identities_db + ".profiles pro")
 
         return tables
 
@@ -548,10 +629,12 @@ class SCMQuery(DSQuery):
         where.add("s.author_id = p.id")
         where.add("p.id = pup.people_id")
         where.add("pup.uuid = u.uuid")
+        where.add("pup.uuid = pro.uuid")
+        where.add("pro.is_bot<>1")
         for bot in bots:
             # This code only ignores bots provided in raw_bots.
             # This should add the other way around, u.identifier = 'xxx'
-            where.add("u.identifier <> '" + bot + "'")
+            where.add("pro.name <> '" + bot + "'")
 
         return where
 
@@ -573,7 +656,7 @@ class SCMQuery(DSQuery):
                 elif analysis == 'company': From.union_update(self.GetSQLCompaniesFrom())
                 elif analysis == 'country': From.union_update(self.GetSQLCountriesFrom())
                 elif analysis == 'domain': From.union_update(self.GetSQLDomainsFrom())
-                elif analysis == 'project': From.union_update(self.GetSQLProjectFrom())
+                elif analysis == 'project': From.union_update(self.GetSQLProjectsFrom(type_analysis[1]))
                 elif analysis == 'branch': From.union_update(self.GetSQLBranchFrom())
                 elif analysis == 'module': From.union_update(self.GetSQLModuleFrom())
                 elif analysis == 'filetype': From.union_update(self.GetSQLFileTypeFrom())
@@ -652,7 +735,7 @@ class SCMQuery(DSQuery):
                 elif analysis == 'company': where.union_update(self.GetSQLCompaniesWhere(value, role))
                 elif analysis == 'country': where.union_update(self.GetSQLCountriesWhere(value, role))
                 elif analysis == 'domain': where.union_update(self.GetSQLDomainsWhere(value, role))
-                elif analysis == 'project': where.union_update(self.GetSQLProjectWhere(value))
+                elif analysis == 'project': where.union_update(self.GetSQLProjectsWhere())
                 elif analysis == 'branch': where.union_update(self.GetSQLBranchWhere(value))
                 elif analysis == 'module': where.union_update(self.GetSQLModuleWhere(value))
                 elif analysis == 'filetype': where.union_update(self.GetSQLFileTypeWhere(value))
@@ -754,41 +837,11 @@ class ITSQuery(DSQuery):
 
         return filters
 
-    def GetSQLProjectsFrom (self):
-        # tables necessary for repositories
-        tables = Set([])
-        tables.add("trackers t")
-
-        return tables
-
-    def GetSQLProjectsWhere (self, project):
-        # include all repositories for a project and its subprojects
-        # Remove '' from project name
-        filters = Set([])
-        if len(project) > 1 :
-            if (project[0] == "'" and project[-1] == "'"):
-                project = project[1:-1]
-
-        subprojects = self.get_subprojects(project)
-
-        repos = """t.url IN (
-               SELECT repository_name
-               FROM   %s.projects p, %s.project_repositories pr
-               WHERE  p.project_id = pr.project_id AND pr.data_source='its'
-        """ % (self.projects_db, self.projects_db)
-
-        if subprojects != "[]":
-            repos += " AND p.project_id IN (%s) " % subprojects
-
-        filters.add(repos + ")")
-        filters.add("t.id = i.tracker_id")
-
-        return filters
-
     def GetSQLCompaniesFrom (self):
         # fields necessary for the organizations analysis
         tables = Set([])
         tables.add("people_uidentities pup")
+        tables.add("issues i")
         tables.add(self.identities_db + ".organizations org")
         tables.add(self.identities_db + ".enrollments enr")
 
@@ -836,19 +889,16 @@ class ITSQuery(DSQuery):
     def GetSQLDomainsFrom (self):
         # fields necessary for the domains analysis
         tables = Set([])
-        tables.add("people_uidentities pup")
-        tables.add(self.identities_db + ".domains d")
-        tables.add(self.identities_db + ".uidentities_domains upd")
+        tables.add("people")
 
         return tables
 
     def GetSQLDomainsWhere (self, name):
         # filters for the domains analysis
         filters = Set([])
-        filters.add("i.submitted_by = pup.people_id")
-        filters.add("pup.uuid = upd.uuid")
-        filters.add("upd.domain_id = d.id")
-        if name is not None: filters.add("d.name = " + name)
+        filters.add("i.submitted_by = people.id")
+        if name is not None and name<>'': 
+            filters.add("people.email like '%"+name.replace("'","")+"%'")
 
         return filters
 
@@ -894,7 +944,7 @@ class ITSQuery(DSQuery):
     def GetSQLBotsFrom (self):
         tables = Set([])
         tables.add("people_uidentities pup")
-        tables.add(self.identities_db + ".uidentities u")
+        tables.add(self.identities_db + ".profiles pro")
 
         return tables
 
@@ -910,11 +960,12 @@ class ITSQuery(DSQuery):
         if table == "issues": field = "i.submitted_by"
 
         filters.add(field + " = pup.people_id")
-        filters.add("u.uuid = pup.uuid")
+        filters.add("pro.uuid = pup.uuid")
+        filters.add("pro.is_bot<>1")
         for bot in bots:
             # This code only ignores bots provided in raw_bots.
             # This should add the other way around, u.identifier = 'xxx'
-            filters.add("u.identifier <> '" + bot + "'")
+            filters.add("pro.name <> '" + bot + "'")
 
         return filters
 
@@ -932,7 +983,7 @@ class ITSQuery(DSQuery):
                 elif analysis == 'company': From.union_update(self.GetSQLCompaniesFrom())
                 elif analysis == 'country': From.union_update(self.GetSQLCountriesFrom())
                 elif analysis == 'domain': From.union_update(self.GetSQLDomainsFrom())
-                elif analysis == 'project': From.union_update(self.GetSQLProjectsFrom())
+                elif analysis == 'project': From.union_update(self.GetSQLProjectsFrom(type_analysis[1]))
                 elif analysis == 'people2': From.union_update(self.GetSQLPeopleFrom())
                 elif analysis == 'ticket_type': From.union_update(self.GetSQLTicketTypeFrom())
                 else: raise Exception( analysis + " not supported")
@@ -1002,7 +1053,7 @@ class ITSQuery(DSQuery):
                 elif analysis == 'company': where.union_update(self.GetSQLCompaniesWhere(value))
                 elif analysis == 'country': where.union_update(self.GetSQLCountriesWhere(value))
                 elif analysis == 'domain': where.union_update(self.GetSQLDomainsWhere(value))
-                elif analysis == 'project': where.union_update(self.GetSQLProjectsWhere(value))
+                elif analysis == 'project': where.union_update(self.GetSQLProjectsWhere())
                 elif analysis == 'people2': where.union_update(self.GetSQLPeopleWhere(value, table))
                 elif analysis == 'ticket_type': where.union_update(self.GetSQLTicketTypeWhere(value))
                 else: raise Exception( analysis + " not supported")
@@ -1035,6 +1086,8 @@ class ITSQuery(DSQuery):
         filters = Set([])
 
         if study == "countries": fields.add("count(distinct(cou.name)) as " + study)
+        elif study == "organizations": fields.add("count(distinct(org.name)) as " + study)
+        elif study == "domains": fields.add("COUNT(DISTINCT(SUBSTR(people.email,LOCATE('@',people.email)+1))) as " + study)
         else: fields.add("count(distinct(name)) as " + study)
         tables.add("issues i")
         mtype_analysis = mfilters.type_analysis
@@ -1102,16 +1155,18 @@ class ITSQuery(DSQuery):
     def GetTablesDomains (self, table='') :
         tables = Set([])
 
-        tables.union_update(self.GetTablesOwnUniqueIds(table))
-        tables.add(self.identities_db + ".uidentities_domains upd")
+        tables.add("people")
+        tables.add("issues i")
+        tables.add("changes c")
+
 
         return(tables)
 
     def GetFiltersDomains (self, table='') :
         filters = Set([])
 
-        filters.union_update(self.GetFiltersOwnUniqueIds(table))
-        filters.add("pup.uuid = upd.uuid")
+        filters.add("i.id  = c.issue_id")
+        filters.add("c.changed_by = people.id")
 
         return(filters)
 
@@ -1184,48 +1239,17 @@ class MLSQuery(DSQuery):
     def GetSQLDomainsFrom (self):
         tables = Set([])
         tables.add("messages_people mp")
-        tables.add("people_uidentities pup")
-        tables.add(self.identities_db + ".domains d")
-        tables.add(self.identities_db + ".uidentities_domains upd")
 
         return tables
 
     def GetSQLDomainsWhere (self, name):
         filters = Set([])
         filters.add("m.message_ID = mp.message_id")
-        filters.add("mp.email_address = pup.people_id")
         filters.add("mp.type_of_recipient = \'From\'")
-        filters.add("pup.uuid = upd.uuid")
-        filters.add("upd.domain_id = d.id")
-        filters.add("m.first_date >= upd.init")
-        filters.add("m.first_date < upd.end")
-        if name is not None and name <> "":
-            filters.add("d.name = " + name)
+        if name is not None and name<>'':
+            filters.add("mp.email_address like '%"+name.replace("'","")+"%'")
 
         return filters
-
-    def GetSQLProjectsFrom(self):
-        tables = Set([])
-        tables.add("mailing_lists ml")
-
-        return tables
-
-    def GetSQLProjectsWhere(self, project):
-        # include all repositories for a project and its subprojects
-        p = project.replace("'", "") # FIXME: why is "'" needed in the name?
-
-        repos = Set([])
-
-        repos_str = """ml.mailing_list_url IN (
-               SELECT repository_name
-               FROM   %s.projects p, %s.project_repositories pr
-               WHERE  p.project_id = pr.project_id AND p.project_id IN (%s)
-                   AND pr.data_source='mls'
-        )""" % (self.projects_db, self.projects_db, self.get_subprojects(p))
-        repos.add(repos_str)
-        repos.add("ml.mailing_list_url = m.mailing_list_url")
-
-        return repos
 
     def GetSQLPeopleFrom (self):
         tables = Set([])
@@ -1279,7 +1303,7 @@ class MLSQuery(DSQuery):
         tables.add("messages m")
         tables.add("messages_people mp")
         tables.add("people_uidentities pup")
-        tables.add(self.identities_db + ".uidentities u")
+        tables.add(self.identities_db + ".profiles pro")
 
         return tables
 
@@ -1301,7 +1325,7 @@ class MLSQuery(DSQuery):
                 elif analysis == 'company': From.union_update(self.GetSQLCompaniesFrom())
                 elif analysis == 'country': From.union_update(self.GetSQLCountriesFrom())
                 elif analysis == 'domain': From.union_update(self.GetSQLDomainsFrom())
-                elif analysis == 'project': From.union_update(self.GetSQLProjectsFrom())
+                elif analysis == 'project': From.union_update(self.GetSQLProjectsFrom(type_analysis[1]))
                 elif analysis == 'people2': From.union_update(self.GetSQLPeopleFrom())
                 else: raise Exception( analysis + " not supported")
 
@@ -1318,9 +1342,9 @@ class MLSQuery(DSQuery):
         where.add("m.message_ID = mp.message_id")
         where.add("mp.email_address = pup.people_id")
         where.add("mp.type_of_recipient = \'From\'")
-        where.add("pup.uuid = u.uuid")
+        where.add("pup.uuid = pro.uuid")
         for bot in bots:
-            where.add("u.identifier <> '" + bot + "'")
+            where.add("pro.name <> '" + bot + "'")
 
         return where
 
@@ -1360,7 +1384,7 @@ class MLSQuery(DSQuery):
                         logging.error("project filter not supported without identities_db")
                         sys.exit(0)
                     else:
-                        where.union_update(self.GetSQLProjectsWhere(value))
+                        where.union_update(self.GetSQLProjectsWhere())
                 elif analysis == 'people2': where.union_update(self.GetSQLPeopleWhere(value))
 
         if filters.people_out is not None:
@@ -1378,11 +1402,12 @@ class MLSQuery(DSQuery):
 
         metric_filters = MetricFilters(period, startdate, enddate, type_analysis, evolutionary)
         if study == "countries": fields.add("count(distinct(cou.name)) as " + study)
+        elif study == "domains": fields.add("COUNT(DISTINCT(SUBSTR(email_address,LOCATE('@',email_address)+1))) as " + study)
         else: fields.add("count(distinct(name)) as " + study)
         tables.add("messages m")
         tables.union_update(self.GetSQLReportFrom(metric_filters))
         filters.add("m.is_response_of is null")
-        filters.union_update(self.GetSQLReportWhere(metric_filters))        
+        filters.union_update(self.GetSQLReportWhere(metric_filters))
 
         #Filtering last part of the query, not used in this case
         #filters = gsub("and\n( )+(d|c|cou|com).name =.*$", "", filters)
@@ -1431,19 +1456,14 @@ class MLSQuery(DSQuery):
 
     def GetTablesDomains (self):
         tables = Set([])
-        tables.union_update(self.GetTablesOwnUniqueIds())
-        tables.add(self.identities_db + ".domains d")
-        tables.add(self.identities_db + ".uidentities_domains upd")
+        tables.add("messages_people mp")
+        tables.add("messages m")
 
         return tables
 
     def GetFiltersDomains (self) :
         filters = Set([])
-        filters.union_update(self.GetFiltersOwnUniqueIds())
-        filters.add("pup.uuid = upd.uuid")
-        filters.add("upd.domain_id = d.id")
-        filters.add("m.first_date >= upd.init")
-        filters.add("m.first_date < upd.end")
+        filters.add("mp.message_id = m.message_ID")
 
         return filters
 
@@ -1485,28 +1505,6 @@ class SCRQuery(DSQuery):
             filters.add("pup.people_id = i.submitted_by")
         else:
             filters.add("pup.people_id = c.changed_by")
-
-        return filters
-
-    def GetSQLProjectFrom (self):
-        # projects are mapped to repositories
-        tables = Set([])
-        tables.add("trackers t")
-
-        return tables
-
-    def GetSQLProjectWhere (self, project):
-        # include all repositories for a project and its subprojects
-        filters = Set([])
-
-        repos = """t.url IN (
-               SELECT repository_name
-               FROM   %s.projects p, %s.project_repositories pr
-               WHERE  p.project_id = pr.project_id AND p.project_id IN (%s)
-                   AND pr.data_source='scr'
-        )""" % (self.projects_db, self.projects_db, self.get_subprojects(project))
-        filters.add(repos)
-        filters.add("t.id = i.tracker_id")
 
         return filters
 
@@ -1553,6 +1551,23 @@ class SCRQuery(DSQuery):
         filters.add("pro.country_code = cou.code")
         if country is not None:
             filters.add("cou.name = '"+country+"'")
+
+        return filters
+
+    def GetSQLDomainsFrom (self) :
+        #tables necessaries for domains
+        tables = Set([])
+        tables.add("people")
+        tables.add("issues i")
+
+        return tables
+
+    def GetSQLDomainsWhere (self, name) :
+        #fields necessaries to match info among tables
+        filters = Set([])
+        filters.add("i.submitted_by = people.id")
+        if name is not None and name<>'':
+            filters.add("people.email like '%"+name.replace("'","")+"%'")
 
         return filters
 
@@ -1629,7 +1644,7 @@ class SCRQuery(DSQuery):
     def GetSQLBotsFrom (self):
         tables = Set([])
         tables.add("people_uidentities pup")
-        tables.add(self.identities_db + ".uidentities u")
+        tables.add(self.identities_db + ".profiles pro")
 
         return tables
 
@@ -1645,11 +1660,12 @@ class SCRQuery(DSQuery):
         if table == "issues": field = "i.submitted_by"
 
         filters.add(field + " = pup.people_id")
-        filters.add("u.uuid = pup.uuid")
+        filters.add("pro.uuid = pup.uuid")
+        filters.add("pro.is_bot<>1")
         for bot in bots:
             # This code only ignores bots provided in raw_bots.
             # This should add the other way around, u.identifier = 'xxx'
-            filters.add("u.identifier <> '" + bot + "'")
+            filters.add("pro.name <> '" + bot + "'")
 
         return filters
 
@@ -1667,7 +1683,8 @@ class SCRQuery(DSQuery):
                 if analysis == 'repository': From.union_update(self.GetSQLRepositoriesFrom())
                 elif analysis == 'company': From.union_update(self.GetSQLCompaniesFrom())
                 elif analysis == 'country': From.union_update(self.GetSQLCountriesFrom())
-                elif analysis == 'project': From.union_update(self.GetSQLProjectFrom())
+                elif analysis == 'domain': From.union_update(self.GetSQLDomainsFrom())
+                elif analysis == 'project': From.union_update(self.GetSQLProjectsFrom(type_analysis[1]))
                 elif analysis == 'people2': From.union_update(self.GetSQLPeopleFrom())
                 elif analysis == 'autoreviews': From.union_update(self.GetSQLAutoReviewsFrom())
                 elif analysis == 'notsummary': From.union_update(self.GetSQLNotSummaryFrom())
@@ -1740,6 +1757,7 @@ class SCRQuery(DSQuery):
                 if analysis == 'repository': where.union_update(self.GetSQLRepositoriesWhere(value))
                 elif analysis == 'company': where.union_update(self.GetSQLCompaniesWhere(value))
                 elif analysis == 'country': where.union_update(self.GetSQLCountriesWhere(value))
+                elif analysis == 'domain': where.union_update(self.GetSQLDomainsWhere(value))
                 elif analysis == 'people2': where.union_update(self.GetSQLPeopleWhere(value, "issues"))
                 elif analysis == 'autoreviews': where.union_update(self.GetSQLAutoReviewsWhere(value))
                 elif analysis == 'notsummary': where.union_update(self.GetSQLNotSummaryWhere(value))
@@ -1748,7 +1766,7 @@ class SCRQuery(DSQuery):
                         logging.error("project filter not supported without identities_db")
                         sys.exit(0)
                     else:
-                        where.union_update(self.GetSQLProjectWhere(value))
+                        where.union_update(self.GetSQLProjectsWhere())
         return where
 
     def GetSQLReportWhere (self, filters, table = "changes"):
@@ -1959,14 +1977,10 @@ class SCRQuery(DSQuery):
         fields.add("TIMESTAMPDIFF(SECOND,ch_ext.changed_on,ch.changed_on)/(24*3600) AS revtime")
         fields.add("ch.changed_on")
 
-        all_items = self.get_all_items(mfilter.type_analysis)
-        if all_items:
-            group_field = self.get_group_field(all_items)
-            fields.add(group_field)
-
         tables.add("issues i")
         tables.add("changes ch")
-        tables.add("changes ch_ext, people")
+        tables.add("changes ch_ext")
+        tables.add("people")
         tables.union_update(self.GetSQLReportFrom(mfilter))
 
         filters.add("i.id = ch.issue_id")
@@ -1984,6 +1998,11 @@ class SCRQuery(DSQuery):
         fields_str = self._get_fields_query(fields)
         tables_str = self._get_tables_query(tables)
         filters_str = self._get_filters_query(filters)
+
+        all_items = self.get_all_items(mfilter.type_analysis)
+        if all_items:
+            group_field = self.get_group_field(all_items)
+            fields_str = group_field + "," + fields_str
 
         filters_str += " ORDER BY ch_ext.changed_on"
 
@@ -2325,25 +2344,6 @@ class IRCQuery(DSQuery):
 
         return filters
 
-    def GetSQLDomainsFrom(self):
-        # tables necessary to domains analysis
-        tables = Set([])
-        tables.add("people_uidentities pup")
-        tables.add(self.identities_db + ".domains d")
-        tables.add(self.identities_db + ".uidentities_domains upd")
-
-        return tables
-
-    def GetSQLDomainsWhere(self, name):
-        # filters necessary to domains analysis
-        filters = Set([])
-        filters.add("i.nick = pup.people_id")
-        filters.add("pup.uuid = upd.uuid")
-        filters.add("upd.domain_id = d.id")
-        filters.add("d.name = " + name)
-
-        return filters
-
     def GetSQLPublicFrom(self):
         # tables necessary to public channels analysis
         tables = Set([])
@@ -2407,7 +2407,6 @@ class IRCQuery(DSQuery):
                 if analysis == 'repository': From.union_update(self.GetSQLRepositoriesFrom())
                 elif analysis == 'company': From.union_update(self.GetSQLCompaniesFrom())
                 elif analysis == 'country': From.union_update(self.GetSQLCountriesFrom())
-                elif analysis == 'domain': From.union_update(self.GetSQLDomainsFrom())
                 elif analysis == 'people2': From.union_update(self.GetSQLPeople2From())
                 elif analysis == 'public': From.union_update(self.GetSQLPublicFrom())
         return From
@@ -2472,7 +2471,6 @@ class IRCQuery(DSQuery):
                 if analysis == 'repository': where.union_update(self.GetSQLRepositoriesWhere(value))
                 elif analysis == 'company': where.union_update(self.GetSQLCompaniesWhere(value))
                 elif analysis == 'country': where.union_update(self.GetSQLCountriesWhere(value))
-                elif analysis == 'domain': where.union_update(self.GetSQLDomainsWhere(value))
                 elif analysis == 'people2': where.union_update(self.GetSQLPeople2Where(value))
                 elif analysis == 'public': where.union_update(self.GetSQLPublicWhere(value))
                 pos += 1
@@ -2913,44 +2911,19 @@ class PullpoQuery(DSQuery):
     def GetSQLDomainsFrom(self):
         # tables necessary to domains analysis
         tables = Set([])
-        tables.add("people_uidentities pup")
-        tables.add(self.identities_db + ".domains d")
-        tables.add(self.identities_db + ".uidentities_domains upd")
+        tables.add("people")
 
         return tables
 
     def GetSQLDomainsWhere(self, name):
         # filters necessary to domains analysis
         filters = Set([])
-        filters.add("pr.user_id = pup.people_id")
-        filters.add("pup.uuid = upd.uuid")
-        filters.add("upd.domain_id = d.id")
-        filters.add("d.name = " + name)
+        filters.add("pr.user_id = people.id")
+
+        if name is not None and name<>'':
+            filters.add("people.email like '%"+name.replace("'","")+"%'")
 
         return filters
-
-    def GetSQLProjectFrom (self):
-        # projects are mapped to repositories
-        tables = Set([])
-        tables.add("repositories re")
-
-        return tables
-
-    def GetSQLProjectWhere (self, project):
-        # include all repositories for a project and its subprojects
-        filters = Set([])
-
-        repos = """re.url IN (
-               SELECT prep.repository_name
-               FROM   %s.projects p, %s.project_repositories prep
-               WHERE  p.project_id = prep.project_id AND p.project_id IN (%s)
-                   AND prep.data_source='pullpo'
-        )""" % (self.projects_db, self.projects_db, self.get_subprojects(project))
-        filters.add(repos)
-        filters.add("re.id = pr.repo_id")
-
-        return filters
-
 
     def GetSQLReportFrom (self, type_analysis):
         #generic function to generate 'from' clauses
@@ -2971,7 +2944,7 @@ class PullpoQuery(DSQuery):
             elif analysis == 'company': From.union_update(self.GetSQLCompaniesFrom())
             elif analysis == 'country': From.union_update(self.GetSQLCountriesFrom())
             elif analysis == 'domain': From.union_update(self.GetSQLDomainsFrom())
-            elif analysis == 'project': From.union_update(self.GetSQLProjectFrom())
+            elif analysis == 'project': From.union_update(self.GetSQLProjectsFrom(type_analysis[1]))
         return From
 
     def GetSQLReportWhere (self, type_analysis):
@@ -3000,7 +2973,7 @@ class PullpoQuery(DSQuery):
                     logging.error("project filter not supported without identities_db")
                     sys.exit(0)
                 else:
-                    where.union_update(self.GetSQLProjectWhere(value))
+                    where.union_update(self.GetSQLProjectsWhere())
         return where
 
     def GetReviewsSQL (self, period, startdate, enddate, type_, type_analysis, evolutionary):

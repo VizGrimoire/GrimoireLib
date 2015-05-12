@@ -278,8 +278,7 @@ class Pending(Metrics):
         items = items.pop('name')
 
         from vizgrimoire.GrimoireUtils import fill_and_order_items
-        id_field = SCRQuery.get_group_field(self.filters.type_analysis[0])
-        id_field = id_field.split('.')[1] # remove table name
+        id_field = SCRQuery.get_group_field_alias(self.filters.type_analysis[0])
         submitted = check_array_values(submitted)
         merged = check_array_values(merged)
         abandoned = check_array_values(abandoned)
@@ -308,8 +307,7 @@ class Pending(Metrics):
     def get_agg_all(self):
         evol = False
         metrics = self._get_metrics_for_pending_all(evol)
-        id_field = SCRQuery.get_group_field(self.filters.type_analysis[0])
-        id_field = id_field.split('.')[1] # remove table name
+        id_field = SCRQuery.get_group_field_alias(self.filters.type_analysis[0])
         data= \
             [metrics['submitted'][i]-metrics['merged'][i]-metrics['abandoned'][i] \
              for i in range(0, len(metrics['submitted']))]
@@ -318,8 +316,7 @@ class Pending(Metrics):
     def get_ts_all(self):
         evol = True
         metrics = self._get_metrics_for_pending_all(evol)
-        id_field = SCRQuery.get_group_field(self.filters.type_analysis[0])
-        id_field = id_field.split('.')[1] # remove table name
+        id_field = SCRQuery.get_group_field_alias(self.filters.type_analysis[0])
         pending = {"pending":[]}
         for i in range(0, len(metrics['submitted'])):
             pending["pending"].append([])
@@ -618,15 +615,17 @@ class Participants(Metrics):
             filters.add("DATEDIFF (%s, t.submitted_on) < %s " % (self.filters.enddate, days))
 
         fields.add("u.uuid as id")
-        fields.add("u.identifier")
+        fields.add("pro.name as identifier")
         fields.add("count(*) as events")
 
         tables.add("people_uidentities pup")
         tables.add(self.db.identities_db + ".uidentities u")
+        tables.add(self.db.identities_db + ".profiles pro")
         tables.add("issues i")
 
         filters.add("t.submitted_by = pup.people_id")
         filters.add("pup.uuid = u.uuid")
+        filters.add("pup.uuid = pro.uuid")
         filters.add("i.id = t.issue_id")
 
         # Comments people
@@ -690,14 +689,16 @@ class Participants(Metrics):
                                    self.filters.enddate, "t.submitted_on",
                                    fields, tables, filters, False)
 
-        query = query + " group by u.identifier "
+        query = query + " group by pro.name "
         query = query + " order by count(*) desc "
 
         # Add orgs information
         q_orgs = """
-            SELECT top.id, identifier, events, org.name as organization FROM (%s) top
+            SELECT DISTINCT(top.id), top.identifier as identifier, events, org.name as organization FROM (%s) top
             LEFT JOIN %s.enrollments enr ON top.id = enr.uuid
-            LEFT JOIN %s.organizations org ON org.id = enr.organization_id;
+            LEFT JOIN %s.organizations org ON org.id = enr.organization_id
+            GROUP BY top.id
+            ORDER BY events DESC, identifier
             """ % (query, self.db.identities_db, self.db.identities_db)
 
         return self.db.ExecuteQuery(q_orgs)
@@ -1034,6 +1035,8 @@ class Countries(Metrics):
                "ORDER BY issues DESC "
         return(self.db.ExecuteQuery(q))
 
+
+
 class Domains(Metrics):
     id = "domains"
     name = "Domains"
@@ -1041,7 +1044,35 @@ class Domains(Metrics):
     data_source = SCR
 
     def _get_sql(self, evolutionary):
-        pass
+        fields = "COUNT(DISTINCT(SUBSTR(email,LOCATE('@',email)+1))) AS domains"
+        tables = "issues i, people p "
+        filters = "i.submitted_by = p.id"
+        q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
+                               self.filters.enddate, " i.submitted_on ", fields,
+                               tables, filters, evolutionary, self.filters.type_analysis)
+        return q
+
+    def get_list(self):
+        from vizgrimoire.data_source import DataSource
+        from vizgrimoire.filter import Filter
+        startdate = self.filters.startdate
+        enddate = self.filters.enddate
+
+        fields = "DISTINCT(SUBSTR(email,LOCATE('@',email)+1)) AS domain"
+        tables = "issues i, people p"
+        filters = "i.submitted_by = p.id"
+
+        q = """
+            SELECT %s
+            FROM %s
+            WHERE %s AND i.submitted_on >= %s AND i.submitted_on < %s
+            GROUP BY domain
+            ORDER BY COUNT(DISTINCT(i.id)) DESC LIMIT %i
+            """ % (fields, tables, filters, startdate, enddate,  + Metrics.domains_limit)
+
+        data = self.db.ExecuteQuery(q)
+        data['name'] = data.pop('domain')
+        return (data)
 
 class Projects(Metrics):
     id = "projects"
@@ -1184,9 +1215,11 @@ class Reviewers(Metrics):
 
         # Add orgs information
         q_orgs = """
-            SELECT top.id, reviewers, reviewed, org.name as organization FROM (%s) top
+            SELECT DISTINCT(top.id), reviewers, reviewed, org.name as organization FROM (%s) top
             LEFT JOIN %s.enrollments enr ON top.id = enr.uuid
-            LEFT JOIN %s.organizations org ON org.id = enr.organization_id;
+            LEFT JOIN %s.organizations org ON org.id = enr.organization_id
+            GROUP BY top.id
+            ORDER BY reviewed DESC, reviewers
             """ % (q, self.db.identities_db, self.db.identities_db)
 
         return(self.db.ExecuteQuery(q_orgs))
@@ -1310,10 +1343,13 @@ class ActiveCoreReviewers(Metrics):
 
         # Add orgs information
         q_orgs = """
-            SELECT top.id, identifier, reviews, org.name as organization FROM (%s) top
+            SELECT DISTINCT(top.id), identifier, reviews, org.name as organization FROM (%s) top
             LEFT JOIN %s.enrollments enr ON top.id = enr.uuid
-            LEFT JOIN %s.organizations org ON org.id = enr.organization_id;
+            LEFT JOIN %s.organizations org ON org.id = enr.organization_id
+            GROUP BY top.id
+            ORDER BY reviews DESC, identifier
             """ % (query, self.db.identities_db, self.db.identities_db)
+
 
         return self.db.ExecuteQuery(q_orgs)
 
@@ -1362,10 +1398,13 @@ class Closers(Metrics):
 
         # Add orgs information
         q_orgs = """
-            SELECT top.id, %s, %s, org.name as organization FROM (%s) top
+            SELECT DISTINCT(top.id), %s, %s, org.name as organization FROM (%s) top
             LEFT JOIN %s.enrollments enr ON top.id = enr.uuid
-            LEFT JOIN %s.organizations org ON org.id = enr.organization_id;
-            """ % (rol, action, q, self.db.identities_db, self.db.identities_db)
+            LEFT JOIN %s.organizations org ON org.id = enr.organization_id
+            GROUP BY top.id
+            ORDER BY %s DESC, %s
+            """ % (rol, action, q, self.db.identities_db, self.db.identities_db,
+                   action, rol)
 
         return(self.db.ExecuteQuery(q_orgs))
 
@@ -1470,10 +1509,13 @@ class Submitters(Metrics):
 
         # Add orgs information
         q_orgs = """
-            SELECT top.id, %s, %s, org.name as organization FROM (%s) top
+            SELECT DISTINCT(top.id), %s, %s, org.name as organization FROM (%s) top
             LEFT JOIN %s.enrollments enr ON top.id = enr.uuid
-            LEFT JOIN %s.organizations org ON org.id = enr.organization_id;
-            """ % (rol, action, q, self.db.identities_db, self.db.identities_db)
+            LEFT JOIN %s.organizations org ON org.id = enr.organization_id
+            GROUP BY top.id
+            ORDER BY %s DESC, %s
+            """ % (rol, action, q, self.db.identities_db, self.db.identities_db,
+                   action, rol)
 
         return(self.db.ExecuteQuery(q_orgs))
 
@@ -1497,8 +1539,7 @@ class TimeToReview(Metrics):
 
         # First, we need to group by the filter field the data
         all_items = self.db.get_all_items(self.filters.type_analysis)
-        group_field = self.db.get_group_field(all_items)
-        id_field = group_field.split('.')[1] # remove table name
+        id_field = self.db.get_group_field_alias(all_items)
 
         items =  list(Set(data[id_field]))
         data_all[id_field] = items
@@ -1556,8 +1597,7 @@ class TimeToReview(Metrics):
 
         # First, we need to group by the filter field the data
         all_items = self.db.get_all_items(self.filters.type_analysis)
-        group_field = self.db.get_group_field(all_items)
-        id_field = group_field.split('.')[1] # remove table name
+        id_field = self.db.get_group_field_alias(all_items)
 
         items =  list(Set(data[id_field]))
         data_all[id_field] = items

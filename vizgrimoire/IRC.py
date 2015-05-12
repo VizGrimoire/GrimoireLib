@@ -278,19 +278,6 @@ def GetIRCSQLCountriesWhere(name):
            "pro.country_code = c.id and "+\
            "c.name = " + name)
 
-def GetIRCSQLDomainsFrom (i_db):
-    # tables necessary to domains analysis
-    return(" , people_uidentities pup, "+\
-           i_db+".domains d, "+\
-           i_db+".uidentities_domains upd")
-
-def GetIRCSQLDomainsWhere (name):
-    # filters necessary to domains analysis
-    return(" i.nick = pup.people_id and "+\
-           "pup.uuid = upd.uuid and "+\
-           "upd.domain_id = d.id and "+\
-           "d.name = " + name)
-
 def GetTablesOwnUniqueIdsIRC () :
     tables = 'irclog, people_uidentities pup'
     return (tables)
@@ -317,7 +304,6 @@ def GetIRCSQLReportFrom (identities_db, type_analysis):
     if analysis == 'repository': From = GetIRCSQLRepositoriesFrom()
     elif analysis == 'company': From = GetIRCSQLCompaniesFrom(identities_db)
     elif analysis == 'country': From = GetIRCSQLCountriesFrom(identities_db)
-    elif analysis == 'domain': From = GetIRCSQLDomainsFrom(identities_db)
 
     return (From)
 
@@ -338,7 +324,6 @@ def GetIRCSQLReportWhere (type_analysis):
     if analysis == 'repository': where = GetIRCSQLRepositoriesWhere(value)
     elif analysis == 'company': where = GetIRCSQLCompaniesWhere(value)
     elif analysis == 'country': where = GetIRCSQLCountriesWhere(value)
-    elif analysis == 'domain': where = GetIRCSQLDomainsWhere(value)
 
     return (where)
 #

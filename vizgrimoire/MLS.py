@@ -142,15 +142,14 @@ class MLS(DataSource):
             top['senders.'] = msenders.get_list(mfilter, 0)
             top['senders.last month'] = msenders.get_list(mfilter, 31)
             top['senders.last year'] = msenders.get_list(mfilter, 365)
-
             if threads_top:
-	    	top['threads.'] = MLS.getLongestThreads(startdate, enddate, identities_db, npeople)
-            	startdate = datetime.date.today() - datetime.timedelta(days=365)
-            	startdate =  "'" + str(startdate) + "'"
-            	top['threads.last year'] = MLS.getLongestThreads(startdate, enddate, identities_db, npeople)
-            	startdate = datetime.date.today() - datetime.timedelta(days=30)
-            	startdate =  "'" + str(startdate) + "'"
-            	top['threads.last month'] = MLS.getLongestThreads(startdate, enddate, identities_db, npeople) 
+                top['threads.'] = MLS.getLongestThreads(startdate, enddate, identities_db, npeople)
+                startdate = datetime.date.today() - datetime.timedelta(days=365)
+                startdate =  "'" + str(startdate) + "'"
+                top['threads.last year'] = MLS.getLongestThreads(startdate, enddate, identities_db, npeople)
+                startdate = datetime.date.today() - datetime.timedelta(days=30)
+                startdate =  "'" + str(startdate) + "'"
+                top['threads.last month'] = MLS.getLongestThreads(startdate, enddate, identities_db, npeople)
 
         else:
             filter_name = filter_.get_name()
@@ -280,7 +279,7 @@ class MLS(DataSource):
     def create_filter_report_all(filter_, period, startdate, enddate, destdir, npeople, identities_db):
         check = False # activate to debug issues
         filter_name = filter_.get_name()
-        if filter_name in ["people2","company","repository","country","domain"] :
+        if filter_name in ["people2","company","repository","country","domain","project"] :
             filter_all = Filter(filter_name, None)
             agg_all = MLS.get_agg_data(period, startdate, enddate,
                                        identities_db, filter_all)
