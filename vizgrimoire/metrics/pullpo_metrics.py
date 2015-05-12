@@ -865,7 +865,7 @@ class Participants(Metrics):
                                    fields, tables, filters, False)
 
         query = query + " group by pro.name "
-        query = query + " order by count(*) desc "
+        query = query + " order by count(*) desc, identifier "
 
         return self.db.ExecuteQuery(query)
 
@@ -951,7 +951,7 @@ class Countries(Metrics):
                "GROUP BY cou.name "+\
                "ORDER BY submitted DESC, name "
                # "  pr.state = 'merged' AND "+\
-        
+
         return(self.db.ExecuteQuery(q))
 
 class Domains(Metrics):

@@ -1011,7 +1011,7 @@ class Domains(Metrics):
             "       c.changed_on < "+ enddate+ " AND "+\
             "       "+ closed_condition+" "+\
             "GROUP BY domain "+\
-            "ORDER BY COUNT(DISTINCT(c.issue_id)) DESC LIMIT " + str(Metrics.domains_limit)
+            "ORDER BY COUNT(DISTINCT(c.issue_id)) DESC, domain LIMIT " + str(Metrics.domains_limit)
         data = self.db.ExecuteQuery(q)
         data['name'] = data.pop('domain')
         return (data)
