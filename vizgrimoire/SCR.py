@@ -498,6 +498,8 @@ def GetPeopleQuerySCR (developer_id, period, startdate, enddate, evol):
     fields = "COUNT(c.id) AS closed"
     tables = GetTablesOwnUniqueIdsSCR()
     filters = GetFiltersOwnUniqueIdsSCR()+ " AND pup.uuid = '"+ str(developer_id) + "'"
+    # Just closed, not all changes
+    filters += "AND (new_value='MERGED' OR new_value='ABANDONED')"
 
     if (evol):
         q = GetSQLPeriod(period,'changed_on', fields, tables, filters,
