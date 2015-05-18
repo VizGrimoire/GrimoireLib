@@ -8,7 +8,7 @@
 ## This program is distributed in the hope that it will be useful,
 ## but WITHOUT ANY WARRANTY; without even the implied warranty of
 ## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-## GNU General Public License for more details. 
+## GNU General Public License for more details.
 ##
 ## You should have received a copy of the GNU General Public License
 ## along with this program; if not, write to the Free Software
@@ -23,7 +23,7 @@
 # with the followin format:
 # Table: downloads
 #       Fields: date (datetime), ip (varchar), package (varchar), protocol (varchar)
-#       
+#
 
 import logging, os
 
@@ -130,7 +130,7 @@ class DownloadsDS(DataSource):
 
     @staticmethod
     def get_top_metrics ():
-        return ["ips","packages"]
+        return ["ips", "packages", "pages", "countries"]
 
     @staticmethod
     def get_top_data (startdate, enddate, identities_db, filter_ = None, npeople = None):
@@ -153,8 +153,12 @@ class DownloadsDS(DataSource):
             return new_ips
 
         top = {}
+
         mips = DataSource.get_metrics("ips", DownloadsDS)
         mpackages = DataSource.get_metrics("packages", DownloadsDS)
+        mpages = DataSource.get_metrics("pages", DownloadsDS)
+        mcountries = DataSource.get_metrics("countries", DownloadsDS)
+
         period = None
         type_analysis = None
         if filter_ is not None:
@@ -164,11 +168,12 @@ class DownloadsDS(DataSource):
         if filter_ is None:
             top['ips.'] = filter_ips(mips.get_list(mfilter, 0))
             top['packages.'] = mpackages.get_list(mfilter, 0)
+            top['pages.'] = mpages.get_list()
+            top['countries.'] = mcountries.get_list()
         else:
             logging.info("DownloadsDS does not support yet top for filters.")
 
         return top
-
 
     @staticmethod
     def create_top_report (startdate, enddate, destdir, npeople, i_db):
@@ -215,12 +220,14 @@ class DownloadsDS(DataSource):
 
     @staticmethod
     def get_metrics_core_agg():
-        return ['downloads','packages','protocols','ips']
+        return ['downloads','packages','protocols','ips',
+                'visits', 'bounce_rate']
 
     @staticmethod
     def get_metrics_core_ts():
-        return ['downloads','packages','protocols','ips']
+        return ['downloads','packages','protocols','ips',
+                'uvisitors', 'visits', 'bounces']
 
     @staticmethod
     def get_metrics_core_trends():
-        return ['downloads','packages','ips']
+        return ['downloads','packages','ips', 'visits', 'bounces']

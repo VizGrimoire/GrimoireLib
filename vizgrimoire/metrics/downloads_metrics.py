@@ -8,7 +8,7 @@
 ## This program is distributed in the hope that it will be useful,
 ## but WITHOUT ANY WARRANTY; without even the implied warranty of
 ## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-## GNU General Public License for more details. 
+## GNU General Public License for more details.
 ##
 ## You should have received a copy of the GNU General Public License
 ## along with this program; if not, write to the Free Software
@@ -37,6 +37,7 @@ from vizgrimoire.metrics.query_builder import DownloadsDSQuery
 
 from vizgrimoire.DownloadsDS import DownloadsDS
 
+from sets import Set
 
 class Downloads(Metrics):
     """ Number of downloads """
@@ -51,8 +52,8 @@ class Downloads(Metrics):
         tables = "downloads"
         filters = ""
 
-        query = self.db.BuildQuery(self.filters.period, self.filters.startdate, 
-                                      self.filters.enddate, " date ", fields, tables, 
+        query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
+                                      self.filters.enddate, " date ", fields, tables,
                                       filters, evolutionary)
         return query
 
@@ -70,7 +71,7 @@ class Packages(Metrics):
         tables = "downloads"
         filters = ""
 
-        query = self.db.BuildQuery(self.filters.period, self.filters.startdate,   
+        query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                       self.filters.enddate, " date ", fields, tables,
                                       filters, evolutionary)
         return query
@@ -130,7 +131,7 @@ class IPs(Metrics):
         limit = metric_filters.npeople
 
         query = """
-                select ip as ips, count(*) as downloads 
+                select ip as ips, count(*) as downloads
                 from downloads
                 where date >= %s and
                       date < %s
@@ -150,3 +151,172 @@ class IPs(Metrics):
                                       filters, evolutionary)
         return query
 
+
+class UniqueVisitors(Metrics):
+    """Number of unique visitors """
+
+    id = "uvisitors"
+    name = "Unique Visitors"
+    desc = "Number of unique visitors"
+    data_source = DownloadsDS
+
+    def get_agg(self):
+        # We do not have this value yet
+        return {'uvisitors' : 'null'}
+
+    def get_ts(self):
+        if self.filters.period != 'month':
+            msg = 'Period %s not valid. Currently, only "month" is supported' % \
+                self.filters.period
+            return ValueError(msg)
+
+        fields = Set([])
+        tables = Set([])
+        filters = Set([])
+
+        fields.add("unique_visitors uvisitors")
+        tables.add("visits_month v")
+
+        query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
+                                   self.filters.enddate, "v.date",
+                                   fields, tables, filters, True,
+                                   self.filters.type_analysis)
+
+        ts = self.db.ExecuteQuery(query)
+        ts = completePeriodIds(ts, self.filters.period,
+                               self.filters.startdate, self.filters.enddate)
+        return ts
+
+
+class Visits(Metrics):
+    """Number of visits"""
+
+    id = "visits"
+    name = "Visits"
+    desc = "Number of visits"
+    data_source = DownloadsDS
+
+    def _get_sql(self, evolutionary):
+        if self.filters.period != 'month':
+            msg = 'Period %s not valid. Currently, only "month" is supported' % \
+                self.filters.period
+            return ValueError(msg)
+
+        fields = "SUM(visits) visits"
+        tables = "visits_month v"
+        filters = ""
+
+        query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
+                                   self.filters.enddate, " date ", fields, tables,
+                                   filters, evolutionary)
+        return query
+
+
+class Bounces(Metrics):
+    """Number of bounces"""
+
+    id = "bounces"
+    name = "Bounces"
+    desc = "Number of bounces"
+    data_source = DownloadsDS
+
+    def _get_sql(self, evolutionary):
+        if self.filters.period != 'month':
+            msg = 'Period %s not valid. Currently, only "month" is supported' % \
+                self.filters.period
+            return ValueError(msg)
+
+        fields = "SUM(bounce) bounces"
+        tables = "visits_month v"
+        filters = ""
+
+        query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
+                                   self.filters.enddate, " date ", fields, tables,
+                                   filters, evolutionary)
+        return query
+
+
+class Pages(Metrics):
+    """Most visited pages"""
+
+    id = "pages"
+    name = "Pages"
+    desc = "Most visited pages"
+    data_source = DownloadsDS
+
+
+    def _get_sql_generic(self, evolutionary, islist=False):
+        if self.filters.period != 'month':
+            msg = 'Period %s not valid. Currently, only "month" is supported' % \
+                self.filters.period
+            return ValueError(msg)
+
+        fields = Set([])
+        tables = Set([])
+        filters = Set([])
+
+        if not islist:
+            fields.add("count(distinct(p.page)) as pages")
+        else:
+            fields.add("p.page as page, SUM(p.visits) visits")
+        tables.add("pages_month p")
+
+        q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
+                               self.filters.enddate, " p.date ", fields,
+                               tables, filters, evolutionary, self.filters.type_analysis)
+        if islist:
+            q += " GROUP BY p.page "
+            if not evolutionary: q += " ORDER BY visits DESC, page"
+
+        return q
+
+    def _get_sql(self, evolutionary):
+        return self._get_sql_generic(evolutionary)
+
+    def get_list(self):
+        q = self._get_sql_generic(None, True)
+        data = self.db.ExecuteQuery(q)
+        return data
+
+
+class Countries(Metrics):
+    """Most visitor countries"""
+
+    id = "countries"
+    name = "Countries"
+    desc = "Most visitor countries"
+    data_source = DownloadsDS
+
+
+    def _get_sql_generic(self, evolutionary, islist=False):
+        if self.filters.period != 'month':
+            msg = 'Period %s not valid. Currently, only "month" is supported' % \
+                self.filters.period
+            return ValueError(msg)
+
+        fields = Set([])
+        tables = Set([])
+        filters = Set([])
+
+        if not islist:
+            fields.add("count(distinct(c.country)) as countries")
+        else:
+            fields.add("c.country as country, SUM(c.visits) visits")
+        tables.add("countries_month c")
+
+        q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
+                               self.filters.enddate, " c.date ", fields,
+                               tables, filters, evolutionary, self.filters.type_analysis)
+        if islist:
+            q += " GROUP BY c.country "
+            if not evolutionary: q += " ORDER BY visits DESC, country"
+
+        return q
+
+    def _get_sql(self, evolutionary):
+        return self._get_sql_generic(evolutionary)
+
+    def get_list(self):
+        q = self._get_sql_generic(None, True)
+        data = self.db.ExecuteQuery(q)
+        return data
