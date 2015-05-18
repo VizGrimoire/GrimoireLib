@@ -234,6 +234,7 @@ class MLS(DataSource):
             items_list = items
 
         for item in items :
+            item = item.replace("'", "\\'")
             item_name = "'"+ item+ "'"
             logging.info (item_name)
             filter_item = Filter(filter_.get_name(), item)
