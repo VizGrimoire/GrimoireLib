@@ -907,6 +907,69 @@ class Countries(Metrics):
         data = self.db.ExecuteQuery(q)
         return (data)
 
+class CompaniesCountries(Metrics):
+    """ Countries in Companies participating in the issue tracking system """
+
+    id = "organizations+countries"
+    name = "CompaniesCountries"
+    desc = "Countries in Companies participating in the issue tracking system"
+    data_source = ITS
+
+    def get_list(self):
+        identities_db = self.db.identities_db
+        startdate = self.filters.startdate
+        enddate = self.filters.enddate
+
+        q = "SELECT count(i.id) as tickets, CONCAT(org.name, '_', cou.name) as name "+\
+            "FROM issues i, people_uidentities pup, "+\
+            identities_db+".countries cou, "+identities_db+".profiles pro, "+\
+            identities_db+".organizations org, "+identities_db+".enrollments enr "+\
+            "WHERE pup.people_id = i.submitted_by and "+\
+            "      pup.uuid  = pro.uuid and "+\
+            "      pro.country_code = cou.code and "+\
+            "      pup.uuid  = enr.uuid and "+\
+            "      enr.organization_id = org.id and "+\
+            "      i.submitted_on >= enr.start  and i.submitted_on < enr.end and "+\
+            "      i.submitted_on >="+startdate+ " and "+\
+            "      i.submitted_on < "+enddate+ " "+\
+            "group by org.name, cou.name "+\
+            "order by tickets desc, org.name, cou.name"
+        clist = self.db.ExecuteQuery(q)
+        return clist
+
+class CompaniesProjects(Metrics):
+    """ Projects in Companies participating in the issue tracking system """
+
+    id = "organizations+projects"
+    name = "CompaniesProjects"
+    desc = "Organizations per Projects participating in the issue tracking system"
+    data_source = ITS
+
+    def get_list(self):
+        identities_db = self.db.identities_db
+        startdate = self.filters.startdate
+        enddate = self.filters.enddate
+
+        prj_name = org_name = None # all projects and orgs
+        tables = self.db.GetSQLProjectsFrom(prj_name)
+        tables.union_update(self.db.GetSQLCompaniesFrom())
+        filters = self.db.GetSQLProjectsWhere()
+        filters.union_update(self.db.GetSQLCompaniesWhere(org_name))
+
+        tables = self.db._get_tables_query(tables)
+        filters = self.db._get_filters_query(filters)
+
+        q = """
+            SELECT count(i.id) as tickets, CONCAT(org.name, '_', prj.name) as name
+            FROM %s
+            WHERE %s
+            group by org.name, prj.name
+            order by tickets desc, org.name, prj.name
+            """ % (tables, filters)
+
+        clist = self.db.ExecuteQuery(q)
+        return clist
+
 class Domains(Metrics):
     """ Domains metric class for issue tracking systems """
     id = "domains"
