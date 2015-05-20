@@ -1200,10 +1200,7 @@ class Projects(Metrics):
         mcommits.filters = mfilter
         commits = mcommits.get_agg()
         mcommits.filters = mfilter_orig
-        plist = commits["name"]
-        if not isinstance(plist, (list)):
-            plist = [plist]
-        return plist
+        return commits
 
 if __name__ == '__main__':
     filters1 = MetricFilters("month", "'2014-04-01'", "'2015-01-01'", ['repository',"'OpenID'"])
