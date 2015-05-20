@@ -115,9 +115,10 @@ class Commits(Metrics):
         fields.add("count(distinct(s.rev)) as commits")
 
         tables.add("scmlog s")
+        tables.add("(select distinct(a.commit_id) as id from actions a) nomergers")
         tables.union_update(self.db.GetSQLReportFrom(self.filters))
  
-        filters.add("s.id IN (select distinct(a.commit_id) from actions a)")
+        filters.add("s.id = nomergers.id")
         filters.union_update(self.db.GetSQLReportWhere(self.filters, "author"))
 
         query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
