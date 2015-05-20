@@ -770,8 +770,8 @@ class CommitsAuthor(Metrics):
   
         fields.add("count(distinct(s.id))/count(distinct(pup.uuid)) as avg_commits_author ")
         tables.add("scmlog s")
-        tables.add("actions a")
-        filters.add("s.id = a.commit_id")
+        tables.add("(select distinct(a.commit_id) as id from actions a) nomergers")
+        filters.add("s.id = nomergers.id")
 
         filters.union_update(self.db.GetSQLReportWhere(self.filters, "author"))
 
