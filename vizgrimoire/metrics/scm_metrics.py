@@ -1187,36 +1187,23 @@ class Projects(Metrics):
     data_source = SCM
 
     def get_list(self):
+        # Just get commits per project
         startdate = self.filters.startdate
         enddate = self.filters.enddate
 
-        # Get all projects list
-        q = "SELECT p.id AS name FROM  %s.projects p" % (self.db.projects_db)
-        projects = self.db.ExecuteQuery(q)
-        data = []
-
-        # Loop all projects getting reviews
-        for project in projects['name']:
-            type_analysis = ['project', project]
-            period = None
-            evol = False
-            mcommits = Commits(self.db, self.filters)
-            mfilter = MetricFilters(period, startdate, enddate, type_analysis)
-            mfilter_orig = mcommits.filters
-            mcommits.filters = mfilter
-            commits = mcommits.get_agg()
-            mcommits.filters = mfilter_orig
-            commits = commits['commits']
-            if (commits > 0):
-                data.append([commits,project])
-
-        # Order the list using reviews: https://wiki.python.org/moin/HowTo/Sorting
-        from operator import itemgetter
-        data_sort = sorted(data, key=itemgetter(0),reverse=True)
-        names = [name[1] for name in data_sort]
-
-        return({"name":names})
-
+        type_analysis = ['project', None]
+        period = None
+        evol = False
+        mcommits = Commits(self.db, self.filters)
+        mfilter = MetricFilters(period, startdate, enddate, type_analysis)
+        mfilter_orig = mcommits.filters
+        mcommits.filters = mfilter
+        commits = mcommits.get_agg()
+        mcommits.filters = mfilter_orig
+        plist = commits["name"]
+        if not isinstance(plist, (list)):
+            plist = [plist]
+        return plist
 
 if __name__ == '__main__':
     filters1 = MetricFilters("month", "'2014-04-01'", "'2015-01-01'", ['repository',"'OpenID'"])
