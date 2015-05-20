@@ -702,11 +702,12 @@ class CommitsPeriod(Metrics):
         # Basic parts of the query needed when calculating commits per period
         fields = Set([])
         tables = Set([])
-        filters = Set([])        
+        filters = Set([])
 
         fields.add("count(distinct(s.id))/timestampdiff("+self.filters.period+",min(s.author_date),max(s.author_date)) as avg_commits_"+self.filters.period)
         tables.add("scmlog s")
-        filters.add("s.id IN (SELECT DISTINCT(a.commit_id) from actions a)")
+        tables.add("(select distinct(a.commit_id) as id from actions a) nomergers")
+        filters.add("s.id = nomergers.id")
 
         tables.union_update(self.db.GetSQLReportFrom(self.filters))
         filters.union_update(self.db.GetSQLReportWhere(self.filters, "author"))
