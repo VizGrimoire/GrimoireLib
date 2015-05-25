@@ -38,14 +38,14 @@ class Email(object):
         self.date = None # Email sending date
         self.url = None # Domain of the archive
         self._buildEmail() # Constructor
-               
+
     def _buildEmail(self):
         # This method retrieves items of information of a given
         # email, specified by its email id.
 
         query = """
-                select distinct m.message_ID, 
-                       m.subject, 
+                select distinct m.message_ID,
+                       m.subject,
                        m.message_body,
                        m.first_date,
                        pro.name as initiator_name,
@@ -96,7 +96,7 @@ class Threads(object):
         self.longest = None # the thread with the longest queue of emails
         self.verbose = None # the thread with the most verbose emails.
 
-        self._init_threads()    
+        self._init_threads()
 
     def _build_threads (self, message_id):
         # Constructor of threads.
@@ -116,31 +116,30 @@ class Threads(object):
                 cont = cont + 1
             for msg in sons:
                 messages.extend([msg])
-                messages.extend(self._build_threads(msg))            
-               
+                messages.extend(self._build_threads(msg))
 
-        return messages          
-            
+
+        return messages
 
     def _init_threads(self):
         # Returns dictionary of message_id threads. Each key contains a list
         # of emails associated to that thread (not ordered).
-       
+
         # Retrieving all of the messages. 
         query = """
-                select DISTINCT message_ID, is_response_of 
-                from messages 
+                select DISTINCT message_ID, is_response_of
+                from messages
                 where first_date >= %s and first_date < %s
                 """ % (self.initdate, self.enddate)
         list_messages = ExecuteQuery(query)
         self.list_message_id = list_messages["message_ID"]
         self.list_is_response_of = list_messages["is_response_of"]
-        
+
         messages = {}
         for message_id in self.list_message_id:
             # Looking for messages in the thread
             index = self.list_message_id.index(message_id)
-            
+
             # Only analyzing those whose is_response_of is None, 
             # those are the message 'root' of each thread.
             if self.list_is_response_of[index] is None:
@@ -157,7 +156,7 @@ class Threads(object):
         if self.crowded == None:
             # variable was not initialize
             pass
-       
+
     def topCrowdedThread(self, numTop):
         # Returns list ordered by the longest thread
 
@@ -181,7 +180,7 @@ class Threads(object):
                              messages_people mp,
                              people_uidentities pup
                         where m.message_ID = '%s' and
-                              m.message_ID = mp.message_id and 
+                              m.message_ID = mp.message_id and
                               mp.type_of_recipient = 'From' and
                               mp.email_address = pup.people_id
                         """ % (message)
@@ -199,7 +198,6 @@ class Threads(object):
             email = Email(message_id, self.i_db)
             top_threads_emails.append((email, top[1]))
         return top_threads_emails
-
 
     def longestThread (self):
         # Returns the longest thread
@@ -231,7 +229,7 @@ class Threads(object):
             top_threads = values
         else:
             top_threads = values[0:numTop]
-            
+
         for thread in top_threads:
             # the root message is the first of the list 
             # (the rest of them are not ordered)
@@ -243,15 +241,14 @@ class Threads(object):
             top_threads_emails.append(email)
 
         return top_threads_emails
-        
-  
+
     def verboseThread (self):
         # TODO: at some point these numbers should be calculated when
         # retrieving the initial list of message_id, is_response_of values
         # Returns the most verbose thread (the biggest emails)
         if self.verbose == None:
             # variable was not initialize
-            self.verbose = "" 
+            self.verbose = ""
             current_len = 0
             # iterating through the root messages
             for message_id in self.threads.keys():
@@ -270,8 +267,7 @@ class Threads(object):
                         # New bigger thread found
                         self.verbose = message_id
                         current_len = total_len_bodies
-        return Email(self.verbose, self.i_db) 
-
+        return Email(self.verbose, self.i_db)
 
     def threads (self):
         # Returns the whole data structure
