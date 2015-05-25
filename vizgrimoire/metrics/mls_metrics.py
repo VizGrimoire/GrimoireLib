@@ -468,7 +468,7 @@ class ActiveThreads(Metrics):
         filters = Set([])
 
         # List of all messages sent to the mailing list
-        fields.add("distinct message_ID as message_id")
+        fields.add("distinct m.message_ID as message_id")
 
         tables.add("messages m")
         tables.union_update(self.db.GetSQLReportFrom(self.filters))
