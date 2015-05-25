@@ -431,6 +431,66 @@ class Threads(Metrics):
                                    tables, filters, evolutionary, self.filters.type_analysis)
         return query
 
+
+class ActiveThreads(Metrics):
+    """ Active threads are those with activity between two dates.
+
+    Thus, a thread may have been started in a specific date, but
+    if that thread shows activity in the studied period, that would
+    be an active thread.
+    """
+
+    id = "active_threads"
+    name = "Active Threads"
+    desc = "Active threads in a given period"
+    data_source = MLS
+
+
+    def _root_message(self, message_id):
+        """ _root_message returns the root of a given message
+        """
+
+        message_id = message_id.replace("'", "\\'")
+        query = """select distinct is_response_of
+                   from messages
+                   where message_ID = '%s'""" % (message_id)
+        father = self.db.ExecuteQuery(query)
+        if father["is_response_of"] is not None and len(father["is_response_of"])>0:
+            self._root_message(father["is_response_of"])
+
+        return father["is_response_of"]
+
+
+    def get_agg(self):
+
+        fields = Set([])
+        tables = Set([])
+        filters = Set([])
+
+        # List of all messages sent to the mailing list
+        fields.add("distinct message_ID as message_id")
+
+        tables.add("messages m")
+        tables.union_update(self.db.GetSQLReportFrom(self.filters))
+
+        filters.union_update(self.db.GetSQLReportWhere(self.filters))
+
+        query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
+                                   self.filters.enddate, " m.first_date ", fields,
+                                   tables, filters, False, self.filters.type_analysis)
+        messages = self.db.ExecuteQuery(query)
+
+        # for each of the messages sent between two dates
+        # and the specific applied filters, the root message of each
+        # of them is calculated.
+        root_messages = Set([])
+        for message_id in messages["message_id"]:
+            root_message = self._root_message(message_id)
+            root_messages.add(root_message)
+
+        return len(root_messages)
+
+
 class Repositories(Metrics):
     """ Mailing lists repositories """
 
