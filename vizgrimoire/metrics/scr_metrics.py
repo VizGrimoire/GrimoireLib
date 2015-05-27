@@ -1098,6 +1098,7 @@ class Projects(Metrics):
         msubmitted.filters = mfilter
         submitted = msubmitted.get_agg()
         msubmitted.filters = mfilter_orig
+        checkListArray(submitted)
         return submitted
 
 class Repositories(Metrics):
