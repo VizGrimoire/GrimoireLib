@@ -59,7 +59,7 @@ class Events(Metrics):
         fields.add("count(distinct(eve.id)) as events")
 
         tables.add("events eve")
-        qtables.union_update(self.db.GetSQLReportFrom(self.filters))
+        tables.union_update(self.db.GetSQLReportFrom(self.filters))
 
         filters.union_update(self.db.GetSQLReportWhere(self.filters))
 
