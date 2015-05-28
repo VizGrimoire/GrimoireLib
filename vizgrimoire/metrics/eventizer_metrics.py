@@ -59,7 +59,7 @@ class Events(Metrics):
         fields.add("count(distinct(eve.id)) as events")
 
         tables.add("events eve")
-        tables.union_update(self.db.GetSQLReportFrom(self.filters))
+        qtables.union_update(self.db.GetSQLReportFrom(self.filters))
 
         filters.union_update(self.db.GetSQLReportWhere(self.filters))
 
@@ -122,14 +122,18 @@ class Attendees(Metrics):
     desc = "Number of people that confirmed their assistance"
     data_source = EventsDS
 
-    def _get_sql(self, evolutionary, islist = False):
+    def _get_sql(self, evolutionary, islist = False, days = 0):
         fields = Set([])
         tables = Set([])
         filters = Set([])
 
         if islist:
             fields.add("p.name")
-            fields.add("count(distinct(eve.id))")
+            fields.add("count(distinct(eve.id)) as events")
+            if (days > 0):
+                tables.add("(SELECT MAX(time) as last_date from events) dt")
+                filters.add("DATEDIFF (last_date, time) < %s " % (days))
+
         else:
             fields.add("count(distinct(p.id)) as attendees")
 
@@ -154,11 +158,11 @@ class Attendees(Metrics):
 
         return query
 
-    def get_list(self):
-        query = self._get_sql(None, True) # evolutionary value is not used
+    def get_list(self, filters = None, days = 0):
+        query = self._get_sql(evolutionary=False, islist=True, days=days) # evolutionary value is not used
         data = self.db.ExecuteQuery(query)
         return data
-        
+
 
 class Cities(Metrics):
     """ Cities that are part of each event
