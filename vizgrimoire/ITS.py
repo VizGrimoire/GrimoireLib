@@ -157,7 +157,7 @@ class ITS(DataSource):
             top = dict(top_closers_data.items() + top_openers_data.items())
 
             if top_issues_on:
-                from vizgrimoire.analysis.top_issues import ssues
+                from vizgrimoire.analysis.top_issues import TopIssues
                 from vizgrimoire.report import Report
                 db_identities= Report.get_config()['generic']['db_identities']
                 dbuser = Report.get_config()['generic']['db_user']
