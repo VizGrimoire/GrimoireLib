@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 # Copyright (C) 2014 Bitergia
-# 
+#
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 3 of the License, or
@@ -149,14 +149,25 @@ class TopIssues(Analyses):
     def result(self, data_source = None):
         """ Returns a JSON to be included in top file """
         from vizgrimoire.ITS import ITS
-        if  data_source is not None and data_source != ITS: return None
+        from vizgrimoire.ITS_1 import ITS_1
 
-        # Closed condition for MediaWiki
-        top_close_condition_mediawiki = """
-            (status = 'RESOLVED' OR status = 'CLOSED' OR status = 'VERIFIED'
-             OR priority = 'Lowest')
-        """
-        nissues = "40"
+        if not data_source:
+            return None
+        elif type(data_source) not in [type(ITS), type(ITS_1)]:
+            return None
+
+        if data_source._get_backend() == 'maniphest':
+            top_close_condition = """
+                (resolution = 'closed')
+            """
+        else:
+            # Closed condition for MediaWiki
+            top_close_condition = """
+                (status = 'RESOLVED' OR status = 'CLOSED' OR status = 'VERIFIED'
+                OR priority = 'Lowest')
+            """
+
+        nissues = "50"
 
         startdate = self.filters.startdate
         enddate = self.filters.enddate
@@ -167,13 +178,13 @@ class TopIssues(Analyses):
 
         top_issues_data = {}
 
-        tops = self.GetTopIssuesWithoutAction(startdate, enddate, top_close_condition_mediawiki, nissues)
+        tops = self.GetTopIssuesWithoutAction(startdate, enddate, top_close_condition, nissues)
         top_issues_data['issues.no action']= completeTops(tops, issues_details)
 
-        tops = self.GetTopIssuesWithoutComment(startdate, enddate, top_close_condition_mediawiki, nissues)
+        tops = self.GetTopIssuesWithoutComment(startdate, enddate, top_close_condition, nissues)
         top_issues_data['issues.no comment']= completeTops(tops, issues_details)
 
-        tops = self.GetTopIssuesWithoutResolution(startdate, enddate, top_close_condition_mediawiki, nissues)
+        tops = self.GetTopIssuesWithoutResolution(startdate, enddate, top_close_condition, nissues)
         top_issues_data['issues.no resolution']= completeTops(tops, issues_details)
 
         return top_issues_data

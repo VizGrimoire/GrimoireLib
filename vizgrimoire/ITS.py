@@ -8,7 +8,7 @@
 ## This program is distributed in the hope that it will be useful,
 ## but WITHOUT ANY WARRANTY; without even the implied warranty of
 ## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-## GNU General Public License for more details. 
+## GNU General Public License for more details.
 ##
 ## You should have received a copy of the GNU General Public License
 ## along with this program; if not, write to the Free Software
@@ -50,7 +50,7 @@ class ITS(DataSource):
 
     @staticmethod
     def get_name(): return "its"
- 
+
     @staticmethod
     def get_url():
         """Get the URL from which the data source was gathered"""
@@ -157,7 +157,7 @@ class ITS(DataSource):
             top = dict(top_closers_data.items() + top_openers_data.items())
 
             if top_issues_on:
-                from vizgrimoire.analysis.top_issues import TopIssues
+                from vizgrimoire.analysis.top_issues import ssues
                 from vizgrimoire.report import Report
                 db_identities= Report.get_config()['generic']['db_identities']
                 dbuser = Report.get_config()['generic']['db_user']
@@ -165,7 +165,7 @@ class ITS(DataSource):
                 dbname = Report.get_config()['generic']['db_bicho']
                 dbcon = ITSQuery(dbuser, dbpass, dbname, db_identities)
                 metric_filters = MetricFilters(None, startdate, enddate, [])
-                top_issues_data = TopIssues(dbcon, metric_filters).result()
+                top_issues_data = TopIssues(dbcon, metric_filters).result(cls)
 
                 top = dict(top.items() + top_issues_data.items())
 
@@ -641,6 +641,10 @@ class Backend(object):
 
         elif (its_type == 'storyboard'):
             self.closed_condition = "(new_value='merged' or new_value='invalid')"
+
+        elif (its_type == 'maniphest'):
+            self.closed_condition = "(new_value = 'resolved' OR new_value ='declined' " + \
+                "OR new_value = 'duplicate' OR new_value = 'invalid')"
 
         elif (its_type == 'jira'):
             self.closed_condition = "(new_value='Closed')"
