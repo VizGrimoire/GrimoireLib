@@ -148,12 +148,16 @@ class TopIssues(Analyses):
 
     def result(self, data_source = None):
         """ Returns a JSON to be included in top file """
+        import inspect
         from vizgrimoire.ITS import ITS
         from vizgrimoire.ITS_1 import ITS_1
 
         if not data_source:
             return None
-        elif type(data_source) not in [type(ITS), type(ITS_1)]:
+        elif inspect.isclass(data_source):
+            if data_source != ITS and data_source != ITS_1:
+                return None
+        elif not isinstance(data_source, ITS) and not isinstance(data_source, ITS_1):
             return None
 
         if data_source._get_backend() == 'maniphest':
