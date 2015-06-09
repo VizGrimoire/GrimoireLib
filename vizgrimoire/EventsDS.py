@@ -21,10 +21,12 @@
 #     Daniel Izquierdo <dizquierdo@bitergia.com>
 #     Alvaro del Castillo <acs@bitergia.com>
 
-import logging, os
+import logging, os, re
 
 from vizgrimoire.data_source import DataSource
 from vizgrimoire.GrimoireUtils import createJSON
+from vizgrimoire.filter import Filter
+from vizgrimoire.GrimoireUtils import GetPercentageDiff, GetDates, getPeriod, createJSON, completePeriodIds
 
 class EventsDS(DataSource):
 
@@ -45,7 +47,7 @@ class EventsDS(DataSource):
     @staticmethod
     def get_supported_filters():
         # return ['group','category','city']
-        return []
+        return ['repository']
 
     @staticmethod
     def get_metrics_core_agg():
@@ -61,6 +63,7 @@ class EventsDS(DataSource):
 
     @staticmethod
     def get_evolutionary_data (period, startdate, enddate, i_db, filter_ = None):
+        logging.warn("evolutionary_data")
         if filter_ is not None:
             sf = EventsDS.get_supported_filters()
             if filter_.get_name() not in sf:
@@ -119,6 +122,46 @@ class EventsDS(DataSource):
         if items is None:
             items = EventsDS.get_filter_items(filter_, startdate, enddate, identities_db)
         if (items == None): return
+
+        filter_name = filter_.get_name()
+        items = items['name']
+
+        if not isinstance(items, list):
+            items = [items]
+
+        file_items = []
+        for item in items:
+            if re.compile("^\..*").match(item) is not None: item = "_"+item
+            file_items.append(item)
+
+        fn = os.path.join(destdir, filter_.get_filename(EventsDS()))
+        createJSON(file_items, fn)
+
+        if filter_name in ("repository"):
+            items_list = {'name' : [], 'events_365' : [], 'rsvps_365' : []}
+        else:
+            items_list = items
+
+        for item in items:
+            logging.info(item)
+            filter_item = Filter(filter_.get_name(), item)
+
+            evol_data = EventsDS.get_evolutionary_data(period, startdate, enddate, identities_db, filter_item)
+            fn = os.path.join(destdir, filter_item.get_evolutionary_filename(EventsDS()))
+            createJSON(completePeriodIds(evol_data, period, startdate, enddate), fn)
+
+            agg = EventsDS.get_agg_data(period, startdate, enddate, identities_db, filter_item)
+            fn = os.path.join(destdir, filter_item.get_static_filename(EventsDS()))
+            createJSON(agg, fn)
+
+            if filter_name in ("repository"):
+                items_list['name'].append(item.replace('/', '_'))
+                items_list['events_365'].append(agg['events_365'])
+                items_list['rsvps_365'].append(agg['attendees_365'])
+
+        fn = os.path.join(destdir, filter_.get_filename(EventsDS()))
+        createJSON(items_list, fn)
+
 
     @staticmethod
     def get_top_metrics ():
