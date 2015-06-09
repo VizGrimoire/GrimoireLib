@@ -49,15 +49,15 @@ class EventsDS(DataSource):
 
     @staticmethod
     def get_metrics_core_agg():
-        return ['events','members','cities','attendees']
+        return ['events','members','cities','attendees','groups']
 
     @staticmethod
     def get_metrics_core_ts():
-        return ['events','members','cities','attendees']
+        return ['events','members','cities','attendees','groups']
 
     @staticmethod
     def get_metrics_core_trends():
-        return ['events','members','cities','attendees']
+        return ['events','members','cities','attendees','groups']
 
     @staticmethod
     def get_evolutionary_data (period, startdate, enddate, i_db, filter_ = None):
@@ -104,7 +104,12 @@ class EventsDS(DataSource):
         items = None
         filter_name = filter_.get_name()
 
-        logging.error("EventsDS " + filter_name + " not supported")
+        if (filter_name == "repository"):
+            metric = DataSource.get_metrics("groups", EventsDS)
+            items = metric.get_list()
+        else:
+            logging.error("EventsDS " + filter_name + " not supported")
+
         return items
 
     @staticmethod
@@ -117,7 +122,7 @@ class EventsDS(DataSource):
 
     @staticmethod
     def get_top_metrics ():
-        return ["attendes"]
+        return ["attendes","groups"]
 
     @staticmethod
     def get_top_data (startdate, enddate, identities_db, filter_, npeople):
@@ -126,12 +131,17 @@ class EventsDS(DataSource):
         period = None
         type_analysis = None
         if filter_ is not None:
-            logging.info("Mediawiki does not support yet top for filters.")
+            logging.info("Eventizer does not support yet top for filters.")
             return top
 
         top['attendees.'] = attendees.get_list(None, 0)
         top['attendees.last month'] = attendees.get_list(None, 31)
         top['attendees.last year'] = attendees.get_list(None, 365)
+
+        groups = DataSource.get_metrics("groups", EventsDS)
+        top['groups.'] = groups.get_list(None, 0)
+        top['groups.last month'] = groups.get_list(None, 31)
+        top['groups.last year'] = groups.get_list(None, 365)
 
         return(top)
 
