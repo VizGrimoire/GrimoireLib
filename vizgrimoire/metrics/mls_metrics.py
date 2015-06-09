@@ -178,7 +178,7 @@ class EmailsSenders(Metrics):
 
 
         if (days > 0):
-            tables.add("(SELECT MAX(first_date) as last_date from messages) t")
+            tables.add("(SELECT MAX(first_date) as last_date from messages WHERE first_date < NOW()) t")
             filters.add("DATEDIFF (last_date, first_date) < %s " % (days))
 
         fields.add("up.uuid as id")
