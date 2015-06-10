@@ -427,22 +427,95 @@ class SCMQuery(DSQuery):
     """ Specific query builders for source code management system data source """
 
     def GetSQLRepositoriesFrom (self):
-        #tables necessaries for repositories
+        """ Tables needed for repository studies
+
+        This always returns the same table for repositories
+
+        >>> scm = SCMQuery("root", "", "cp_cvsanaly_GrimoireLibTests")
+        >>> scm.GetSQLRepositoriesFrom()
+        Set(['repositories r'])
+
+        and this is a Set of 1 element
+        >>> len(scm.GetSQLRepositoriesFrom())
+        1
+        """
+
         tables = Set([])
         tables.add("repositories r")
 
         return tables
 
     def GetSQLRepositoriesWhere (self, repository):
-        #fields necessaries to match info among tables
+        """ Filters needed for the repository studies
+
+        This matches the repositories and scmlog tables
+
+        Case 1: a repository is provided
+        --------------------------------
+        >>> scm = SCMQuery("root", "", "cp_cvsanaly_GrimoireLibTests")
+        >>> scm.GetSQLRepositoriesWhere ('repository_1')
+        Set(['r.name = repository_1', 'r.id = s.repository_id'])
+
+        and this is a Set of 2 elements
+        >>> len(scm.GetSQLRepositoriesWhere ('repository_1'))
+        2
+
+        Case 2: a repository is None (used when grouping by repository)
+        ---------------------------------------------------------------
+
+        >>> scm = SCMQuery("root", "", "cp_cvsanaly_GrimoireLibTests")
+        >>> scm.GetSQLRepositoriesWhere (None)
+        Set(['r.id = s.repository_id'])
+
+        and this is a Set of 1 element
+        >>> len(scm.GetSQLRepositoriesWhere (None))
+        1
+
+        Case 3: several repositories are provided
+        -----------------------------------------
+
+        >>> scm = SCMQuery("root", "", "cp_cvsanaly_GrimoireLibTests")
+        >>> scm.GetSQLRepositoriesWhere (["'repo1'", "'repo2'", "'repo3'"])
+        Set(["(r.name = 'repo1' or r.name = 'repo2' or r.name = 'repo3')", 'r.id = s.repository_id'])
+
+        and this is a set of 2 elements
+        >>> len(scm.GetSQLRepositoriesWhere (["'repo1'", "'repo2'", "'repo3'"]))
+        2
+        """
+
         fields = Set([])
         fields.add("r.id = s.repository_id")
-        if repository is not None: fields.add("r.name ="+ repository)
+
+        if isinstance(repository, list):
+            repo_filter = "("
+            for repo in repository:
+                repo_filter = repo_filter + "r.name = " + repo + " or "
+            repo_filter = repo_filter[:-4] + ")"
+            fields.add(repo_filter)
+        elif repository is not None:
+            fields.add("r.name = "+ repository)
 
         return fields
 
     def GetSQLCompaniesFrom (self):
-        #tables necessaries for organizations
+        """ Tables needed for organization studies
+
+        This always returns the same table for organizations
+
+        >>> scm = SCMQuery("root", "", "cp_cvsanaly_GrimoireLibTests", "fake")
+        >>> organizations = scm.GetSQLCompaniesFrom()
+        >>> "fake.organizations org" in organizations
+        True
+        >>> "fake.enrollments enr" in organizations
+        True
+        >>> "people_uidentities pup" in organizations
+        True
+
+        and this is a Set of only 3 elements
+        >>> len(scm.GetSQLCompaniesFrom())
+        3
+        """
+
         tables = Set([])
         tables.add("people_uidentities pup")
         tables.add(self.identities_db + ".enrollments enr")
@@ -451,16 +524,62 @@ class SCMQuery(DSQuery):
         return tables
 
     def GetSQLCompaniesWhere (self, company, role):
-         #fields necessaries to match info among tables
-         fields = Set([])
-         fields.add("s."+role+"_id = pup.people_id")
-         fields.add("pup.uuid = enr.uuid")
-         fields.add("s.author_date >= enr.start")
-         fields.add("s.author_date < enr.end")
-         fields.add("enr.organization_id = org.id")
-         if company is not None: fields.add("org.name =" + company)
+        """ Filters needed for the organization studies
 
-         return fields
+        This matches the scmlog and organizations tables
+
+        Case 1: an organizations is provided
+        --------------------------------
+        >>> scm = SCMQuery("root", "", "cp_cvsanaly_GrimoireLibTests", "fake")
+        >>> organizations = scm.GetSQLCompaniesWhere ("'organization_1'", 'author')
+        >>> "s.author_id = pup.people_id" in organizations
+        True
+        >>> "pup.uuid = enr.uuid" in organizations
+        True
+        >>> "s.author_date >= enr.start" in organizations
+        True
+        >>> "s.author_date < enr.end" in organizations
+        True
+        >>> "enr.organization_id = org.id" in organizations
+        True
+        >>> "org.name = 'organization_1'" in organizations
+        True
+
+        and this is a Set of 6 elements
+        >>> len(organizations)
+        6
+
+        Case 2: an organization is None (used when grouping by organization)
+        ---------------------------------------------------------------
+        >>> organizations = scm.GetSQLCompaniesWhere (None, 'author')
+        >>> "s.author_id = pup.people_id" in organizations
+        True
+        >>> "pup.uuid = enr.uuid" in organizations
+        True
+        >>> "s.author_date >= enr.start" in organizations
+        True
+        >>> "s.author_date < enr.end" in organizations
+        True
+        >>> "enr.organization_id = org.id" in organizations
+        True
+
+        and this is a Set of 5 elements
+        >>> len(organizations)
+        5
+
+        Case 3: several organizations are provided
+        -----------------------------------------
+        """
+
+        fields = Set([])
+        fields.add("s."+role+"_id = pup.people_id")
+        fields.add("pup.uuid = enr.uuid")
+        fields.add("s.author_date >= enr.start")
+        fields.add("s.author_date < enr.end")
+        fields.add("enr.organization_id = org.id")
+        if company is not None: fields.add("org.name = " + company)
+
+        return fields
 
     def GetSQLCountriesFrom (self):
         #tables necessaries for organizations
@@ -3187,3 +3306,6 @@ class EventizerQuery(DSQuery):
 
         return where
 
+if __name__=="__main__":
+    import doctest
+    doctest.testmod()

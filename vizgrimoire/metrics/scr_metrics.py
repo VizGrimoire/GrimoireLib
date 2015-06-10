@@ -1083,35 +1083,23 @@ class Projects(Metrics):
     def _get_sql(self, evolutionary):
         pass
 
-    def get_list (self):
-        # Projects activity needs to include subprojects also
+    def get_list(self):
+        # Just get submitted per project
         logging.info ("Getting projects list for SCR")
+        startdate = self.filters.startdate
+        enddate = self.filters.enddate
 
-        # Get all projects list
-        q = "SELECT p.id AS name FROM  %s.projects p" % (self.db.projects_db)
-        projects = self.db.ExecuteQuery(q)
-        data = []
-
-        # Loop all projects getting reviews
-        for project in projects['name']:
-            type_analysis = ['project', project]
-
-            metric = SCR.get_metrics("submitted", SCR)
-            type_analysis_orig = metric.filters.type_analysis
-            metric.filters.type_analysis = type_analysis
-            reviews = metric.get_agg()
-            metric.filters.type_analysis = type_analysis_orig
-
-            reviews = reviews['submitted']
-            if (reviews > 0):
-                data.append([reviews,project])
-
-        # Order the list using reviews: https://wiki.python.org/moin/HowTo/Sorting
-        from operator import itemgetter
-        data_sort = sorted(data, key=itemgetter(0),reverse=True)
-        names = [name[1] for name in data_sort]
-
-        return({"name":names})
+        type_analysis = ['project', None]
+        period = None
+        evol = False
+        msubmitted = Submitted(self.db, self.filters)
+        mfilter = MetricFilters(period, startdate, enddate, type_analysis)
+        mfilter_orig = msubmitted.filters
+        msubmitted.filters = mfilter
+        submitted = msubmitted.get_agg()
+        msubmitted.filters = mfilter_orig
+        checkListArray(submitted)
+        return submitted
 
 class Repositories(Metrics):
     id = "repositories"
@@ -1469,7 +1457,8 @@ class Submitters(Metrics):
 
     def _get_sql(self, evolutionary):
 #         if (self.filters.type_analysis is not None and (self.filters.type_analysis[0] in  ["repository","project"])):
-        if (self.filters.type_analysis is not None and (self.filters.type_analysis[0] in  ["project"])):
+        # Not needed anymore this special SQL for project (simplified SQL for filtering projects)
+        if (self.filters.type_analysis is not None and (self.filters.type_analysis[0] in  [])):
             # repository filter does not work with prj SQL using GROUP BY queries
             return self.__get_sql_trk_prj__(evolutionary)
         else:

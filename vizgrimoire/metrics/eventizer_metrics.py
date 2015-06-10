@@ -122,14 +122,18 @@ class Attendees(Metrics):
     desc = "Number of people that confirmed their assistance"
     data_source = EventsDS
 
-    def _get_sql(self, evolutionary, islist = False):
+    def _get_sql(self, evolutionary, islist = False, days = 0):
         fields = Set([])
         tables = Set([])
         filters = Set([])
 
         if islist:
             fields.add("p.name")
-            fields.add("count(distinct(eve.id))")
+            fields.add("count(distinct(eve.id)) as events")
+            if (days > 0):
+                tables.add("(SELECT MAX(time) as last_date from events) dt")
+                filters.add("DATEDIFF (last_date, time) < %s " % (days))
+
         else:
             fields.add("count(distinct(p.id)) as attendees")
 
@@ -154,11 +158,11 @@ class Attendees(Metrics):
 
         return query
 
-    def get_list(self):
-        query = self._get_sql(None, True) # evolutionary value is not used
+    def get_list(self, filters = None, days = 0):
+        query = self._get_sql(evolutionary=False, islist=True, days=days) # evolutionary value is not used
         data = self.db.ExecuteQuery(query)
         return data
-        
+
 
 class Cities(Metrics):
     """ Cities that are part of each event
@@ -190,6 +194,58 @@ class Cities(Metrics):
         return query
 
 
+class Groups(Metrics):
+    """ A group contains a set of events and rsvps potentially attending that
+        event
+    """
+
+    id = "groups"
+    name = "Groups"
+    desc = "Groups hosting events"
+    data_source = EventsDS
+
+    def _get_sql(self, evolutionary, islist = False, days = 0):
+        fields = Set([])
+        tables = Set([])
+        filters = Set([])
+
+        if islist:
+            fields.add("gro.name as name")
+            fields.add("gro.urlname as group_id")
+            fields.add("gro.rating as rating")
+            fields.add("count(distinct(rsvps.id)) as rsvps")
+            if (days > 0):
+                tables.add("(SELECT MAX(time) as last_date from events) dt")
+                filters.add("DATEDIFF (last_date, time) < %s " % (days))
+
+            tables.add("rsvps")
+
+            filters.add("rsvps.event_id = eve.id")
+            filters.add("rsvps.response = 'yes'")
+
+        fields.add("count(distinct(gro.id)) as groups")
+
+        tables.add("groups gro")
+        tables.add("events eve")
+        tables.union_update(self.db.GetSQLReportFrom(self.filters))
+
+        filters.add("gro.id = eve.group_id")
+        filters.union_update(self.db.GetSQLReportWhere(self.filters))
+
+
+        query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
+                                  self.filters.enddate, " eve.time ", fields,
+                                  tables, filters, evolutionary, self.filters.type_analysis)
+
+        return query
+
+
+    def get_list(self, filters = None, days = 0):
+        query = self._get_sql(evolutionary=False, islist=True, days=days) # evolutionary value is not used
+        data = self.db.ExecuteQuery(query)
+        return data
+
+
 if __name__ == '__main__':
     filters = MetricFilters("month", "'2014-04-01'", "'2015-01-01'")
     dbcon = EventizerQuery("root", "", "test_eventizer", "test_eventizer")
@@ -203,4 +259,8 @@ if __name__ == '__main__':
     print attendees.get_ts()
     print attendees.get_list()
 
+    groups = Groups(dbcon, filters)
+    print groups.get_agg()
+    print groups.get_ts()
+    print groups.get_list()
 

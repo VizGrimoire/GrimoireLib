@@ -29,7 +29,7 @@ import logging
 from datetime import datetime
 
 from vizgrimoire.data_source import DataSource
-from vizgrimoire.GrimoireUtils import completePeriodIds, GetDates, GetPercentageDiff
+from vizgrimoire.GrimoireUtils import completePeriodIds, GetDates, GetPercentageDiff, checkListArray
 from vizgrimoire.filter import Filter
 from vizgrimoire.metrics.metrics import Metrics
 from vizgrimoire.metrics.metrics_filter import MetricFilters
@@ -125,131 +125,6 @@ class EmailsSenders(Metrics):
     desc = "People sending emails"
     data_source = MLS
 
-    def _get_top_repository (self, metric_filters, days = None):
-        startdate = metric_filters.startdate
-        enddate = metric_filters.enddate
-        repo = metric_filters.type_analysis[1]
-        limit = metric_filters.npeople
-        filter_bots = self.db.get_bots_filter_sql(self.data_source, metric_filters)
-        rfield = MLS.get_repo_field()
-
-        dtables = dfilters = ""
-        if (days > 0):
-            dtables = ", (SELECT MAX(first_date) as last_date from messages) t"
-            dfilters = " and DATEDIFF (last_date, first_date) < %s " % (days)
-
-        #TODO: instead of directly using the private method for building 
-        # from or where clauses, this code should use GetSQLReportFrom/Where
-        # and sets where strings are added.
-        uniqueids_tables = self.db._get_tables_query(self.db.GetTablesOwnUniqueIds())
-        uniqueids_filters = self.db._get_filters_query(self.db.GetFiltersOwnUniqueIds())
-
-        q = "SELECT up.uuid as id, up.identifier as senders, "+\
-                " COUNT(m.message_id) as sent "+\
-                " FROM "+ uniqueids_tables+ ","+self.db.identities_db+".uidentities up "+ dtables + \
-                " WHERE "+ uniqueids_filters + " AND "+\
-                "  pup.uuid = up.uuid AND "+\
-                "  m.first_date >= "+startdate+" AND "+\
-                "  m.first_date < "+enddate+" AND "+\
-                "  m."+rfield+"="+ repo + " " + dfilters + \
-                " GROUP BY up.identifier "+\
-                " ORDER BY sent desc, senders "+\
-                " LIMIT " + str(limit)
-        data = self.db.ExecuteQuery(q)
-        return (data)
-
-    def _get_top_country (self, metric_filters, days = None):
-        startdate = metric_filters.startdate
-        enddate = metric_filters.enddate
-        country_name = metric_filters.type_analysis[1]
-        limit = metric_filters.npeople
-        filter_bots = self.db.get_bots_filter_sql(self.data_source, metric_filters)
-
-        #TODO: instead of directly using the private method for building 
-        # from or where clauses, this code should use GetSQLReportFrom/Where
-        # and sets where strings are added.
-        countries_tables = self.db._get_tables_query(self.db.GetSQLCountriesFrom())
-        countries_filters = self.db._get_filters_query(self.db.GetSQLCountriesWhere(country_name))
-
-        q = "SELECT up.uuid as id, up.identifier as senders, "+\
-            " COUNT(DISTINCT(m.message_id)) as sent "+\
-            " FROM messages m, "+ countries_tables+ \
-            "  , "+self.db.identities_db+".uidentities up "+\
-            " WHERE "+ countries_filters + " AND "+\
-            "  up.uuid = pro.uuid AND "+\
-            "  m.first_date >= "+startdate+" AND "+\
-            "  m.first_date < "+enddate+\
-            " GROUP BY up.identifier "+\
-            " ORDER BY COUNT(DISTINCT(m.message_ID)) DESC, senders LIMIT " + str(limit)
-        data = self.db.ExecuteQuery(q)
-        return (data)
-
-    def _get_top_company (self, metric_filters, days = None):
-        startdate = metric_filters.startdate
-        enddate = metric_filters.enddate
-        company_name = metric_filters.type_analysis[1]
-        limit = metric_filters.npeople
-        filter_bots = self.db.get_bots_filter_sql(self.data_source, metric_filters)
-
-        #TODO: instead of directly using the private method for building 
-        # from or where clauses, this code should use GetSQLReportFrom/Where
-        # and sets where strings are added.
-        organizations_tables = self.db._get_tables_query(self.db.GetSQLCompaniesFrom())
-        organizations_filters = self.db._get_filters_query(self.db.GetSQLCompaniesWhere(company_name))
-
-        q = "SELECT up.uuid as id, up.identifier as senders, "+\
-            " COUNT(DISTINCT(m.message_id)) as sent "+\
-            " FROM messages m, "+self.db.identities_db+".uidentities up , "+\
-             organizations_tables +\
-            " WHERE "+ organizations_filters  +" AND "+\
-            "  up.uuid = enr.uuid AND "+\
-            "  m.first_date >= "+startdate+" AND "+\
-            "  m.first_date < "+enddate+\
-            " GROUP BY up.identifier "+\
-            " ORDER BY COUNT(DISTINCT(m.message_ID)) DESC, senders LIMIT " + str(limit)
-        data = self.db.ExecuteQuery(q)
-        return (data)
-
-
-    def _get_top_global (self, days = 0, metric_filters = None):
-        if metric_filters == None:
-            metric_filters = self.filters
-
-        tables = self.db._get_tables_query(self.db.GetTablesOwnUniqueIds())
-        filters = self.db._get_filters_query(self.db.GetFiltersOwnUniqueIds())
-
-        startdate = metric_filters.startdate
-        enddate = metric_filters.enddate
-        limit = metric_filters.npeople
-        filter_bots = self.db.get_bots_filter_sql(self.data_source, metric_filters)
-        if filter_bots != "": filter_bots += " AND "
-
-        dtables = dfilters = ""
-        if (days > 0):
-            dtables = ", (SELECT MAX(first_date) as last_date from messages) t"
-            dfilters = " AND DATEDIFF (last_date, first_date) < %s " % (days)
-
-        q = "SELECT up.uuid as id, up.identifier as senders, "+\
-                "COUNT(distinct(m.message_id)) as sent "+\
-                "FROM "+ tables + dtables +\
-                " ,"+self.db.identities_db+".uidentities up "+\
-                " ,"+self.db.identities_db+".profiles pro "+\
-                "WHERE "+ filter_bots + filters + " AND "+\
-                "  pup.uuid = up.uuid AND "+\
-                "  pro.uuid = up.uuid AND "+\
-                "  pro.is_bot<>'1' AND "+\
-                "  m.first_date >= "+startdate+" AND "+\
-                "  m.first_date < "+enddate +\
-                dfilters+ " "+\
-                "GROUP BY up.identifier "+\
-                "ORDER BY sent desc, senders "+\
-                "LIMIT " + str(limit)
-        data = self.db.ExecuteQuery(q)
-        return (data)
-
-    def _get_top_supported_filters(self):
-        return ['repository','company','country','domain']
-
     def _get_sql (self, evolutionary):
         fields = Set([])
         tables = Set([])
@@ -278,6 +153,61 @@ class EmailsSenders(Metrics):
                                    tables, filters, evolutionary, self.filters.type_analysis)
 
         return query
+
+    def get_list(self, mfilters = None, days = 0):
+        fields = Set([])
+        tables = Set([])
+        filters = Set([])
+
+        #TODO: code to be removed. Deprecated use of the API
+        period = self.filters.period
+        startdate = self.filters.startdate
+        enddate = self.filters.enddate
+        type_analysis = self.filters.type_analysis
+        npeople = self.filters.npeople
+        all_filters = self.filters
+
+        if mfilters is not None:
+            period = mfilters.period
+            startdate = mfilters.startdate
+            enddate = mfilters.enddate
+            type_analysis = mfilters.type_analysis
+            all_filters = mfilters
+            npeople = mfilters.npeople
+        #End of code removal
+
+
+        if (days > 0):
+            tables.add("(SELECT MAX(first_date) as last_date from messages WHERE first_date < NOW()) t")
+            filters.add("DATEDIFF (last_date, first_date) < %s " % (days))
+
+        fields.add("up.uuid as id")
+        fields.add("up.identifier as senders")
+        fields.add("COUNT(DISTINCT(m.message_id)) as sent")
+
+        tables.add("messages m")
+        tables.union_update(self.db.GetSQLReportFrom(all_filters))
+        tables.add("messages_people mp")
+        tables.add("people_uidentities pup")
+        tables.add(self.db.identities_db + ".uidentities up")
+
+        filters.union_update(self.db.GetFiltersOwnUniqueIds())
+        filters.union_update(self.db.GetSQLReportWhere(all_filters))
+        filters.add("m.message_ID = mp.message_id")
+        filters.add("mp.email_address = pup.people_id")
+        filters.add("mp.type_of_recipient = \'From\'")
+        filters.add("pup.uuid = up.uuid")
+
+        query = self.db.BuildQuery(period, startdate,
+                                   enddate, " m.first_date ", fields,
+                                   tables, filters, False, type_analysis)
+
+        query = query + " group by up.uuid "
+        query = query + " order by count(distinct(m.message_id)) desc "
+        query = query + " limit " + str(self.filters.npeople)
+
+        return self.db.ExecuteQuery(query)
+
 
 class People(Metrics):
     """ People metric class for mailing lists (senders) """
@@ -501,6 +431,66 @@ class Threads(Metrics):
                                    tables, filters, evolutionary, self.filters.type_analysis)
         return query
 
+
+class ActiveThreads(Metrics):
+    """ Active threads are those with activity between two dates.
+
+    Thus, a thread may have been started in a specific date, but
+    if that thread shows activity in the studied period, that would
+    be an active thread.
+    """
+
+    id = "active_threads"
+    name = "Active Threads"
+    desc = "Active threads in a given period"
+    data_source = MLS
+
+
+    def _root_message(self, message_id):
+        """ _root_message returns the root of a given message
+        """
+
+        message_id = message_id.replace("'", "\\'")
+        query = """select distinct is_response_of
+                   from messages
+                   where message_ID = '%s'""" % (message_id)
+        father = self.db.ExecuteQuery(query)
+        if father["is_response_of"] is not None and len(father["is_response_of"])>0:
+            self._root_message(father["is_response_of"])
+
+        return father["is_response_of"]
+
+
+    def get_agg(self):
+
+        fields = Set([])
+        tables = Set([])
+        filters = Set([])
+
+        # List of all messages sent to the mailing list
+        fields.add("distinct m.message_ID as message_id")
+
+        tables.add("messages m")
+        tables.union_update(self.db.GetSQLReportFrom(self.filters))
+
+        filters.union_update(self.db.GetSQLReportWhere(self.filters))
+
+        query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
+                                   self.filters.enddate, " m.first_date ", fields,
+                                   tables, filters, False, self.filters.type_analysis)
+        messages = self.db.ExecuteQuery(query)
+
+        # for each of the messages sent between two dates
+        # and the specific applied filters, the root message of each
+        # of them is calculated.
+        root_messages = Set([])
+        for message_id in messages["message_id"]:
+            root_message = self._root_message(message_id)
+            root_messages.add(root_message)
+
+        return len(root_messages)
+
+
 class Repositories(Metrics):
     """ Mailing lists repositories """
 
@@ -647,36 +637,21 @@ class Projects(Metrics):
     data_source = MLS
 
     def get_list(self):
-        # Projects activity needs to include subprojects also
-        logging.info ("Getting projects list for MLS")
+        # Just get sent per project
+        startdate = self.filters.startdate
+        enddate = self.filters.enddate
 
-        # Get all projects list
-        q = "SELECT p.id AS name FROM  %s.projects p" % (self.db.projects_db)
-        projects = self.db.ExecuteQuery(q)
-        data = []
-
-        # Loop all projects getting reviews
-        for project in projects['name']:
-            type_analysis = ['project', project]
-            period = None
-            filter_com = MetricFilters(period, self.filters.startdate,
-                                       self.filters.enddate, type_analysis)
-            msent = MLS.get_metrics("sent", MLS)
-            # TODO: we should restore original filter
-            msent.filters = filter_com
-            sent = msent.get_agg()
-
-            sent = sent['sent']
-            if (sent > 0):
-                data.append([sent,project])
-
-        # Order the list using reviews: https://wiki.python.org/moin/HowTo/Sorting
-        from operator import itemgetter
-        data_sort = sorted(data, key=itemgetter(0),reverse=True)
-        names = [name[1] for name in data_sort]
-
-        # if (limit > 0): names = names[:limit]
-        return names
+        type_analysis = ['project', None]
+        period = None
+        evol = False
+        msent = EmailsSent(self.db, self.filters)
+        mfilter = MetricFilters(period, startdate, enddate, type_analysis)
+        mfilter_orig = msent.filters
+        msent.filters = mfilter
+        sent = msent.get_agg()
+        msent.filters = mfilter_orig
+        checkListArray(sent)
+        return sent
 
 class UnansweredPosts(Metrics):
     """ Unanswered posts in mailing lists """
@@ -778,4 +753,14 @@ class UnansweredPosts(Metrics):
 
         return completePeriodIds(num_unanswered, self.filters.period,
                                  self.filters.startdate, self.filters.enddate)
+
+
+if __name__== '__main__':
+    from vizgrimoire.metrics.query_builder import MLSQuery
+    filters = MetricFilters("month", "'2014-01-01'", "'2015-01-01'", None, 30)
+    dbcon = MLSQuery("root", "", "cp_mlstats_GrimoireLibTests", "cp_sortinghat_GrimoireLibTests")
+    emailssenders = EmailsSenders(dbcon, filters)
+    print emailssenders.get_agg()
+    print emailssenders.get_list(30)
+    print emailssenders.get_list(365)
 

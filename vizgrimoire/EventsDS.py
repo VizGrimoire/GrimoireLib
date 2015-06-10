@@ -21,10 +21,13 @@
 #     Daniel Izquierdo <dizquierdo@bitergia.com>
 #     Alvaro del Castillo <acs@bitergia.com>
 
-import logging, os
+import logging, os, re
 
 from vizgrimoire.data_source import DataSource
 from vizgrimoire.GrimoireUtils import createJSON
+from vizgrimoire.filter import Filter
+from vizgrimoire.GrimoireUtils import GetPercentageDiff, GetDates, getPeriod, createJSON, completePeriodIds
+from vizgrimoire.metrics.metrics_filter import MetricFilters
 
 class EventsDS(DataSource):
 
@@ -45,19 +48,19 @@ class EventsDS(DataSource):
     @staticmethod
     def get_supported_filters():
         # return ['group','category','city']
-        return []
+        return ['repository']
 
     @staticmethod
     def get_metrics_core_agg():
-        return ['events','members','cities','attendees']
+        return ['events','members','cities','attendees','groups']
 
     @staticmethod
     def get_metrics_core_ts():
-        return ['events','members','cities','attendees']
+        return ['events','members','cities','attendees','groups']
 
     @staticmethod
     def get_metrics_core_trends():
-        return ['events','members','cities','attendees']
+        return ['events','members','cities','attendees','groups']
 
     @staticmethod
     def get_evolutionary_data (period, startdate, enddate, i_db, filter_ = None):
@@ -104,8 +107,41 @@ class EventsDS(DataSource):
         items = None
         filter_name = filter_.get_name()
 
-        logging.error("EventsDS " + filter_name + " not supported")
+        if (filter_name == "repository"):
+            metric = DataSource.get_metrics("groups", EventsDS)
+            items = metric.get_list()
+        else:
+            logging.error("EventsDS " + filter_name + " not supported")
+
         return items
+
+    @staticmethod
+    def create_filter_report_top(filter_, period, startdate, enddate, destdir, npeople, identities_db):
+        from vizgrimoire.report import Report
+        items = Report.get_items()
+        if items is None:
+            items = EventsDS.get_filter_items(filter_, startdate, enddate, identities_db)
+            if (items == None): return
+            items = items['name']
+
+        filter_name = filter_.get_name()
+
+        if not isinstance(items, (list)):
+            items = [items]
+
+        fn = os.path.join(destdir, filter_.get_filename(EventsDS()))
+        createJSON(items, fn)
+
+        for item in items :
+            item_name = "'"+ item+ "'"
+            logging.info (item_name)
+            filter_item = Filter(filter_name, item)
+
+            if filter_name in ("repository"):
+                top_authors = EventsDS.get_top_data(startdate, enddate, identities_db, filter_item, npeople)
+                logging.warn(filter_item.get_top_filename(EventsDS()))
+                fn = os.path.join(destdir, filter_item.get_top_filename(EventsDS()))
+                createJSON(top_authors, fn)
 
     @staticmethod
     def create_filter_report(filter_, period, startdate, enddate, destdir, npeople, identities_db):
@@ -115,9 +151,51 @@ class EventsDS(DataSource):
             items = EventsDS.get_filter_items(filter_, startdate, enddate, identities_db)
         if (items == None): return
 
+        filter_name = filter_.get_name()
+        items = items['name']
+
+        if not isinstance(items, list):
+            items = [items]
+
+        file_items = []
+        for item in items:
+            if re.compile("^\..*").match(item) is not None: item = "_"+item
+            file_items.append(item)
+
+        fn = os.path.join(destdir, filter_.get_filename(EventsDS()))
+        createJSON(file_items, fn)
+
+        if filter_name in ("repository"):
+            items_list = {'name' : [], 'events_365' : [], 'rsvps_365' : []}
+        else:
+            items_list = items
+
+        for item in items:
+            logging.info(item)
+            filter_item = Filter(filter_.get_name(), item)
+
+            evol_data = EventsDS.get_evolutionary_data(period, startdate, enddate, identities_db, filter_item)
+            fn = os.path.join(destdir, filter_item.get_evolutionary_filename(EventsDS()))
+            createJSON(completePeriodIds(evol_data, period, startdate, enddate), fn)
+
+            agg = EventsDS.get_agg_data(period, startdate, enddate, identities_db, filter_item)
+            fn = os.path.join(destdir, filter_item.get_static_filename(EventsDS()))
+            createJSON(agg, fn)
+
+            if filter_name in ("repository"):
+                items_list['name'].append(item.replace('/', '_'))
+                items_list['events_365'].append(agg['events_365'])
+                items_list['rsvps_365'].append(agg['attendees_365'])
+
+        EventsDS.create_filter_report_top(filter_, period, startdate, enddate, destdir, npeople, identities_db)
+
+        fn = os.path.join(destdir, filter_.get_filename(EventsDS()))
+        createJSON(items_list, fn)
+
+
     @staticmethod
     def get_top_metrics ():
-        return ["attendes"]
+        return ["attendes","groups"]
 
     @staticmethod
     def get_top_data (startdate, enddate, identities_db, filter_, npeople):
@@ -125,15 +203,22 @@ class EventsDS(DataSource):
         attendees = DataSource.get_metrics("attendees", EventsDS)
         period = None
         type_analysis = None
+        mfilter = attendees.filters
         if filter_ is not None:
-            logging.info("Mediawiki does not support yet top for filters.")
-            return top
+            mfilter = MetricFilters(startdate, enddate, identities_db, npeople)
 
-        top['attendees.'] = attendees.get_list(None, 0)
-        top['attendees.last month'] = attendees.get_list(None, 31)
-        top['attendees.last year'] = attendees.get_list(None, 365)
+        top['attendees.'] = attendees.get_list(mfilter, 0)
+        top['attendees.last month'] = attendees.get_list(mfilter, 31)
+        top['attendees.last year'] = attendees.get_list(mfilter, 365)
 
-        return(top)
+        if filter_ is not None:
+            if filter_.get_name() <> 'repository':
+                groups = DataSource.get_metrics("groups", EventsDS)
+                top['groups.'] = groups.get_list(mfilter, 0)
+                top['groups.last month'] = groups.get_list(mfilter, 31)
+                top['groups.last year'] = groups.get_list(mfilter, 365)
+
+        return top
 
     @staticmethod
     def create_top_report (startdate, enddate, destdir, npeople, i_db):

@@ -196,7 +196,7 @@ class MLS(DataSource):
             return items
 
         items = metric.get_list()
-
+        if (filter_name == "project"): items = items['name']
         return {"name":items}
 
     @staticmethod
@@ -234,6 +234,7 @@ class MLS(DataSource):
             items_list = items
 
         for item in items :
+            item = item.replace("'", "\\'")
             item_name = "'"+ item+ "'"
             logging.info (item_name)
             filter_item = Filter(filter_.get_name(), item)

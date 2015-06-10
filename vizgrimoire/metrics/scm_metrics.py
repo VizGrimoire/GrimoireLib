@@ -29,7 +29,7 @@ import MySQLdb
 
 import re, sys
 
-from vizgrimoire.GrimoireUtils import completePeriodIds, GetDates, GetPercentageDiff, check_array_values
+from vizgrimoire.GrimoireUtils import completePeriodIds, GetDates, GetPercentageDiff, check_array_values, checkListArray
 
 from vizgrimoire.metrics.metrics import Metrics
 
@@ -115,9 +115,10 @@ class Commits(Metrics):
         fields.add("count(distinct(s.rev)) as commits")
 
         tables.add("scmlog s")
+        tables.add("(select distinct(a.commit_id) as id from actions a) nomergers")
         tables.union_update(self.db.GetSQLReportFrom(self.filters))
  
-        filters.add("s.id IN (select distinct(a.commit_id) from actions a)")
+        filters.add("s.id = nomergers.id")
         filters.union_update(self.db.GetSQLReportWhere(self.filters, "author"))
 
         query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
@@ -701,11 +702,12 @@ class CommitsPeriod(Metrics):
         # Basic parts of the query needed when calculating commits per period
         fields = Set([])
         tables = Set([])
-        filters = Set([])        
+        filters = Set([])
 
         fields.add("count(distinct(s.id))/timestampdiff("+self.filters.period+",min(s.author_date),max(s.author_date)) as avg_commits_"+self.filters.period)
         tables.add("scmlog s")
-        filters.add("s.id IN (SELECT DISTINCT(a.commit_id) from actions a)")
+        tables.add("(select distinct(a.commit_id) as id from actions a) nomergers")
+        filters.add("s.id = nomergers.id")
 
         tables.union_update(self.db.GetSQLReportFrom(self.filters))
         filters.union_update(self.db.GetSQLReportWhere(self.filters, "author"))
@@ -768,8 +770,8 @@ class CommitsAuthor(Metrics):
   
         fields.add("count(distinct(s.id))/count(distinct(pup.uuid)) as avg_commits_author ")
         tables.add("scmlog s")
-        tables.add("actions a")
-        filters.add("s.id = a.commit_id")
+        tables.add("(select distinct(a.commit_id) as id from actions a) nomergers")
+        filters.add("s.id = nomergers.id")
 
         filters.union_update(self.db.GetSQLReportWhere(self.filters, "author"))
 
@@ -1187,36 +1189,21 @@ class Projects(Metrics):
     data_source = SCM
 
     def get_list(self):
+        # Just get commits per project
         startdate = self.filters.startdate
         enddate = self.filters.enddate
 
-        # Get all projects list
-        q = "SELECT p.id AS name FROM  %s.projects p" % (self.db.projects_db)
-        projects = self.db.ExecuteQuery(q)
-        data = []
-
-        # Loop all projects getting reviews
-        for project in projects['name']:
-            type_analysis = ['project', project]
-            period = None
-            evol = False
-            mcommits = Commits(self.db, self.filters)
-            mfilter = MetricFilters(period, startdate, enddate, type_analysis)
-            mfilter_orig = mcommits.filters
-            mcommits.filters = mfilter
-            commits = mcommits.get_agg()
-            mcommits.filters = mfilter_orig
-            commits = commits['commits']
-            if (commits > 0):
-                data.append([commits,project])
-
-        # Order the list using reviews: https://wiki.python.org/moin/HowTo/Sorting
-        from operator import itemgetter
-        data_sort = sorted(data, key=itemgetter(0),reverse=True)
-        names = [name[1] for name in data_sort]
-
-        return({"name":names})
-
+        type_analysis = ['project', None]
+        period = None
+        evol = False
+        mcommits = Commits(self.db, self.filters)
+        mfilter = MetricFilters(period, startdate, enddate, type_analysis)
+        mfilter_orig = mcommits.filters
+        mcommits.filters = mfilter
+        commits = mcommits.get_agg()
+        mcommits.filters = mfilter_orig
+        checkListArray(commits)
+        return commits
 
 if __name__ == '__main__':
     filters1 = MetricFilters("month", "'2014-04-01'", "'2015-01-01'", ['repository',"'OpenID'"])

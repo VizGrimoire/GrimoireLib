@@ -35,9 +35,9 @@ from vizgrimoire.GrimoireUtils import completePeriodIds, createJSON
 
 class AllEvents(Analyses):
 
-    id = "status_changers"
-    name = "Top people changing status"
-    desc = "Top people changing the status of the tickets"
+    id = "events_list"
+    name = "List of events"
+    desc = "List of events"
     data_source = EventsDS
 
     def result(self):

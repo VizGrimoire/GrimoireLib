@@ -26,6 +26,9 @@
 import logging
 import MySQLdb
 
+
+from vizgrimoire.GrimoireUtils import checkListArray
+
 from vizgrimoire.metrics.metrics import Metrics
 
 from vizgrimoire.metrics.metrics_filter import MetricFilters
@@ -311,16 +314,27 @@ class Closers(Metrics):
     data_source = ITS
     envision = {"gtype" : "whiskers"}
 
-    def _get_top_company (self, metric_filters, days = None) :
+    def get_list(self, metric_filters = None, days = 0):
+
+        # Overwriting the filters used. This code should be
+        # removed at some point.
+        if metric_filters is not None:
+            metric_filters_orig = self.filters
+            self.filters = metric_filters
+
         startdate = metric_filters.startdate
         enddate = metric_filters.enddate
-        company_name = metric_filters.type_analysis[1]
         limit = metric_filters.npeople
         filter_bots = self.db.get_bots_filter_sql(self.data_source, metric_filters)
         closed_condition =  ITS._get_closed_condition()
         if self.filters.closed_condition is not None:
              closed_condition = self.filters.closed_condition
 
+        dtables = Set([])
+        dfilters = Set([])
+        if (days > 0):
+            dtables.add("(SELECT MAX(changed_on) as last_date from changes) t")
+            dfilters.add("DATEDIFF (last_date, changed_on) < %s " % (days))
 
         fields = Set([])
         tables = Set([])
@@ -328,19 +342,23 @@ class Closers(Metrics):
 
         fields.add("up.uuid as id")
         fields.add("up.identifier as closers")
-        fields.add("COUNT(DISTINCT(c.id)) as closed")
+        fields.add("COUNT(DISTINCT(ch.id)) as closed")
 
-        tables.union_update(self.db.GetTablesCompanies(self.db.identities_db))
-        tables.add(self.db.identities_db+".organizations org")
+        tables.union_update(self.db.GetSQLReportFrom(self.filters))
+        tables.add("people_uidentities pup")
         tables.add(self.db.identities_db+".uidentities up")
+        tables.add("issues i")
+        tables.add("changes ch")
+        tables.union_update(dtables)
 
-        filters.union_update(self.db.GetFiltersCompanies())
+        filters.union_update(self.db.GetSQLReportWhere(self.filters))
         filters.add(closed_condition)
+        filters.add("i.id = ch.issue_id")
+        filters.add("ch.changed_by = pup.people_id")
         filters.add("pup.uuid = up.uuid")
-        filters.add("enr.organization_id = org.id")
-        filters.add("org.name = " + company_name)
-        filters.add("changed_on >= " + startdate)
-        filters.add("changed_on < " + enddate)
+        filters.add("ch.changed_on >= " + startdate)
+        filters.add("ch.changed_on < " + enddate)
+        filters.union_update(dfilters)
         if len(filter_bots) > 0:
             filters.add(filter_bots)
 
@@ -348,104 +366,10 @@ class Closers(Metrics):
         query = query + " from " + self.db._get_tables_query(tables)
         query = query + " where " + self.db._get_filters_query(filters)
         query = query + " GROUP BY up.identifier ORDER BY closed DESC, closers LIMIT " + str(limit)
-        return self.db.ExecuteQuery(query)
-
-    def _get_top_repository (self, metric_filters, days = None):
-        startdate = metric_filters.startdate
-        enddate = metric_filters.enddate
-        repo_name = metric_filters.type_analysis[1]
-        limit = metric_filters.npeople
-        filter_bots = self.db.get_bots_filter_sql(self.data_source, metric_filters)
-        closed_condition =  ITS._get_closed_condition()
-        if self.filters.closed_condition is not None:
-             closed_condition = self.filters.closed_condition
-
-        if filter_bots != '': filter_bots = " AND " + filter_bots
-
-        dtables = dfilters = ""
-        if (days > 0):
-            dtables = ", (SELECT MAX(changed_on) as last_date from changes) t "
-            dfilters = " AND DATEDIFF (last_date, changed_on) < %s " % (days)
-
-        q = "SELECT up.uuid as id, up.identifier as closers, "+\
-            "COUNT(DISTINCT(i.id)) as closed "+\
-            "FROM issues i, changes c, trackers t, people_uidentities pup, " +\
-            "     "+self.db.identities_db+".uidentities up "+ dtables + \
-            "WHERE "+closed_condition+" "+\
-            "      AND pup.uuid = up.uuid "+\
-            "      AND c.changed_by = pup.people_id "+\
-            "      AND c.issue_id = i.id "+\
-            "      AND i.tracker_id = t.id "+\
-            "      AND t.url = "+repo_name+" "+\
-            "      AND changed_on >= "+startdate+" AND changed_on < " +enddate +\
-            "      " + filter_bots + " " + dfilters + \
-            " GROUP BY up.identifier ORDER BY closed DESC, closers LIMIT " + str(limit)
-        data = self.db.ExecuteQuery(q)
-        return (data)
-
-
-    def _get_top(self, days = 0, metric_filters = None):
-        if metric_filters == None:
-            metric_filters = self.filters
-
-        tables_set = self.db.GetTablesOwnUniqueIds("changes")
-        filters_set = self.db.GetFiltersOwnUniqueIds("changes")
-        tables = self.db._get_tables_query(tables_set)
-        filters = self.db._get_filters_query(filters_set)
-
-        startdate = metric_filters.startdate
-        enddate = metric_filters.enddate
-        limit = metric_filters.npeople
-        filter_bots = self.db.get_bots_filter_sql(self.data_source, metric_filters)
-        if filter_bots != "": filter_bots += " AND "
-        closed_condition =  ITS._get_closed_condition()
-        if self.filters.closed_condition is not None:
-             closed_condition = self.filters.closed_condition
-
-
-        dtables = dfilters = ""
-        if (days > 0):
-            dtables = ", (SELECT MAX(changed_on) as last_date from changes) t "
-            dfilters = " AND DATEDIFF (last_date, changed_on) < %s " % (days)
-
-        q = "SELECT up.uuid as id, up.identifier as closers, "+\
-            "       count(distinct(c.id)) as closed "+\
-            "FROM  "+tables+\
-            ",     "+self.db.identities_db+".uidentities up "+ dtables +\
-            "WHERE "+filter_bots + filters + " and "+\
-            "      c.changed_by = pup.people_id and "+\
-            "      pup.uuid = up.uuid and "+\
-            "      c.changed_on >= "+ startdate+ " and "+\
-            "      c.changed_on < "+ enddate+ " and " +\
-            "      " + closed_condition + " " + dfilters+ " "+\
-            "GROUP BY up.identifier "+\
-            "ORDER BY closed desc, closers "+\
-            "LIMIT "+ str(limit)
-
-        data = self.db.ExecuteQuery(q)
-
-        if not isinstance(data['id'], list):
-            data = {item: [data[item]] for item in data}
-
-        return (data)
-
-    def get_list(self, metric_filters = None, days = 0):
-        alist = {}
-
-        if metric_filters is not None:
-            metric_filters_orig = self.filters
-            self.filters = metric_filters
-
-        if metric_filters.type_analysis and metric_filters.type_analysis is not None:
-            if metric_filters.type_analysis[0] == "repository":
-                alist = self._get_top_repository(metric_filters, days)
-            if metric_filters.type_analysis[0] == "company":
-                alist = self._get_top_company(metric_filters, days)
-        else:
-            alist = self._get_top(days)
 
         if metric_filters is not None: self.filters = metric_filters_orig
-        return alist
+
+        return self.db.ExecuteQuery(query)
 
     def _get_sql(self, evolutionary):
         """ Implemented using Changers (changed metric should exists first) """
@@ -1023,36 +947,22 @@ class Projects(Metrics):
     desc = "Number of distinct projects active in the ticketing system"
     data_source = ITS
 
-    def get_list (self):
-        # Projects activity needs to include subprojects also
-        logging.info ("Getting projects list for ITS")
-        from vizgrimoire.metrics.metrics_filter import MetricFilters
+    def get_list(self):
+        # Just get closed per project
+        startdate = self.filters.startdate
+        enddate = self.filters.enddate
 
-        q = "SELECT p.id AS name FROM  %s.projects p" % (self.db.projects_db)
-        projects = self.db.ExecuteQuery(q)
-        data = []
-
-        # Loop all projects getting reviews
-        for project in projects['name']:
-            type_analysis = ['project', project]
-
-            period = None
-            filter_com = MetricFilters(period, self.filters.startdate,
-                                       self.filters.enddate, type_analysis)
-            mclosed = ITS.get_metrics("closed", ITS)
-            mclosed.filters = filter_com
-            issues = mclosed.get_agg()
-
-            issues = issues['closed']
-            if (issues > 0):
-                data.append([issues,project])
-
-        # Order the list using reviews: https://wiki.python.org/moin/HowTo/Sorting
-        from operator import itemgetter
-        data_sort = sorted(data, key=itemgetter(0),reverse=True)
-        names = [name[1] for name in data_sort]
-
-        return({"name":names})
+        type_analysis = ['project', None]
+        period = None
+        evol = False
+        mclosed = Closed(self.db, self.filters)
+        mfilter = MetricFilters(period, startdate, enddate, type_analysis)
+        mfilter_orig = mclosed.filters
+        mclosed.filters = mfilter
+        closed = mclosed.get_agg()
+        mclosed.filters = mfilter_orig
+        checkListArray(closed)
+        return closed
 
     def _get_sql(self, evolutionary):
         # Not yet working
