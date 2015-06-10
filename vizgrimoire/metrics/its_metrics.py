@@ -26,6 +26,9 @@
 import logging
 import MySQLdb
 
+
+from vizgrimoire.GrimoireUtils import checkListArray
+
 from vizgrimoire.metrics.metrics import Metrics
 
 from vizgrimoire.metrics.metrics_filter import MetricFilters
@@ -944,36 +947,22 @@ class Projects(Metrics):
     desc = "Number of distinct projects active in the ticketing system"
     data_source = ITS
 
-    def get_list (self):
-        # Projects activity needs to include subprojects also
-        logging.info ("Getting projects list for ITS")
-        from vizgrimoire.metrics.metrics_filter import MetricFilters
+    def get_list(self):
+        # Just get closed per project
+        startdate = self.filters.startdate
+        enddate = self.filters.enddate
 
-        q = "SELECT p.id AS name FROM  %s.projects p" % (self.db.projects_db)
-        projects = self.db.ExecuteQuery(q)
-        data = []
-
-        # Loop all projects getting reviews
-        for project in projects['name']:
-            type_analysis = ['project', project]
-
-            period = None
-            filter_com = MetricFilters(period, self.filters.startdate,
-                                       self.filters.enddate, type_analysis)
-            mclosed = ITS.get_metrics("closed", ITS)
-            mclosed.filters = filter_com
-            issues = mclosed.get_agg()
-
-            issues = issues['closed']
-            if (issues > 0):
-                data.append([issues,project])
-
-        # Order the list using reviews: https://wiki.python.org/moin/HowTo/Sorting
-        from operator import itemgetter
-        data_sort = sorted(data, key=itemgetter(0),reverse=True)
-        names = [name[1] for name in data_sort]
-
-        return({"name":names})
+        type_analysis = ['project', None]
+        period = None
+        evol = False
+        mclosed = Closed(self.db, self.filters)
+        mfilter = MetricFilters(period, startdate, enddate, type_analysis)
+        mfilter_orig = mclosed.filters
+        mclosed.filters = mfilter
+        closed = mclosed.get_agg()
+        mclosed.filters = mfilter_orig
+        checkListArray(closed)
+        return closed
 
     def _get_sql(self, evolutionary):
         # Not yet working

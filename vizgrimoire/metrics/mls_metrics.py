@@ -29,7 +29,7 @@ import logging
 from datetime import datetime
 
 from vizgrimoire.data_source import DataSource
-from vizgrimoire.GrimoireUtils import completePeriodIds, GetDates, GetPercentageDiff
+from vizgrimoire.GrimoireUtils import completePeriodIds, GetDates, GetPercentageDiff, checkListArray
 from vizgrimoire.filter import Filter
 from vizgrimoire.metrics.metrics import Metrics
 from vizgrimoire.metrics.metrics_filter import MetricFilters
@@ -178,7 +178,7 @@ class EmailsSenders(Metrics):
 
 
         if (days > 0):
-            tables.add("(SELECT MAX(first_date) as last_date from messages) t")
+            tables.add("(SELECT MAX(first_date) as last_date from messages WHERE first_date < NOW()) t")
             filters.add("DATEDIFF (last_date, first_date) < %s " % (days))
 
         fields.add("up.uuid as id")
@@ -637,36 +637,21 @@ class Projects(Metrics):
     data_source = MLS
 
     def get_list(self):
-        # Projects activity needs to include subprojects also
-        logging.info ("Getting projects list for MLS")
+        # Just get sent per project
+        startdate = self.filters.startdate
+        enddate = self.filters.enddate
 
-        # Get all projects list
-        q = "SELECT p.id AS name FROM  %s.projects p" % (self.db.projects_db)
-        projects = self.db.ExecuteQuery(q)
-        data = []
-
-        # Loop all projects getting reviews
-        for project in projects['name']:
-            type_analysis = ['project', project]
-            period = None
-            filter_com = MetricFilters(period, self.filters.startdate,
-                                       self.filters.enddate, type_analysis)
-            msent = MLS.get_metrics("sent", MLS)
-            # TODO: we should restore original filter
-            msent.filters = filter_com
-            sent = msent.get_agg()
-
-            sent = sent['sent']
-            if (sent > 0):
-                data.append([sent,project])
-
-        # Order the list using reviews: https://wiki.python.org/moin/HowTo/Sorting
-        from operator import itemgetter
-        data_sort = sorted(data, key=itemgetter(0),reverse=True)
-        names = [name[1] for name in data_sort]
-
-        # if (limit > 0): names = names[:limit]
-        return names
+        type_analysis = ['project', None]
+        period = None
+        evol = False
+        msent = EmailsSent(self.db, self.filters)
+        mfilter = MetricFilters(period, startdate, enddate, type_analysis)
+        mfilter_orig = msent.filters
+        msent.filters = mfilter
+        sent = msent.get_agg()
+        msent.filters = mfilter_orig
+        checkListArray(sent)
+        return sent
 
 class UnansweredPosts(Metrics):
     """ Unanswered posts in mailing lists """

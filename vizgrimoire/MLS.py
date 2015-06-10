@@ -196,7 +196,7 @@ class MLS(DataSource):
             return items
 
         items = metric.get_list()
-
+        if (filter_name == "project"): items = items['name']
         return {"name":items}
 
     @staticmethod
