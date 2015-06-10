@@ -190,6 +190,7 @@ class EmailsSenders(Metrics):
         tables.add("messages_people mp")
         tables.add("people_uidentities pup")
         tables.add(self.db.identities_db + ".uidentities up")
+        tables.add(self.db.identities_db + ".profiles pro")
 
         filters.union_update(self.db.GetFiltersOwnUniqueIds())
         filters.union_update(self.db.GetSQLReportWhere(all_filters))
@@ -197,6 +198,8 @@ class EmailsSenders(Metrics):
         filters.add("mp.email_address = pup.people_id")
         filters.add("mp.type_of_recipient = \'From\'")
         filters.add("pup.uuid = up.uuid")
+        filters.add("pro.uuid = up.uuid")
+        filters.add("pro.is_bot<>'1'")
 
         query = self.db.BuildQuery(period, startdate,
                                    enddate, " m.first_date ", fields,
