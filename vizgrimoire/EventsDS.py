@@ -27,6 +27,7 @@ from vizgrimoire.data_source import DataSource
 from vizgrimoire.GrimoireUtils import createJSON
 from vizgrimoire.filter import Filter
 from vizgrimoire.GrimoireUtils import GetPercentageDiff, GetDates, getPeriod, createJSON, completePeriodIds
+from vizgrimoire.metrics.metrics_filter import MetricFilters
 
 class EventsDS(DataSource):
 
@@ -63,7 +64,6 @@ class EventsDS(DataSource):
 
     @staticmethod
     def get_evolutionary_data (period, startdate, enddate, i_db, filter_ = None):
-        logging.warn("evolutionary_data")
         if filter_ is not None:
             sf = EventsDS.get_supported_filters()
             if filter_.get_name() not in sf:
@@ -116,6 +116,34 @@ class EventsDS(DataSource):
         return items
 
     @staticmethod
+    def create_filter_report_top(filter_, period, startdate, enddate, destdir, npeople, identities_db):
+        from vizgrimoire.report import Report
+        items = Report.get_items()
+        if items is None:
+            items = EventsDS.get_filter_items(filter_, startdate, enddate, identities_db)
+            if (items == None): return
+            items = items['name']
+
+        filter_name = filter_.get_name()
+
+        if not isinstance(items, (list)):
+            items = [items]
+
+        fn = os.path.join(destdir, filter_.get_filename(EventsDS()))
+        createJSON(items, fn)
+
+        for item in items :
+            item_name = "'"+ item+ "'"
+            logging.info (item_name)
+            filter_item = Filter(filter_name, item)
+
+            if filter_name in ("repository"):
+                top_authors = EventsDS.get_top_data(startdate, enddate, identities_db, filter_item, npeople)
+                logging.warn(filter_item.get_top_filename(EventsDS()))
+                fn = os.path.join(destdir, filter_item.get_top_filename(EventsDS()))
+                createJSON(top_authors, fn)
+
+    @staticmethod
     def create_filter_report(filter_, period, startdate, enddate, destdir, npeople, identities_db):
         from vizgrimoire.report import Report
         items = Report.get_items()
@@ -159,6 +187,8 @@ class EventsDS(DataSource):
                 items_list['events_365'].append(agg['events_365'])
                 items_list['rsvps_365'].append(agg['attendees_365'])
 
+        EventsDS.create_filter_report_top(filter_, period, startdate, enddate, destdir, npeople, identities_db)
+
         fn = os.path.join(destdir, filter_.get_filename(EventsDS()))
         createJSON(items_list, fn)
 
@@ -173,20 +203,22 @@ class EventsDS(DataSource):
         attendees = DataSource.get_metrics("attendees", EventsDS)
         period = None
         type_analysis = None
+        mfilter = attendees.filters
         if filter_ is not None:
-            logging.info("Eventizer does not support yet top for filters.")
-            return top
+            mfilter = MetricFilters(startdate, enddate, identities_db, npeople)
 
-        top['attendees.'] = attendees.get_list(None, 0)
-        top['attendees.last month'] = attendees.get_list(None, 31)
-        top['attendees.last year'] = attendees.get_list(None, 365)
+        top['attendees.'] = attendees.get_list(mfilter, 0)
+        top['attendees.last month'] = attendees.get_list(mfilter, 31)
+        top['attendees.last year'] = attendees.get_list(mfilter, 365)
 
-        groups = DataSource.get_metrics("groups", EventsDS)
-        top['groups.'] = groups.get_list(None, 0)
-        top['groups.last month'] = groups.get_list(None, 31)
-        top['groups.last year'] = groups.get_list(None, 365)
+        if filter_ is not None:
+            if filter_.get_name() <> 'repository':
+                groups = DataSource.get_metrics("groups", EventsDS)
+                top['groups.'] = groups.get_list(mfilter, 0)
+                top['groups.last month'] = groups.get_list(mfilter, 31)
+                top['groups.last year'] = groups.get_list(mfilter, 365)
 
-        return(top)
+        return top
 
     @staticmethod
     def create_top_report (startdate, enddate, destdir, npeople, i_db):

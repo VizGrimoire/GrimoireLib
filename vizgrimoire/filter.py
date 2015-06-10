@@ -111,6 +111,8 @@ class Filter(object):
                 name += "closers.json"
             elif (ds.get_name() == "mls"): 
                 name += "senders.json"
+            elif (ds.get_name() == "eventizer"):
+                name += "rsvps.json"
             else:
                 logging.warning("No filename for filter top %s %s"
                                 % (self.get_name(), self.get_item()))
