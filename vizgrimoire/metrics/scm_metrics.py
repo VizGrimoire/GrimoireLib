@@ -29,7 +29,7 @@ import MySQLdb
 
 import re, sys
 
-from vizgrimoire.GrimoireUtils import completePeriodIds, GetDates, GetPercentageDiff, check_array_values
+from vizgrimoire.GrimoireUtils import completePeriodIds, GetDates, GetPercentageDiff, check_array_values, checkListArray
 
 from vizgrimoire.metrics.metrics import Metrics
 
@@ -1202,6 +1202,7 @@ class Projects(Metrics):
         mcommits.filters = mfilter
         commits = mcommits.get_agg()
         mcommits.filters = mfilter_orig
+        checkListArray(commits)
         return commits
 
 if __name__ == '__main__':
