@@ -233,8 +233,11 @@ class EmailsSenders(Metrics):
                 "COUNT(distinct(m.message_id)) as sent "+\
                 "FROM "+ tables + dtables +\
                 " ,"+self.db.identities_db+".uidentities up "+\
+                " ,"+self.db.identities_db+".profiles pro "+\
                 "WHERE "+ filter_bots + filters + " AND "+\
                 "  pup.uuid = up.uuid AND "+\
+                "  pro.uuid = up.uuid AND "+\
+                "  pro.is_bot<>'1' AND "+\
                 "  m.first_date >= "+startdate+" AND "+\
                 "  m.first_date < "+enddate +\
                 dfilters+ " "+\
