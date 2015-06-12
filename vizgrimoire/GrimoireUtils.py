@@ -551,12 +551,14 @@ def completeTops(tops, details, backend_name='bugzilla'):
     return completed_tops
 
 def buildIssueURL(tracker_url, issue_id, backend='bugzilla'):
-    if backend is not 'bugzilla':
-        return ""
-    offset = tracker_url.find('/buglist.cgi')
-    url = tracker_url[:offset] + '/show_bug.cgi?id=' + issue_id
+    if backend == 'bugzilla':
+        offset = tracker_url.find('/buglist.cgi')
+        url = tracker_url[:offset] + '/show_bug.cgi?id=' + issue_id
+    elif backend == 'maniphest':
+        url = tracker_url + '/T' + issue_id
+    else:
+        url = ""
     return url
-
 
 def get_median(period_values):
     # No data for this period
