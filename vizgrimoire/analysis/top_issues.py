@@ -160,7 +160,9 @@ class TopIssues(Analyses):
         elif not isinstance(data_source, ITS) and not isinstance(data_source, ITS_1):
             return None
 
-        if data_source._get_backend() == 'maniphest':
+        backend_type = data_source._get_backend().its_type
+
+        if backend_type == 'maniphest':
             top_close_condition = """
                 (resolution = 'closed')
             """
@@ -183,12 +185,12 @@ class TopIssues(Analyses):
         top_issues_data = {}
 
         tops = self.GetTopIssuesWithoutAction(startdate, enddate, top_close_condition, nissues)
-        top_issues_data['issues.no action']= completeTops(tops, issues_details)
+        top_issues_data['issues.no action']= completeTops(tops, issues_details, backend_type)
 
         tops = self.GetTopIssuesWithoutComment(startdate, enddate, top_close_condition, nissues)
-        top_issues_data['issues.no comment']= completeTops(tops, issues_details)
+        top_issues_data['issues.no comment']= completeTops(tops, issues_details, backend_type)
 
         tops = self.GetTopIssuesWithoutResolution(startdate, enddate, top_close_condition, nissues)
-        top_issues_data['issues.no resolution']= completeTops(tops, issues_details)
+        top_issues_data['issues.no resolution']= completeTops(tops, issues_details, backend_type)
 
         return top_issues_data

@@ -162,7 +162,7 @@ class ITS(DataSource):
                 db_identities= Report.get_config()['generic']['db_identities']
                 dbuser = Report.get_config()['generic']['db_user']
                 dbpass = Report.get_config()['generic']['db_password']
-                dbname = Report.get_config()['generic']['db_bicho']
+                dbname = Report.get_config()['generic'][cls.get_db_name()]
                 dbcon = ITSQuery(dbuser, dbpass, dbname, db_identities)
                 metric_filters = MetricFilters(None, startdate, enddate, [])
                 top_issues_data = TopIssues(dbcon, metric_filters).result(cls)
