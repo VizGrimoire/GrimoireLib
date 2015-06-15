@@ -52,6 +52,7 @@ class AllEvents(Analyses):
         fields.add("gro.name as group_name")
         fields.add("count(distinct(rsvps.member_id)) as attendees")
         fields.add("eve.time as date")
+        fields.add("eve.rating_average as rating")
         fields.add("cit.city as city")
         fields.add("cit.country as country")
 
@@ -74,7 +75,7 @@ class AllEvents(Analyses):
 
         data = self.db.ExecuteQuery(query)
         # TODO: Hardcoded creation of file
-        #createJSON(data, "../../../../json/meetup-events.json")
+        #createJSON(data, "../../../../json/eventizer-events.json")
 
         return data
 
