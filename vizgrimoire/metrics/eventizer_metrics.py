@@ -181,12 +181,13 @@ class Attendees(Metrics):
         if islist:
             query = query + " group by p.name "
             query = query + " order by count(distinct(eve.id)) desc "
-            query = query + " limit %d " % self.filters.npeople
+            query = query + " limit %d " % int(self.filters.npeople)
 
         return query
 
     def get_list(self, filters = None, days = 0):
         query = self._get_sql(evolutionary=False, islist=True, days=days) # evolutionary value is not used
+        print query
         data = self.db.ExecuteQuery(query)
         return data
 
@@ -263,6 +264,10 @@ class Groups(Metrics):
         query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                   self.filters.enddate, " eve.time ", fields,
                                   tables, filters, evolutionary, self.filters.type_analysis)
+
+        if islist:
+            query = query + " group by gro.name "
+            query = query + " order by count(distinct(rsvps.id)) desc "
 
         return query
 

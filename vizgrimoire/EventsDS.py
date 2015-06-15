@@ -203,27 +203,46 @@ class EventsDS(DataSource):
     def get_top_data (startdate, enddate, identities_db, filter_, npeople):
         top = {}
         attendees = DataSource.get_metrics("attendees", EventsDS)
-        period = None
+        period = attendees.filters.period
         type_analysis = None
-        mfilter = attendees.filters
+        mfilter = attendees.filters # updated filters
+        filters = None # original filters
         if filter_ is not None:
-            mfilter = MetricFilters(startdate, enddate, identities_db, npeople)
+            type_analysis = filter_.get_type_analysis()
+            print type_analysis
+            mfilter = MetricFilters(period, startdate, enddate, type_analysis, npeople)
+            print mfilter.startdate
+            print mfilter.enddate
 
+        print mfilter.type_analysis
+        if filter_ is not None:
+            filters = attendees.filters
+            attendees.filters = mfilter
         top['attendees.'] = attendees.get_list(mfilter, 0)
         top['attendees.last month'] = attendees.get_list(mfilter, 31)
         top['attendees.last year'] = attendees.get_list(mfilter, 365)
+        if filter_ is not None:
+            attendees.filters = filters
 
         events = DataSource.get_metrics("events", EventsDS)
+        if filter_ is not None:
+            filters = events.filters
+            events.filters = mfilter
         top['events.'] = events.get_list(mfilter, 0)
         top['events.last month'] = events.get_list(mfilter,31)
         top['events.last year'] = events.get_list(mfilter, 365)
+        if filter_ is not None:
+            events.filters = filters
 
         if filter_ is not None:
+            groups = DataSource.get_metrics("groups", EventsDS)
+            filters = groups.filters
+            groups.filters = mfilter
             if filter_.get_name() <> 'repository':
-                groups = DataSource.get_metrics("groups", EventsDS)
                 top['groups.'] = groups.get_list(mfilter, 0)
                 top['groups.last month'] = groups.get_list(mfilter, 31)
                 top['groups.last year'] = groups.get_list(mfilter, 365)
+                groups.filters = filters
 
         return top
 

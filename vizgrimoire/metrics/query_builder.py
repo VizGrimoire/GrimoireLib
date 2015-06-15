@@ -3283,7 +3283,7 @@ class EventizerQuery(DSQuery):
             analysis = type_analysis[0]
             # Retrieving tables based on the required type of analysis.
             for analysis in list_analysis:
-                if analysis == 'group': From.union_update(self.GetSQLGroupsFrom())
+                if analysis == 'repository': From.union_update(self.GetSQLGroupsFrom())
                 elif analysis == 'category': From.union_update(self.GetSQLCategoriesFrom())
                 elif analysis == 'city': From.union_update(self.GetSQLCitiesFrom())
 
@@ -3300,7 +3300,7 @@ class EventizerQuery(DSQuery):
             # Retrieving tables based on the required type of analysis.
             for analysis in list_analysis:
                 value = list_values[list_analysis.index(analysis)]
-                if analysis == 'group': where.union_update(self.GetSQLGroupsWhere(value))
+                if analysis == 'repository': where.union_update(self.GetSQLGroupsWhere(value))
                 elif analysis == 'category': where.union_update(self.GetSQLCategoriesWhere(value))
                 elif analysis == 'city': where.union_update(self.GetSQLCitiesWhere(value))
 
