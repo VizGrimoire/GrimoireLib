@@ -64,6 +64,7 @@ class EventsDS(DataSource):
 
     @staticmethod
     def get_evolutionary_data (period, startdate, enddate, i_db, filter_ = None):
+        logging.warn("evolutionary_data")
         if filter_ is not None:
             sf = EventsDS.get_supported_filters()
             if filter_.get_name() not in sf:
@@ -138,8 +139,9 @@ class EventsDS(DataSource):
             filter_item = Filter(filter_name, item)
 
             if filter_name in ("repository"):
+                logging.warn("Filter 'repository' detected for top info")
                 top_authors = EventsDS.get_top_data(startdate, enddate, identities_db, filter_item, npeople)
-                logging.warn(filter_item.get_top_filename(EventsDS()))
+                logging.warn(filter_item.get_top_filename(EventsDS())) 
                 fn = os.path.join(destdir, filter_item.get_top_filename(EventsDS()))
                 createJSON(top_authors, fn)
 
@@ -210,6 +212,11 @@ class EventsDS(DataSource):
         top['attendees.'] = attendees.get_list(mfilter, 0)
         top['attendees.last month'] = attendees.get_list(mfilter, 31)
         top['attendees.last year'] = attendees.get_list(mfilter, 365)
+
+        events = DataSource.get_metrics("events", EventsDS)
+        top['events.'] = events.get_list(mfilter, 0)
+        top['events.last month'] = events.get_list(mfilter,31)
+        top['events.last year'] = events.get_list(mfilter, 365)
 
         if filter_ is not None:
             if filter_.get_name() <> 'repository':

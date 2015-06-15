@@ -51,10 +51,25 @@ class Events(Metrics):
     desc = "Meetup events"
     data_source = EventsDS
 
-    def _get_sql(self, evolutionary):
+    def _get_sql(self, evolutionary, islist = False, days = 0):
         fields = Set([])
         tables = Set([])
         filters = Set([])
+
+
+        if islist:
+            fields.add("eve.name as name")
+            fields.add("eve.event_url as url")
+            fields.add("eve.time as time")
+            fields.add("count(distinct(rsvps.id)) as rsvps")
+            if days > 0:
+                tables.add("(SELECT MAX(time) as last_date from events) dt")
+                filters.add("DATEDIFF (last_date, time) < %s " % (days))
+
+            tables.add("rsvps")
+
+            filters.add("rsvps.event_id = eve.id")
+            filters.add("rsvps.response = 'yes'")
 
         fields.add("count(distinct(eve.id)) as events")
 
@@ -66,7 +81,19 @@ class Events(Metrics):
         query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                    self.filters.enddate, " eve.time ", fields,
                                    tables, filters, evolutionary, self.filters.type_analysis)
+
+        if islist:
+            query = query + " group by eve.name "
+            query = query + " order by count(distinct(rsvps.id)) desc "
+
         return query
+
+    def get_list(self, filters = None, days = 0):
+        query = self._get_sql(evolutionary=False, islist=True, days=days) # evolutionary value is not used
+        print query
+        data = self.db.ExecuteQuery(query)
+        return data
+
 
 
 class Members(Metrics):
