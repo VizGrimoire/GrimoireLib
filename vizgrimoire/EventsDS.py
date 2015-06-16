@@ -52,15 +52,15 @@ class EventsDS(DataSource):
 
     @staticmethod
     def get_metrics_core_agg():
-        return ['events','members','cities','attendees','groups']
+        return ['events','members','cities','rsvps','groups', 'rsvps_event']
 
     @staticmethod
     def get_metrics_core_ts():
-        return ['events','members','cities','attendees','groups']
+        return ['events','members','cities','rsvps','groups']
 
     @staticmethod
     def get_metrics_core_trends():
-        return ['events','members','cities','attendees','groups']
+        return ['events','members','cities','rsvps','groups']
 
     @staticmethod
     def get_evolutionary_data (period, startdate, enddate, i_db, filter_ = None):
@@ -187,7 +187,7 @@ class EventsDS(DataSource):
             if filter_name in ("repository"):
                 items_list['name'].append(item.replace('/', '_'))
                 items_list['events_365'].append(agg['events_365'])
-                items_list['rsvps_365'].append(agg['attendees_365'])
+                items_list['rsvps_365'].append(agg['rsvps_365'])
 
         EventsDS.create_filter_report_top(filter_, period, startdate, enddate, destdir, npeople, identities_db)
 
@@ -197,30 +197,26 @@ class EventsDS(DataSource):
 
     @staticmethod
     def get_top_metrics ():
-        return ["attendes","groups"]
+        return ["rsvps","groups"]
 
     @staticmethod
     def get_top_data (startdate, enddate, identities_db, filter_, npeople):
         top = {}
-        attendees = DataSource.get_metrics("attendees", EventsDS)
+        attendees = DataSource.get_metrics("rsvps", EventsDS)
         period = attendees.filters.period
         type_analysis = None
         mfilter = attendees.filters # updated filters
         filters = None # original filters
         if filter_ is not None:
             type_analysis = filter_.get_type_analysis()
-            print type_analysis
             mfilter = MetricFilters(period, startdate, enddate, type_analysis, npeople)
-            print mfilter.startdate
-            print mfilter.enddate
 
-        print mfilter.type_analysis
         if filter_ is not None:
             filters = attendees.filters
             attendees.filters = mfilter
-        top['attendees.'] = attendees.get_list(mfilter, 0)
-        top['attendees.last month'] = attendees.get_list(mfilter, 31)
-        top['attendees.last year'] = attendees.get_list(mfilter, 365)
+        top['rsvps.'] = attendees.get_list(mfilter, 0)
+        top['rsvps.last month'] = attendees.get_list(mfilter, 31)
+        top['rsvps.last year'] = attendees.get_list(mfilter, 365)
         if filter_ is not None:
             attendees.filters = filters
 
@@ -258,9 +254,9 @@ class EventsDS(DataSource):
 
         top_data = EventsDS.get_top_data (startdate, enddate, identities_db, None, npeople)
 
-        top = top_data['attendees.']["id"]
-        top += top_data['attendees.last year']["id"]
-        top += top_data['attendees.last month']["id"]
+        top = top_data['rsvps.']["id"]
+        top += top_data['rsvps.last year']["id"]
+        top += top_data['rsvps.last month']["id"]
         # remove duplicates
         people = list(set(top))
         return people

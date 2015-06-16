@@ -25,6 +25,7 @@
 
 import logging
 import MySQLdb
+import numpy
 
 import re, sys
 
@@ -95,6 +96,35 @@ class Events(Metrics):
         return data
 
 
+class RsvpsEvent(Metrics):
+    """ Number of rsvps attending per event in mean and median during
+        the last year.
+    """
+
+    id = "rsvps_event"
+    name = "rsvps by event"
+    desc = "rsvps by event"
+    data_source = EventsDS
+
+    def get_agg(self):
+        """ Returns the mean and median of rsvps per event
+
+            This function uses the method get_list of the Events class
+        """
+
+        data = {}
+
+        events = Events(self.db, self.filters)
+        events_list = events.get_list(None, 365)
+
+        rsvps = events_list['rsvps']
+        data["rsvps_mean"] = numpy.mean(rsvps)
+        data["rsvps_median"] = numpy.median(rsvps)
+
+        return data
+
+    def get_trends(self):
+        return {}
 
 class Members(Metrics):
     """ Members of a group are people that subscribed at some point to this
@@ -144,8 +174,8 @@ class Attendees(Metrics):
         attended the event.
     """
 
-    id = "attendees"
-    name = "Attendees"
+    id = "rsvps"
+    name = "rsvps"
     desc = "Number of people that confirmed their assistance"
     data_source = EventsDS
 
