@@ -118,8 +118,8 @@ class RsvpsEvent(Metrics):
         events_list = events.get_list(None, 365)
 
         rsvps = events_list['rsvps']
-        data["rsvps_mean"] = numpy.mean(rsvps)
-        data["rsvps_median"] = numpy.median(rsvps)
+        data["rsvps_mean_365"] = numpy.mean(rsvps)
+        data["rsvps_median_365"] = numpy.median(rsvps)
 
         return data
 
