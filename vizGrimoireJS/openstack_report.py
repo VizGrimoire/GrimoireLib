@@ -22,7 +22,7 @@
 ##   Daniel Izquierdo-Cortazar <dizquierdo@bitergia.com>
 ##   Luis Cañas-Díaz <lcanas@bitergia.com>
 ##
-## python openstack_report.py -a openstack_2015q1_git -d openstack_2015q1_gerrit -i openstack_2015q1_git -r 2013-04-01,2013-07-01,2013-10-01,2014-01-01,2014-04-01,2014-07-01,2014-10-01,2015-01-01,2015-04-01 -c openstack_2015q1_tickets -b openstack_2015q1_mailing_lists -f openstack_2015q1_qaforums -e openstack_2015q1_irc
+## python openstack_report.py -a openstack_2015q2_git -d openstack_2015q2_gerrit -i openstack_2015q2_git -r 2013-07-01,2013-10-01,2014-01-01,2014-04-01,2014-07-01,2014-10-01,2015-01-01,2015-04-01,2015-07-01 -c openstack_2015q2_tickets      -b openstack_2015q2_mailing_lists -f openstack_2015q2_qaforums -e openstack_2015q2_irc
 
 import imp, inspect
 from optparse import OptionParser
@@ -859,7 +859,7 @@ def general_info(opts, releases, people_out, affs_out):
 
 
 
-    labels = ["13-Q2", "13-Q3", "13-Q4", "14-Q1", "14-Q2","14-Q3", "14-Q4", "15-Q1"]
+    labels = ["13-Q3", "13-Q4", "14-Q1", "14-Q2","14-Q3", "14-Q4", "15-Q1", "15-Q2"]
     #labels = ["2013-Q3", "2013-Q4", "2014-Q1", "2014-Q2"]
     bar_chart("Emails sent", labels, emails, "emails")
 
@@ -934,7 +934,7 @@ def releases_info(startdate, enddate, project, opts, people_out, affs_out):
 def print_n_draw(agg_data, project):
     # The releases information is print in CSV/JSON format and specific charts are built
 
-    labels = ["13-Q2", "13-Q3", "13-Q4", "14-Q1", "14-Q2", "14-Q3", "14-Q4", "15-Q1"]
+    labels = ["13-Q3", "13-Q4", "14-Q1", "14-Q2", "14-Q3", "14-Q4", "15-Q1", "15-Q2"]
     #labels = ["2013-Q3", "2013-Q4", "2014-Q1", "2014-Q2"]
     project_name = project.replace(" ", "")
 
