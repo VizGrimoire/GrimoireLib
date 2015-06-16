@@ -445,9 +445,45 @@ class PatchesSent(Metrics):
     desc = "Number of patches sent"
     data_source = SCR
 
+    # WARNING: this class does not really do what it claims
+    #          This uses the field "subm" that is not always found in the db
+    #          Instead of using this class, it's better to use the approach at
+    #          PatchsetsSubmitted class
     def _get_sql(self, evolutionary):
         q = self.db.GetEvaluationsSQL ("sent", self.filters, evolutionary)
         return q
+
+
+class PatchsetsSubmitted(Metrics):
+    """ This calculates the total patchsets sent per period of time and in total.
+    """
+
+    id = "sent_patchsets"
+    name = "Total patchsets"
+    desc = "Number of submitted patchsets"
+    data_source = SCR
+
+    def _get_sql(self, evolutionary):
+        fields = Set([])
+        tables = Set([])
+        filters = Set([])
+
+        fields.add("count(distinct c.issue_id, c.old_value) as patchsets_submitted")
+
+        tables.add("changes c")
+        tables.add("issues i")
+        tables.union_update(self.db.GetSQLReportFrom(self.filters))
+
+        filters.add("c.issue_id = i.id")
+        filters.union_update(self.db.GetSQLReportWhere(self.filters))
+
+        query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
+                                   self.filters.enddate, "c.changed_on", fields,
+                                   tables, filters, evolutionary,
+                                   self.filters.type_analysis)
+
+        return query
+
 
 class PatchesPerReview(Metrics):
     """Class that returns the mean and median of patches per review
