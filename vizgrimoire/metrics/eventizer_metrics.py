@@ -162,7 +162,7 @@ class Attendees(Metrics):
                 filters.add("DATEDIFF (last_date, time) < %s " % (days))
 
         else:
-            fields.add("count(distinct(p.id)) as attendees")
+            fields.add("count(distinct(p.id)) as rsvps")
 
         tables.add("events eve")
         tables.add("rsvps")
