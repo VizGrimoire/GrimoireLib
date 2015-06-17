@@ -21,7 +21,7 @@
 ## Authors:
 ##   Daniel Izquierdo-Cortazar <dizquierdo@bitergia.com>
 ##
-## python eclipse_mm.py -a cp_cvsanaly_PolarsysMaturity -d cp_gerrit_PolarsysMaturity -i cp_cvsanaly_PolarsysMaturity -r 2014-12-21,2015-01-20 -c cp_bicho_PolarsysMaturity -b cp_mlstats_PolarsysMaturity -e cp_mlstats_fudforums 
+## python eclipse_mm.py -a cp_cvsanaly_PolarsysMaturity -d cp_gerrit_PolarsysMaturity -i cp_cvsanaly_PolarsysMaturity -c cp_bicho_PolarsysMaturity -b cp_mlstats_PolarsysMaturity -e cp_mlstats_fudforums 
 
 
 import imp, inspect
@@ -32,7 +32,9 @@ import sys
 
 import locale
 import numpy as np
-from datetime import datetime
+import datetime
+
+PERIOD = 90 # Number of days for the analysis
 
 def read_options():
 
@@ -74,11 +76,6 @@ def read_options():
                       dest="dbpassword",
                       default="",
                       help="Database password")
-    parser.add_option("-r", "--dates",
-                      action="store",
-                      dest="dates",
-                      default="root",
-                      help="Initial date, final date <date1,date2>")
     parser.add_option("-t", "--type",
                       action="store",
                       dest="backend",
@@ -114,7 +111,7 @@ def scm_report(dbcon, filters, sloc):
     commits = scm.Commits(dbcon, filters)
     # NOTE: Commits ignore merges, are for all of the branches,
     # ignore specified bots, count unique revisions
-    scm_commits_1m = commits.get_trends(filters.enddate, 30)["commits_30"]
+    scm_commits_3m = commits.get_trends(filters.enddate, PERIOD)["commits_%d" % PERIOD]
 
     # Name: Files committed
     # Mnemo: SCM_COMMITTED_FILES_1M
@@ -123,7 +120,7 @@ def scm_report(dbcon, filters, sloc):
     files = scm.Files(dbcon, filters)
     # NOTE: In addition to commits conditions, a committed file is defined as a 
     # 'touched' file: added, removed, modified, copied, moved, etc.
-    scm_committed_files_1m = files.get_trends(filters.enddate, 30)["files_30"]
+    scm_committed_files_3m = files.get_trends(filters.enddate, PERIOD)["files_%d" % PERIOD]
 
     # Name: SCM committers
     # Mnemo: SCM_COMMITTERS_1M
@@ -132,7 +129,7 @@ def scm_report(dbcon, filters, sloc):
     authors = scm.Authors(dbcon, filters)
     # NOTE: We should probably calculate authors instead of committers.
     # In addition: SCM_COMMITTERS and SCM_AUTHORS point to the same metric
-    scm_committers_1m = authors.get_trends(filters.enddate, 30)["authors_30"]
+    scm_committers_3m = authors.get_trends(filters.enddate, PERIOD)["authors_%d" % PERIOD]
 
     # Name: File Statibility Index
     # Mnemo: SCM_Stability_1M
@@ -153,7 +150,7 @@ def scm_report(dbcon, filters, sloc):
                       group by a.file_id """ % (filters.startdate, value)
     file_pokes =  dbcon.ExecuteQuery(query)
     file_pokes = file_pokes["pokes"]
-    avg_file_pokes = 0
+    avg_file_pokes = "nan"
     if isinstance(file_pokes, list) and len(file_pokes) > 0:
         avg_file_pokes = DHESA(file_pokes)
         avg_file_pokes = avg_file_pokes.data["mean"]
@@ -162,14 +159,11 @@ def scm_report(dbcon, filters, sloc):
 
 
     dataset = {}
-    #dataset["scm_commits_1m"] = float(scm_commits_1m) / ksloc
-    #dataset["scm_committed_files_1m"] = float(scm_committed_files_1m) / ksloc
-    #dataset["scm_committers_1m"] = float(scm_committers_1m) / ksloc
-    dataset["scm_stability_1m"] = avg_file_pokes
+    dataset["scm_stability_3m"] = avg_file_pokes
 
-    dataset["scm_commits_1m"] = scm_commits_1m
-    dataset["scm_committed_files_1m"] = scm_committed_files_1m
-    dataset["scm_committers_1m"] = scm_committers_1m
+    dataset["scm_commits_3m"] = scm_commits_3m
+    dataset["scm_committed_files_3m"] = scm_committed_files_3m
+    dataset["scm_committers_3m"] = scm_committers_3m
 
     
     return dataset
@@ -186,9 +180,9 @@ def its_report(dbcon, filters, sloc):
     # NOTE: this metric is defined as CPI and to not be retrieved by Grimoire
     # We should probably retrieve it.
     # updates = opened issues + changes in the period.
-    its_updates_1m = changes.get_trends(filters.enddate, 30)["changed_30"]
+    its_updates_3m = changes.get_trends(filters.enddate, PERIOD)["changed_%d" % PERIOD]
     opened = its.Opened(dbcon, filters)
-    its_updates_1m += opened.get_agg()["opened"]
+    its_updates_3m += opened.get_agg()["opened"]
 
     # ITS BUGS OPEN
     query = """ select count(distinct(i.id)) as opened_issues 
@@ -211,7 +205,7 @@ def its_report(dbcon, filters, sloc):
     authors = its.Changers(dbcon, filters)
     # NOTE: this metric is not the correct one, we should probably add people opening
     # and closing issues, and not only those participating in the changes part
-    its_auth_1m = authors.get_trends(filters.enddate, 30)["changers_30"]
+    its_auth_3m = authors.get_trends(filters.enddate, PERIOD)["changers_%d" % PERIOD]
 
     # Name: Median time to fix bug
     # Mnemo: ITS_FIX_MED_1M
@@ -227,9 +221,9 @@ def its_report(dbcon, filters, sloc):
     if not isinstance(timeto_list["timeto"], list):
         timeto_list["timeto"] = [int(timeto_list["timeto"])]
     dhesa = DHESA(timeto_list["timeto"])
-    its_fix_med_1m = dhesa.data["median"]
-    its_fix_med_1m = its_fix_med_1m / 3600.0
-    its_fix_med_1m = round(its_fix_med_1m / 24.0, 2)
+    its_fix_med_3m = dhesa.data["median"]
+    its_fix_med_3m = its_fix_med_3m / 3600.0
+    its_fix_med_3m = round(its_fix_med_3m / 24.0, 2)
 
 
     # Name: Defect density
@@ -238,17 +232,23 @@ def its_report(dbcon, filters, sloc):
     # of lines (KLOC).
     # TBD
     project_name = filters.type_analysis[1].replace("'", "")
+    startdate = filters.startdate
+    enddate = filters.enddate
+    filters.startdate = "'1900-01-01'"
+    filters.enddate = "'2100-01-01'"
     opened = its.Opened(dbcon, filters)
     its_bugs_density = float(opened.get_agg()["opened"]) / ksloc
+    filters.startdate = startdate
+    filters.enddate = enddate
 
     dataset = {}
-    dataset["its_updates_1m"] = its_updates_1m
-    dataset["its_auth_1m"] = its_auth_1m
+    dataset["its_updates_3m"] = its_updates_3m
+    dataset["its_auth_3m"] = its_auth_3m
     dataset["its_bugs_density"] = its_bugs_density
-    dataset["its_fix_med_1m"] = its_fix_med_1m
+    dataset["its_fix_med_3m"] = its_fix_med_3m
     dataset["its_bugs_open"] = its_bugs_open
-   
-    return dataset 
+
+    return dataset
 
 def scr_report(dbcon, filters):
     pass
@@ -263,9 +263,35 @@ def get_sloc(dbcon):
 
     return sloc_git_repo
 
+def repositories(dbcon, filters):
+    # Checks if there are repositories for the specific project
+    # at filters.type_analysis.
+
+    tables = dbcon.GetSQLProjectsFrom()
+    filters = dbcon.GetSQLProjectsWhere(filters.type_analysis[1])
+
+    fields = "count(*) as nrepositories"
+
+    query = "select %s from %s, messages m where %s and %s" % (fields, tables.pop(), filters.pop(), filters.pop())
+
+    data = dbcon.ExecuteQuery(query)
+
+    return data["nrepositories"]
+
 def mls_report(dbcon, filters, sloc):
 
     ksloc = float(sloc) / 1000.0
+
+    if int(repositories(dbcon, filters)) <= 0:
+        dataset = {}
+        dataset["mls_dev_vol_3m"] = "null"
+        dataset["mls_dev_subj_3m"] = "null"
+        dataset["mls_dev_auth_3m"] = "null"
+        dataset["mls_dev_resp_ratio_3m"] = "null"
+        dataset["mls_dev_resp_time_med_3m"] = "null"
+
+        return dataset
+
 
     # MLS project info is not supported yet. Thus, instead of using the 
     # "project" type of analysis, the "repository" type of analysis is used.
@@ -277,7 +303,7 @@ def mls_report(dbcon, filters, sloc):
     # the last month.
     emails = mls.EmailsSent(dbcon, filters)
     # NOTE: We need to identify the specific developer mailing list
-    mls_dev_vol_1m = emails.get_trends(filters.enddate, 30)["sent_30"]
+    mls_dev_vol_3m = emails.get_trends(filters.enddate, PERIOD)["sent_%d" % PERIOD]
 
     # Name: User ML posts
     # Mnemo: MLS_USR_VOL_1M
@@ -298,23 +324,31 @@ def mls_report(dbcon, filters, sloc):
     timeto_list = timeto.get_agg()
     if not isinstance(timeto_list, list):
         timeto_list = [int(timeto_list)]
-    dhesa = DHESA(timeto_list)
-    mls_dev_resp_time_med_1m = dhesa.data["median"]
-    mls_dev_resp_time_med_1m = mls_dev_resp_time_med_1m / 3600.0
-    mls_dev_resp_time_med_1m = round(mls_dev_resp_time_med_1m / 24.0, 2)
+
+    mls_dev_resp_time_med_3m = "nan"
+    if len(timeto_list) > 0:
+        dhesa = DHESA(timeto_list)
+        mls_dev_resp_time_med_3m = dhesa.data["median"]
+        mls_dev_resp_time_med_3m = mls_dev_resp_time_med_3m / 3600.0
+        mls_dev_resp_time_med_3m = round(mls_dev_resp_time_med_3m / 24.0, 2)
+
 
     # Name: Developer ML subjects
     # Mnemo: MLS_DEV_SUBJ_1M
     # Description: Number of threads in the developer mailing list 
     # during last month
-    threads = mls.Threads(dbcon, filters)
-    mls_dev_subj_1m = threads.get_trends(filters.enddate, 30)["threads_30"]
-     
+    activethreads = mls.ActiveThreads(dbcon, filters)
+    mls_dev_subj_3m = activethreads.get_agg()
+
+#threads = mls.Threads(dbcon, filters)
+    #print threads._get_sql(False)
+    #mls_dev_subj_3m = threads.get_trends(filters.enddate, PERIOD)["threads_%d" % PERIOD]
+
     # Name:
     # Mnemo: MLS_DEV_AUTH_1M
     # Description: Number of authors in the developers mailing list during the last month
     authors = mls.EmailsSenders(dbcon, filters)
-    mls_dev_auth_1m = authors.get_trends(filters.enddate, 30)["senders_30"]
+    mls_dev_auth_3m = authors.get_trends(filters.enddate, PERIOD)["senders_%d" % PERIOD]
 
 
     # Name: Developer ML response ratio
@@ -322,19 +356,19 @@ def mls_report(dbcon, filters, sloc):
     # Description: Average number of responses for a question in the developer 
     # mailing list during last month.
     emails = mls.EmailsSentResponse(dbcon, filters)
-    mls_dev_resp_ratio_1m = emails.get_trends(filters.enddate, 30)["sent_response_30"]
+    mls_dev_resp_ratio_3m = emails.get_trends(filters.enddate, PERIOD)["sent_response_%d" % PERIOD]
 
-    if mls_dev_subj_1m > 0:
-        mls_dev_resp_ratio_1m = float(mls_dev_resp_ratio_1m) / float(mls_dev_subj_1m)
+    if mls_dev_subj_3m > 0:
+        mls_dev_resp_ratio_3m = float(mls_dev_resp_ratio_3m) / float(mls_dev_subj_3m)
     else:
-        mls_dev_resp_ratio_1m = 0
+        mls_dev_resp_ratio_3m = "nan"
 
     dataset = {}
-    dataset["mls_dev_vol_1m"] = mls_dev_vol_1m
-    dataset["mls_dev_subj_1m"] = mls_dev_subj_1m
-    dataset["mls_dev_auth_1m"] = mls_dev_auth_1m
-    dataset["mls_dev_resp_ratio_1m"] = mls_dev_resp_ratio_1m
-    dataset["mls_dev_resp_time_med_1m"] = mls_dev_resp_time_med_1m
+    dataset["mls_dev_vol_3m"] = mls_dev_vol_3m
+    dataset["mls_dev_subj_3m"] = mls_dev_subj_3m
+    dataset["mls_dev_auth_3m"] = mls_dev_auth_3m
+    dataset["mls_dev_resp_ratio_3m"] = mls_dev_resp_ratio_3m
+    dataset["mls_dev_resp_time_med_3m"] = mls_dev_resp_time_med_3m
 
     return dataset
 
@@ -359,10 +393,10 @@ if __name__ == '__main__':
     # parse options
     opts = read_options()    
 
-    # obtain list of releases by tuples [(date1, date2), (date2, date3), ...]
-    releases = opts.dates.split(",")
-    startdate = "'" + releases[0] + "'"
-    enddate = "'" + releases[1] + "'"
+    today = datetime.date.today()
+    startdate = today - datetime.timedelta(days=PERIOD)
+    startdate = "'" + startdate.strftime("%Y-%m-%d") + "'"
+    enddate = "'" + today.strftime("%Y-%m-%d") + "'"
 
     # Projects analysis. This includes SCM, SCR and ITS.
     people_out = []
@@ -406,11 +440,6 @@ if __name__ == '__main__':
         filters = MetricFilters("month", startdate, enddate, ["project", "'"+project+"'"], opts.npeople,
                              people_out, affs_out)
 
-        #filters = MetricFilters("month", startdate, enddate, ["project", "'"+project+"'"], opts.npeople,
-        #                     people_out, affs_out)
-        #filters_scm = MetricFilters("month", startdate, enddate, ["repository,branch", "'"+project+"','master'"], opts.npeople, people_out, affs_out)
-
-        #filters = MetricFilters("month", startdate, enddate, ["repository", "'"+project+"'"], opts.npeople,  people_out, affs_out)
         #SCM report
         scm_dbcon = SCMQuery(opts.dbuser, opts.dbpassword, opts.dbcvsanaly, opts.dbidentities)
         data.update(scm_report(scm_dbcon, filters, project_sloc))
@@ -430,13 +459,13 @@ if __name__ == '__main__':
         #FUDFORUMS Report
         fudforums_dbcon = MLSQuery(opts.dbuser, opts.dbpassword, opts.dbfudforums, opts.dbidentities)
         dataset = mls_report(fudforums_dbcon, filters, project_sloc)
-
+         
         data_aux = {}
-        data_aux["mls_usr_vol_1m"] = dataset["mls_dev_vol_1m"]
-        data_aux["mls_usr_subj_1m"] = dataset["mls_dev_subj_1m"]
-        data_aux["mls_usr_auth_1m"] = dataset["mls_dev_auth_1m"]
-        data_aux["mls_usr_resp_ratio_1m"] = dataset["mls_dev_resp_ratio_1m"]
-        data_aux["mls_usr_resp_time_med_1m"] = dataset["mls_dev_resp_time_med_1m"]
+        data_aux["mls_usr_vol_3m"] = dataset["mls_dev_vol_3m"]
+        data_aux["mls_usr_subj_3m"] = dataset["mls_dev_subj_3m"]
+        data_aux["mls_usr_auth_3m"] = dataset["mls_dev_auth_3m"]
+        data_aux["mls_usr_resp_ratio_3m"] = dataset["mls_dev_resp_ratio_3m"]
+        data_aux["mls_usr_resp_time_med_3m"] = dataset["mls_dev_resp_time_med_3m"]
         data.update(data_aux)
         
 
