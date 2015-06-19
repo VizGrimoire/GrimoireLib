@@ -433,7 +433,7 @@ class SCR(DataSource):
               'pending','review_time','repositories']
         # patches metrics
         m += ['verified','approved','codereview','sent','WaitingForReviewer','WaitingForSubmitter']
-        m += ['submitters','reviewers','active_core_reviewers','participants']
+        m += ['submitters','reviewers','active_core_reviewers','participants','voted_patchsets','sent_patchsets']
 
         return m
 
@@ -444,12 +444,13 @@ class SCR(DataSource):
         m += ['merged','abandoned','new']
         m += ['verified','codereview','sent','WaitingForReviewer','WaitingForSubmitter']
         m += ['submitters','reviewers','active_core_reviewers','participants']
+        m += ['voted_patchsets','sent_patchsets']
 
         return m
 
     @staticmethod
     def get_metrics_core_trends():
-        return ['submitted','merged','pending','abandoned','closed','submitters','active_core_reviewers','participants']
+        return ['submitted','merged','pending','abandoned','closed','submitters','active_core_reviewers','participants','voted_patchsets','sent_patchsets']
 
 
 #########
