@@ -485,6 +485,39 @@ class PatchsetsSubmitted(Metrics):
         return query
 
 
+class PatchsetsVotes(Metrics):
+    """ This calculates the total votes received by each of the patchets
+    """
+
+    id = "voted_patchsets"
+    name = "Total votes in patchsets"
+    desc = "+1,+2,-1,-2 votes in patchsets"
+    data_source = SCR
+
+    def _get_sql(self, evolutionary):
+        fields = Set([])
+        tables = Set([])
+        filters = Set([])
+
+        fields.add("count(distinct c.id, new_value) as patchsets_voted")
+
+        tables.add("changes c")
+        tables.add("issues i")
+        tables.union_update(self.db.GetSQLReportFrom(self.filters))
+
+        filters.add("c.issue_id = i.id")
+        filters.add("c.field='Code-Review'")
+        filters.add("(new_value = 1 or new_value = 2 or new_value = -1 or new_value = -2)")
+        filters.union_update(self.db.GetSQLReportWhere(self.filters))
+
+        query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
+                                   self.filters.enddate, "c.changed_on", fields,
+                                   tables, filters, evolutionary,
+                                   self.filters.type_analysis)
+        print query
+        return query
+
+
 class PatchesPerReview(Metrics):
     """Class that returns the mean and median of patches per review
 
