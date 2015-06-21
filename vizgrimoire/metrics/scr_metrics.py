@@ -468,7 +468,7 @@ class PatchsetsSubmitted(Metrics):
         tables = Set([])
         filters = Set([])
 
-        fields.add("count(distinct ch.issue_id, ch.old_value) as patchsets_submitted")
+        fields.add("count(distinct ch.issue_id, ch.old_value) as sent_patchsets")
 
         tables.add("changes ch")
         tables.add("issues i")
@@ -499,7 +499,7 @@ class PatchsetsVotes(Metrics):
         tables = Set([])
         filters = Set([])
 
-        fields.add("count(distinct ch.id, ch.new_value) as patchsets_voted")
+        fields.add("count(distinct ch.id, ch.new_value) as voted_patchsets")
 
         tables.add("changes ch")
         tables.add("issues i")
@@ -1230,6 +1230,45 @@ class People(Metrics):
 
         top['name'] = top.pop('openers')
         return top
+
+
+class PatchsetSubmitters(Metrics):
+    """Returns people submitting new patchsets to the Gerrit system
+
+    In some cases there may appear several submitters in the same changeset.
+    This class takes into account that potential activity by counting unique
+    uploaders of patchsets to the system.
+    """
+
+    id = "patchset_submitters"
+    name = "Patchset Submitters"
+    desc = "People sending patchsets"
+    data_source = SCR
+
+    def _get_sql(self, evolutionary):
+        fields = Set([])
+        tables = Set([])
+        filters = Set([])
+
+        fields.add("count(distinct(ch.changed_by)) as patchset_submitters")
+
+        tables.add("issues i")
+        tables.add("changes ch")
+        tables.add("people_uidentities pup")
+        tables.union_update(self.db.GetSQLReportFrom(self.filters))
+
+        filters.add("i.id = ch.issue_id")
+        filters.add("ch.field = 'status'")
+        filters.add("ch.new_value = 'UPLOADED'")
+        filters.add("ch.changed_by = pup.people_id")
+        filters.union_update(self.db.GetSQLReportWhere(self.filters))
+
+
+        query = self.db.BuildQuery (self.filters.period, self.filters.startdate,
+                                    self.filters.enddate, " ch.changed_on",
+                                    fields, tables, filters, evolutionary, self.filters.type_analysis)
+        return query
+
 
 class Reviewers(Metrics):
     """Returns a list of reviewers in Gerrit systems.
