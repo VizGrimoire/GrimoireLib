@@ -468,17 +468,17 @@ class PatchsetsSubmitted(Metrics):
         tables = Set([])
         filters = Set([])
 
-        fields.add("count(distinct c.issue_id, c.old_value) as patchsets_submitted")
+        fields.add("count(distinct ch.issue_id, ch.old_value) as patchsets_submitted")
 
-        tables.add("changes c")
+        tables.add("changes ch")
         tables.add("issues i")
         tables.union_update(self.db.GetSQLReportFrom(self.filters))
 
-        filters.add("c.issue_id = i.id")
+        filters.add("ch.issue_id = i.id")
         filters.union_update(self.db.GetSQLReportWhere(self.filters))
 
         query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
-                                   self.filters.enddate, "c.changed_on", fields,
+                                   self.filters.enddate, "ch.changed_on", fields,
                                    tables, filters, evolutionary,
                                    self.filters.type_analysis)
 
@@ -499,22 +499,21 @@ class PatchsetsVotes(Metrics):
         tables = Set([])
         filters = Set([])
 
-        fields.add("count(distinct c.id, new_value) as patchsets_voted")
+        fields.add("count(distinct ch.id, ch.new_value) as patchsets_voted")
 
-        tables.add("changes c")
+        tables.add("changes ch")
         tables.add("issues i")
         tables.union_update(self.db.GetSQLReportFrom(self.filters))
 
-        filters.add("c.issue_id = i.id")
-        filters.add("c.field='Code-Review'")
-        filters.add("(new_value = 1 or new_value = 2 or new_value = -1 or new_value = -2)")
+        filters.add("ch.issue_id = i.id")
+        filters.add("ch.field = 'Code-Review'")
+        filters.add("(ch.new_value = 1 or ch.new_value = 2 or ch.new_value = -1 or ch.new_value = -2)")
         filters.union_update(self.db.GetSQLReportWhere(self.filters))
 
         query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
-                                   self.filters.enddate, "c.changed_on", fields,
+                                   self.filters.enddate, "ch.changed_on", fields,
                                    tables, filters, evolutionary,
                                    self.filters.type_analysis)
-        print query
         return query
 
 
