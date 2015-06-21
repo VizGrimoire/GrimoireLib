@@ -1232,13 +1232,25 @@ class People(Metrics):
         return top
 
 class Reviewers(Metrics):
+    """Returns a list of reviewers in Gerrit systems.
+
+    A reviewer is defined as a member of the Gerrit system that is allowed
+    to vote a patchset. This vote is registered as a +1, -1, +2 or -2.
+    However, given that there is not
+    a public list of reviewers per project, this class assumes
+    that a developer is a(n active)  reviewer the point in time when she
+    uses the right to review.
+    """
+
     id = "reviewers"
     name = "Reviewers"
-    desc = "Number of persons reviewing code review activities"
+    desc = "People actively voting +1,-1,+2,-2 to patchsets"
     data_source = SCR
     action = "reviews"
 
-    # Not sure if this top is right
+    # WARNING: This top is deprecated. This does not take into account
+    # the several votes, +1,-1,+2,-2 potentially done by a developer.
+    # In addition, this does not use the GetSQLReportFrom/Where methods
     def _get_top_global (self, days = 0, metric_filters = None):
         if metric_filters == None:
             metric_filters = self.filters
@@ -1280,35 +1292,32 @@ class Reviewers(Metrics):
 
         return(self.db.ExecuteQuery(q_orgs))
 
-
-
     def _get_sql(self, evolutionary):
         fields = Set([])
         tables = Set([])
         filters = Set([])
 
-        fields.add("count(distinct(changed_by)) as reviewers")
+        fields.add("count(distinct(ch.changed_by)) as reviewers")
         tables.add("changes ch")
         tables.add("issues i")
+        tables.add("people_uidentities pup")
         tables.union_update(self.db.GetSQLReportFrom(self.filters))
+
         filters.add("ch.issue_id = i.id")
+        filters.add("ch.changed_by  = pup.people_id")
+        filters.add("(ch.new_value = 1 or ch.new_value = -1 or ch.new_value = 2 or ch.new_value = -2)")
         filters.union_update(self.db.GetSQLReportWhere(self.filters))
 
-        #Specific case for the basic option where people_upeople table is needed
-        #and not taken into account in the initial part of the query
-        tables.add("people_uidentities pup")
-        filters.add("ch.changed_by  = pup.people_id")
-
-        q = self.db.BuildQuery (self.filters.period, self.filters.startdate,
-                                self.filters.enddate, " ch.changed_on",
-                                fields, tables, filters, evolutionary, self.filters.type_analysis)
-        return q
+        query = self.db.BuildQuery (self.filters.period, self.filters.startdate,
+                                    self.filters.enddate, " ch.changed_on",
+                                    fields, tables, filters, evolutionary, self.filters.type_analysis)
+        return query
 
 
 class ActiveCoreReviewers(Metrics):
     """Returns a list of core reviewers in Gerrit systems.
-    
-    A core reviewer is defined as a reviewer that can use the 
+
+    A core reviewer is defined as a reviewer that can use the
     +2 or -2 in the review system. However, given that there is not
     a public list of core reviewers per project, this class assumes
     that a developer is a(n active)  core reviewer the point in time when she
