@@ -73,6 +73,9 @@ class DSQuery(object):
             group_field = cls.get_group_field(all_items)
             # Format: "count(distinct(pup.uuid)) AS authors"
             count_field = fields.split(" ")[2]
+            if len(fields.split(" ")) == 5:
+                # Format: "count(distinct ch.issue_id, ch.old_value) as sent_patchsets"
+                count_field = fields.split(" ")[4]
             fields = group_field + ", " + fields
 
         sql = 'SELECT '+ fields
