@@ -434,6 +434,7 @@ class SCR(DataSource):
         # patches metrics
         m += ['verified','approved','codereview','sent','WaitingForReviewer','WaitingForSubmitter']
         m += ['submitters','reviewers','active_core_reviewers','participants','voted_patchsets','sent_patchsets']
+        m += ['patchset_submitters']
 
         return m
 
@@ -444,14 +445,16 @@ class SCR(DataSource):
         m += ['merged','abandoned','new']
         m += ['verified','codereview','sent','WaitingForReviewer','WaitingForSubmitter']
         m += ['submitters','reviewers','active_core_reviewers','participants']
-        m += ['voted_patchsets','sent_patchsets']
+        m += ['voted_patchsets','sent_patchsets','patchset_submitters']
 
         return m
 
     @staticmethod
     def get_metrics_core_trends():
-        return ['submitted','merged','pending','abandoned','closed','submitters','active_core_reviewers','participants','voted_patchsets','sent_patchsets']
+        metrics = ['submitted','merged','pending','abandoned','closed','submitters','active_core_reviewers']
+        metrics += ['participants','voted_patchsets','sent_patchsets','patchset_submitters','reviewers']
 
+        return metrics
 
 #########
 # PEOPLE: Pretty similar to ITS
