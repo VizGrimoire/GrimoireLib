@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 # Copyright (C) 2014 Bitergia
-# 
+#
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 3 of the License, or
@@ -31,6 +31,8 @@ from vizgrimoire.metrics.metrics_filter import MetricFilters
 from vizgrimoire.EventsDS import EventsDS
 
 from vizgrimoire.GrimoireUtils import completePeriodIds, createJSON
+
+from copy import deepcopy
 
 
 class PunchcardEvents(Analyses):
@@ -93,7 +95,8 @@ class PunchcardEvents(Analyses):
             empty_week_structure[weekday] = []
             for hour in range(0,24):
                 empty_week_structure[weekday].append(0)
-        week_structure = empty_week_structure.copy()
+        week_structure = deepcopy(empty_week_structure)
+
         count = 0
         old_group = ""
         current_group = data["group_name"][0]
@@ -102,18 +105,18 @@ class PunchcardEvents(Analyses):
             current_group = group
             if current_group <> old_group:
                 # we need to restart the process
-                punchcard[old_group] = week_structure.copy()
+                punchcard[old_group] = deepcopy(week_structure)
                 # Init data structure
-                week_structure = empty_week_structure.copy()
+                week_structure = deepcopy(empty_week_structure)
 
             weekday = int(data["weekday"][count])
             hour = int(data["hour"][count])
             mean = float(data["mean"][count])
             week_structure[weekday][hour] = mean
             count = count + 1
-            if count == len(data["group_name"]) -1:
+            if count == len(data["group_name"]):
                 # last loop
-                punchcard[current_group] = week_structure.copy()
+                punchcard[current_group] = deepcopy(week_structure)
 
         # TODO: Hardcoded creation of file
         #createJSON(punchcard, "../../../../json/eventizer-punchcard.json")
@@ -123,7 +126,7 @@ class PunchcardEvents(Analyses):
 if __name__ == '__main__':
 
     filters = MetricFilters("month", "'2013-04-01'", "'2016-01-01'")
-    dbcon = EventizerQuery("root", "", "test_eventizer", "test_eventizer")
+    dbcon = EventizerQuery("root", "", "meetuptest_eventizer", "meetuptest_eventizer")
 
     punchcard = PunchcardEvents(dbcon, filters)
     print punchcard.result()
