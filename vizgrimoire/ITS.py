@@ -340,16 +340,16 @@ class ITS(DataSource):
         top_data = cls.get_top_data (startdate, enddate, identities_db, None, npeople)
         if top_data is None: return None
 
-        top = top_data['closers.']["id"]
-        top += top_data['closers.last year']["id"]
+        top = check_array_value(top_data['closers.']["id"])
+        top += check_array_value(top_data['closers.last year']["id"])
         top += check_array_value(top_data['closers.last month']["id"])
         top += check_array_value(top_data['openers.']["id"])
         top += check_array_value(top_data['openers.last year']["id"])
         top += check_array_value(top_data['openers.last month']["id"])
         if 'stories_openers' in top_data:
-            top += top_data['stories_openers.']["id"]
-            top += top_data['stories_openers.last year']["id"]
-            top += top_data['stories_openers.last month']["id"]
+            top += check_array_value(top_data['stories_openers.']["id"])
+            top += check_array_value(top_data['stories_openers.last year']["id"])
+            top += check_array_value(top_data['stories_openers.last month']["id"])
 
         # remove duplicates
         people = list(set(top))
