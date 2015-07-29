@@ -646,6 +646,9 @@ class Backend(object):
             self.closed_condition = "(new_value = 'resolved' OR new_value ='declined' " + \
                 "OR new_value = 'duplicate' OR new_value = 'invalid')"
 
+        elif (its_type == 'trac'):
+            self.closed_condition = "(new_value = 'closed')"
+
         elif (its_type == 'jira'):
             self.closed_condition = "(new_value='Closed')"
             self.reopened_condition = "new_value='Reopened'"
