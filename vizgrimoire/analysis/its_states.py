@@ -165,7 +165,7 @@ class TicketsStates(Analyses):
         query = self.__get_sql_state_types__(backend_type)
         result = self.db.ExecuteQuery(query)
 
-        return [state  for state in result['status']]
+        return [state for state in result['status']]
 
     def get_ts(self, data_source = None):
         from vizgrimoire.ITS import ITS
@@ -189,4 +189,20 @@ class TicketsStates(Analyses):
 
         backlog = self.get_backlog(states, backend_type)
         current_states = self.get_current_states(states)
-        return dict(backlog.items() + current_states.items())
+        data = dict(backlog.items() + current_states.items())
+
+        prep_data = {}
+
+        # Capitalize first letter to avoid collision with other metrics
+        capitalize = lambda s: s[0].upper() + s[1:]
+
+        for state in data:
+            if state.startswith('current_'):
+                s = capitalize(state.partition('_')[2])
+                s = 'current_' + s
+            else:
+                s = capitalize(state)
+
+            prep_data[s] = data[state]
+
+        return prep_data
