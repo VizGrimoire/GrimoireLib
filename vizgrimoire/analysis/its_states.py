@@ -196,13 +196,16 @@ class TicketsStates(Analyses):
         # Capitalize first letter to avoid collision with other metrics
         capitalize = lambda s: s[0].upper() + s[1:]
 
-        for state in data:
-            if state.startswith('current_'):
-                s = capitalize(state.partition('_')[2])
-                s = 'current_' + s
+        for k in data:
+            if k in ['id', 'date', 'month', 'unixtime']:
+                prep_data[k] = data[k]
             else:
-                s = capitalize(state)
+                if k.startswith('current_'):
+                    state = capitalize(k.partition('_')[2])
+                    state = 'current_' + state
+                else:
+                    state = capitalize(k)
 
-            prep_data[s] = data[state]
+                prep_data[state] = data[k]
 
         return prep_data
