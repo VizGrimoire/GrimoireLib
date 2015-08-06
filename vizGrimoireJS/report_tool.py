@@ -58,7 +58,7 @@ def get_top_report(startdate, enddate, npeople, identities_db):
     for ds in Report.get_data_sources():
         Report.connect_ds(ds)
         top = ds.get_top_data (startdate, enddate, identities_db, None, npeople)
-        all_ds_top[ds.get_name()] = top 
+        all_ds_top[ds.get_name()] = top
     return all_ds_top
 
 def create_top_report(startdate, enddate, destdir, npeople, identities_db):
@@ -89,24 +89,24 @@ def create_reports_filters(period, startdate, enddate, destdir, npeople, identit
                          "eventizer":[]
                          }
             supported_on = {
-                         "scm":["company+country","company+project"],
-                         "its":["company+country","company+project"],
-                         "its_1":[],
-                         "mls":[],
-                         "scr":[],
-                         "mediawiki":[],
-                         "irc":[],
-                         "downloads":[],
-                         "qaforums":[],
-                         "releases":[],
-                         "pullpo":[],
+                         "scm":["people2","company","country","repository","domain","company+country","company+project"],
+                         "its":["people2","company","country","repository","domain","company+country","company+project"],
+                         "its_1":["people2"],
+                         "mls":["people2","company","country","repository","domain"],
+                         "scr":["people2","company","country","repository"],
+                         "mediawiki":["people2","company"],
+                         "irc":["people2"],
+                         "downloads":["people2"],
+                         "qaforums":["people2"],
+                         "releases":["people2"],
+                         "pullpo":["people2"],
                          "eventizer":[]
                          }
 
             if filter_.get_name() in supported_on[ds.get_name()]:
             # if filter_.get_name() in ["people2","company+country","repository","company"]:
                 logging.info("---> Using new filter API")
-                ds.create_filter_report_all(filter_, period, startdate, enddate, 
+                ds.create_filter_report_all(filter_, period, startdate, enddate,
                                             destdir, npeople, identities_db)
             else:
                 ds.create_filter_report(filter_, period, startdate, enddate, destdir, npeople, identities_db)
