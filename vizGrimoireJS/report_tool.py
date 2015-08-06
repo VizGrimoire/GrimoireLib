@@ -52,12 +52,17 @@ def create_agg_report(startdate, enddate, destdir, identities_db):
         Report.connect_ds(ds)
         ds.create_agg_report (period, startdate, enddate, destdir, identities_db)
 
-def get_top_report(startdate, enddate, npeople, identities_db):
+def get_top_report(startdate, enddate, npeople, identities_db, only_people=False):
     all_ds_top = {}
 
     for ds in Report.get_data_sources():
         Report.connect_ds(ds)
-        top = ds.get_top_data (startdate, enddate, identities_db, None, npeople)
+
+        if only_people and ds.get_name() == 'mls':
+            top = ds.get_top_data(startdate, enddate, identities_db, None, npeople,
+                                  threads_top=False)
+        else:
+            top = ds.get_top_data(startdate, enddate, identities_db, None, npeople)
         all_ds_top[ds.get_name()] = top
     return all_ds_top
 
@@ -197,7 +202,7 @@ def create_people_identifiers(startdate, enddate, destdir, npeople, identities_d
     from vizgrimoire.GrimoireUtils import check_array_values
     logging.info("Generating people identifiers")
 
-    people = get_top_report(startdate, enddate, npeople, identities_db);
+    people = get_top_report(startdate, enddate, npeople, identities_db, only_people=True);
     people_ids = [] # upeople_ids which need identifiers
     people_data = {} # identifiers for upeople_ids
     ds_scm = Report.get_data_source("scm")
