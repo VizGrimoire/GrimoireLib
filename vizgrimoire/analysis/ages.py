@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # Copyright (C) 2014 Bitergia
-# 
+#
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 3 of the License, or
@@ -86,18 +86,18 @@ def parse_analysis (type_analysis):
     elements, of the form ["company,repo", "'SwiftStack','onerepo'"].
     With it, produces a dictionary such as:
     {"company": "SwiftStack", "repo": "onerepo"}
-    
+
     Parametrers
     -----------
-    
+
     type_analysis: list of str
         type_analysis to parse
-    
+
     Returns
     -------
 
     dict: dictionary
-    
+
     """
 
     analysis_dict = {}
@@ -125,7 +125,7 @@ class Ages(Analyses):
     desc = "Age of developers in project"
 
     def __get_sql__(self):
-   
+
         raise NotImplementedError
 
     def result(self, data_source = None):
@@ -234,7 +234,7 @@ class Ages(Analyses):
                                      name = "age",
                                      conditions = (snapshot,),
                                      )
-            # "Aging" has the ages of those actors active during the 
+            # "Aging" has the ages of those actors active during the
             # last half year (that is, the period from enddate - half year
             # to enddate)
             active_period = ActiveCondition (after = enddate - \
@@ -259,7 +259,7 @@ class Ages(Analyses):
          ds-demographics-birth.json, ds-demographics-aging.json,
          with ds being "scm" or "its".
         Only works for SCM, ITS, MLS data sources.
-        
+
         Parameters
         ----------
 
@@ -298,8 +298,16 @@ class Ages(Analyses):
                                        prefix + "-demographics-birth.json")
             file_aging = os.path.join (destdir,
                                        prefix + "-demographics-aging.json")
-        produce_json (file_birth, demos["birth"])
-        produce_json (file_aging, demos["aging"])
+
+        # Create JSON files removing uidentities names
+        birth = demos["birth"]
+        del(birth["persons"]["name"])
+        produce_json(file_birth, birth)
+
+        aging = demos["aging"]
+        del(aging["persons"]["name"])
+        produce_json(file_aging, aging)
+
         logging.info(log_message)
 
 
@@ -318,7 +326,7 @@ if __name__ == '__main__':
     # the internals of Automator etc.
     filters_scm = filters
     filters_scm.add_filter (filters.COMPANY, "SwiftStack")
-    dbcon = DSQuery(user = "jgb", password = "XXX", 
+    dbcon = DSQuery(user = "jgb", password = "XXX",
                     database = "oscon_openstack_scm",
                     identities_db = "oscon_openstack_scm")
     ages = Ages(dbcon, filters_scm)
@@ -342,7 +350,7 @@ if __name__ == '__main__':
 
     filters_its = filters
     filters_its.add_filter (filters_its.COMPANY, "company2")
-    dbcon = DSQuery(user = "jgb", password = "XXX", 
+    dbcon = DSQuery(user = "jgb", password = "XXX",
                     database = "cp_bicho_GrimoireLibTests",
                     identities_db = "cp_cvsanaly_GrimoireLibTests")
     ages = Ages(dbcon, filters_its)
@@ -359,7 +367,7 @@ if __name__ == '__main__':
 
     filters_mls = filters
     filters_mls.add_filter (filters_mls.COMPANY, "company3")
-    dbcon = DSQuery(user = "jgb", password = "XXX", 
+    dbcon = DSQuery(user = "jgb", password = "XXX",
                     database = "cp_mlstats_GrimoireLibTests",
                     identities_db = "cp_cvsanaly_GrimoireLibTests")
     ages = Ages(dbcon, filters_mls)
