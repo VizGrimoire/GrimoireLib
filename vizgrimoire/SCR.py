@@ -450,7 +450,7 @@ class SCR(DataSource):
 
     @staticmethod
     def get_metrics_core_trends():
-        return ['submitted','merged','pending','abandoned','closed','submitters','active_core_reviewers','participants','voted_patchsets','sent_patchsets']
+        return ['submitted','merged','pending','abandoned','closed','submitters','active_core_reviewers','participants','voted_patchsets','sent_patchsets','reviewers','patchset_submitters']
 
 
 #########

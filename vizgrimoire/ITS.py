@@ -128,7 +128,7 @@ class ITS(DataSource):
         bots = cls.get_bots()
         closed_condition =  cls._get_closed_condition()
         # TODO: It should be configurable from Automator
-        top_issues_on = False
+        top_issues_on = True
         top = None
         mopeners = DataSource.get_metrics("openers", cls)
         mclosers = DataSource.get_metrics("closers", cls)
@@ -287,12 +287,12 @@ class ITS(DataSource):
 
         if (filter_name == "company"):
             ds = ITS
-            summary = cls.get_filter_summary(
-                filter_, period, startdate, enddate,
-                identities_db, 10
-                )
-            createJSON (summary,
-                        destdir + "/" + filter_.get_summary_filename(cls))
+            #summary = cls.get_filter_summary(
+            #    filter_, period, startdate, enddate,
+            #    identities_db, 10
+            #    )
+            #createJSON (summary,
+            #            destdir + "/" + filter_.get_summary_filename(cls))
 
             # Perform ages study, if it is specified in Report
             cls.ages_study_com (items, period, startdate, enddate, destdir)

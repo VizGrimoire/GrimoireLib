@@ -224,6 +224,15 @@ class DSQuery(object):
 
     def ExecuteQuery (self, sql):
         if sql is None: return {}
+        
+        #FIXME
+        #fd = open("/tmp/lcanas/log","a")
+        #fd.write("-\n")
+        #fd.write(sql)
+        #fd.close()
+
+
+
         # print sql
         result = {}
         self.cursor.execute(sql)

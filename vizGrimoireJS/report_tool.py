@@ -89,11 +89,11 @@ def create_reports_filters(period, startdate, enddate, destdir, npeople, identit
                          "eventizer":[]
                          }
             supported_on = {
-                         "scm":["company+country","company+project"],
-                         "its":["company+country","company+project"],
+                         "scm":["people2","company","company+country","country","repository","domain"],
+                         "its":["people2","company","company+country","country","repository","domain"],
                          "its_1":[],
-                         "mls":[],
-                         "scr":[],
+                         "mls":["people2","company","country","repository","domain"],
+                         "scr":["people2","company","country","repository"],
                          "mediawiki":[],
                          "irc":[],
                          "downloads":[],
@@ -316,6 +316,7 @@ def set_study(study_id):
     study_ok = False
 
     studies = Report.get_studies()
+
     for study in studies:
         if study.id == study_id:
             study_ok = True
