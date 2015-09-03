@@ -8,7 +8,7 @@
 ## This program is distributed in the hope that it will be useful,
 ## but WITHOUT ANY WARRANTY; without even the implied warranty of
 ## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-## GNU General Public License for more details. 
+## GNU General Public License for more details.
 ##
 ## You should have received a copy of the GNU General Public License
 ## along with this program; if not, write to the Free Software
@@ -43,8 +43,8 @@ from sets import Set
 class Events(Metrics):
     """ An event is a meeting of several people related to specific topics of interest
 
-        This class filters by time of planification. There may be other options
-        such as the time when the event was created or updated.
+        This class filters by the local time of planification. There may be other
+        options such as the time when the event was created or updated.
     """
 
     id = "events"
@@ -61,11 +61,11 @@ class Events(Metrics):
         if islist:
             fields.add("eve.name as name")
             fields.add("eve.event_url as url")
-            fields.add("eve.time as time")
+            fields.add("eve.local_time as time")
             fields.add("count(distinct(rsvps.id)) as rsvps")
             if days > 0:
-                tables.add("(SELECT MAX(time) as last_date from events) dt")
-                filters.add("DATEDIFF (last_date, time) < %s " % (days))
+                tables.add("(SELECT MAX(local_time) as last_date from events) dt")
+                filters.add("DATEDIFF (last_date, local_time) < %s " % (days))
 
             tables.add("rsvps")
 
@@ -80,7 +80,7 @@ class Events(Metrics):
         filters.union_update(self.db.GetSQLReportWhere(self.filters))
 
         query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
-                                   self.filters.enddate, " eve.time ", fields,
+                                   self.filters.enddate, " eve.local_time ", fields,
                                    tables, filters, evolutionary, self.filters.type_analysis)
 
         if islist:
@@ -188,8 +188,8 @@ class Attendees(Metrics):
             fields.add("p.name")
             fields.add("count(distinct(eve.id)) as events")
             if (days > 0):
-                tables.add("(SELECT MAX(time) as last_date from events) dt")
-                filters.add("DATEDIFF (last_date, time) < %s " % (days))
+                tables.add("(SELECT MAX(local_time) as last_date from events) dt")
+                filters.add("DATEDIFF (last_date, local_time) < %s " % (days))
 
         else:
             fields.add("count(distinct(p.id)) as rsvps")
@@ -205,7 +205,7 @@ class Attendees(Metrics):
         filters.union_update(self.db.GetSQLReportWhere(self.filters))
 
         query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
-                                   self.filters.enddate, " eve.time ", fields,
+                                   self.filters.enddate, " eve.local_time ", fields,
                                    tables, filters, evolutionary, self.filters.type_analysis)
 
         if islist:
@@ -246,7 +246,7 @@ class Cities(Metrics):
         filters.union_update(self.db.GetSQLReportWhere(self.filters))
 
         query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
-                                  self.filters.enddate, " eve.time ", fields,
+                                  self.filters.enddate, " eve.local_time ", fields,
                                   tables, filters, evolutionary, self.filters.type_analysis)
 
         return query
@@ -273,8 +273,8 @@ class Groups(Metrics):
             fields.add("gro.rating as rating")
             fields.add("count(distinct(rsvps.id)) as rsvps")
             if (days > 0):
-                tables.add("(SELECT MAX(time) as last_date from events) dt")
-                filters.add("DATEDIFF (last_date, time) < %s " % (days))
+                tables.add("(SELECT MAX(local_time) as last_date from events) dt")
+                filters.add("DATEDIFF (last_date, local_time) < %s " % (days))
 
             tables.add("rsvps")
 
@@ -292,7 +292,7 @@ class Groups(Metrics):
 
 
         query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
-                                  self.filters.enddate, " eve.time ", fields,
+                                  self.filters.enddate, " eve.local_time ", fields,
                                   tables, filters, evolutionary, self.filters.type_analysis)
 
         if islist:
@@ -325,4 +325,3 @@ if __name__ == '__main__':
     print groups.get_agg()
     print groups.get_ts()
     print groups.get_list()
-

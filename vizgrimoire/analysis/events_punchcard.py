@@ -50,8 +50,8 @@ class PunchcardEvents(Analyses):
 
         #subquery
         fields.add("gro.name as group_name")
-        fields.add("dayofweek(eve.time) as weekday")
-        fields.add("hour(eve.time) as hour")
+        fields.add("dayofweek(eve.local_time) as weekday")
+        fields.add("hour(eve.local_time) as hour")
         fields.add("eve.id as event_id")
         fields.add("count(rsvps.id) as rsvps")
 
@@ -63,10 +63,10 @@ class PunchcardEvents(Analyses):
         filters.add("eve.id = rsvps.event_id")
 
         subquery = self.db.BuildQuery(self.filters.period, self.filters.startdate,
-                                   self.filters.enddate, " eve.time ", fields,
+                                   self.filters.enddate, " eve.local_time ", fields,
                                    tables, filters, False, self.filters.type_analysis)
 
-        subquery = subquery + " group by gro.name, hour(eve.time), eve.id "
+        subquery = subquery + " group by gro.name, hour(eve.local_time), eve.id "
 
         #query
         fields = Set([])

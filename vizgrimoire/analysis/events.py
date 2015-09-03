@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 # Copyright (C) 2014 Bitergia
-# 
+#
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 3 of the License, or
@@ -47,7 +47,7 @@ class AllEvents(Analyses):
                            gro.urlname as group_id,
                            gro.name as group_name,
                            IFNULL(t.rsvps, 0) as rsvps,
-                           eve.time as date,
+                           eve.local_time as date,
                            eve.rating_average as rating,
                            cit.city as city,
                            cit.country as country
@@ -60,10 +60,10 @@ class AllEvents(Analyses):
                                       count(distinct(member_id)) as rsvps
                                from rsvps
                                where response='yes'
-                               group by event_id) as t 
+                               group by event_id) as t
                          ON eve.id = t.event_id
                     GROUP BY eve.meetup_id
-                    ORDER BY eve.time DESC
+                    ORDER BY eve.local_time DESC
                 """
 
         data = self.db.ExecuteQuery(query)
