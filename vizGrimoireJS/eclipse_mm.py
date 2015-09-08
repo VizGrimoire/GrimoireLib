@@ -29,6 +29,7 @@ from optparse import OptionParser
 from os import listdir, path, environ
 from os.path import isfile, join
 import sys
+import json
 
 import locale
 import numpy as np
@@ -136,13 +137,13 @@ def scm_report(dbcon, filters, sloc):
     # Description: Average number of commits touching each file in source 
     #              code management repositories dated during the last month.
     value = filters.type_analysis[1].split(",")[0]
-    query = """ select a.file_id, 
-                       count(distinct(a.id)) as pokes 
-                from actions a, 
+    query = """ select a.file_id,
+                       count(distinct(a.id)) as pokes
+                from actions a,
                      scmlog s,
                      repositories r,
                      projects pr
-                where a.commit_id = s.id and 
+                where a.commit_id = s.id and
                       s.author_date >=%s and
                       s.repository_id = r.id and
                       r.name = pr.title and
@@ -165,9 +166,8 @@ def scm_report(dbcon, filters, sloc):
     dataset["scm_committed_files_3m"] = scm_committed_files_3m
     dataset["scm_committers_3m"] = scm_committers_3m
 
-    
     return dataset
-    
+
 def its_report(dbcon, filters, sloc):
 
     ksloc = float(sloc) / 1000.0
@@ -185,7 +185,7 @@ def its_report(dbcon, filters, sloc):
     its_updates_3m += opened.get_agg()["opened"]
 
     # ITS BUGS OPEN
-    query = """ select count(distinct(i.id)) as opened_issues 
+    query = """ select count(distinct(i.id)) as opened_issues
                 from issues i, trackers t
                 where (i.status<>'CLOSED' and i.status<>'RESOLVED') and
                 i.tracker_id = t.id and
@@ -252,16 +252,6 @@ def its_report(dbcon, filters, sloc):
 
 def scr_report(dbcon, filters):
     pass
-
-def get_sloc(dbcon):
-    # Returns a dictionary of git repositories and number of Ksloc
-    # For this purpose, this uses the database schema provided by Cloc as the
-    # tool calculating number of lines of code.
-
-    query = "select Project, sum(nCode) as total_lines from t group by Project;"
-    sloc_git_repo = dbcon.ExecuteQuery(query)
-
-    return sloc_git_repo
 
 def repositories(dbcon, filters):
     # Checks if there are repositories for the specific project
@@ -340,7 +330,7 @@ def mls_report(dbcon, filters, sloc):
     activethreads = mls.ActiveThreads(dbcon, filters)
     mls_dev_subj_3m = activethreads.get_agg()
 
-#threads = mls.Threads(dbcon, filters)
+    #threads = mls.Threads(dbcon, filters)
     #print threads._get_sql(False)
     #mls_dev_subj_3m = threads.get_trends(filters.enddate, PERIOD)["threads_%d" % PERIOD]
 
@@ -391,7 +381,7 @@ if __name__ == '__main__':
     from vizgrimoire.datahandlers.data_handler import DHESA
 
     # parse options
-    opts = read_options()    
+    opts = read_options()
 
     today = datetime.date.today()
     startdate = today - datetime.timedelta(days=PERIOD)
@@ -404,7 +394,6 @@ if __name__ == '__main__':
 
     # Lines of code per repository
     scm_dbcon = SCMQuery(opts.dbuser, opts.dbpassword, opts.dbcvsanaly, opts.dbidentities)
-    sloc_per_repo = get_sloc(scm_dbcon)
 
     data = {}
 
@@ -412,30 +401,18 @@ if __name__ == '__main__':
     query = "select project_id, id from projects"
     projects = scm_dbcon.ExecuteQuery(query)
 
-    # List of sloc per project
-    query = """select p.id, 
-                      pr.project_id, 
-                      sum(m.total_sloc) as total_sloc
-               from metadata m, 
-                    repositories r, 
-                    project_repositories pr, 
-                    projects p 
-               where p.project_id = pr.project_id and 
-                     pr.data_source = 'scm' and 
-                     pr.repository_name = r.uri and 
-                     (r.name = m.Project or r.name = CONCAT(m.Project, ".git")) 
-               group by pr.project_id"""
-    projects_sloc = scm_dbcon.ExecuteQuery(query)
-
-
     for project in projects["id"]:
-        if project not in projects_sloc["id"]:
-            #ignoring some projects not found in the list of sloc
+
+        try:
+            #Obtaining ncloc metric from Sonar dataset
+            with open("../../../json/" + project + "-metrics-sonarqube.json") as sonar_data:
+                sonar_metrics = json.load(sonar_data)
+        except:
             continue
 
-        pr_index = projects_sloc["id"].index(project)
-
-        project_sloc = projects_sloc["total_sloc"][pr_index]
+        project_sloc = float(sonar_metrics["ncloc"])
+        print "Project: " + str(project)
+        print "NCLOC: " + str(project_sloc)
 
         filters = MetricFilters("month", startdate, enddate, ["project", "'"+project+"'"], opts.npeople,
                              people_out, affs_out)
@@ -459,7 +436,7 @@ if __name__ == '__main__':
         #FUDFORUMS Report
         fudforums_dbcon = MLSQuery(opts.dbuser, opts.dbpassword, opts.dbfudforums, opts.dbidentities)
         dataset = mls_report(fudforums_dbcon, filters, project_sloc)
-         
+
         data_aux = {}
         data_aux["mls_usr_vol_3m"] = dataset["mls_dev_vol_3m"]
         data_aux["mls_usr_subj_3m"] = dataset["mls_dev_subj_3m"]
@@ -467,7 +444,7 @@ if __name__ == '__main__':
         data_aux["mls_usr_resp_ratio_3m"] = dataset["mls_dev_resp_ratio_3m"]
         data_aux["mls_usr_resp_time_med_3m"] = dataset["mls_dev_resp_time_med_3m"]
         data.update(data_aux)
-        
+
 
         createJSON(data, "../../../json/" + project + "-metrics-grimoirelib.json")
 
