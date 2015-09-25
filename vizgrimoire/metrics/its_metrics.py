@@ -26,18 +26,14 @@
 import logging
 import MySQLdb
 
+from sets import Set
 
 from vizgrimoire.GrimoireUtils import checkListArray
-
-from vizgrimoire.metrics.metrics import Metrics
-
+from vizgrimoire.metrics.metrics import Metrics, to_list
 from vizgrimoire.metrics.metrics_filter import MetricFilters
-
 from vizgrimoire.metrics.query_builder import ITSQuery
-
 from vizgrimoire.ITS import ITS
 
-from sets import Set
 
 class Opened(Metrics):
     """ Tickets Opened metric class for issue tracking systems """
@@ -314,6 +310,7 @@ class Closers(Metrics):
     data_source = ITS
     envision = {"gtype" : "whiskers"}
 
+    @to_list
     def get_list(self, metric_filters = None, days = 0):
 
         # Overwriting the filters used. This code should be
@@ -710,6 +707,7 @@ class Trackers(Metrics):
     desc = "Number of active trackers"
     data_source = ITS
 
+    @to_list
     def get_list(self):
         # List the url of each of the repositories analyzed
         # Those are order by the number of opened issues (desc order)
@@ -751,6 +749,7 @@ class Companies(Metrics):
     desc = "Number of organizations (organizations, etc.) with persons active in the ticketing system"
     data_source = ITS
 
+    @to_list
     def get_list(self):
         from vizgrimoire.data_source import DataSource
         from vizgrimoire.filter import Filter
@@ -805,6 +804,7 @@ class Countries(Metrics):
         q = self.db.GetSQLIssuesStudies(self.filters, ['country', ''], evolutionary, 'countries')
         return q
 
+    @to_list
     def get_list(self):
         startdate = self.filters.startdate
         enddate = self.filters.enddate
@@ -839,6 +839,7 @@ class CompaniesCountries(Metrics):
     desc = "Countries in Companies participating in the issue tracking system"
     data_source = ITS
 
+    @to_list
     def get_list(self):
         identities_db = self.db.identities_db
         startdate = self.filters.startdate
@@ -869,6 +870,7 @@ class CompaniesProjects(Metrics):
     desc = "Organizations per Projects participating in the issue tracking system"
     data_source = ITS
 
+    @to_list
     def get_list(self):
         identities_db = self.db.identities_db
         startdate = self.filters.startdate
@@ -905,6 +907,7 @@ class Domains(Metrics):
         q = self.db.GetSQLIssuesStudies(self.filters, ['domain', ''], evolutionary, 'domains')
         return q
 
+    @to_list
     def get_list(self):
         from vizgrimoire.data_source import DataSource
         from vizgrimoire.filter import Filter
@@ -947,6 +950,7 @@ class Projects(Metrics):
     desc = "Number of distinct projects active in the ticketing system"
     data_source = ITS
 
+    @to_list
     def get_list(self):
         # Just get closed per project
         startdate = self.filters.startdate
