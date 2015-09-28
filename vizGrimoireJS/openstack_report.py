@@ -22,7 +22,8 @@
 ##   Daniel Izquierdo-Cortazar <dizquierdo@bitergia.com>
 ##   Luis Cañas-Díaz <lcanas@bitergia.com>
 ##
-## python openstack_report.py -a openstack_2015q2_git -d openstack_2015q2_gerrit -i openstack_2015q2_git -r 2013-07-01,2013-10-01,2014-01-01,2014-04-01,2014-07-01,2014-10-01,2015-01-01,2015-04-01,2015-07-01 -c openstack_2015q2_tickets      -b openstack_2015q2_mailing_lists -f openstack_2015q2_qaforums -e openstack_2015q2_irc
+## python openstack_report.py -a openstack_2015q3_git -d openstack_2015q3_gerrit -i openstack_2015q3_identities -r 2013-10-01,2014-01-01,2014-04-01,2014-07-01,2014-10-01,2015-01-01,2015-04-01,2015-07-01,2015-10-01 -c openstack_2015q3_tickets -b openstack_2015q3_mailing_lists -f openstack_2015q3_qaforums -e openstack_2015q3_irc -j openstack_2015q3_projects
+
 
 import imp, inspect
 from optparse import OptionParser
@@ -138,6 +139,10 @@ def read_options():
                       action="store",
                       dest="dbidentities",
                       help="Database with unique identities and affiliations")
+    parser.add_option("-j", "--projects",
+                      action="store",
+                      dest="dbprojects",
+                      help="Database with projects information")
 
     parser.add_option("-u","--dbuser",
                       action="store",
@@ -335,7 +340,7 @@ def scr_report(dbcon, filters):
     dataset["merged"] = merged.get_agg()["merged"]
     dataset["abandoned"] = abandoned.get_agg()["abandoned"]
     dataset["bmiscr"] = round(bmi.get_agg()["bmiscr"], 2)
-    dataset["active_core"] = active_core.get_agg()["core_reviewers"]
+    dataset["active_core"] = active_core.get_agg()["active_core_reviewers"]
     #dataset["waiting4reviewer"] = round(waiting4reviewer.get_agg()["ReviewsWaitingForReviewer"], 2)
     #dataset["waiting4submitter"] = round(waiting4submitter.get_agg()["ReviewsWaitingForSubmitter"], 2)
     dataset["review_time_days_median"] = round(time2review.get_agg()["review_time_days_median"], 2)
@@ -401,10 +406,10 @@ def mls_report(dbcon, filters):
     createJSON(top_longest_threads, "./release/mls_top_longest_threads.json")
     createCSV(top_longest_threads, "./release/mls_top_longest_threads.csv")
 
-    top_crowded_threads = threads.topCrowdedThread(10)
-    top_crowded_threads = serialize_threads(top_crowded_threads, True, threads)
-    createJSON(top_crowded_threads, "./release/mls_top_crowded_threads.json")
-    createCSV(top_crowded_threads, "./release/mls_top_crowded_threads.csv")
+    #top_crowded_threads = threads.topCrowdedThread(10)
+    #top_crowded_threads = serialize_threads(top_crowded_threads, True, threads)
+    #createJSON(top_crowded_threads, "./release/mls_top_crowded_threads.json")
+    #createCSV(top_crowded_threads, "./release/mls_top_crowded_threads.csv")
 
     return dataset
 
@@ -472,7 +477,7 @@ def qaforums_report(dbcon, filters):
     visited["site"] = parse_urls(visited.pop("url"))
     visited["subject"] = get_qa_subjects(visited["site"])
     #commented["site"] = commented.pop("url").split("/")[-2:][1:]
-    
+
     createJSON(visited, "./release/qa_top_questions_visited.json")
     createCSV(visited, "./release/qa_top_questions_visited.csv")
 
@@ -486,7 +491,7 @@ def qaforums_report(dbcon, filters):
     filters.npeople = 15
     createJSON(tops.top_tags(), "./release/qa_top_tags.json")
     createCSV(tops.top_tags(), "./release/qa_top_tags.csv")
-    
+
     return dataset
 
 def irc_report(dbcon, filters):
@@ -513,11 +518,11 @@ def irc_report(dbcon, filters):
 def createCSV(data, filepath, skip_fields = []):
     fd = open(filepath, "w")
     keys = list(set(data.keys()) - set(skip_fields))
-    
+
     header = u''
     for k in keys:
         header += unicode(k)
-        header += u','        
+        header += u','
     header = header[:-1]
     body = ''
     length = len(data[keys[0]]) # the length should be the same for all
@@ -554,7 +559,7 @@ def init_env():
 
 def projects(user, password, database):
     # List projects to be analyzed
-    dbcon = DSQuery(user, password, database, None)
+    dbcon = DSQuery(user, password, database)
     query = "select id from projects"
     return dbcon.ExecuteQuery(query)["id"]
 
@@ -567,12 +572,12 @@ def data_source_increment_activity(opts, people_out, affs_out):
     net_values = []
     rel_values = [] #percentage wrt the previous 365 days
 
-    scm_dbcon = SCMQuery(opts.dbuser, opts.dbpassword, opts.dbcvsanaly, opts.dbidentities) 
-    its_dbcon = ITSQuery(opts.dbuser, opts.dbpassword, opts.dbbicho, opts.dbidentities)
-    mls_dbcon = MLSQuery(opts.dbuser, opts.dbpassword, opts.dbmlstats, opts.dbidentities)
-    scr_dbcon = SCRQuery(opts.dbuser, opts.dbpassword, opts.dbreview, opts.dbidentities)
-    qaforums_dbcon = QAForumsQuery(opts.dbuser, opts.dbpassword, opts.dbqaforums, opts.dbidentities)
-    irc_dbcon = IRCQuery(opts.dbuser, opts.dbpassword, opts.dbirc, opts.dbidentities)
+    scm_dbcon = SCMQuery(opts.dbuser, opts.dbpassword, opts.dbcvsanaly, opts.dbidentities, opts.dbprojects)
+    its_dbcon = ITSQuery(opts.dbuser, opts.dbpassword, opts.dbbicho, opts.dbidentities, opts.dbprojects)
+    mls_dbcon = MLSQuery(opts.dbuser, opts.dbpassword, opts.dbmlstats, opts.dbidentities, opts.dbprojects)
+    scr_dbcon = SCRQuery(opts.dbuser, opts.dbpassword, opts.dbreview, opts.dbidentities, opts.dbprojects)
+    qaforums_dbcon = QAForumsQuery(opts.dbuser, opts.dbpassword, opts.dbqaforums, opts.dbidentities, opts.dbprojects)
+    irc_dbcon = IRCQuery(opts.dbuser, opts.dbpassword, opts.dbirc, opts.dbidentities, opts.dbprojects)
 
     period = "month"
     type_analysis = None
@@ -610,10 +615,10 @@ def data_source_increment_activity(opts, people_out, affs_out):
 def integrated_projects(dbcon):
     # List of projects that are under the integrated umbrella
     query = """ select b.id as subproject_id
-                from projects p, 
+                from projects p,
                      project_children pc,
                      projects b
-                where p.title='integrated'  and 
+                where p.title='integrated'  and
                       p.project_id=pc.project_id and
                       pc.subproject_id = b.project_id
             """
@@ -634,7 +639,7 @@ def integrated_projects_activity(dbcon, opts, people_out, affs_out):
     releases = opts.releases.split(",")[-2:]
     startdate = "'"+releases[0]+"'"
     enddate = "'"+releases[1]+"'"
-    
+
     for project_id in projects_ids:
         project_title = "'" + project_id + "'"
         type_analysis = ["project", project_title]
@@ -665,13 +670,13 @@ def integrated_projects_top_orgs(dbcon, people_out, affs_out):
     releases = opts.releases.split(",")[-2:]
     startdate = "'"+releases[0]+"'"
     enddate = "'"+releases[1]+"'"
-    
+
     for project_id in projects_ids:
         project_title = "'" + project_id + "'"
         type_analysis = ["project", project_title]
         project_filters = MetricFilters(period, startdate, enddate, type_analysis, 10,
                                         people_out, affs_out)
-        
+
         companies = scm.Companies(dbcon, project_filters)
         activity = companies.get_list()
 
@@ -713,9 +718,9 @@ def integrated_projects_top_contributors(scm_dbcon, people_out, affs_out):
 
 def projects_efficiency(opts, people_out, affs_out):
     # BMI and time to review in mean per general project
-    scr_dbcon = SCRQuery(opts.dbuser, opts.dbpassword, opts.dbreview, opts.dbidentities)
-    scm_dbcon = SCMQuery(opts.dbuser, opts.dbpassword, opts.dbcvsanaly, opts.dbidentities)
-    its_dbcon = ITSQuery(opts.dbuser, opts.dbpassword, opts.dbbicho, opts.dbidentities)
+    scr_dbcon = SCRQuery(opts.dbuser, opts.dbpassword, opts.dbreview, opts.dbidentities, opts.dbprojects)
+    scm_dbcon = SCMQuery(opts.dbuser, opts.dbpassword, opts.dbcvsanaly, opts.dbidentities, opts.dbprojects)
+    its_dbcon = ITSQuery(opts.dbuser, opts.dbpassword, opts.dbbicho, opts.dbidentities, opts.dbprojects)
 
     projects = integrated_projects(scm_dbcon)
 
@@ -737,7 +742,7 @@ def projects_efficiency(opts, people_out, affs_out):
                                         people_out, affs_out)
         scr_bmi = scr.BMISCR(scr_dbcon, project_filters)
         time2review = scr.TimeToReview(scr_dbcon, project_filters)
-   
+
         # ITS BMI index
         from vizgrimoire.ITS import ITS
         ITS.set_backend("launchpad")
@@ -764,15 +769,15 @@ def projects_efficiency(opts, people_out, affs_out):
         bmi_its.append(its_bmi)
 
 
-    createCSV({"projects":projects_list, "bmi":bmi_list, "timereview":time2review_list, "bmiits":bmi_its}, "./release/integrated_projects_efficiency.csv")    
+    createCSV({"projects":projects_list, "bmi":bmi_list, "timereview":time2review_list, "bmiits":bmi_its}, "./release/integrated_projects_efficiency.csv")
 
 def timezone_analysis(opts):
     from vizgrimoire.analysis.timezone import Timezone
     from vizgrimoire.SCM import SCM
     from vizgrimoire.MLS import MLS
 
-    scm_dbcon = DSQuery(opts.dbuser, opts.dbpassword, opts.dbcvsanaly, opts.dbidentities)
-    mls_dbcon = MLSQuery(opts.dbuser, opts.dbpassword, opts.dbmlstats, opts.dbidentities)
+    scm_dbcon = SCMQuery(opts.dbuser, opts.dbpassword, opts.dbcvsanaly, opts.dbidentities, opts.dbprojects)
+    mls_dbcon = MLSQuery(opts.dbuser, opts.dbpassword, opts.dbmlstats, opts.dbidentities, opts.dbprojects)
 
     period = "month"
     releases = opts.releases.split(",")[-2:]
@@ -796,8 +801,8 @@ def timezone_analysis(opts):
 
 def general_info(opts, releases, people_out, affs_out):
     # General info from MLS, IRC and QAForums.
-    scm_dbcon = SCMQuery(opts.dbuser, opts.dbpassword, opts.dbcvsanaly, opts.dbidentities)
-    
+    scm_dbcon = SCMQuery(opts.dbuser, opts.dbpassword, opts.dbcvsanaly, opts.dbidentities, opts.dbprojects)
+
     # analysis currently failing
     #timezone_analysis(opts)
 
@@ -823,7 +828,7 @@ def general_info(opts, releases, people_out, affs_out):
         filters = MetricFilters("month", startdate, enddate, None, opts.npeople, people_out, affs_out)
         # SCM info
         print "    General info: SCM"
-        scm_dbcon = SCMQuery(opts.dbuser, opts.dbpassword, opts.dbcvsanaly, opts.dbidentities)
+        scm_dbcon = SCMQuery(opts.dbuser, opts.dbpassword, opts.dbcvsanaly, opts.dbidentities, opts.dbprojects)
         dataset = scm_general(scm_dbcon, filters)
         core.append(dataset["core"])
         regular.append(dataset["regular"])
@@ -832,10 +837,10 @@ def general_info(opts, releases, people_out, affs_out):
         top_authors = dataset["topauthors"]
         release_pos = releases.index(release)
         createCSV(top_authors, "./release/top_authors_release" + str(release_pos)+ ".csv")
-  
+
         # MLS info
         print "    General info: MLS"
-        mls_dbcon = MLSQuery(opts.dbuser, opts.dbpassword, opts.dbmlstats, opts.dbidentities)
+        mls_dbcon = MLSQuery(opts.dbuser, opts.dbpassword, opts.dbmlstats, opts.dbidentities, opts.dbprojects)
         dataset = mls_report(mls_dbcon, filters)
         emails.append(dataset["sent"])
         emails_senders.append(dataset["senders"])
@@ -843,7 +848,7 @@ def general_info(opts, releases, people_out, affs_out):
 
         # QAForums info 
         print "    General info: QAForums"
-        qaforums_dbcon = QAForumsQuery(opts.dbuser, opts.dbpassword, opts.dbqaforums, opts.dbidentities)
+        qaforums_dbcon = QAForumsQuery(opts.dbuser, opts.dbpassword, opts.dbqaforums, opts.dbidentities, opts.dbprojects)
         dataset = qaforums_report(qaforums_dbcon, filters)
         questions.append(dataset["questions"])
         answers.append(dataset["answers"])
@@ -852,7 +857,7 @@ def general_info(opts, releases, people_out, affs_out):
 
         # IRC info
         print "    General info: IRC"
-        irc_dbcon = IRCQuery(opts.dbuser, opts.dbpassword, opts.dbirc, opts.dbidentities)
+        irc_dbcon = IRCQuery(opts.dbuser, opts.dbpassword, opts.dbirc, opts.dbidentities, opts.dbprojects)
         dataset = irc_report(irc_dbcon, filters)
         irc_sent.append(dataset["sent"])
         irc_senders.append(dataset["senders"])
@@ -880,7 +885,7 @@ def general_info(opts, releases, people_out, affs_out):
     createCSV({"labels":labels, "messages":irc_sent}, "./release/irc_sent.csv")
     bar_chart("People in IRC channels", labels, irc_senders, "irc_senders")
     createCSV({"labels":labels, "senders":irc_senders}, "./release/irc_senders.csv")
-    
+
     bar3_chart("Community structure", labels, regular, "onion", core, occasional, ["casual", "regular", "core"])
     createCSV({"labels":labels, "core":core, "regular":regular, "occasional":occasional}, "./release/onion_model.csv")
     bar_chart("Developers per month", labels, authors_month, "authors_month")
@@ -889,22 +894,27 @@ def general_info(opts, releases, people_out, affs_out):
     # other analysis
     print "Other analysis"
     scm_dbcon = SCMQuery(opts.dbuser, opts.dbpassword, opts.dbcvsanaly, opts.dbidentities)
-        
+
     # Increment of activity in the last 365 days by data source
-    data_source_increment_activity(opts, people_out, affs_out)
+    #data_source_increment_activity(opts, people_out, affs_out)
 
     # Commits and reviews per integrated project
-    integrated_projects_activity(scm_dbcon, opts, people_out, affs_out)
+    # Deprecated function, 'integrated' projects do not exist any more.
+    #integrated_projects_activity(scm_dbcon, opts, people_out, affs_out)
 
     # Top orgs per integrated project
-    integrated_projects_top_orgs(scm_dbcon, people_out, affs_out)
+    # Deprecated function, 'integrated' projects do not exist any more.
+    #integrated_projects_top_orgs(scm_dbcon, people_out, affs_out)
 
     # Top contributors per integrated project 
-    integrated_projects_top_contributors(scm_dbcon, people_out, affs_out)
+    # Deprecated function, 'integrated' projects do not exist any more.
+    #integrated_projects_top_contributors(scm_dbcon, people_out, affs_out)
+
 
     # Efficiency per general project
-    projects_efficiency(opts, people_out, affs_out)    
-   
+    # Deprecated function, 'integrated' projects do not exist any more.
+    #projects_efficiency(opts, people_out, affs_out)
+
     # TZ analysis
     #timezone_analysis(opts)
 
@@ -914,17 +924,17 @@ def releases_info(startdate, enddate, project, opts, people_out, affs_out):
     filters = MetricFilters("month", startdate, enddate, ["project", str(project)], opts.npeople,
                              people_out, affs_out)
     # SCM report
-    scm_dbcon = SCMQuery(opts.dbuser, opts.dbpassword, opts.dbcvsanaly, opts.dbidentities)
+    scm_dbcon = SCMQuery(opts.dbuser, opts.dbpassword, opts.dbcvsanaly, opts.dbidentities, opts.dbprojects)
     dataset = scm_report(scm_dbcon, filters)
     data["scm"] = dataset
 
     #ITS report
-    its_dbcon = ITSQuery(opts.dbuser, opts.dbpassword, opts.dbbicho, opts.dbidentities)
+    its_dbcon = ITSQuery(opts.dbuser, opts.dbpassword, opts.dbbicho, opts.dbidentities, opts.dbprojects)
     dataset = its_report(its_dbcon, filters)
     data["its"] = dataset
 
     #SCR Report
-    scr_dbcon = SCRQuery(opts.dbuser, opts.dbpassword, opts.dbreview, opts.dbidentities)
+    scr_dbcon = SCRQuery(opts.dbuser, opts.dbpassword, opts.dbreview, opts.dbidentities, opts.dbprojects)
     dataset = scr_report(scr_dbcon, filters)
     data["scr"] = dataset
 
@@ -1007,7 +1017,7 @@ def order_data(agg_data, releases):
            agg_data["bmi"].append(round(float(releases_data[release]["its"]["closed"])/float(releases_data[release]["its"]["opened"]), 2))
         else:
            agg_data["bmi"].append(0)
-   
+
         #scr
         agg_data["submitted"].append(releases_data[release]["scr"]["submitted"])
         agg_data["merged"].append(releases_data[release]["scr"]["merged"])
@@ -1046,14 +1056,14 @@ if __name__ == '__main__':
     from vizgrimoire.datahandlers.data_handler import DHESA
 
     # parse options
-    opts = read_options()    
+    opts = read_options()
 
     # obtain list of releases by tuples [(date1, date2), (date2, date3), ...]
     releases = build_releases(opts.releases)
 
 
     # Projects analysis. This includes SCM, SCR and ITS.
-    projects_list = projects(opts.dbuser, opts.dbpassword, opts.dbidentities)
+    projects_list = projects(opts.dbuser, opts.dbpassword, opts.dbprojects)
     people_out = ["OpenStack Jenkins","Launchpad Translations on behalf of nova-core","Jenkins","OpenStack Hudson","gerrit2@review.openstack.org","linuxdatacenter@gmail.com","Openstack Project Creator","Openstack Gerrit","openstackgerrit"]
     affs_out = ["-Bot","-Individual","-Unknown"]
 
