@@ -72,6 +72,11 @@ class AllEvents(Analyses):
 
         return data
 
+    def create_report(self, data_source, destdir):
+        if data_source == EventsDS:
+            data = self.result()
+            createJSON(data, destdir + "/eventizer-events.json")
+
 
 if __name__ == '__main__':
 

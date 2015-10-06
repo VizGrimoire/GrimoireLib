@@ -122,6 +122,10 @@ class PunchcardEvents(Analyses):
         #createJSON(punchcard, "../../../../json/eventizer-punchcard.json")
         return punchcard
 
+    def create_report(self, data_source, destdir):
+        if data_source == EventsDS:
+            data = self.result()
+            createJSON(data, destdir + "/eventizer-punchcard.json")
 
 if __name__ == '__main__':
 
