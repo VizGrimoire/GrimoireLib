@@ -3244,7 +3244,11 @@ class EventizerQuery(DSQuery):
     def GetSQLGroupsWhere(self, value):
         filters = Set([])
         filters.add("eve.group_id = gro.id")
-        filters.add("gro.name = " + value)
+        #TODO: at some point we should use the escape function from mysqldb
+        value = value.replace("'", "\\'")
+        value = value[1:]
+        value = value[:-2] + "'"
+        filters.add("gro.name = %s" % (value))
         return filters
 
     # Categories conditions
