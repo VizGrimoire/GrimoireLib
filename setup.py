@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 #
-# 
+#
 # Copyright (C) 2014 Bitergia
 #
 # This program is free software; you can redistribute it and/or modify
@@ -24,12 +24,18 @@
 
 from distutils.core import setup
 from setuptools import find_packages
+import os
+import subprocess
+
+# Fetch version from git tags,
+# it will crash if you are running this outside a git clone
+
+version_git = subprocess.check_output(["git", "describe","--tags"]).rstrip()
 
 setup(name = "GrimoireLib",
-      version = "0.1",
+      version="{ver}".format(ver=version_git),
       author =  "Daniel Izquierdo et al",
       author_email = "dizquierdo@bitergia.com",
       description = "Open Source projects data mining library",
       url = "https://github.com/VizGrimoire/GrimoireLib",
       packages = find_packages())
-
