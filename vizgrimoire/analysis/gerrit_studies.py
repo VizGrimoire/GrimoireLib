@@ -68,6 +68,7 @@ class OldestChangesets(Analyses):
         filters.add("i.status<>'Merged'")
         filters.add("tr.id=i.tracker_id")
         filters.add("i.submitted_by=p.id")
+        filters.add("i.summary not like '%WIP%'")
 
         query = " select " + self.db._get_fields_query(fields)
         query = query + " from " + self.db._get_tables_query(tables)
