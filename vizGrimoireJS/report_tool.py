@@ -90,6 +90,7 @@ def create_reports_filters(period, startdate, enddate, destdir, npeople, identit
                          "downloads":["people2"],
                          "qaforums":["people2"],
                          "releases":["people2"],
+                         "dockerhub":["people2"],
                          "pullpo":["people2"],
                          "eventizer":[]
                          }
@@ -104,6 +105,7 @@ def create_reports_filters(period, startdate, enddate, destdir, npeople, identit
                          "downloads":["people2"],
                          "qaforums":["people2"],
                          "releases":["people2"],
+                         "dockerhub":["people2"],
                          "pullpo":["people2"],
                          "eventizer":[]
                          }
