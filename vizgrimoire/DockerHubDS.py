@@ -1,3 +1,5 @@
+## -*- coding: utf-8 -*-
+##
 ## Copyright (C) 2014 Bitergia
 ##
 ## This program is free software; you can redistribute it and/or modify
@@ -17,6 +19,8 @@
 ##
 ## Authors:
 ##   Alvaro del Castillo <acs@bitergia.com>
+##   Luis Cañas-Díaz <lcanas@bitergia.com>
+
 
 import logging, os
 
