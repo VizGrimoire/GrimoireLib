@@ -8,7 +8,7 @@
 ## This program is distributed in the hope that it will be useful,
 ## but WITHOUT ANY WARRANTY; without even the implied warranty of
 ## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-## GNU General Public License for more details. 
+## GNU General Public License for more details.
 ##
 ## You should have received a copy of the GNU General Public License
 ## along with this program; if not, write to the Free Software
@@ -34,6 +34,7 @@ import vizgrimoire.QAForums as QAForums
 import vizgrimoire.ReleasesDS as ReleasesDS
 import vizgrimoire.Pullpo as Pullpo
 import vizgrimoire.EventsDS as EventsDS
+import vizgrimoire.DockerHubDS as DockerHubDS
 from vizgrimoire.filter import Filter
 from vizgrimoire.metrics.metrics import Metrics
 from vizgrimoire.metrics.metrics_filter import MetricFilters
@@ -87,7 +88,7 @@ class Report(object):
         Report._all_data_sources = [SCM.SCM, ITS.ITS, ITS_1.ITS_1, MLS.MLS, SCR.SCR,
                                     Mediawiki.Mediawiki, IRC.IRC, DownloadsDS.DownloadsDS,
                                     QAForums.QAForums, ReleasesDS.ReleasesDS, Pullpo.Pullpo,
-                                    EventsDS.EventsDS]
+                                    EventsDS.EventsDS, DockerHubDS.DockerHubDS]
         if 'people_out' in Report.get_config()['r']:
             bots = Report.get_config()['r']['people_out'].split(",")
             for ds in Report._all_data_sources:
@@ -288,7 +289,7 @@ class Report(object):
 
     @staticmethod
     def set_data_sources(dss):
-        Report._all_data_sources = dss 
+        Report._all_data_sources = dss
 
     @staticmethod
     def get_filters():
@@ -296,7 +297,7 @@ class Report(object):
 
     @staticmethod
     def set_filters(filters):
-        Report._filters = filters 
+        Report._filters = filters
 
     @staticmethod
     def get_filter(name):
