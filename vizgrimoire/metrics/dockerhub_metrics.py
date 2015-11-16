@@ -78,9 +78,9 @@ class Pulls(Metrics):
             limit = metric_filters.npeople
 
             query = """
-                    SELECT name, pulls
+                    SELECT id, name, pulls
                     FROM repositories
-                    ORDER BY pulls
+                    ORDER BY pulls DESC
                     LIMIT %s
                     """ % (str(limit))
             return self.db.ExecuteQuery(query)
