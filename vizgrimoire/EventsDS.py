@@ -261,3 +261,11 @@ class EventsDS(DataSource):
         people = list(set(top))
         return people
 
+    @staticmethod
+    def get_person_evol(upeople_id, period, startdate, enddate, identities_db, type_analysis):
+        pass
+
+    @staticmethod
+    def get_person_agg(upeople_id, startdate, enddate, identities_db, type_analysis):
+        pass
+
