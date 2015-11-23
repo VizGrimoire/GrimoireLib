@@ -8,7 +8,7 @@
 ## This program is distributed in the hope that it will be useful,
 ## but WITHOUT ANY WARRANTY; without even the implied warranty of
 ## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-## GNU General Public License for more details. 
+## GNU General Public License for more details.
 ##
 ## You should have received a copy of the GNU General Public License
 ## along with this program; if not, write to the Free Software
@@ -117,7 +117,7 @@ class Commits(Metrics):
         tables.add("scmlog s")
         tables.add("(select distinct(a.commit_id) as id from actions a) nomergers")
         tables.union_update(self.db.GetSQLReportFrom(self.filters))
- 
+
         filters.add("s.id = nomergers.id")
         filters.union_update(self.db.GetSQLReportWhere(self.filters, "author"))
 
@@ -131,7 +131,7 @@ class NewAuthors(Metrics):
     """ A new author comes to the community when her first commit is detected
 
         By definition a new author joins the Git community when her first patchset
-        has landed into the code. This is calculated as the minimum date found in 
+        has landed into the code. This is calculated as the minimum date found in
         the database for her actions.
     """
 
@@ -309,7 +309,7 @@ class Authors(Metrics):
         tables.union_update(self.db.GetSQLReportFrom(self.filters))
 
         # This may be redundant code. However this is needed for specific analysis
-        # such as repositories or projects. Given that we're using sets, this is not 
+        # such as repositories or projects. Given that we're using sets, this is not
         # an issue. Not repeated tables or filters will appear in the final query.
         tables.add("people_uidentities pup")
         filters.add("s.author_id = pup.people_id")
@@ -353,7 +353,7 @@ class Authors(Metrics):
         tables.union_update(self.db.GetSQLReportFrom(self.filters))
 
         # This may be redundant code. However this is needed for specific analysis
-        # such as repositories or projects. Given that we're using sets, this is not 
+        # such as repositories or projects. Given that we're using sets, this is not
         # an issue. Not repeated tables or filters will appear in the final query.
         tables.add("people_uidentities pup")
         tables.add(self.db.identities_db + ".uidentities u")
@@ -460,7 +460,7 @@ class Committers(Metrics):
                 tables.add("people_uidentities pup")
                 filters.add("s.committer_id = pup.people_id")
 
-        q = self.db.BuildQuery(self.filters.period, self.filters.startdate, 
+        q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                self.filters.enddate, " s.author_date ", fields,
                                tables, filters, evolutionary, self.filters.type_analysis)
 
@@ -486,7 +486,7 @@ class Files(Metrics):
         filters.add("a.commit_id = s.id")
 
         tables.union_update(self.db.GetSQLReportFrom(self.filters))
-        # TODO: left "author" as generic option coming from parameters 
+        # TODO: left "author" as generic option coming from parameters
         # (this should be specified by command line)
         filters.union_update(self.db.GetSQLReportWhere(self.filters, "author"))
 
@@ -574,7 +574,7 @@ class Lines(Metrics):
 
         #Returning filters to their original value
         self.filters = filters
-        return (data) 
+        return (data)
 
 class AddedLines(Metrics):
     """ Added lines for source code management system """
@@ -767,7 +767,7 @@ class CommitsAuthor(Metrics):
         fields = Set([])
         tables = Set([])
         filters = Set([])
-  
+
         fields.add("count(distinct(s.id))/count(distinct(pup.uuid)) as avg_commits_author ")
         tables.add("scmlog s")
         tables.add("(select distinct(a.commit_id) as id from actions a) nomergers")
@@ -777,7 +777,7 @@ class CommitsAuthor(Metrics):
 
         #specific parts of the query depending on the report needed
         tables.union_update(self.db.GetSQLReportFrom(self.filters))
- 
+
         # Needed code for specific analysis such as repositories or projects
         # Given that we're using sets, this does not add extra tables or filters.
         tables.add("people_uidentities pup")
@@ -930,12 +930,13 @@ class Repositories(Metrics):
 
         fields.add("count(distinct(s.repository_id)) AS repositories")
         tables.add("scmlog s")
+        tables.add("actions a")
 
         # specific parts of the query depending on the report needed
         tables.union_update(self.db.GetSQLReportFrom(self.filters))
         #TODO: left "author" as generic option coming from parameters (this should be specified by command line)
         filters.union_update(self.db.GetSQLReportWhere(self.filters, "author"))
-
+        filters.add("s.id = a.commit_id")
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                self.filters.enddate, " s.author_date ", fields,
                                tables, filters, evolutionary, self.filters.type_analysis)
@@ -949,7 +950,7 @@ class Repositories(Metrics):
               select distinct(s.id) as sid, repository_id from actions a, scmlog s
               where s.id = a.commit_id  and s.author_date >=%s and s.author_date < %s) t
             WHERE repository_id = r.id
-            group by repository_id   
+            group by repository_id
             order by total desc,name
             """ % (self.filters.startdate, self.filters.enddate)
 
@@ -978,7 +979,7 @@ class Companies(Metrics):
         filters.add("s.author_date >= enr.start")
         filters.add("s.author_date < enr.end")
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
-                               self.filters.enddate, " s.author_date ", fields, 
+                               self.filters.enddate, " s.author_date ", fields,
                                tables, filters, evol, self.filters.type_analysis)
         return q
 
@@ -1013,7 +1014,7 @@ class Companies(Metrics):
         filters.add("s.author_date >= enr.start")
         filters.add("s.author_date < enr.end")
         filters.union_update(self.db.GetSQLReportWhere(self.filters))
-        
+
         query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                    self.filters.enddate, " s.author_date ", fields,
                                    tables, filters, False, self.filters.type_analysis)
@@ -1053,7 +1054,7 @@ class Countries(Metrics):
                                tables, filters, evol, self.filters.type_analysis)
         return q
 
-    def get_list(self): 
+    def get_list(self):
         rol = "author" #committer
         identities_db = self.db.identities_db
         startdate = self.filters.startdate
