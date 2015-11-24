@@ -8,7 +8,7 @@
 ## This program is distributed in the hope that it will be useful,
 ## but WITHOUT ANY WARRANTY; without even the implied warranty of
 ## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-## GNU General Public License for more details. 
+## GNU General Public License for more details.
 ##
 ## You should have received a copy of the GNU General Public License
 ## along with this program; if not, write to the Free Software
@@ -165,8 +165,8 @@ class BMISCR(Metrics):
 
     This class is based on the Backlog Management Index that in issues, it is
     calculated as the number of closed issues out of the total number of opened
-    ones in a period. (The other way around also provides an interesting view). 
-    
+    ones in a period. (The other way around also provides an interesting view).
+
     In terms of the code review system, this values is measured as the number
     of merged+abandoned reviews out of the total number of submitted ones.
     """
@@ -565,7 +565,7 @@ class PatchesPerReview(Metrics):
         filters.add("ch.issue_id = i.id")
         filters.add("ch.old_value <> ''")
 
-        query = "select " + self.db._get_fields_query(fields) 
+        query = "select " + self.db._get_fields_query(fields)
         query = query + " from " + self.db._get_tables_query(tables)
         query = query + " where " + self.db._get_filters_query(filters)
         query = query + " group by i.id "
@@ -1194,13 +1194,22 @@ class Repositories(Metrics):
 
     def get_list  (self):
         #TODO: warning -> not using GetSQLReportFrom/Where
-        q = "SELECT t.url as name, COUNT(DISTINCT(i.id)) AS issues "+\
-               " FROM  issues i, trackers t "+\
-               " WHERE i.tracker_id = t.id AND "+\
-               "  i.submitted_on >="+  self.filters.startdate+ " AND "+\
-               "  i.submitted_on < "+ self.filters.enddate +\
-               " GROUP BY t.url "+\
-               " ORDER BY issues DESC "
+        fields = Set([])
+        tables = Set([])
+        filters = Set([])
+
+        fields.add("t.url as name, COUNT(DISTINCT(i.id)) AS issues")
+        tables.add("issues i")
+        tables.add("trackers t")
+        tables.union_update(self.db.GetSQLReportFrom(self.filters))
+        filters.add("i.tracker_id = t.id")
+        filters.union_update(self.db.GetSQLReportWhere(self.filters,"issues"))
+        evolutionary = False
+        q = self.db.BuildQuery (self.filters.period, self.filters.startdate,
+                                self.filters.enddate, " i.submitted_on",
+                                fields, tables, filters, evolutionary, self.filters.type_analysis)
+        q = q + " GROUP BY t.url ORDER BY issues DESC "
+
         names = self.db.ExecuteQuery(q)
         if not isinstance(names['name'], (list)): names['name'] = [names['name']]
         return(names)
@@ -1780,7 +1789,7 @@ class TimeToReviewPatch(Metrics):
     following conditions:
     - A Code-Review action is detected, being this a -1 or -2
     - A Verified action is detected, being this a -1 or -2
-    - A Workflow -1 is detected, after the started. An initial patchset with 
+    - A Workflow -1 is detected, after the started. An initial patchset with
       Workflow -1 would not be considered in the machine states.
 
     A patch is considered as waiting for a reviewer action in the
@@ -1926,8 +1935,8 @@ class TimeToReviewPatch(Metrics):
                 elif field == "Workflow" and new_value == -1:
                     current_state = 2
                     # we shouldn't count time waiting for a reviewer action
-                    # Typically, developers upload a new patchset and after a while they 
-                    # update the flag Workflow to -1. Thus, we may consider 
+                    # Typically, developers upload a new patchset and after a while they
+                    # update the flag Workflow to -1. Thus, we may consider
                     # TODO: an improvement to this state would be to take into account
                     # if the modification to Workflow=-1 was made by a reviewer
                     # or the developer

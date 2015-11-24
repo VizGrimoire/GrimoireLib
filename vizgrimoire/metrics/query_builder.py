@@ -7,7 +7,7 @@
 ## This program is distributed in the hope that it will be useful,
 ## but WITHOUT ANY WARRANTY; without even the implied warranty of
 ## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-## GNU General Public License for more details. 
+## GNU General Public License for more details.
 ##
 ## You should have received a copy of the GNU General Public License
 ## along with this program; if not, write to the Free Software
@@ -101,7 +101,7 @@ class DSQuery(object):
 
         iso_8601_mode = 3
         if (period == 'day'):
-            # Remove time so unix timestamp is start of day    
+            # Remove time so unix timestamp is start of day
             fields = 'UNIX_TIMESTAMP(DATE('+date+')) AS unixtime'
         elif (period == 'week'):
             fields = 'YEARWEEK('+date+','+str(iso_8601_mode)+') AS week'
@@ -650,7 +650,7 @@ class SCMQuery(DSQuery):
         tables = Set([])
         tables.add("file_links fl")
 
-        return tables 
+        return tables
 
     def GetSQLModuleWhere(self, module):
         # filters necessary to limit the analysis to specific directories path
@@ -750,7 +750,7 @@ class SCMQuery(DSQuery):
         return tables
 
     def GetSQLBotWhere(self, bots_str):
-        # Based on the tables provided in GetSQLBotFrom method, 
+        # Based on the tables provided in GetSQLBotFrom method,
         # this method provides the clauses to join the several tables
 
         bots = bots_str
@@ -835,7 +835,7 @@ class SCMQuery(DSQuery):
         where = Set([])
 
         #if (type_analysis is None or len(type_analysis) != 2): return where_str
-        # the type_analysis !=2 error should be raised when building a new instance 
+        # the type_analysis !=2 error should be raised when building a new instance
         # of the class MetricFilter
         if type_analysis is not None and len(type_analysis)>1:
             analysis = type_analysis[0]
@@ -911,7 +911,7 @@ class SCMQuery(DSQuery):
         else :
             fields += ",DATE_FORMAT (min(s.author_date),'%Y-%m-%d') as first_date, "+\
                       "DATE_FORMAT (max(s.author_date),'%Y-%m-%d') as last_date"
-            q = self.GetSQLGlobal('s.author_date', fields, tables, filters, 
+            q = self.GetSQLGlobal('s.author_date', fields, tables, filters,
                     startdate, enddate)
 
         return (q)
@@ -954,7 +954,7 @@ class SCMQuery(DSQuery):
 class ITSQuery(DSQuery):
     """ Specific query builders for issue tracking system data source """
     def GetSQLRepositoriesFrom (self):
-        # tables necessary for repositories 
+        # tables necessary for repositories
         tables = Set([])
         tables.add("trackers t")
 
@@ -1028,7 +1028,7 @@ class ITSQuery(DSQuery):
         # filters for the domains analysis
         filters = Set([])
         filters.add("i.submitted_by = people.id")
-        if name is not None and name<>'': 
+        if name is not None and name<>'':
             filters.add("people.email like '%"+name.replace("'","")+"%'")
 
         return filters
@@ -1305,7 +1305,7 @@ class MLSQuery(DSQuery):
     """ Specific query builders for mailing lists data source """
     def GetSQLRepositoriesFrom (self):
         # tables necessary for repositories
-        #return (" messages m ") 
+        #return (" messages m ")
         tables = Set([])
         tables.add("mailing_lists ml")
         return tables
@@ -1400,7 +1400,7 @@ class MLSQuery(DSQuery):
         filters.add("mp.type_of_recipient = \'From\'")
         filters.add("up.uuid = pup.uuid")
 
-        if name is not None: 
+        if name is not None:
             filters.add("up.identifier = " + name)
 
         return filters
@@ -1440,7 +1440,7 @@ class MLSQuery(DSQuery):
 
     def GetSQLReportFrom (self, filters):
         #generic function to generate 'from' clauses
-        #"type" is a list of two values: type of analysis and value of 
+        #"type" is a list of two values: type of analysis and value of
         #such analysis
 
         From = Set([])
@@ -1466,7 +1466,7 @@ class MLSQuery(DSQuery):
         return (From)
 
     def GetSQLBotWhere(self, bots):
-        # Based on the tables provided in GetSQLBotFrom method, 
+        # Based on the tables provided in GetSQLBotFrom method,
         # this method provides the clauses to join the several tables
 
         where = Set([])
@@ -1481,7 +1481,7 @@ class MLSQuery(DSQuery):
 
     def GetSQLReportWhere (self, filters):
         #generic function to generate 'where' clauses
-        #"type" is a list of two values: type of analysis and value of 
+        #"type" is a list of two values: type of analysis and value of
         #such analysisd
 
         where = Set([])
@@ -1721,7 +1721,7 @@ class SCRQuery(DSQuery):
         filters.add(field + " = pup.people_id")
         filters.add("up.uuid = pup.uuid")
 
-        if name is not None: 
+        if name is not None:
             filters.add("up.identifier = " + name)
 
         return filters
@@ -1767,7 +1767,7 @@ class SCRQuery(DSQuery):
 
     def GetSQLNotSummaryWhere(self, value):
         """ Remove issues with summary including value """
-        filters = Set([]) 
+        filters = Set([])
 
         filters.add("i.summary not like '%"+value+"%'")
         return filters
@@ -2102,7 +2102,7 @@ class SCRQuery(DSQuery):
             filters.add("people.name <> '"+bot+"'")
 
         # Subquery to get the time to review for all reviews
-        # Initially we can not trust the i.submitted_on date. 
+        # Initially we can not trust the i.submitted_on date.
         # Thus, we're retrieving the first Upload patch date that should
         # be close to the actual changeset submission
         fields.add("TIMESTAMPDIFF(SECOND,ch_ext.changed_on,ch.changed_on)/(24*3600) AS revtime")
@@ -2755,7 +2755,7 @@ class QAForumsQuery(DSQuery):
             filters.add(shorttable + ".question_identifier = qt.question_identifier")
             filters.add("qt.tag_id = t.id")
             filters.add("t.tag = " + value)
- 
+
         return filters
 
     def __get_date_field(self, table_name):
@@ -3253,7 +3253,11 @@ class EventizerQuery(DSQuery):
     def GetSQLGroupsWhere(self, value):
         filters = Set([])
         filters.add("eve.group_id = gro.id")
-        filters.add("gro.name = " + value)
+        #TODO: at some point we should use the escape function from mysqldb
+        value = value.replace("'", "\\'")
+        value = value[1:]
+        value = value[:-2] + "'"
+        filters.add("gro.name = %s" % (value))
         return filters
 
     # Categories conditions
@@ -3317,6 +3321,10 @@ class EventizerQuery(DSQuery):
                 elif analysis == 'city': where.union_update(self.GetSQLCitiesWhere(value))
 
         return where
+
+class DockerHubDSQuery(DSQuery):
+    """ Specific query builders for dockerhub """
+    pass
 
 if __name__=="__main__":
     import doctest

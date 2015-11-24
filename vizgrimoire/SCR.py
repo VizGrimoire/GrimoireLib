@@ -126,7 +126,7 @@ class SCR(DataSource):
         if filter_ is not None:
             metrics_not_filters =  SCR.get_metrics_not_filters()
             metrics_on_filters = list(set(metrics_on) - set(metrics_not_filters))
-            if filter_.get_name() == "repository": 
+            if filter_.get_name() == "repository":
                 if 'review_time' in metrics_on: metrics_on_filters+= ['review_time']
                 if 'submitted' in metrics_on: metrics_on_filters+= ['submitted']
             metrics_on = metrics_on_filters
@@ -203,7 +203,7 @@ class SCR(DataSource):
 
 
         if filter_ is not None: studies_data = {}
-        else: 
+        else:
             studies_data = DataSource.get_studies_data(SCR, period, startdate, enddate, evol)
         data = dict(data.items() +  studies_data.items())
 
@@ -263,7 +263,19 @@ class SCR(DataSource):
             # The order of the list item change so we can not check it
             top_all = dict(top_reviewers.items() +  top_openers.items() + top_mergers.items() + top_participants.items() + top_core_reviewers.items())
         else:
-            logging.info("SCR does not support yet top for filters.")
+            filter_name = filter_.get_name()
+
+            if filter_name in ["company","domain","repository"]:
+                if filter_name in ["company","domain","repository"]:
+                    top_all = {}
+                    top_all['active_core_reviewers.'] = mcorereviewers.get_list(mfilter, 0)
+                    top_all['active_core_reviewers.last month'] = mcorereviewers.get_list(mfilter, 31)
+                    top_all['active_core_reviewers.last year'] = mcorereviewers.get_list(mfilter, 365)
+                else:
+                    # Remove filters above if there are performance issues
+                    top_all = mcorereviewers.get_list(mfilter)
+            else:
+                top_all = None
 
         return (top_all)
 
@@ -297,6 +309,33 @@ class SCR(DataSource):
         return items
 
     @staticmethod
+    def create_filter_report_top(filter_, period, startdate, enddate, destdir, npeople, identities_db):
+        from vizgrimoire.report import Report
+        items = Report.get_items()
+        if items is None:
+            items = SCR.get_filter_items(filter_, startdate, enddate, identities_db)
+            if (items == None): return
+            items = items['name']
+
+        filter_name = filter_.get_name()
+
+        if not isinstance(items, (list)):
+            items = [items]
+
+        fn = os.path.join(destdir, filter_.get_filename(SCR()))
+        createJSON(items, fn)
+
+        for item in items :
+            item_name = "'"+ item+ "'"
+            logging.info (item_name)
+            filter_item = Filter(filter_name, item)
+
+            if filter_name in ("company","project","repository"):
+                top_mergers = SCR.get_top_data(startdate, enddate, identities_db, filter_item, npeople)
+                fn = os.path.join(destdir, filter_item.get_top_filename(SCR()))
+                createJSON(top_mergers, fn)
+
+    @staticmethod
     def create_filter_report(filter_, period, startdate, enddate, destdir, npeople, identities_db):
         from vizgrimoire.report import Report
         items = Report.get_items()
@@ -320,7 +359,7 @@ class SCR(DataSource):
             logging.info (item)
             filter_item = Filter(filter_name, item)
 
-            evol = SCR.get_evolutionary_data(period, startdate, enddate, 
+            evol = SCR.get_evolutionary_data(period, startdate, enddate,
                                                identities_db, filter_item)
             fn = os.path.join(destdir, filter_item.get_evolutionary_filename(SCR()))
             createJSON(evol, fn)
@@ -339,6 +378,8 @@ class SCR(DataSource):
 
         fn = os.path.join(destdir, filter_.get_filename(SCR()))
         createJSON(items_list, fn)
+
+        SCR.create_filter_report_top(filter_, period, startdate, enddate, destdir, npeople, identities_db)
 
     @staticmethod
     def _check_report_all_data(data, filter_, startdate, enddate, idb,
@@ -404,7 +445,7 @@ class SCR(DataSource):
         top += SCR._safeTopIds(top_data['active_core_reviewers.last year'])
 
         # remove duplicates
-        people = list(set(top)) 
+        people = list(set(top))
 
         return people
 
@@ -434,6 +475,7 @@ class SCR(DataSource):
         # patches metrics
         m += ['verified','approved','codereview','sent','WaitingForReviewer','WaitingForSubmitter']
         m += ['submitters','reviewers','active_core_reviewers','participants','voted_patchsets','sent_patchsets']
+        m += ['patchset_submitters']
 
         return m
 
@@ -444,14 +486,15 @@ class SCR(DataSource):
         m += ['merged','abandoned','new']
         m += ['verified','codereview','sent','WaitingForReviewer','WaitingForSubmitter']
         m += ['submitters','reviewers','active_core_reviewers','participants']
-        m += ['voted_patchsets','sent_patchsets']
+        m += ['voted_patchsets','sent_patchsets','patchset_submitters']
 
         return m
 
     @staticmethod
     def get_metrics_core_trends():
-        return ['submitted','merged','pending','abandoned','closed','submitters','active_core_reviewers','participants','voted_patchsets','sent_patchsets','reviewers','patchset_submitters']
-
+        metrics = ['submitted','merged','pending','abandoned','closed','submitters','active_core_reviewers']
+        metrics += ['participants','voted_patchsets','sent_patchsets','patchset_submitters','reviewers']
+        return metrics
 
 #########
 # PEOPLE: Pretty similar to ITS

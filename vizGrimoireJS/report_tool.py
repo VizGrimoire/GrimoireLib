@@ -52,13 +52,18 @@ def create_agg_report(startdate, enddate, destdir, identities_db):
         Report.connect_ds(ds)
         ds.create_agg_report (period, startdate, enddate, destdir, identities_db)
 
-def get_top_report(startdate, enddate, npeople, identities_db):
+def get_top_report(startdate, enddate, npeople, identities_db, only_people=False):
     all_ds_top = {}
 
     for ds in Report.get_data_sources():
         Report.connect_ds(ds)
-        top = ds.get_top_data (startdate, enddate, identities_db, None, npeople)
-        all_ds_top[ds.get_name()] = top 
+
+        if only_people and ds.get_name() == 'mls':
+            top = ds.get_top_data(startdate, enddate, identities_db, None, npeople,
+                                  threads_top=False)
+        else:
+            top = ds.get_top_data(startdate, enddate, identities_db, None, npeople)
+        all_ds_top[ds.get_name()] = top
     return all_ds_top
 
 def create_top_report(startdate, enddate, destdir, npeople, identities_db):
@@ -85,28 +90,30 @@ def create_reports_filters(period, startdate, enddate, destdir, npeople, identit
                          "downloads":["people2"],
                          "qaforums":["people2"],
                          "releases":["people2"],
+                         "dockerhub":["people2"],
                          "pullpo":["people2"],
                          "eventizer":[]
                          }
             supported_on = {
-                         "scm":["people2","company","company+country","country","repository","domain"],
-                         "its":["people2","company","company+country","country","repository","domain"],
-                         "its_1":[],
+                         "scm":["people2","company","country","repository","domain","company+country","company+project"],
+                         "its":["people2","company","country","repository","domain","company+country","company+project"],
+                         "its_1":["people2"],
                          "mls":["people2","company","country","repository","domain"],
                          "scr":["people2","company","country","repository"],
-                         "mediawiki":[],
-                         "irc":[],
-                         "downloads":[],
-                         "qaforums":[],
-                         "releases":[],
-                         "pullpo":[],
+                         "mediawiki":["people2","company"],
+                         "irc":["people2"],
+                         "downloads":["people2"],
+                         "qaforums":["people2"],
+                         "releases":["people2"],
+                         "dockerhub":["people2"],
+                         "pullpo":["people2"],
                          "eventizer":[]
                          }
 
             if filter_.get_name() in supported_on[ds.get_name()]:
             # if filter_.get_name() in ["people2","company+country","repository","company"]:
                 logging.info("---> Using new filter API")
-                ds.create_filter_report_all(filter_, period, startdate, enddate, 
+                ds.create_filter_report_all(filter_, period, startdate, enddate,
                                             destdir, npeople, identities_db)
             else:
                 ds.create_filter_report(filter_, period, startdate, enddate, destdir, npeople, identities_db)
@@ -197,7 +204,7 @@ def create_people_identifiers(startdate, enddate, destdir, npeople, identities_d
     from vizgrimoire.GrimoireUtils import check_array_values
     logging.info("Generating people identifiers")
 
-    people = get_top_report(startdate, enddate, npeople, identities_db);
+    people = get_top_report(startdate, enddate, npeople, identities_db, only_people=True);
     people_ids = [] # upeople_ids which need identifiers
     people_data = {} # identifiers for upeople_ids
     ds_scm = Report.get_data_source("scm")

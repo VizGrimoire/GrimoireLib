@@ -8,7 +8,7 @@
 ## This program is distributed in the hope that it will be useful,
 ## but WITHOUT ANY WARRANTY; without even the implied warranty of
 ## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-## GNU General Public License for more details. 
+## GNU General Public License for more details.
 ##
 ## You should have received a copy of the GNU General Public License
 ## along with this program; if not, write to the Free Software
@@ -41,7 +41,7 @@ class Filter(object):
             if name in filter_data:
                 self.name_short = filter_data[1]
                 self.name_plural = filter_data[2]
-        self.item = item 
+        self.item = item
 
     @staticmethod
     def get_filter_from_plural(plural):
@@ -109,8 +109,10 @@ class Filter(object):
                 name += "authors.json"
             elif (ds.get_name() == "its" or ds.get_name() == "its_1"):
                 name += "closers.json"
-            elif (ds.get_name() == "mls"): 
+            elif (ds.get_name() == "mls"):
                 name += "senders.json"
+            elif (ds.get_name() == "scr"):
+                name += "reviewers.json"
             elif (ds.get_name() == "eventizer"):
                 name += "rsvps.json"
             else:

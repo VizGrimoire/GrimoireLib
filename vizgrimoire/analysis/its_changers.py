@@ -32,6 +32,8 @@ from vizgrimoire.ITS import ITS
 
 from vizgrimoire.GrimoireUtils import completePeriodIds, createJSON
 
+from datetime import datetime, timedelta
+
 
 class StatusChangers(Analyses):
 
@@ -40,39 +42,54 @@ class StatusChangers(Analyses):
     desc = "Top people changing the status of the tickets"
     data_source = ITS
 
-    def result(self):
+    def _compose_start_date(self, n_days):
+        aux = self.filters.enddate[1:-1]
+        final_date = datetime.strptime(aux, '%Y-%m-%d') - timedelta(days=n_days)
+        return "'" + final_date.strftime("%Y-%m-%d") + "'"
 
+    def _query(self, days):
         fields = Set([])
         tables = Set([])
         filters = Set([])
 
         fields.add("pro.name as name")
+        fields.add("pup.uuid as uuid")
         fields.add("new_value as state")
         fields.add("count(distinct(ch.id)) as changes")
 
         tables.add("issues i")
         tables.add("changes ch")
-        tables.add("people_upeople pup")
-        tables.add(self.db.identities_db + ".profile pro")
+        tables.add("people_uidentities pup")
+        tables.add(self.db.identities_db + ".profiles pro")
         tables.union_update(self.db.GetSQLReportFrom(self.filters))
 
         filters.add("ch.issue_id = i.id")
         filters.add("ch.field = 'Status'")
+        filters.add("ch.new_value = 'Resolved'")
         filters.add("ch.changed_by = pup.people_id")
         filters.add("pup.uuid = pro.uuid")
         filters.union_update(self.db.GetSQLReportWhere(self.filters))
 
-        query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
+        my_startdate = self.filters.startdate
+        if (days == 30 or days == 365):
+            my_startdate = self._compose_start_date(days)
+
+        query = self.db.BuildQuery(self.filters.period, my_startdate,
                                    self.filters.enddate, " ch.changed_on ", fields,
                                    tables, filters, False, self.filters.type_analysis)
-
         query = query + " group by name, state "
         query = query + " order by state, count(distinct(ch.id)) desc, name "
         #print query
-        data = self.db.ExecuteQuery(query)
+        auxdata = self.db.ExecuteQuery(query)
+        return auxdata
 
+    def result(self):
+        data = {}
+        data['resolvers.'] = self._query(0)
+        data['resolvers.last month'] = self._query(30)
+        data['resolvers.last year'] = self._query(365)
         # TODO: Hardcoded creation of file
-        #createJSON(data, "../../../../json/its-changers.json")
+        createJSON(data, "../../../../json/its-changers.json")
 
         return data
 
@@ -89,11 +106,16 @@ class StatusChanges(Analyses):
         filters = Set([])
 
         fields.add("count(distinct(ch.id)) as changes")
+        fields.add("count(distinct(puid.uuid)) as resolvers")
 
         tables.add("issues i")
         tables.add("changes ch")
+        tables.add("people_uidentities puid")
+        tables.add("people p")
         tables.union_update(self.db.GetSQLReportFrom(self.filters))
 
+        filters.add("puid.people_id = p.id")
+        filters.add("p.id = ch.changed_by")
         filters.add("ch.issue_id = i.id")
         filters.add("ch.field = 'Status'")
         filters.add("ch.new_value = '" + status + "'")
@@ -118,6 +140,7 @@ class StatusChanges(Analyses):
 
         data = {}
         for state in states["states"]:
+            if state <> 'Resolved': continue
             query = self._sql(state)
             state_data = self.db.ExecuteQuery(query)
             state_data = completePeriodIds(state_data, self.filters.period,
@@ -130,14 +153,20 @@ class StatusChanges(Analyses):
                 data[state] = state_data["changes"]
 
         # TODO: Hardcoded creation of file
-        #createJSON(data, "../../../../json/its-changes.json")
+        createJSON(data, "../../../../json/its-changes.json")
 
         return data
 
+def get_today_date():
+    import datetime
+    return str(datetime.date.today())
+
 if __name__ == '__main__':
 
-    filters = MetricFilters("month", "'2014-04-01'", "'2015-01-01'", [])
-    dbcon = ITSQuery("root", "", "cp_bicho_cloudera", "cp_cvsanaly_cloudera")
+    today_date = "'" + get_today_date() + "'"
+
+    filters = MetricFilters("month", "'2010-01-01'", today_date, [])
+    dbcon = ITSQuery("root", "", "cp_bicho_cloudera", "cp_sortinghat_cloudera")
 
     all_people_changing = StatusChangers(dbcon, filters)
     print all_people_changing.result()

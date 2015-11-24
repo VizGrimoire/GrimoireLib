@@ -649,10 +649,22 @@ def fill_items(items, data, id_field, evol = False,
         logging.info("[fill_items] " + id_field + " not found in " + ",".join(data))
         return data
     fields.remove(id_field)
-    for id in items:
+
+    if not isinstance(items, list):
+        items_ids = [items]
+    else:
+        items_ids = items
+
+    if type(data[id_field]) != list:
+        data[id_field] = [data[id_field]]
+
+    for id in items_ids:
         if id not in data[id_field]:
             data[id_field].append(id)
             for field in fields:
+                if type(data[field]) != list:
+                    data[field] = [data[field]]
+
                 if field in ts_fields: continue
                 if not evol:
                     data[field].append(0)

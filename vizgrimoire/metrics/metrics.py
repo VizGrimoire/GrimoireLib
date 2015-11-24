@@ -25,9 +25,22 @@
 
 import logging
 
+from functools import wraps
+
 from vizgrimoire.GrimoireUtils import completePeriodIds, GetDates, GetPercentageDiff, check_array_values
 from vizgrimoire.metrics.query_builder import DSQuery
 from vizgrimoire.metrics.metrics_filter import MetricFilters
+
+
+def to_list(func):
+    convert = lambda x: [x] if not isinstance(x, list) else x
+
+    @wraps(func)
+    def decorator(*args, **kwargs):
+        results = func(*args, **kwargs)
+        return {key: convert(value) for key, value in results.items()}
+    return decorator
+
 
 class Metrics(object):
     """Root of hierarchy of Entities (Metrics)
@@ -322,6 +335,7 @@ class Metrics(object):
             alist = self._get_top_global(days, metric_filters)
         return alist
 
+    @to_list
     def get_list(self, metric_filters = None, days = 0):
         """ Returns a list of items. Mainly used for tops. """
         mlist = {}

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 # Copyright (C) 2014 Bitergia
-# 
+#
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 3 of the License, or
@@ -42,42 +42,40 @@ class AllEvents(Analyses):
 
     def result(self):
 
-        fields = Set([])
-        tables = Set([])
-        filters = Set([])
-
-        fields.add("eve.name as event_name")
-        fields.add("eve.meetup_id as event_id")
-        fields.add("gro.urlname as group_id")
-        fields.add("gro.name as group_name")
-        fields.add("count(distinct(rsvps.member_id)) as attendees")
-        fields.add("eve.time as date")
-        fields.add("eve.rating_average as rating")
-        fields.add("cit.city as city")
-        fields.add("cit.country as country")
-
-        tables.add("events eve")
-        tables.add("groups gro")
-        tables.add("rsvps")
-        tables.add("cities cit")
-
-        filters.add("eve.group_id = gro.id")
-        filters.add("eve.id = rsvps.event_id")
-        filters.add("rsvps.response = 'yes'")
-        filters.add("eve.city_id = cit.id")
-
-        query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
-                                   self.filters.enddate, " eve.time ", fields,
-                                   tables, filters, False, self.filters.type_analysis)
-
-        query = query + " group by eve.meetup_id "
-        query = query + " order by eve.time desc "
+        query = """ SELECT eve.name as event_name,
+                           eve.meetup_id as event_id,
+                           gro.urlname as group_id,
+                           gro.name as group_name,
+                           IFNULL(t.rsvps, 0) as rsvps,
+                           eve.local_time as date,
+                           eve.rating_average as rating,
+                           cit.city as city,
+                           cit.country as country
+                    FROM events eve
+                    LEFT JOIN groups gro
+                         ON eve.group_id = gro.id
+                    LEFT JOIN cities cit
+                         ON eve.city_id = cit.id
+                    LEFT JOIN (select event_id,
+                                      count(distinct(member_id)) as rsvps
+                               from rsvps
+                               where response='yes'
+                               group by event_id) as t
+                         ON eve.id = t.event_id
+                    GROUP BY eve.meetup_id
+                    ORDER BY eve.local_time DESC
+                """
 
         data = self.db.ExecuteQuery(query)
         # TODO: Hardcoded creation of file
         #createJSON(data, "../../../../json/eventizer-events.json")
 
         return data
+
+    def create_report(self, data_source, destdir):
+        if data_source == EventsDS:
+            data = self.result()
+            createJSON(data, destdir + "/eventizer-events.json")
 
 
 if __name__ == '__main__':
