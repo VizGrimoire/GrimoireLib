@@ -943,15 +943,30 @@ class Repositories(Metrics):
 
     def get_list(self):
         """Repositories list ordered by number of commits"""
+        #q = """
+        #    select count(distinct(sid)) as total, name
+        #    from repositories r, (
+        #      select distinct(s.id) as sid, repository_id from actions a, scmlog s
+        #      where s.id = a.commit_id  and s.author_date >=%s and s.author_date < %s) t
+        #    WHERE repository_id = r.id
+        #    group by repository_id   
+        #    order by total desc,name
+        #    """ % (self.filters.startdate, self.filters.enddate)
+
+        # FIXME ad-hoc query hardcoded for wikimedia (lcanas #6189)
         q = """
-            select count(distinct(sid)) as total, name
-            from repositories r, (
-              select distinct(s.id) as sid, repository_id from actions a, scmlog s
-              where s.id = a.commit_id  and s.author_date >=%s and s.author_date < %s) t
-            WHERE repository_id = r.id
-            group by repository_id   
-            order by total desc,name
-            """ % (self.filters.startdate, self.filters.enddate)
+            SELECT count(distinct(s.rev)) as total, r.name as name
+            FROM people p , people_uidentities pup, %s.profiles pro, scmlog s, %s.uidentities u, repositories r, (
+                        select distinct(a.commit_id) as id 
+                        from actions a) nomergers 
+            WHERE  s.author_date >=%s AND s.author_date <%s AND pro.name <> 'wm-bot' and pro.name <> 'jenkins-bot' 
+            and pro.name <> 'gerrit-wm' and pro.name <> 'wikibugs_' and pro.name <> 'wikibugs' and s.id = nomergers.id 
+            and pro.name <> 'Wikimedia Jenkins Bot' and r.id = s.repository_id and pup.uuid = u.uuid and p.id = pup.people_id 
+            and pro.name <> 'Translation updater bot' and s.author_id = p.id and pro.name <> 'Jenkins-mwext-sync' 
+            and pro.name <> 'L10n-bot' 
+            and pup.uuid = pro.uuid and pro.is_bot<>1 
+            GROUP BY r.name ORDER BY total DESC,r.name
+            """ % (self.db.identities_db, self.db.identities_db, self.filters.startdate, self.filters.enddate)
 
         return self.db.ExecuteQuery(q)
 

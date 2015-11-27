@@ -1049,19 +1049,44 @@ class Companies(Metrics):
         return q
 
     def get_list (self):
-        q = "SELECT org.id as id, org.name as name, COUNT(DISTINCT(i.id)) AS total "+\
-                   "FROM  "+self.db.identities_db+".organizations org, "+\
-                           self.db.identities_db+".enrollments enr, "+\
-                    "     people_uidentities pup, "+\
-                    "     issues i "+\
-                   "WHERE i.submitted_by = pup.people_id AND "+\
-                   "  enr.uuid = pup.uuid AND "+\
-                   "  org.id = enr.organization_id AND "+\
-                   "  i.status = 'merged' AND "+\
-                   "  i.submitted_on >="+  self.filters.startdate+ " AND "+\
-                   "  i.submitted_on < "+ self.filters.enddate+ " "+\
-                   "GROUP BY org.name "+\
-                   "ORDER BY total DESC, org.name "
+        #q = "SELECT org.id as id, org.name as name, COUNT(DISTINCT(i.id)) AS total "+\
+        #           "FROM  "+self.db.identities_db+".organizations org, "+\
+        #                   self.db.identities_db+".enrollments enr, "+\
+        #            "     people_uidentities pup, "+\
+        #            "     issues i "+\
+        #           "WHERE i.submitted_by = pup.people_id AND "+\
+        #           "  enr.uuid = pup.uuid AND "+\
+        #           "  org.id = enr.organization_id AND "+\
+        #           "  i.status = 'merged' AND "+\
+        #           "  i.submitted_on >="+  self.filters.startdate+ " AND "+\
+        #           "  i.submitted_on < "+ self.filters.enddate+ " "+\
+        #           "GROUP BY org.name "+\
+        #           "ORDER BY total DESC, org.name "
+
+        # FIXME ad-hoc query hardcoded for wikimedia (lcanas #6189)
+
+        q = """
+        SELECT org.id as id, org.name as name, count(distinct(i.issue)) as total
+        FROM people_uidentities pup , %s.profiles pro , %s.organizations org , 
+            issues i , issues_ext_gerrit ie , %s.enrollments enr 
+        WHERE ie.mod_date>=%s AND ie.mod_date<%s AND pro.name <> 'jenkins-bot' 
+            and pro.uuid = pup.uuid and i.submitted_on >= %s and i.submitted_by = pup.people_id 
+            and i.submitted_on < enr.end and enr.organization_id = org.id and pro.name <> 'gerrit-wm' 
+            and i.submitted_on >= enr.start and pro.name <> 'wikibugs' and pro.name <> 'L10n-bot' 
+            and pup.uuid = enr.uuid and pro.name <> 'Wikimedia Jenkins Bot' and pro.name <> 'wm-bot' and i.id = ie.issue_id and i.id not in
+                       (select distinct(i.id) as issue_id
+                       from issues i,
+                            changes ch
+                       where i.submitted_by = ch.changed_by and
+                             i.id = ch.issue_id and
+                             ch.field = 'status' and
+                             ch.new_value = 'MERGED')
+            and pro.name <> 'wikibugs_' and pro.name <> 'Translation updater bot' and pro.name <> 'Jenkins-mwext-sync' 
+            and i.summary not like '%%WIP%%' and i.status = 'MERGED' and pro.is_bot<>1 
+        GROUP BY org.name ORDER BY total DESC,org.name
+        """ % (self.db.identities_db, self.db.identities_db, self.db.identities_db, self.filters.startdate, 
+                self.filters.enddate, self.filters.startdate)
+
         return(self.db.ExecuteQuery(q))
 
 class Countries(Metrics):
@@ -1089,7 +1114,7 @@ class Countries(Metrics):
         return q
 
     def get_list  (self):
-        q = "SELECT cou.name as name, COUNT(DISTINCT(i.id)) AS issues "+\
+        """q = "SELECT cou.name as name, COUNT(DISTINCT(i.id)) AS issues "+\
                "FROM  "+self.db.identities_db+".countries cou, "+\
                        self.db.identities_db+".profiles pro, "+\
                 "    people_uidentities pup, "+\
@@ -1102,6 +1127,28 @@ class Countries(Metrics):
                "  i.submitted_on < "+ self.filters.enddate+ " "+\
                "GROUP BY cou.name "+\
                "ORDER BY issues DESC "
+        """
+        q = """
+        SELECT cou.name as name, count(distinct(i.issue)) AS issues
+        FROM people_uidentities pup , %s.profiles pro , %s.countries cou , 
+        issues i , issues_ext_gerrit ie 
+        WHERE ie.mod_date>=%s AND ie.mod_date<%s AND pro.name <> 'jenkins-bot' and pro.uuid = pup.uuid 
+            and i.submitted_on >= %s and i.submitted_by = pup.people_id and pro.name <> 'gerrit-wm' 
+            and pro.name <> 'wikibugs_' and pro.name <> 'wikibugs'
+            and pro.name <> 'L10n-bot' and pro.country_code = cou.code and pro.name <> 'Wikimedia Jenkins Bot' 
+            and pro.name <> 'wm-bot' and i.id = ie.issue_id and i.id not in
+                       (select distinct(i.id) as issue_id
+                       from issues i,
+                            changes ch
+                       where i.submitted_by = ch.changed_by and
+                             i.id = ch.issue_id and
+                             ch.field = 'status' and
+                             ch.new_value = 'MERGED')
+            and pro.name <> 'Translation updater bot' and pro.name <> 'Jenkins-mwext-sync' 
+            and i.summary not like '%%WIP%%' and pup.uuid = pro.uuid and i.status = 'MERGED' and pro.is_bot<>1
+        GROUP BY cou.name
+        ORDER BY issues DESC
+        """ % (self.db.identities_db, self.db.identities_db, self.filters.startdate, self.filters.enddate, self.filters.startdate)
         return(self.db.ExecuteQuery(q))
 
 
@@ -1194,6 +1241,7 @@ class Repositories(Metrics):
 
     def get_list  (self):
         #TODO: warning -> not using GetSQLReportFrom/Where
+        """
         q = "SELECT t.url as name, COUNT(DISTINCT(i.id)) AS issues "+\
                " FROM  issues i, trackers t "+\
                " WHERE i.tracker_id = t.id AND "+\
@@ -1201,6 +1249,27 @@ class Repositories(Metrics):
                "  i.submitted_on < "+ self.filters.enddate +\
                " GROUP BY t.url "+\
                " ORDER BY issues DESC "
+        """
+        q = """
+        SELECT t.url as name, count(distinct(i.issue)) as issues
+        FROM people_uidentities pup , %s.profiles pro , trackers t , issues i , issues_ext_gerrit ie 
+        WHERE ie.mod_date>= %s AND ie.mod_date<%s
+        AND pro.name <> 'jenkins-bot' and pro.uuid = pup.uuid 
+        and i.submitted_on >= %s
+        and i.submitted_by = pup.people_id and pro.name <> 'gerrit-wm' and pro.name <> 'wikibugs_' and pro.name <> 'wikibugs' 
+        and pro.name <> 'L10n-bot' and pro.name <> 'Wikimedia Jenkins Bot' and pro.name <> 'wm-bot' and i.id = ie.issue_id and i.id not in
+                       (select distinct(i.id) as issue_id
+                       from issues i,
+                            changes ch
+                       where i.submitted_by = ch.changed_by and
+                             i.id = ch.issue_id and
+                             ch.field = 'status' and
+                             ch.new_value = 'MERGED')
+                     and pro.name <> 'Translation updater bot' and pro.name <> 'Jenkins-mwext-sync' 
+                     and t.id = i.tracker_id and i.summary not like '%%WIP%%' 
+                     and i.status = 'MERGED' and pro.is_bot<>1 GROUP BY t.url ORDER BY issues DESC,t.url
+        """ % (self.db.identities_db, self.filters.startdate, self.filters.enddate, self.filters.startdate)
+    
         names = self.db.ExecuteQuery(q)
         if not isinstance(names['name'], (list)): names['name'] = [names['name']]
         return(names)

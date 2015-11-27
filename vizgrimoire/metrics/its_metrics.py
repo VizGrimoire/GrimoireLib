@@ -716,14 +716,26 @@ class Trackers(Metrics):
         startdate = self.filters.startdate
         enddate = self.filters.enddate
 
-        q = " SELECT t.url as name "+\
-                   "   FROM issues i, "+\
-                   "        trackers t "+\
-                   "   WHERE i.tracker_id=t.id and "+\
-                   "         i.submitted_on >= "+ startdate+ " and "+\
-                   "         i.submitted_on < "+ enddate+\
-                   "   GROUP BY t.url  "+\
-                   "   ORDER BY count(distinct(i.id)) DESC "
+        #q = " SELECT t.url as name "+\
+        #           "   FROM issues i, "+\
+        #           "        trackers t "+\
+        #           "   WHERE i.tracker_id=t.id and "+\
+        #           "         i.submitted_on >= "+ startdate+ " and "+\
+        #           "         i.submitted_on < "+ enddate+\
+        #           "   GROUP BY t.url  "+\
+        #           "   ORDER BY count(distinct(i.id)) DESC "
+        q = """
+        SELECT t.url as name
+        FROM issues i, changes ch, %s.profiles pro , people_uidentities pup , trackers t 
+        WHERE  ch.changed_on >= %s AND  ch.changed_on < %s
+            AND pro.name <> 'wm-bot' and pro.name <> 'jenkins-bot' and pro.uuid = pup.uuid and ch.changed_by = pup.people_id and 
+            pro.name <> 'Translation updater bot' and pro.name <> 'wikibugs_' 
+            and (new_value='RESOLVED' OR new_value='CLOSED') and i.id = ch.issue_id and pro.name <> 'Jenkins-mwext-sync' 
+                and pro.name <> 'wikibugs' and pro.name <> 'gerrit-wm' and pro.name <> 'L10n-bot' 
+                and i.tracker_id = t.id and pro.name <> 'Wikimedia Jenkins Bot' and pro.is_bot<>1 
+        GROUP BY t.url ORDER BY count(distinct(i.id)) DESC,t.url;
+        """ % (self.db.identities_db,startdate, enddate)    
+
         data = self.db.ExecuteQuery(q)
         return (data)
 
