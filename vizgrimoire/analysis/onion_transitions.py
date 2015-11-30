@@ -77,7 +77,7 @@ class OnionTransitions(Analyses):
             #     "       pup.uuid = " + str(upeople_id) +\
             #     " group by pup.uuid "+\
             #     " order by commits desc; "
-            q0 = "select name, email from people, people_uidentities pup "+\
+            q0 = "select uuid, name, email from people, people_uidentities pup "+\
                 "where people.id = pup.people_id and pup.uuid = '" + str(upeople_id) + "' "+\
                 " LIMIT 1"
             
@@ -99,6 +99,7 @@ class OnionTransitions(Analyses):
             aux = self.db.ExecuteQuery(q0)
             person_data["name"] = aux["name"]
             person_data["email"] = aux["email"]
+            person_data["uuid"] = aux["uuid"]
             aux = self.db.ExecuteQuery(q1)
             if (type(aux["commits"]) == list):
                 person_data["commits"] = 0
@@ -190,7 +191,7 @@ class OnionTransitions(Analyses):
         for g in groups:
             #here we define what we export in each group
             if (data_source.get_name() == "scm"):
-                result[g] = {"name":[],"email":[],"commits":[]}
+                result[g] = {"uuid":[],"name":[],"email":[],"commits":[]}
             elif (data_source.get_name() == "qaforums"):
                 result[g] = {"name":[],"messages":[]}
 
@@ -199,6 +200,7 @@ class OnionTransitions(Analyses):
                 user_data = self._get_person_info(person, self.filters.startdate, self.filters.enddate, data_source)
                 result[g]["name"].append(user_data["name"])
                 if (data_source.get_name() == "scm"):
+                    result[g]["uuid"].append(user_data["uuid"])
                     result[g]["email"].append(user_data["email"])
                     result[g]["commits"].append(user_data["commits"])
                 elif (data_source.get_name() == "qaforums"):
