@@ -305,6 +305,16 @@ class SCR(DataSource):
             logging.error("SCR " + filter_name + " not supported")
             return items
 
+        # workaround due to bug https://phabricator.wikimedia.org/T116484
+        from vizgrimoire.report import Report
+        automator = Report.get_config()
+        DS = SCR
+        if DS.get_name()+"_start_date" in Report.get_config()['r']:
+            metric.filters.startdate = "'"+Report.get_config()['r'][DS.get_name()+"_start_date"]+"'"
+        if DS.get_name()+"_end_date" in Report.get_config()['r']:
+            metric.filters.enddate = "'"+Report.get_config()['r'][DS.get_name()+"_end_date"]+"'"
+        # end
+
         items = metric.get_list()
         return items
 
