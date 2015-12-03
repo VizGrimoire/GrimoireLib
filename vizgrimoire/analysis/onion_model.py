@@ -131,6 +131,7 @@ class CommunityStructure(Analyses):
         community['regular'] = regular
         community['occasional'] = occasional
 
+        print(community)
         return(community)
 
 

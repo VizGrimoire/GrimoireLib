@@ -54,9 +54,13 @@ class SCM(DataSource):
     @staticmethod
     def get_evolutionary_data (period, startdate, enddate, identities_db, filter_ = None):
         metrics = SCM.get_metrics_data(period, startdate, enddate, identities_db, filter_, True)
-        if filter_ is not None: studies = {}
+        if filter_ is not None:
+            studies = {}
+            logging.info("No studies found for evolutionary report")
         else:
+            logging.info("Studies found for evolutionary report")
             studies = DataSource.get_studies_data(SCM, period, startdate, enddate, True)
+            logging.info(studies)
         evol_data = dict(metrics.items()+studies.items())
 
         return evol_data
@@ -70,9 +74,13 @@ class SCM(DataSource):
     @staticmethod
     def get_agg_data (period, startdate, enddate, identities_db, filter_= None):
         metrics = SCM.get_metrics_data(period, startdate, enddate, identities_db, filter_, False)
-        if filter_ is not None: studies = {}
+        if filter_ is not None:
+            studies = {}
+            logging.info("No studies found for aggregated analysis")
         else:
+            logging.info("Studies found for aggregated analysis")
             studies = DataSource.get_studies_data(SCM, period, startdate, enddate, False)
+            logging.info(studies)
         agg = dict(metrics.items()+studies.items())
 
         if (filter_ is None):
@@ -300,8 +308,8 @@ class SCM(DataSource):
 
         if (filter_name == "company"):
             ds = SCM
-            summary =  SCM.get_filter_summary(filter_, period, startdate, enddate, identities_db, 10)
-            createJSON (summary, destdir+"/"+ filter_.get_summary_filename(SCM))
+            #summary =  SCM.get_filter_summary(filter_, period, startdate, enddate, identities_db, 10)
+            #createJSON (summary, destdir+"/"+ filter_.get_summary_filename(SCM))
             # Perform ages study, if it is specified in Report
             SCM.ages_study_com (items, period, startdate, enddate, destdir)
 
@@ -351,7 +359,7 @@ class SCM(DataSource):
 
         # Change filter to GrimoireLib notation
         filter_name = filter_name.replace("+", MetricFilters.DELIMITER)
-
+    
         # This report is created per item, not using GROUP BY yet
         SCM.create_filter_report_top(filter_, period, startdate, enddate, destdir, npeople, identities_db)
 
@@ -375,8 +383,8 @@ class SCM(DataSource):
             # Studies report for filters
             if (filter_name == "company"):
                 ds = SCM
-                summary =  SCM.get_filter_summary(filter_, period, startdate, enddate, identities_db, 10)
-                createJSON (summary, destdir+"/"+ filter_.get_summary_filename(SCM))
+                #summary =  SCM.get_filter_summary(filter_, period, startdate, enddate, identities_db, 10)
+                #createJSON (summary, destdir+"/"+ filter_.get_summary_filename(SCM))
                 # Perform ages study, if it is specified in Report
                 SCM.ages_study_com (agg_all['name'], period, startdate, enddate, destdir)
 

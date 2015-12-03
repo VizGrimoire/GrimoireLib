@@ -323,6 +323,7 @@ def set_study(study_id):
     study_ok = False
 
     studies = Report.get_studies()
+
     for study in studies:
         if study.id == study_id:
             study_ok = True

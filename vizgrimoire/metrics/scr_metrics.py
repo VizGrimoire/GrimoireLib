@@ -468,6 +468,7 @@ class PatchsetsSubmitted(Metrics):
         tables = Set([])
         filters = Set([])
 
+        #WARNING: due to regular expressions restrictions at 
         fields.add("count(distinct ch.issue_id, ch.old_value) as sent_patchsets")
 
         tables.add("changes ch")

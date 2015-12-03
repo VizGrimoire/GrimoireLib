@@ -42,9 +42,12 @@ class OldestChangesets(Analyses):
     id = "oldest_changesets"
     name = "The oldest changesets"
     desc = "The oldest changesets"
-    data_source = SCR
 
-    def result(self):
+    def create_report(self, data_source, destdir):
+        if data_source != SCR: return
+        self.result(data_source, destdir)
+
+    def result(self, data_source = None, destdir = None):
 
         fields = Set([])
         tables = Set([])
@@ -78,7 +81,7 @@ class OldestChangesets(Analyses):
 
         data = self.db.ExecuteQuery(query)
         # TODO: Hardcoded creation of file
-        #createJSON(data, "../../../../json/oldest_changesets.json")
+        createJSON(data, destdir + "/scr-oldest_changesets.json")
 
         return data
 
@@ -96,9 +99,12 @@ class MostActiveChangesetsWaiting4Reviewer(Analyses):
     id = "list_most_active_changesets_waiting4reviewer"
     name = "List of the most active changesets waiting for a reviewer action"
     desc = "List of the most active changesets waiting for a reviewer action"
-    data_source = SCR
+    
+    def create_report(self, data_source, destdir):
+        if data_source != SCR: return
+        self.result(data_source, destdir)
 
-    def result(self):
+    def result(self, data_source = None, destdir = None):
         fields = Set([])
         tables = Set([])
         filters = Set([])
@@ -199,14 +205,14 @@ class MostActiveChangesetsWaiting4Reviewer(Analyses):
 
         data = self.db.ExecuteQuery(query)
         # TODO: Hardcoded creation of file
-        #createJSON(data, "../../../../json/oldest_changesets.json")
+        createJSON(data, destdir + "/scr-most_active_changesets.json")
 
         return data
 
 if __name__ == '__main__':
 
     filters = MetricFilters("month", "'2011-04-01'", "'2016-01-01'")
-    dbcon = SCRQuery("root", "", "openstack_2015q1_gerrit", "openstack_2015q1_git")
+    dbcon = SCRQuery("root", "", "dic_gerrit_mediawiki_5829", "acs_sortinghat_mediawiki_5879")
 
     oldest_changesets = OldestChangesets(dbcon, filters)
     print oldest_changesets.result()
