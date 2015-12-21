@@ -22,7 +22,7 @@
 # All of the functions found in this file expect to find a database
 # with the followin format:
 # Table: downloads
-#       Fields: date (datetime), ip (varchar), package (varchar), protocol (varchar)
+#       Fields: date (datetime), downloads (varchar), package (varchar), udownloads (varchar)
 #
 
 import logging, os
@@ -130,31 +130,13 @@ class DownloadsDS(DataSource):
 
     @staticmethod
     def get_top_metrics ():
-        return ["ips", "packages", "pages", "countries"]
+        return ["packages", "pages", "countries"]
 
     @staticmethod
     def get_top_data (startdate, enddate, identities_db, filter_ = None, npeople = None):
 
-        def filter_ips(ips):
-            new_ips = {}
-            new_ips['downloads'] = ips['downloads']
-            new_ips['ips'] = []
-            for ip in ips['ips']:
-                # ipv4
-                new_ip_aux = ip.split(".")
-                new_ip = ip
-                if len(new_ip_aux) == 4:
-                    new_ip = "x.x."+new_ip_aux[2]+"."+new_ip_aux[3]
-                # ipv6
-                new_ip_aux = ip.split(":")
-                if len(new_ip_aux) > 1:
-                    new_ip = new_ip_aux[0]+":X"
-                new_ips['ips'].append(new_ip)
-            return new_ips
-
         top = {}
 
-        mips = DataSource.get_metrics("ips", DownloadsDS)
         mpackages = DataSource.get_metrics("packages", DownloadsDS)
         mpages = DataSource.get_metrics("pages", DownloadsDS)
         mcountries = DataSource.get_metrics("countries", DownloadsDS)
@@ -166,8 +148,7 @@ class DownloadsDS(DataSource):
         mfilter = MetricFilters(period, startdate, enddate, type_analysis, npeople)
 
         if filter_ is None:
-            top['ips.'] = filter_ips(mips.get_list(mfilter, 0))
-            top['packages.'] = mpackages.get_list(mfilter, 0)
+            top['packages.'] = mpackages.get_list()
             top['pages.'] = mpages.get_list()
             top['countries.'] = mcountries.get_list()
         else:
@@ -220,14 +201,15 @@ class DownloadsDS(DataSource):
 
     @staticmethod
     def get_metrics_core_agg():
-        return ['downloads','packages','protocols','ips',
+        return ['downloads', 'udownloads', 'packages',
                 'visits', 'bounce_rate']
 
     @staticmethod
     def get_metrics_core_ts():
-        return ['downloads','packages','protocols','ips',
+        return ['downloads', 'udownloads', 'packages',
                 'uvisitors', 'visits', 'bounces']
 
     @staticmethod
     def get_metrics_core_trends():
-        return ['downloads','packages','ips', 'visits', 'bounces']
+        return ['downloads', 'udownloads', 'packages',
+                'visits', 'bounces']

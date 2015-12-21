@@ -48,8 +48,13 @@ class Downloads(Metrics):
     data_source = DownloadsDS
 
     def _get_sql(self, evolutionary):
-        fields = "count(*) as downloads"
-        tables = "downloads"
+        if self.filters.period != 'month':
+            msg = 'Period %s not valid. Currently, only "month" is supported' % \
+                self.filters.period
+            return ValueError(msg)
+
+        fields = "SUM(downloads) as downloads"
+        tables = "downloads_month"
         filters = ""
 
         query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
@@ -57,6 +62,28 @@ class Downloads(Metrics):
                                       filters, evolutionary)
         return query
 
+class UniqueDownloads(Metrics):
+    """ Number of unique downloads """
+
+    id = "udownloads"
+    name = "Unique Downloads"
+    desc = "Number of unique downloads"
+    data_source = DownloadsDS
+
+    def _get_sql(self, evolutionary):
+        if self.filters.period != 'month':
+            msg = 'Period %s not valid. Currently, only "month" is supported' % \
+                self.filters.period
+            return ValueError(msg)
+
+        fields = "SUM(unique_downloads) as udownloads"
+        tables = "downloads_month"
+        filters = ""
+
+        query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
+                                      self.filters.enddate, " date ", fields, tables,
+                                      filters, evolutionary)
+        return query
 
 class Packages(Metrics):
     """ Number of downloaded packages """
@@ -66,91 +93,38 @@ class Packages(Metrics):
     desc = "Number of downloaded packages"
     data_source = DownloadsDS
 
-    def _get_sql(self, evolutionary):
-        fields = "count(distinct(package)) as packages"
-        tables = "downloads"
-        filters = ""
+    def _get_sql_generic(self, evolutionary, islist=False):
+        if self.filters.period != 'month':
+            msg = 'Period %s not valid. Currently, only "month" is supported' % \
+                self.filters.period
+            return ValueError(msg)
 
-        query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
-                                      self.filters.enddate, " date ", fields, tables,
-                                      filters, evolutionary)
-        return query
+        fields = Set([])
+        tables = Set([])
+        filters = Set([])
 
-    def _get_top_global (self, days = 0, metric_filters = None):
-        if metric_filters == None:
-            metric_filters = self.filters
+        if not islist:
+            fields.add("count(distinct(label)) as packages")
+        else:
+            fields.add("label as packages, SUM(downloads) downloads")
+        tables.add("downloads_month")
 
-        startdate = metric_filters.startdate
-        enddate = metric_filters.enddate
-        limit = metric_filters.npeople
+        q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
+                               self.filters.enddate, " date ", fields,
+                               tables, filters, evolutionary, self.filters.type_analysis)
+        if islist:
+            q += " group by label "
+            if not evolutionary: q += " order by downloads desc, packages "
 
-        query = """
-                select package as packages, count(*) as downloads
-                from downloads
-                where date >= %s and
-                      date < %s
-                group by packages
-                order by downloads desc
-                limit %s
-                """ % (startdate, enddate, str(limit))
-        return self.db.ExecuteQuery(query)
-
-class Protocols(Metrics):
-    """ Number of protocols used to download packages """
-
-    id = "protocols"
-    name = "Protocols"
-    desc = "Number of protocols used to download packages """
-    data_source = DownloadsDS
+        return q
 
     def _get_sql(self, evolutionary):
-        fields = "count(distinct(protocol)) as protocols"
-        tables = "downloads"
-        filters = ""
+        return self._get_sql_generic(evolutionary)
 
-        query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
-                                      self.filters.enddate, " date ", fields, tables,
-                                      filters, evolutionary)
-        return query
-
-
-class IPs(Metrics):
-    """ Number of IPs downloading packages """
-
-    id = "ips"
-    name = "IPs"
-    desc = "Number of IPs downloading packages """
-    data_source = DownloadsDS
-
-    def _get_top_global (self, days = 0, metric_filters = None):
-        if metric_filters == None:
-            metric_filters = self.filters
-
-        startdate = metric_filters.startdate
-        enddate = metric_filters.enddate
-        limit = metric_filters.npeople
-
-        query = """
-                select ip as ips, count(*) as downloads
-                from downloads
-                where date >= %s and
-                      date < %s
-                group by ips
-                order by downloads desc
-                limit %s
-                """ % (startdate, enddate, str(limit))
-        return self.db.ExecuteQuery(query)
-
-    def _get_sql(self, evolutionary):
-        fields = "count(distinct(ip)) as ips"
-        tables = "downloads"
-        filters = ""
-
-        query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
-                                      self.filters.enddate, " date ", fields, tables,
-                                      filters, evolutionary)
-        return query
-
+    def get_list(self):
+        q = self._get_sql_generic(None, True)
+        data = self.db.ExecuteQuery(q)
+        return data
 
 class UniqueVisitors(Metrics):
     """Number of unique visitors """
