@@ -1458,12 +1458,16 @@ class ActiveCoreReviewers(Metrics):
         # Add orgs information
         q_orgs = """
             SELECT DISTINCT(top.id), identifier, reviews, org.name as organization FROM (%s) top
-            LEFT JOIN %s.enrollments enr ON top.id = enr.uuid
+            LEFT JOIN (
+                SELECT * FROM %s.enrollments WHERE (uuid, end) IN
+                    ( SELECT uuid, MAX(end)
+                      FROM %s.enrollments
+                      GROUP BY uuid
+                )) enr ON top.id = enr.uuid
             LEFT JOIN %s.organizations org ON org.id = enr.organization_id
             GROUP BY top.id
             ORDER BY reviews DESC, identifier
-            """ % (query, self.db.identities_db, self.db.identities_db)
-
+            """ % (query, self.db.identities_db, self.db.identities_db, self.db.identities_db)
 
         return self.db.ExecuteQuery(q_orgs)
 
