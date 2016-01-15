@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 # Copyright (C) 2014 Bitergia
-# 
+#
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 3 of the License, or
@@ -66,7 +66,7 @@ class Email(object):
                 """  % (self.i_db, self.i_db, self.message_id)
         # WARNING: There may appear in some cases repeated emails.
         # This may be because the same email was sent to different
-        # mailing lists. Forcing the query to 1 row, allows to 
+        # mailing lists. Forcing the query to 1 row, allows to
         # avoid this issue till we understand why this behaviour
         results = ExecuteQuery(query)
 
@@ -125,22 +125,24 @@ class Threads(object):
         # Returns dictionary of message_id threads. Each key contains a list
         # of emails associated to that thread (not ordered).
 
-        # Retrieving all of the messages. 
+        # Retrieving all of the messages.
         query = """
                 select DISTINCT message_ID, is_response_of
                 from messages
                 where first_date >= %s and first_date < %s
                 """ % (self.initdate, self.enddate)
         list_messages = ExecuteQuery(query)
-        self.list_message_id = list_messages["message_ID"]
-        self.list_is_response_of = list_messages["is_response_of"]
+
+        to_list = lambda x: [x] if type(x) not in (list, dict) else x
+        self.list_message_id = to_list(list_messages["message_ID"])
+        self.list_is_response_of = to_list(list_messages["is_response_of"])
 
         messages = {}
         for message_id in self.list_message_id:
             # Looking for messages in the thread
             index = self.list_message_id.index(message_id)
 
-            # Only analyzing those whose is_response_of is None, 
+            # Only analyzing those whose is_response_of is None,
             # those are the message 'root' of each thread.
             if self.list_is_response_of[index] is None:
                 messages[message_id] = self._build_threads(message_id)
@@ -164,14 +166,14 @@ class Threads(object):
 
         for thread in self.threads.values():
             # this loop counts number of different people
-            # in each of the threads and provides a 
+            # in each of the threads and provides a
             # dictionary with root message_id as each of the keys
             # and a list of upeople_id as the value.
             # Sets were considered as an option, but it implies that
             # we may find with a higher probability equal sets, what
             # would provide incorrect sets to their correspondant message_id
             # when ordering them (at least using this algorithm).
-            # So, not using sets, and manual order of the lists is done 
+            # So, not using sets, and manual order of the lists is done
             people = set([])
             for message in thread:
                 query = """
@@ -231,7 +233,7 @@ class Threads(object):
             top_threads = values[0:numTop]
 
         for thread in top_threads:
-            # the root message is the first of the list 
+            # the root message is the first of the list
             # (the rest of them are not ordered)
             top_root_msgs.append(thread[0])
 
@@ -279,7 +281,7 @@ class Threads(object):
 
     def lenThread(self, message_id):
         # Returns the number of message in a given thread
-        # Each thread is identified by the message_id of the 
+        # Each thread is identified by the message_id of the
         # root message
         return len(self.threads[message_id])
 
@@ -287,4 +289,3 @@ if __name__ == '__main__':
     GrimoireSQL.SetDBChannel (database = "openstack_mls", user="root", password="")
     main_topics = Threads("'2012-01-01'", "'2014-01-01'", "openstack_scm")
     print main_topics.topCrowdedThread(10)
-
