@@ -59,7 +59,7 @@ class Downloads(Metrics):
 
         query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                       self.filters.enddate, " date ", fields, tables,
-                                      filters, evolutionary)
+                                      filters, evolutionary, strict = True)
         return query
 
 class UniqueDownloads(Metrics):
@@ -82,7 +82,7 @@ class UniqueDownloads(Metrics):
 
         query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                       self.filters.enddate, " date ", fields, tables,
-                                      filters, evolutionary)
+                                      filters, evolutionary, strict = True)
         return query
 
 class Packages(Metrics):
@@ -111,7 +111,7 @@ class Packages(Metrics):
 
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                self.filters.enddate, " date ", fields,
-                               tables, filters, evolutionary, self.filters.type_analysis)
+                               tables, filters, evolutionary, self.filters.type_analysis, strict = True)
         if islist:
             q += " group by label "
             if not evolutionary: q += " order by downloads desc, packages "
@@ -154,7 +154,7 @@ class UniqueVisitors(Metrics):
         query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                    self.filters.enddate, "v.date",
                                    fields, tables, filters, True,
-                                   self.filters.type_analysis)
+                                   self.filters.type_analysis, strict = True)
 
         ts = self.db.ExecuteQuery(query)
         ts = completePeriodIds(ts, self.filters.period,
@@ -182,7 +182,7 @@ class Visits(Metrics):
 
         query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                    self.filters.enddate, " date ", fields, tables,
-                                   filters, evolutionary)
+                                   filters, evolutionary, strict = True)
         return query
 
 
@@ -206,7 +206,7 @@ class Bounces(Metrics):
 
         query = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                    self.filters.enddate, " date ", fields, tables,
-                                   filters, evolutionary)
+                                   filters, evolutionary, strict = True)
         return query
 
 
@@ -237,7 +237,7 @@ class Pages(Metrics):
 
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                self.filters.enddate, " p.date ", fields,
-                               tables, filters, evolutionary, self.filters.type_analysis)
+                               tables, filters, evolutionary, self.filters.type_analysis, strict = True)
         if islist:
             q += " GROUP BY p.page "
             if not evolutionary: q += " ORDER BY visits DESC, page"
@@ -280,7 +280,7 @@ class Countries(Metrics):
 
         q = self.db.BuildQuery(self.filters.period, self.filters.startdate,
                                self.filters.enddate, " c.date ", fields,
-                               tables, filters, evolutionary, self.filters.type_analysis)
+                               tables, filters, evolutionary, self.filters.type_analysis, strict = True)
         if islist:
             q += " GROUP BY c.country "
             if not evolutionary: q += " ORDER BY visits DESC, country"
