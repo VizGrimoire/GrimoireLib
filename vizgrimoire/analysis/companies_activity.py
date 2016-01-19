@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 # Copyright (C) 2014 Bitergia
-# 
+#
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 3 of the License, or
@@ -48,9 +48,9 @@ class CompaniesActivity(Analyses):
         from_ = """
             FROM messages m
               JOIN messages_people mp ON m.message_ID = mp.message_id
-              JOIN people_uidentities pup ON mp.email_address = pup.people_id 
-              JOIN %s.enrollments enr ON enr.upeople_id = pup.uuid 
-              JOIN %s.organizations org ON org.id = enr.organization_id 
+              JOIN people_uidentities pup ON mp.email_address = pup.people_id
+              JOIN %s.enrollments enr ON enr.uuid = pup.uuid
+              JOIN %s.organizations org ON org.id = enr.organization_id
         """ % (identities_db, identities_db)
         return from_
 
@@ -61,21 +61,23 @@ class CompaniesActivity(Analyses):
 
         from_ = """
             FROM issues i
-              JOIN people_uidentities pup ON i.submitted_by = pup.people_id 
-              JOIN %s.enrollments enr ON enr.uuid = pup.uuid 
-              JOIN %s.organizations org ON org.id = enr.organization_id 
+              JOIN people_uidentities pup ON i.submitted_by = pup.people_id
+              JOIN %s.enrollments enr ON enr.uuid = pup.uuid
+              JOIN %s.organizations org ON org.id = enr.organization_id
         """ % (identities_db, identities_db)
         return from_
 
     def get_scm_from_organizations(self, committers = False):
+        automator = Report.get_config()
+        identities_db = automator['generic']['db_identities']
         if (committers): field = "s.committer_id"
         else:  field = "s.author_id"
         from_ = """
-            FROM scmlog s 
+            FROM scmlog s
               JOIN people_uidentities pup ON %s = pup.people_id
-              JOIN enrollments enr ON enr.uuid = pup.uuid 
-              JOIN organizations org ON org.id = enr.organization_id 
-        """ % (field)
+              JOIN %s.enrollments enr ON enr.uuid = pup.uuid
+              JOIN %s.organizations org ON org.id = enr.organization_id
+        """ % (field, identities_db, identities_db)
         return from_
 
     def get_sql_commits(self, year = None):
@@ -150,7 +152,7 @@ class CompaniesActivity(Analyses):
         sql = """
             select org.name, count(a.id) as %s
             %s
-              JOIN actions a ON a.commit_id = s.id 
+              JOIN actions a ON a.commit_id = s.id
             %s
             group by org.id
             order by %s desc, org.name
@@ -264,7 +266,7 @@ class CompaniesActivity(Analyses):
 
         if year is not None:
             if where != "WHERE": where += " AND "
-            where += " YEAR(i.submitted_on) = " + str(year) 
+            where += " YEAR(i.submitted_on) = " + str(year)
             field = field + "_" + str(year)
         sql = """
             select org.name, count(distinct(i.id)) as %s
@@ -319,7 +321,7 @@ class CompaniesActivity(Analyses):
 
         # Find the name of the field to be uses to get values
         for key in data.keys():
-            if key != "name": 
+            if key != "name":
                 field = key
                 break
         for company in activity['name']:
@@ -334,7 +336,7 @@ class CompaniesActivity(Analyses):
         return activity
 
     def check_array_values(self, data):
-        for item in data: 
+        for item in data:
             if not isinstance(data[item], list): data[item] = [data[item]]
 
     def add_metric_years(self, metric, activity, start, end):
@@ -483,12 +485,11 @@ class CompaniesActivity(Analyses):
         activity = self.add_organizations_data (activity, data)
         self.add_metric_years("closed", activity, start_year, end_year)
 
-        # Messages sent 
+        # Messages sent
         dbname = automator["generic"]["db_mlstats"]
         dsquery = MLS.get_query_builder()
         dbcon = dsquery(dbuser, dbpass, dbname, db_identities)
         self.db = dbcon
-
         data = self.db.ExecuteQuery(self.get_sql_sent())
         activity = self.add_organizations_data (activity, data)
         self.add_metric_years("sent", activity, start_year, end_year)
