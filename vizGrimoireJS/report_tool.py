@@ -95,11 +95,11 @@ def create_reports_filters(period, startdate, enddate, destdir, npeople, identit
                          "eventizer":[]
                          }
             supported_on = {
-                         "scm":["people2","company","country","repository","domain","company+country","company+project"],
-                         "its":["people2","company","country","repository","domain","company+country","company+project"],
+                         "scm":["people2","company","country","repository","domain","project","company+country","company+project"],
+                         "its":["people2","company","country","repository","domain","project","company+country","company+project"],
                          "its_1":["people2"],
-                         "mls":["people2","company","country","repository","domain"],
-                         "scr":["people2","company","country","repository"],
+                         "mls":["people2","company","country","repository","domain","project"],
+                         "scr":["people2","company","country","repository","project"],
                          "mediawiki":["people2","company"],
                          "irc":["people2"],
                          "downloads":["people2"],
