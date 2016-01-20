@@ -468,7 +468,7 @@ class PatchsetsSubmitted(Metrics):
         tables = Set([])
         filters = Set([])
 
-        #WARNING: due to regular expressions restrictions at 
+        #WARNING: due to regular expressions restrictions at
         fields.add("count(distinct ch.issue_id, ch.old_value) as sent_patchsets")
 
         tables.add("changes ch")
@@ -764,11 +764,17 @@ class Participants(Metrics):
         # Add orgs information
         q_orgs = """
             SELECT DISTINCT(top.id), top.identifier as identifier, events, org.name as organization FROM (%s) top
-            LEFT JOIN %s.enrollments enr ON top.id = enr.uuid
+            LEFT JOIN (
+                SELECT * FROM %s.enrollments WHERE (uuid, end) IN
+                    ( SELECT uuid, MAX(end)
+                      FROM %s.enrollments
+                      GROUP BY uuid
+                )) enr ON top.id = enr.uuid
             LEFT JOIN %s.organizations org ON org.id = enr.organization_id
             GROUP BY top.id
             ORDER BY events DESC, identifier
-            """ % (query, self.db.identities_db, self.db.identities_db)
+            """ % (query, self.db.identities_db, self.db.identities_db,
+                self.db.identities_db)
 
         return self.db.ExecuteQuery(q_orgs)
 
@@ -1333,11 +1339,17 @@ class Reviewers(Metrics):
         # Add orgs information
         q_orgs = """
             SELECT DISTINCT(top.id), reviewers, reviewed, org.name as organization FROM (%s) top
-            LEFT JOIN %s.enrollments enr ON top.id = enr.uuid
+            LEFT JOIN (
+                SELECT * FROM %s.enrollments WHERE (uuid, end) IN
+                    ( SELECT uuid, MAX(end)
+                      FROM %s.enrollments
+                      GROUP BY uuid
+                )) enr ON top.id = enr.uuid
             LEFT JOIN %s.organizations org ON org.id = enr.organization_id
             GROUP BY top.id
             ORDER BY reviewed DESC, reviewers
-            """ % (q, self.db.identities_db, self.db.identities_db)
+            """ % (q, self.db.identities_db, self.db.identities_db,
+                    self.db.identities_db)
 
         return(self.db.ExecuteQuery(q_orgs))
 
@@ -1517,12 +1529,17 @@ class Closers(Metrics):
         # Add orgs information
         q_orgs = """
             SELECT DISTINCT(top.id), %s, %s, org.name as organization FROM (%s) top
-            LEFT JOIN %s.enrollments enr ON top.id = enr.uuid
+            LEFT JOIN (
+                SELECT * FROM %s.enrollments WHERE (uuid, end) IN
+                    ( SELECT uuid, MAX(end)
+                      FROM %s.enrollments
+                      GROUP BY uuid
+                )) enr ON top.id = enr.uuid
             LEFT JOIN %s.organizations org ON org.id = enr.organization_id
             GROUP BY top.id
             ORDER BY %s DESC, %s
             """ % (rol, action, q, self.db.identities_db, self.db.identities_db,
-                   action, rol)
+                    self.db.identities_db, action, rol)
 
         return(self.db.ExecuteQuery(q_orgs))
 
@@ -1629,12 +1646,17 @@ class Submitters(Metrics):
         # Add orgs information
         q_orgs = """
             SELECT DISTINCT(top.id), %s, %s, org.name as organization FROM (%s) top
-            LEFT JOIN %s.enrollments enr ON top.id = enr.uuid
+            LEFT JOIN (
+                SELECT * FROM %s.enrollments WHERE (uuid, end) IN
+                    ( SELECT uuid, MAX(end)
+                      FROM %s.enrollments
+                      GROUP BY uuid
+                )) enr ON top.id = enr.uuid
             LEFT JOIN %s.organizations org ON org.id = enr.organization_id
             GROUP BY top.id
             ORDER BY %s DESC, %s
             """ % (rol, action, q, self.db.identities_db, self.db.identities_db,
-                   action, rol)
+                    self.db.identities_db, action, rol)
 
         return(self.db.ExecuteQuery(q_orgs))
 
