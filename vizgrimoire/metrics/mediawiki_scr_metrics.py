@@ -326,7 +326,7 @@ class TimeToReviewPendingSCR(Metrics):
         def get_values_median(values):
             if not isinstance(values, list): values = [values]
             values = removeDecimals(values)
-            if (len(values) == 0): values = float('nan')
+            if (len(values) == 0): values = float('0')
             else: values = median(values)
             return values
 
