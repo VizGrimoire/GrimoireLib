@@ -222,20 +222,11 @@ def create_people_identifiers(startdate, enddate, destdir, npeople, identities_d
                         people_ids += check_array_values(people[ds.get_name()][top_name+period])['id']
     people_ids = list(set(people_ids))
 
-    from vizgrimoire.SCM import GetPeopleListSCM
     import vizgrimoire.People as People
-    from vizgrimoire.GrimoireSQL import SetDBChannel
-
-    # TODO: Identities db is the same than SCM
-    Report.connect_ds(ds_scm)
-
     for upeople_id in people_ids:
         people_data[upeople_id] = People.GetPersonIdentifiers(identities_db, upeople_id)
 
     all_top_min_ds = get_top_people(startdate, enddate, identities_db)
-
-    db = automator['generic']['db_cvsanaly']
-    SetDBChannel (database=db, user=opts.dbuser, password=opts.dbpassword)
 
     for upeople_id in all_top_min_ds:
         people_data[upeople_id] = People.GetPersonIdentifiers(identities_db, upeople_id)

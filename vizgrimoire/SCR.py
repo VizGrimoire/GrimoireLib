@@ -217,7 +217,7 @@ class SCR(DataSource):
 
     @staticmethod
     def get_top_metrics ():
-        return ["reviewers","openers","mergers"]
+        return ["reviewers","openers","mergers","participants","active_core_reviewers"]
 
     @staticmethod
     def get_top_data (startdate, enddate, identities_db, filter_, npeople):

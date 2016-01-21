@@ -8,7 +8,7 @@
 ## This program is distributed in the hope that it will be useful,
 ## but WITHOUT ANY WARRANTY; without even the implied warranty of
 ## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-## GNU General Public License for more details. 
+## GNU General Public License for more details.
 ##
 ## You should have received a copy of the GNU General Public License
 ## along with this program; if not, write to the Free Software
@@ -26,21 +26,18 @@ def GetPersonIdentifiers (identities_db, upeople_id):
         SELECT pro.uuid, pro.name, pro.email, cou.name as country,
                org.name as affiliation
         FROM %s.profiles pro
-        JOIN %s.enrollments enr ON enr.uuid= pro.uuid
-        JOIN %s.organizations org ON org.id = enr.organization_id
+        LEFT JOIN (
+            SELECT * FROM %s.enrollments WHERE (uuid, end) IN
+                ( SELECT uuid, MAX(end)
+                  FROM %s.enrollments
+                  GROUP BY uuid
+            )) enr ON enr.uuid = pro.uuid
+        LEFT JOIN %s.organizations org ON org.id = enr.organization_id
         LEFT JOIN %s.countries cou ON cou.code = pro.country_code
         WHERE pro.uuid ='%s'
         """ % (identities_db, identities_db, identities_db, identities_db,
-               upeople_id)
-    try:
-        res = ExecuteQuery(q)
-    except:
-        # No organizations. Just people data and country data.
-        q = """
-            SELECT pro.uuid, pro.name, pro.email, cou.name as country
-            FROM %s.profiles pro
-            LEFT JOIN %s.countries cou ON cou.code = pro.country_code
-            WHERE pro.uuid ='%s'
-            """ % (identities_db, identities_db, upeople_id)
-        res = ExecuteQuery(q)
+                identities_db, upeople_id)
+
+    res = ExecuteQuery(q)
+
     return res
