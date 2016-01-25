@@ -66,7 +66,7 @@ class DSQuery(object):
         pass
 
     @classmethod
-    def GetSQLGlobal(cls, date, fields, tables, filters, start, end, all_items = None):
+    def GetSQLGlobal(cls, date, fields, tables, filters, start, end, all_items = None, strict = False):
         group_field = None
         count_field = None
         if all_items:
@@ -80,7 +80,11 @@ class DSQuery(object):
 
         sql = 'SELECT '+ fields
         sql += ' FROM '+ tables
-        sql += ' WHERE '+date+'>='+start+' AND '+date+'<'+end
+        if (strict):
+            sql += ' WHERE '+date+'>='+start+' AND '+date+'<='+end
+        else:
+            sql += ' WHERE '+date+'>='+start+' AND '+date+'<'+end
+
         reg_and = re.compile("^[ ]*and", re.IGNORECASE)
         if (filters != ""):
             if (reg_and.match (filters.lower())) is not None: sql += " " + filters
@@ -96,7 +100,7 @@ class DSQuery(object):
 
     @classmethod
     def GetSQLPeriod(cls, period, date, qfields, tables, filters, start, end,
-                     all_items = None):
+                     all_items = None, strict = False):
         group_field = None
 
         iso_8601_mode = 3
@@ -123,7 +127,11 @@ class DSQuery(object):
         fields += ", " + qfields
         sql = "SELECT " + fields
         sql += ' FROM ' + tables
-        sql = sql + ' WHERE '+date+'>='+start+' AND '+date+'<'+end
+        if (strict):
+            sql = sql + ' WHERE '+date+'>='+start+' AND '+date+'<='+end
+        else:
+            sql = sql + ' WHERE '+date+'>='+start+' AND '+date+'<'+end
+
         reg_and = re.compile("^[ ]*and", re.IGNORECASE)
 
         if (filters != ""):
@@ -188,7 +196,7 @@ class DSQuery(object):
         return filters_str
 
     def BuildQuery (self, period, startdate, enddate, date_field, fields,
-                    tables, filters, evolutionary, type_analysis = None):
+                    tables, filters, evolutionary, type_analysis = None, strict = False):
         # Select the way to evolutionary or aggregated dataset
         # filter_all: get data for all items in a filter
         q = ""
@@ -206,10 +214,10 @@ class DSQuery(object):
 
         if (evolutionary):
             q = self.GetSQLPeriod(period, date_field, fields, tables, filters,
-                                  startdate, enddate, all_items)
+                                  startdate, enddate, all_items, strict = strict)
         else:
             q = self.GetSQLGlobal(date_field, fields, tables, filters,
-                                  startdate, enddate, all_items)
+                                  startdate, enddate, all_items, strict = strict)
         return(q)
 
     def __SetDBChannel__ (self, user=None, password=None, database=None,
@@ -224,15 +232,6 @@ class DSQuery(object):
 
     def ExecuteQuery (self, sql):
         if sql is None: return {}
-        
-        #FIXME
-        #fd = open("/tmp/lcanas/log","a")
-        #fd.write("-\n")
-        #fd.write(sql)
-        #fd.close()
-
-
-
         # print sql
         result = {}
         self.cursor.execute(sql)
