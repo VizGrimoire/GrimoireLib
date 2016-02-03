@@ -74,6 +74,7 @@ class CompaniesActivity(Analyses):
         else:  field = "s.author_id"
         from_ = """
             FROM scmlog s
+              JOIN actions a ON a.commit_id = s.id
               JOIN people_uidentities pup ON %s = pup.people_id
               JOIN %s.enrollments enr ON enr.uuid = pup.uuid
               JOIN %s.organizations org ON org.id = enr.organization_id
@@ -89,7 +90,7 @@ class CompaniesActivity(Analyses):
             where = " WHERE YEAR(s.author_date) = " + str(year)
             field = field + "_" + str(year)
         sql = """
-            select org.name, count(distinct(s.id)) as %s
+            select org.name, count(distinct(s.rev)) as %s
             %s %s
             group by org.id
             order by %s desc, org.name
