@@ -315,7 +315,7 @@ class DSQuery(object):
             if ds_query == MLSQuery:
                 field = "DISTINCT(SUBSTR(mp.email_address,LOCATE('@',mp.email_address)+1)) as name"
         elif analysis == "repository":
-            field = "r.name"
+            field = "r.uri AS name"
             if ds_query == ITSQuery: field = "t.url"
             elif ds_query == SCRQuery: field = "t.url"
             elif ds_query == MLSQuery: field = "ml.mailing_list_url"
@@ -500,11 +500,11 @@ class SCMQuery(DSQuery):
         if isinstance(repository, list):
             repo_filter = "("
             for repo in repository:
-                repo_filter = repo_filter + "r.name = " + repo + " or "
+                repo_filter = repo_filter + "r.uri = " + repo + " or "
             repo_filter = repo_filter[:-4] + ")"
             fields.add(repo_filter)
         elif repository is not None:
-            fields.add("r.name = "+ repository)
+            fields.add("r.uri = "+ repository)
 
         return fields
 

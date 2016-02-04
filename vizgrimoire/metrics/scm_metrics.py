@@ -945,7 +945,7 @@ class Repositories(Metrics):
     def get_list(self):
         """Repositories list ordered by number of commits"""
         q = """
-            select count(distinct(sid)) as total, name
+            select count(distinct(sid)) as total, r.uri AS name
             from repositories r, (
               select distinct(s.id) as sid, repository_id from actions a, scmlog s
               where s.id = a.commit_id  and s.author_date >=%s and s.author_date < %s) t

@@ -249,7 +249,8 @@ class SCM(DataSource):
             items = [items]
 
         fn = os.path.join(destdir, filter_.get_filename(SCM()))
-        createJSON(items, fn)
+        escaped_items = [i.replace('/','_') for i in items]
+        createJSON(escaped_items, fn)
 
         for item in items :
             item_name = "'"+ item+ "'"
@@ -276,12 +277,9 @@ class SCM(DataSource):
             items = [items]
 
         fn = os.path.join(destdir, filter_.get_filename(SCM()))
-        createJSON(items, fn)
-
-        if filter_name in ("domain", "company", "repository"):
-            items_list = {'name' : [], 'commits_365' : [], 'authors_365' : []}
-        else:
-            items_list = items
+        escaped_items = [i.replace('/','_') for i in items]
+        logging.info("D1")
+        createJSON(escaped_items, fn)
 
         for item in items :
             item_name = "'"+ item+ "'"
@@ -296,15 +294,7 @@ class SCM(DataSource):
             fn = os.path.join(destdir, filter_item.get_static_filename(SCM()))
             createJSON(agg, fn)
 
-            if filter_name in ("domain", "company", "repository"):
-                items_list['name'].append(item.replace('/', '_'))
-                items_list['commits_365'].append(agg['commits_365'])
-                items_list['authors_365'].append(agg['authors_365'])
-
         SCM.create_filter_report_top(filter_, period, startdate, enddate, destdir, npeople, identities_db)
-
-        fn = os.path.join(destdir, filter_.get_filename(SCM()))
-        createJSON(items_list, fn)
 
         if (filter_name == "company"):
             ds = SCM

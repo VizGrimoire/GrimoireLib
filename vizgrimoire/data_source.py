@@ -518,6 +518,9 @@ class DataSource(object):
         if cls == ITS or cls == SCM:
             if filter_.get_name() in ["company+country","company+project"]:
                 data['name'] = data.pop('filter')
+                data['name'] = [item.replace('/', '_') for item in data['name']]
+        if cls == SCM:
+            data['name'] = [item.replace('/', '_') for item in data['name']]
 
         if not evolutionary:
             # First create the JSON with the list of items
