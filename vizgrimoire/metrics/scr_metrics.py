@@ -1432,7 +1432,7 @@ class ActiveCoreReviewers(Metrics):
         if days > 0:
             filters.add("DATEDIFF (%s, ch.changed_on) < %s " % (self.filters.enddate, days))
 
-        fields.add("up.identifier as identifier")
+        fields.add("pro.name as identifier")
         fields.add("count(distinct(ch.id)) as reviews")
 
         tables.add("changes ch")
