@@ -94,12 +94,12 @@ class DownloadsDS(DataSource):
 
     @staticmethod
     def get_date_init(startdate = None, enddate = None, identities_db = None, type_analysis = None):
-        q = " SELECT DATE_FORMAT (MIN(date), '%Y-%m-%d') as first_date FROM downloads"
+        q = " SELECT DATE_FORMAT (MIN(date), '%Y-%m-%d') as first_date FROM downloads_month"
         return(ExecuteQuery(q))
 
     @staticmethod
     def get_date_end(startdate = None, enddate = None, identities_db = None, type_analysis = None):
-        q = " SELECT DATE_FORMAT (MAX(date), '%Y-%m-%d') as last_date FROM downloads"
+        q = " SELECT DATE_FORMAT (MAX(date), '%Y-%m-%d') as last_date FROM downloads_month"
         return(ExecuteQuery(q))
 
 
