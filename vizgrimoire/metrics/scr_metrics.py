@@ -1450,11 +1450,13 @@ class ActiveCoreReviewers(Metrics):
         #Specific case for the basic option where people_upeople table is needed
         #and not taken into account in the initial part of the query
         tables.add(self.db.identities_db + ".uidentities up")
+        tables.add(self.db.identities_db + ".profiles pro")
         tables.add("people_uidentities pup")
         filters.add("ch.changed_by  = pup.people_id")
         filters.add("pup.uuid = up.uuid")
         filters.add("(ch.new_value = -2 or ch.new_value = 2)")
         filters.add("field = 'Code-Review'")
+        filters.add("pup.uuid = pro.uuid")
         #dates
         filters.add("changed_on >= " + self.filters.startdate)
         filters.add("changed_on < " + self.filters.enddate)
