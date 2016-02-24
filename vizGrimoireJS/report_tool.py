@@ -207,10 +207,6 @@ def create_people_identifiers(startdate, enddate, destdir, npeople, identities_d
     people = get_top_report(startdate, enddate, npeople, identities_db, only_people=True);
     people_ids = [] # upeople_ids which need identifiers
     people_data = {} # identifiers for upeople_ids
-    ds_scm = Report.get_data_source("scm")
-    if ds_scm is None:
-        # Without SCM (identities) data source can not continue
-        return
 
     for ds in Report.get_data_sources():
         periods = [".",".last year",".last month"]
