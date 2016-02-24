@@ -35,9 +35,9 @@ def GetPersonIdentifiers (identities_db, upeople_id):
         LEFT JOIN %s.organizations org ON org.id = enr.organization_id
         LEFT JOIN %s.countries cou ON cou.code = pro.country_code
         WHERE pro.uuid ='%s'
+        LIMIT 1
         """ % (identities_db, identities_db, identities_db, identities_db,
                 identities_db, upeople_id)
-
     res = ExecuteQuery(q)
 
     return res
