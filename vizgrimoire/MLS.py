@@ -277,9 +277,37 @@ class MLS(DataSource):
         pass
 
     @staticmethod
+    def create_filter_report_top(filter_, period, startdate, enddate, destdir, npeople, identities_db):
+        from vizgrimoire.report import Report
+        items = Report.get_items()
+        if items is None:
+            items = MLS.get_filter_items(filter_, startdate, enddate, identities_db)
+            if (items == None): return
+            items = items['name']
+
+        filter_name = filter_.get_name()
+
+        if not isinstance(items, (list)):
+            items = [items]
+
+        for item in items :
+            item = item.replace("'", "\\'")
+            item_name = "'"+ item+ "'"
+            logging.info (item_name)
+            filter_item = Filter(filter_.get_name(), item)
+
+            top_senders = MLS.get_top_data(startdate, enddate, identities_db, filter_item, npeople, False)
+            createJSON(top_senders, destdir+"/"+filter_item.get_top_filename(MLS()))
+
+
+    @staticmethod
     def create_filter_report_all(filter_, period, startdate, enddate, destdir, npeople, identities_db):
         check = False # activate to debug issues
         filter_name = filter_.get_name()
+
+        # top by filter, not supported by group all queries
+        MLS.create_filter_report_top(filter_, period, startdate, enddate, destdir, npeople, identities_db)
+
         if filter_name in ["people2","company","repository","country","domain","project"] :
             filter_all = Filter(filter_name, None)
             agg_all = MLS.get_agg_data(period, startdate, enddate,
