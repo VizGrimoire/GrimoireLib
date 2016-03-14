@@ -8,7 +8,7 @@
 ## This program is distributed in the hope that it will be useful,
 ## but WITHOUT ANY WARRANTY; without even the implied warranty of
 ## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-## GNU General Public License for more details. 
+## GNU General Public License for more details.
 ##
 ## You should have received a copy of the GNU General Public License
 ## along with this program; if not, write to the Free Software
@@ -211,15 +211,17 @@ class Openers(Metrics):
             dtables = ", (SELECT MAX(submitted_on) as last_date from issues) t "
             dfilters = " AND DATEDIFF (last_date, submitted_on) < %s " % (days)
 
-        q = "SELECT up.uuid as id, up.identifier as openers, "+\
+        q = "SELECT up.uuid as id, pro.name as openers, "+\
             "    count(distinct(i.id)) as opened "+\
-            "FROM " +tables +\
-            " ,   "+self.db.identities_db+".uidentities up "+ dtables + \
+            "FROM " + tables +\
+            " ,   " + self.db.identities_db + ".profiles pro " +\
+            " ,   " + self.db.identities_db +".uidentities up "+ dtables + \
             "WHERE "+filter_bots + filters +" and "+\
             "    pup.uuid = up.uuid and "+\
+            "    pup.uuid = pro.uuid and "+\
             "    i.submitted_on >= "+ startdate+ " and "+\
             "    i.submitted_on < "+ enddate + dfilters +\
-            "    GROUP BY up.identifier "+\
+            "    GROUP BY pro.name "+\
             "    ORDER BY opened desc, openers "+\
             "    LIMIT " + str(limit)
         data = self.db.ExecuteQuery(q)
@@ -285,7 +287,7 @@ class TimeToClose(Metrics):
         if self.filters.closed_condition is not None:
              closed_condition = self.filters.closed_condition
 
-        # TODO: if RESOLVED and CLOSED appear in the same period of study, this 
+        # TODO: if RESOLVED and CLOSED appear in the same period of study, this
         # will affect the total time to close the issue. Both timeframes will
         # be taken into account.
         table_extra = "(select issue_id, changed_on from changes where "+closed_condition+" and changed_on < "+self.filters.enddate+" and changed_on >= "+self.filters.startdate+") t1"
@@ -338,12 +340,13 @@ class Closers(Metrics):
         filters = Set([])
 
         fields.add("up.uuid as id")
-        fields.add("up.identifier as closers")
+        fields.add("pro.name as closers")
         fields.add("COUNT(DISTINCT(ch.id)) as closed")
 
         tables.union_update(self.db.GetSQLReportFrom(self.filters))
         tables.add("people_uidentities pup")
         tables.add(self.db.identities_db+".uidentities up")
+        tables.add(self.db.identities_db + ".profiles pro")
         tables.add("issues i")
         tables.add("changes ch")
         tables.union_update(dtables)
@@ -353,6 +356,7 @@ class Closers(Metrics):
         filters.add("i.id = ch.issue_id")
         filters.add("ch.changed_by = pup.people_id")
         filters.add("pup.uuid = up.uuid")
+        filters.add("pup.uuid = pro.uuid")
         filters.add("ch.changed_on >= " + startdate)
         filters.add("ch.changed_on < " + enddate)
         filters.union_update(dfilters)
@@ -362,7 +366,7 @@ class Closers(Metrics):
         query = "select " + self.db._get_fields_query(fields)
         query = query + " from " + self.db._get_tables_query(tables)
         query = query + " where " + self.db._get_filters_query(filters)
-        query = query + " GROUP BY up.identifier ORDER BY closed DESC, closers LIMIT " + str(limit)
+        query = query + " GROUP BY pro.name ORDER BY closed DESC, closers LIMIT " + str(limit)
 
         if metric_filters is not None: self.filters = metric_filters_orig
 
@@ -393,7 +397,7 @@ class BMIIndex(Metrics):
         tickets in a given period. This metric aims at having an overview of
         how the community deals with tickets. Continuous values under 1
         (or 100 if this is calculated as a percentage) shows low peformance
-        given that the community leaves a lot of opened tickets. Continuous 
+        given that the community leaves a lot of opened tickets. Continuous
         values close to 1 or over 1 shows a better performance. This would
         indicate that most of the tickets are being closed.
     """
