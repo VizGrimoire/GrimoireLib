@@ -8,7 +8,7 @@
 ## This program is distributed in the hope that it will be useful,
 ## but WITHOUT ANY WARRANTY; without even the implied warranty of
 ## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-## GNU General Public License for more details. 
+## GNU General Public License for more details.
 ##
 ## You should have received a copy of the GNU General Public License
 ## along with this program; if not, write to the Free Software
@@ -182,7 +182,8 @@ class EmailsSenders(Metrics):
             filters.add("DATEDIFF (last_date, first_date) < %s " % (days))
 
         fields.add("up.uuid as id")
-        fields.add("up.identifier as senders")
+        #fields.add("up.identifier as senders")
+        fields.add("pro.name as senders")
         fields.add("COUNT(DISTINCT(m.message_id)) as sent")
 
         tables.add("messages m")
@@ -400,7 +401,7 @@ class EmailsSentInit(Metrics):
         filters = Set([])
 
         fields.add("count(distinct(m.message_ID)) as sent_init")
-        tables.add("messages m") 
+        tables.add("messages m")
         tables.union_update(self.db.GetSQLReportFrom(self.filters))
         filters.union_update(self.db.GetSQLReportWhere(self.filters))
         filters.add("m.is_response_of is null")
@@ -548,7 +549,7 @@ class Companies(Metrics):
     data_source = MLS
 
     def _get_sql(self, evolutionary):
-        return self.db.GetStudies(self.filters.period, self.filters.startdate, 
+        return self.db.GetStudies(self.filters.period, self.filters.startdate,
                                   self.filters.enddate, ['company', ''], evolutionary, 'organizations')
 
     def get_list (self):
@@ -680,7 +681,7 @@ class UnansweredPosts(Metrics):
         fields.add("m.message_ID as message_ID")
         fields.add("m.is_response_of as is_response_of")
         tables.add("messages m")
-        filters.add("m.first_date >= '" + str(from_date) + "' ") 
+        filters.add("m.first_date >= '" + str(from_date) + "' ")
         filters.add("m.first_date < '" + str(to_date) + "' ")
         filters.add("m.first_date >= " + str(self.filters.startdate))
         filters.add("m.first_date < " + str(self.filters.enddate))
@@ -766,4 +767,3 @@ if __name__== '__main__':
     print emailssenders.get_agg()
     print emailssenders.get_list(30)
     print emailssenders.get_list(365)
-
