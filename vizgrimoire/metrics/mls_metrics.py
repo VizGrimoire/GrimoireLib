@@ -208,8 +208,7 @@ class EmailsSenders(Metrics):
 
         query = query + " group by up.uuid "
         query = query + " order by count(distinct(m.message_id)) desc "
-        query = query + " limit " + str(self.filters.npeople)
-
+        query = query + " limit " + str(npeople)
         return self.db.ExecuteQuery(query)
 
 
