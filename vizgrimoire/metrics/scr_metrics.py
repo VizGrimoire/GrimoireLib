@@ -1632,19 +1632,20 @@ class Submitters(Metrics):
             self.db.ExecuteQuery(q)
             date_limit = " AND DATEDIFF(@maxdate, submitted_on)<"+str(days)
 
-        q = "SELECT up.uuid as id, up.identifier as "+rol+", "+\
+        q = "SELECT up.uuid as id, pro.name as "+rol+", "+\
             "            count(distinct(i.id)) as "+action+" "+\
-            "        FROM people_uidentities pup, issues i, "+self.db.identities_db+".uidentities up "+\
+            "        FROM people_uidentities pup, issues i, "+self.db.identities_db+".uidentities up, "+\
+            "        " + self.db.identities_db + ".profiles pro "+\
             "        WHERE "+ filter_bots+ " "+\
             "            i.submitted_by = pup.people_id and "+\
             "            pup.uuid = up.uuid and "+\
+            "            pro.uuid = pup.uuid and "+\
             "            i.submitted_on >= "+ startdate+ " and "+\
             "            i.submitted_on < "+ enddate+ " "+\
             "            "+date_limit +  " "+\
             "        GROUP BY up.identifier "+\
             "        ORDER BY "+action+" desc, id "+\
             "        LIMIT "+ str(limit)
-
         # Add orgs information
         q_orgs = """
             SELECT DISTINCT(top.id), %s, %s, org.name as organization FROM (%s) top
