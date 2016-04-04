@@ -29,26 +29,26 @@ from utils import read_options
 def get_evol_report(startdate, enddate, identities_db):
     all_ds = {}
 
-    for ds in Report.get_data_sources():
+    for ds in get_enabled_data_sources():
         Report.connect_ds(ds)
         all_ds[ds.get_name()] = ds.get_evolutionary_data (period, startdate, enddate, identities_db)
     return all_ds
 
 def create_evol_report(startdate, enddate, destdir, identities_db):
-    for ds in Report.get_data_sources():
+    for ds in get_enabled_data_sources():
         Report.connect_ds(ds)
         ds.create_evolutionary_report (period, startdate, enddate, destdir, identities_db)
 
 def get_agg_report(startdate, enddate, identities_db):
     all_ds = {}
 
-    for ds in Report.get_data_sources():
+    for ds in get_enabled_data_sources():
         Report.connect_ds(ds)
         all_ds[ds.get_name()] = ds.get_agg_data (period, startdate, enddate, identities_db)
     return all_ds
 
 def create_agg_report(startdate, enddate, destdir, identities_db):
-    for ds in Report.get_data_sources():
+    for ds in get_enabled_data_sources():
         Report.connect_ds(ds)
         ds.create_agg_report (period, startdate, enddate, destdir, identities_db)
 
@@ -67,13 +67,13 @@ def get_top_report(startdate, enddate, npeople, identities_db, only_people=False
     return all_ds_top
 
 def create_top_report(startdate, enddate, destdir, npeople, identities_db):
-    for ds in Report.get_data_sources():
+    for ds in get_enabled_data_sources():
         logging.info("Creating TOP for " + ds.get_name())
         Report.connect_ds(ds)
         ds.create_top_report (startdate, enddate, destdir, npeople, identities_db)
 
 def create_reports_filters(period, startdate, enddate, destdir, npeople, identities_db):
-    for ds in Report.get_data_sources():
+    for ds in get_enabled_data_sources():
         Report.connect_ds(ds)
         logging.info("Creating filter reports for " + ds.get_name())
         for filter_ in Report.get_filters():
@@ -119,7 +119,7 @@ def create_reports_filters(period, startdate, enddate, destdir, npeople, identit
                 ds.create_filter_report(filter_, period, startdate, enddate, destdir, npeople, identities_db)
 
 def create_report_people(startdate, enddate, destdir, npeople, identities_db, people_ids=None):
-    for ds in Report.get_data_sources():
+    for ds in get_enabled_data_sources():
         Report.connect_ds(ds)
         logging.info("Creating people for " + ds.get_name())
         ds().create_people_report(period, startdate, enddate, destdir, npeople, identities_db, people_ids)
@@ -190,7 +190,7 @@ def create_reports_r(enddate, destdir):
 
     vizr = importr("vizgrimoire")
 
-    for ds in Report.get_data_sources():
+    for ds in get_enabled_data_sources():
 	if ds.get_name() != "its": continue
         automator = Report.get_config()
         db = automator['generic'][ds.get_db_name()]
@@ -242,7 +242,7 @@ def create_reports_studies(period, startdate, enddate, destdir):
 
     metric_filters = MetricFilters(period, startdate, enddate, [])
 
-    for ds in Report.get_data_sources():
+    for ds in get_enabled_data_sources():
         ds_dbname = ds.get_db_name()
         dbname = Report.get_config()['generic'][ds_dbname]
         dsquery = ds.get_query_builder()
@@ -260,11 +260,21 @@ def create_reports_studies(period, startdate, enddate, destdir):
                 continue
 
 def create_events(startdate, enddate, destdir):
-    for ds in Report.get_data_sources():
+    for ds in get_enabled_data_sources():
         if ds.get_name() != "scm": continue
         logging.info("EVENTS for " + ds.get_name())
         events = ds.get_events()
         createJSON(events, destdir+"/"+ds.get_name()+"-events.json")
+
+def get_enabled_data_sources():
+    """
+        return available + enable data sources unless one of them was
+        specified by a parameter, in that case return it.
+    """
+    if len(data_sources_subset) > 0:
+        return data_sources_subset
+    else:
+        return Report.get_data_sources()
 
 def set_data_source(ds_name):
     ds_ok = False
@@ -274,7 +284,9 @@ def set_data_source(ds_name):
         if ds.get_name() == opts.data_source:
             ds_ok = True
             DS = ds
-            Report.set_data_sources([DS])
+            global data_sources_subset
+            data_sources_subset = [DS]
+            #Report.set_data_sources([DS])
     if not ds_ok:
         logging.error(opts.data_source + " data source not available")
         sys.exit(1)
@@ -362,6 +374,10 @@ if __name__ == '__main__':
     enddate = "'"+end_date+"'"
 
     identities_db = automator['generic']['db_identities']
+
+    # ad-hoc list of data sources based on data-source parameter used when
+    # report_tool is executed for a single data source
+    global data_sources_subset
 
     if (opts.data_source):
         set_data_source(opts.data_source)
