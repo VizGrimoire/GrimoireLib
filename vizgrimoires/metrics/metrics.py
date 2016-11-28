@@ -23,7 +23,11 @@
 ##   Daniel Izquierdo-Cortazar <dizquierdo@bitergia.com>
 ##   Alvaro del Castillo <acs@bitergia.com>
 
+import pytz
+
 import requests
+
+from datetime import datetime, timedelta
 
 from esquery import ElasticQuery
 
@@ -43,10 +47,12 @@ class Metrics(object):
     name = None
     desc = None
 
-    def __init__(self, es_url, es_index):
+    def __init__(self, es_url, es_index, start=None, end=None):
         """db connection and filter to be used"""
         self.es_url = es_url
         self.es_index = es_index
+        self.start = start
+        self.end = end
 
     def get_definition(self):
         def_ = {
@@ -110,9 +116,37 @@ class Metrics(object):
 
         return agg
 
-    def get_trends(self, date, days):
-        """ Returns the trend metrics between now and now-days values """
-        pass
+    def get_trends(self, period='quarter'):
+
+        PERIODS = {'day':1, 'week':7, 'month':30, 'quarter':90, 'year':365}
+
+        if period not in PERIODS.keys():
+            raise RuntimeError('Period not supported: %s' % period)
+
+        offset = PERIODS[period]
+        # Last interval metrics
+        end = datetime.utcnow().replace(tzinfo=pytz.utc)
+        start = end - timedelta(days=offset)
+
+        last_commits = type(self)(self.es_url, self.es_index, start, end)
+        val_last_period = last_commits.get_agg()
+        # Previous interval metrics
+        end = start
+        start = end - timedelta(days=offset)
+        prev_commits = type(self)(self.es_url, self.es_index, start, end)
+        val_previous_period = prev_commits.get_agg()
+        trend = val_last_period - val_previous_period
+        trend_percent = None
+        if val_last_period == 0:
+            if val_previous_period > 0:
+                trend_percent = -100
+            else:
+                trend_percent = 0
+        else:
+            trend_percent = int((trend/val_last_period)*100)
+
+        return (val_last_period, trend_percent)
+
 
     def get_list(self, field):
         query = ElasticQuery.get_agg_count(field)

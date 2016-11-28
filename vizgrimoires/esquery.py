@@ -57,7 +57,9 @@ class ElasticQuery():
         return query_range
 
     @classmethod
-    def get_query_all(cls, field=DEFAULT_TS_FIELD, start=None, end=None):
+    def get_query_all(cls, field=None, start=None, end=None):
+        if not field:
+            field=DEFAULT_TS_FIELD
         query_range = cls.get_query_range(field, start, end)
 
         if query_range:
@@ -185,7 +187,7 @@ class ElasticQuery():
     def get_agg_count(cls, field, date_field=None, start=None, end=None, agg_type="terms"):
         """ if field and date_field the time series of the agg is collected """
 
-        query_all = cls.get_query_all(field=field, start=start, end=end)
+        query_all = cls.get_query_all(field=date_field, start=start, end=end)
 
         if not date_field:
             if agg_type == "terms":

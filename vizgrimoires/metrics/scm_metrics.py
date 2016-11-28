@@ -40,9 +40,10 @@ class Commits(Metrics):
 
     def get_query(self, evolutionary=False):
         if not evolutionary:
-            query = ElasticQuery.get_count()
+            query = ElasticQuery.get_count(start=self.start, end=self.end)
         else:
-            query = ElasticQuery.get_agg_count(FIELD_DATE)
+            query = ElasticQuery.get_agg_count(FIELD_DATE, start=self.start,
+                                               end=self.end)
         return query
 
     def get_list(self):
@@ -60,9 +61,11 @@ class Authors(Metrics):
 
     def get_query(self, evolutionary):
         if not evolutionary:
-            query = ElasticQuery.get_agg_count(self.FIELD_COUNT, agg_type="count")
+            query = ElasticQuery.get_agg_count(self.FIELD_COUNT, start=self.start,
+                                               end=self.end, agg_type="count")
         else:
-            query = ElasticQuery.get_agg_count(self.FIELD_COUNT, date_field=FIELD_DATE, agg_type="count")
+            query = ElasticQuery.get_agg_count(self.FIELD_COUNT, start=self.start,
+                                               end=self.end, date_field=FIELD_DATE, agg_type="count")
         return query
 
     def get_list(self):
@@ -79,9 +82,9 @@ class Committers(Metrics):
 
     def get_query(self, evolutionary):
         if not evolutionary:
-            query = ElasticQuery.get_agg_count(self.FIELD_COUNT, agg_type="count")
+            query = ElasticQuery.get_agg_count(self.FIELD_COUNT, start=self.start, end=self.end, agg_type="count")
         else:
-            query = ElasticQuery.get_agg_count(self.FIELD_COUNT, date_field=FIELD_DATE, agg_type="count")
+            query = ElasticQuery.get_agg_count(self.FIELD_COUNT, start=self.start, end=self.end, date_field=FIELD_DATE, agg_type="count")
         return query
 
     def get_list(self):
