@@ -32,6 +32,7 @@ logging.getLogger("requests").setLevel(logging.WARNING)
 from dateutil import parser
 
 from metrics.scm_metrics import Commits, Committers, Authors
+from metrics.its_metrics import Opened, Closed
 
 # Default values so it works without params
 ES_URL = 'http://localhost:9200'
@@ -54,9 +55,7 @@ class Report():
         self.get_metrics()
 
 
-    def get_metrics(self):
-        """ Get the metrics """
-
+    def __get_metrics_git(self):
         period = 'quarter'
         scm_index = 'git_enrich'
         commits = Commits(self.es_url, scm_index)
@@ -75,6 +74,30 @@ class Report():
         logging.info("Committers ts: %s", committers.get_ts())
         logging.info("Committers list: %s", committers.get_list())
         logging.info("Committers trend: %s", committers.get_trends(period))
+
+    def __get_metrics_github_issues(self):
+        period = 'quarter'
+        github_index = 'github_issues_enrich'
+        opened = Opened(self.es_url, github_index)
+        closed = Closed(self.es_url, github_index)
+
+        # GitHub Issues
+        logging.info("Closed total: %s", closed.get_agg())
+        logging.info("Closed ts: %s", closed.get_ts())
+        logging.info("Closed list: %s", closed.get_list())
+        logging.info("Closed trend: %s", closed.get_trends(period))
+        logging.info("Opened total: %s", opened.get_agg())
+        logging.info("Opened ts: %s", opened.get_ts())
+        logging.info("Opened list: %s", opened.get_list())
+        logging.info("Opened trend: %s", opened.get_trends(period))
+
+
+    def get_metrics(self):
+        """ Get the metrics """
+
+        self.__get_metrics_git()
+        self.__get_metrics_github_issues()
+
 
 
 def get_params():

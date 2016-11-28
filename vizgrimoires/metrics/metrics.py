@@ -46,13 +46,17 @@ class Metrics(object):
     id = None
     name = None
     desc = None
+    filters = None
+    FIELD_DATE='metadata__updated_on'
 
-    def __init__(self, es_url, es_index, start=None, end=None):
-        """db connection and filter to be used"""
+
+    def __init__(self, es_url, es_index, start=None, end=None, esfilter=None):
+        """es connection and filter to be used"""
         self.es_url = es_url
         self.es_index = es_index
         self.start = start
         self.end = end
+        self.filter = esfilter
 
     def get_definition(self):
         def_ = {
@@ -148,8 +152,8 @@ class Metrics(object):
         return (val_last_period, trend_percent)
 
 
-    def get_list(self, field):
-        query = ElasticQuery.get_agg_count(field)
+    def get_list(self, field, filters=None):
+        query = ElasticQuery.get_agg_count(field, filters=filters)
         res = self.get_metrics_data(query)
         l = {field:[],"value":[]}
         for bucket in res['aggregations'][str(ElasticQuery.AGGREGATION_ID)]['buckets']:

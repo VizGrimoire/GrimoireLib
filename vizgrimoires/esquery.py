@@ -32,6 +32,32 @@ class ElasticQuery():
     AGG_SIZE = 100
 
     @classmethod
+    def get_query_filters(cls, filters=None):
+        """ {"name1":"value1", "name2":"value2"} """
+
+        query_filters = ''
+
+        if not filters:
+            return query_filters
+
+        for name in filters:
+            query_filters += """
+                {
+                  "match": {
+                    "%s": {
+                      "query": "%s",
+                      "type": "phrase"
+                    }
+                  }
+                }
+            """ % (name, filters[name])
+            query_filters += ","
+
+        query_filters = query_filters[:-1]  # Remove the last comma
+
+        return query_filters
+
+    @classmethod
     def get_query_range(cls, field=DEFAULT_TS_FIELD, start=None, end=None):
 
         if not start and not end:
@@ -57,15 +83,18 @@ class ElasticQuery():
         return query_range
 
     @classmethod
-    def get_query_all(cls, field=None, start=None, end=None):
+    def get_query_basic(cls, field=None, start=None, end=None, filters=None):
         if not field:
             field=DEFAULT_TS_FIELD
         query_range = cls.get_query_range(field, start, end)
-
         if query_range:
             query_range = ", " +  query_range
 
-        query_all = """
+        query_filters = cls.get_query_filters(filters)
+        if query_filters:
+            query_filters = ", " +  query_filters
+
+        query_basic = """
           "query": {
             "bool": {
               "must": [
@@ -75,17 +104,16 @@ class ElasticQuery():
                     "query": "*"
                   }
                 }
-                %s
+                %s %s
               ]
             }
           }
-        """ % (query_range)
+        """ % (query_range, query_filters)
 
-        return query_all
+        return query_basic
 
     @classmethod
-    def get_query_agg_terms(cls, field, interval=None, timezone=None):
-
+    def get_query_agg_interval_tz(cls, field, interval=None, timezone=None):
         if interval:
             # 1d, 1w, 1d, 1M, 1y
             interval = '"interval": "%s",' % interval
@@ -99,6 +127,13 @@ class ElasticQuery():
         else:
             timezone = ''
 
+        return (interval, timezone, size)
+
+
+
+    @classmethod
+    def get_query_agg_terms(cls, field, interval=None, timezone=None):
+        (interval, timezone, size) = cls.get_query_agg_interval_tz(field, interval, timezone)
         query_agg = """
           "aggs": {
             "%i": {
@@ -144,15 +179,19 @@ class ElasticQuery():
         return query_agg
 
     @classmethod
-    def get_query_agg_count_ts(cls, field, time_field):
+    def get_query_agg_count_ts(cls, field, time_field, interval=None, timezone=None):
         """ Time series for an aggregation metric """
+        if not interval:
+            interval = '1M'
+        if not timezone:
+            timezone = 'Europe/Berlin'
         query_agg = """
              "aggs": {
                 "%i": {
                   "date_histogram": {
                     "field": "%s",
-                    "interval": "1M",
-                    "time_zone": "Europe/Berlin",
+                    "interval": "%s",
+                    "time_zone": "%s",
                     "min_doc_count": 1
                   },
                   "aggs": {
@@ -164,30 +203,31 @@ class ElasticQuery():
                   }
                 }
             }
-        """ % (cls.AGGREGATION_ID, time_field, cls.AGGREGATION_ID+1, field)
+        """ % (cls.AGGREGATION_ID, time_field, interval, timezone, cls.AGGREGATION_ID+1, field)
 
         return query_agg
 
 
     @classmethod
-    def get_count(cls, start = None, end = None):
-        query_all = cls.get_query_all(start=start, end=end)
+    def get_count(cls, start=None, end=None, filters=None):
+        query_basic = cls.get_query_basic(start=start, end=end, filters=filters)
 
         query = """
             {
               "size": 0,
               %s
               }
-        """ % (query_all)
+        """ % (query_basic)
+
 
         return query
 
 
     @classmethod
-    def get_agg_count(cls, field, date_field=None, start=None, end=None, agg_type="terms"):
+    def get_agg_count(cls, field, date_field=None, start=None, end=None, filters=None, agg_type="terms"):
         """ if field and date_field the time series of the agg is collected """
 
-        query_all = cls.get_query_all(field=date_field, start=start, end=end)
+        query_basic = cls.get_query_basic(field=date_field, start=start, end=end, filters=filters)
 
         if not date_field:
             if agg_type == "terms":
@@ -210,6 +250,6 @@ class ElasticQuery():
               %s,
               %s
               }
-        """ % (query_agg, query_all)
+        """ % (query_agg, query_basic)
 
         return query
