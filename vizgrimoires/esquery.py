@@ -28,7 +28,7 @@ DEFAULT_TS_FIELD = 'metadata__updated_on'
 class ElasticQuery():
     """ Helper class for building Elastic queries """
 
-    AGGREGATION_ID = "1"
+    AGGREGATION_ID = 1
     AGG_SIZE = 100
 
     @classmethod
@@ -99,7 +99,7 @@ class ElasticQuery():
 
         query_agg = """
           "aggs": {
-            "%s": {
+            "%i": {
               "terms": {
                 "field": "%s",
                 %s %s %s
@@ -117,13 +117,52 @@ class ElasticQuery():
     def get_query_agg_max(cls, field):
         query_agg = """
           "aggs": {
-            "%s": {
+            "%i": {
               "max": {
                 "field": "%s"
               }
             }
           }
         """ % (cls.AGGREGATION_ID, field)
+
+        return query_agg
+
+    @classmethod
+    def get_query_agg_count(cls, field):
+        query_agg = """
+          "aggs": {
+            "%i": {
+              "cardinality": {
+                "field": "%s"
+              }
+            }
+          }
+        """ % (cls.AGGREGATION_ID, field)
+
+        return query_agg
+
+    @classmethod
+    def get_query_agg_count_ts(cls, field, time_field):
+        """ Time series for an aggregation metric """
+        query_agg = """
+             "aggs": {
+                "%i": {
+                  "date_histogram": {
+                    "field": "%s",
+                    "interval": "1M",
+                    "time_zone": "Europe/Berlin",
+                    "min_doc_count": 1
+                  },
+                  "aggs": {
+                    "%i": {
+                      "cardinality": {
+                        "field": "%s"
+                      }
+                    }
+                  }
+                }
+            }
+        """ % (cls.AGGREGATION_ID, time_field, cls.AGGREGATION_ID+1, field)
 
         return query_agg
 
@@ -143,14 +182,25 @@ class ElasticQuery():
 
 
     @classmethod
-    def get_agg_count(cls, field, start=None, end=None, agg_type="terms"):
+    def get_agg_count(cls, field, date_field=None, start=None, end=None, agg_type="terms"):
+        """ if field and date_field the time series of the agg is collected """
+
         query_all = cls.get_query_all(field=field, start=start, end=end)
-        if agg_type == "terms":
-            query_agg = ElasticQuery.get_query_agg_terms(field)
-        elif agg_type == "max":
-            query_agg = ElasticQuery.get_query_agg_max(field)
+
+        if not date_field:
+            if agg_type == "terms":
+                query_agg = ElasticQuery.get_query_agg_terms(field)
+            elif agg_type == "max":
+                query_agg = ElasticQuery.get_query_agg_max(field)
+            elif agg_type == "count":
+                query_agg = ElasticQuery.get_query_agg_count(field)
+            else:
+                RuntimeError("Aggregation of %s not supported", agg_type)
         else:
-            RuntimeError("Aggregation of %s not supported", agg_type)
+            if agg_type == "count":
+                query_agg = ElasticQuery.get_query_agg_count_ts(field, date_field)
+            else:
+                RuntimeError("Aggregation of %s in ts not supported", agg_type)
 
         query = """
             {

@@ -87,9 +87,13 @@ class Metrics(object):
         res = self.get_metrics_data(query)
         # Time to convert it to our grimoire timeseries format
         ts = {"date":[],"value":[],"unixtime":[]}
-        for bucket in res['aggregations'][ElasticQuery.AGGREGATION_ID]['buckets']:
+        for bucket in res['aggregations'][str(ElasticQuery.AGGREGATION_ID)]['buckets']:
             ts['date'].append(bucket['key_as_string'])
-            ts['value'].append(bucket['doc_count'])
+            if str(ElasticQuery.AGGREGATION_ID+1) in bucket:
+                # We have a subaggregation with the value
+                ts['value'].append(bucket[str(ElasticQuery.AGGREGATION_ID+1)]['value'])
+            else:
+                ts['value'].append(bucket['doc_count'])
             ts['unixtime'].append(bucket['key'])
         return ts
 
@@ -98,7 +102,11 @@ class Metrics(object):
         query = self.get_query(False)
         res = self.get_metrics_data(query)
         # We need to extract the data from the JSON res
-        agg = res['hits']['total']
+        # If we have agg data use it
+        if 'aggregations' in res and res['aggregations'][str(ElasticQuery.AGGREGATION_ID)]['value']:
+            agg = res['aggregations'][str(ElasticQuery.AGGREGATION_ID)]['value']
+        else:
+            agg = res['hits']['total']
 
         return agg
 
@@ -106,12 +114,11 @@ class Metrics(object):
         """ Returns the trend metrics between now and now-days values """
         pass
 
-
     def get_list(self, field):
         query = ElasticQuery.get_agg_count(field)
         res = self.get_metrics_data(query)
         l = {field:[],"value":[]}
-        for bucket in res['aggregations'][ElasticQuery.AGGREGATION_ID]['buckets']:
+        for bucket in res['aggregations'][str(ElasticQuery.AGGREGATION_ID)]['buckets']:
             l[field].append(bucket['key'])
             l['value'].append(bucket['doc_count'])
         return l

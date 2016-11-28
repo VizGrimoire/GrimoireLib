@@ -36,7 +36,7 @@ from datetime import datetime, timedelta
 from dateutil import parser
 
 from esquery import ElasticQuery
-from metrics.scm_metrics import Commits
+from metrics.scm_metrics import Commits, Committers, Authors
 
 # Default values so it works without params
 ES_URL = 'http://localhost:9200'
@@ -68,10 +68,18 @@ class Report():
 
         scm_index = 'git_enrich'
         commits = Commits(self.es_url, scm_index)
+        authors = Authors(self.es_url, scm_index)
+        committers = Committers(self.es_url, scm_index)
 
         logging.info("Commits total: %s", commits.get_agg())
         logging.info("Commits ts: %s", commits.get_ts())
-        logging.info("Commits list: %s", commits.get_list('hash'))
+        logging.info("Commits list: %s", commits.get_list())
+        logging.info("Authors total: %s", authors.get_agg())
+        logging.info("Authors ts: %s", authors.get_ts())
+        logging.info("Authors list: %s", authors.get_list())
+        logging.info("Committers total: %s", committers.get_agg())
+        logging.info("Committers ts: %s", committers.get_ts())
+        logging.info("Committers list: %s", committers.get_list())
 
 
     def get_metric_trends(self, period):

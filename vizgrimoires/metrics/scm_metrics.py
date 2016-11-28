@@ -28,6 +28,9 @@
 from esquery import ElasticQuery
 from metrics.metrics import Metrics
 
+
+FIELD_DATE='metadata__updated_on'
+
 class Commits(Metrics):
     """ Commits metric class for source code management systems """
 
@@ -39,5 +42,47 @@ class Commits(Metrics):
         if not evolutionary:
             query = ElasticQuery.get_count()
         else:
-            query = ElasticQuery.get_agg_count("metadata__updated_on")
+            query = ElasticQuery.get_agg_count(FIELD_DATE)
         return query
+
+    def get_list(self):
+        field = "hash"
+        return super(Commits, self).get_list(field)
+
+class Authors(Metrics):
+    """ Authors metric class for source code management systems """
+
+    id = "authors"
+    name = "Authors"
+    desc = "People authoring commits (changes to source code)"
+    FIELD_COUNT = 'author_uuid' # field used to count Authors
+    FIELD_NAME = 'author_name' # field used to count Authors
+
+    def get_query(self, evolutionary):
+        if not evolutionary:
+            query = ElasticQuery.get_agg_count(self.FIELD_COUNT, agg_type="count")
+        else:
+            query = ElasticQuery.get_agg_count(self.FIELD_COUNT, date_field=FIELD_DATE, agg_type="count")
+        return query
+
+    def get_list(self):
+        return super(type(self), self).get_list(self.FIELD_NAME)
+
+class Committers(Metrics):
+    """ Committers metric class for source code management systems """
+
+    id = "committers"
+    name = "Committers"
+    desc = "Number of developers committing (merging changes to source code)"
+    FIELD_COUNT = 'Commit_uuid'
+    FIELD_NAME = 'Commit_name'
+
+    def get_query(self, evolutionary):
+        if not evolutionary:
+            query = ElasticQuery.get_agg_count(self.FIELD_COUNT, agg_type="count")
+        else:
+            query = ElasticQuery.get_agg_count(self.FIELD_COUNT, date_field=FIELD_DATE, agg_type="count")
+        return query
+
+    def get_list(self):
+        return super(type(self), self).get_list(self.FIELD_NAME)
