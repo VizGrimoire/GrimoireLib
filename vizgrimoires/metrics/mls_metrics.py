@@ -23,7 +23,6 @@
 ##   Alvaro del Castillo <acs@bitergia.com>
 ##
 
-from esquery import ElasticQuery
 from metrics.metrics import Metrics
 
 
@@ -33,19 +32,8 @@ class EmailsSent(Metrics):
     id = "sent"
     name = "Emails Sent"
     desc = "Emails sent to mailing lists"
-
-    def get_query(self, evolutionary=False):
-        if not evolutionary:
-            query = ElasticQuery.get_count(start=self.start, end=self.end)
-        else:
-            query = ElasticQuery.get_agg_count(date_field=self.FIELD_DATE, start=self.start,
-                                               end=self.end, agg_type="count",
-                                               interval=self.interval)
-        return query
-
-    def get_list(self):
-        field = "Message-ID"
-        return super(type(self), self).get_list(field)
+    FIELD_COUNT= "Message-ID"
+    FIELD_NAME = "Message-ID"
 
 
 class EmailsSenders(Metrics):
@@ -58,19 +46,6 @@ class EmailsSenders(Metrics):
     FIELD_COUNT = 'author_uuid' # field used to count Authors
     FIELD_NAME = 'author_name' # field used to count Authors
 
-    def get_query(self, evolutionary):
-        if not evolutionary:
-            query = ElasticQuery.get_agg_count(field=self.FIELD_COUNT, start=self.start,
-                                               end=self.end, agg_type="count",
-                                               interval=self.interval)
-        else:
-            query = ElasticQuery.get_agg_count(field=self.FIELD_COUNT, start=self.start,
-                                               end=self.end, date_field=self.FIELD_DATE,
-                                               agg_type="count", interval=self.interval)
-        return query
-
-    def get_list(self):
-        return super(type(self), self).get_list(self.FIELD_NAME)
 
 class ProjectsMLS(Metrics):
     """ Projects in the mailing lists """
@@ -79,7 +54,3 @@ class ProjectsMLS(Metrics):
     name = "Projects"
     desc = "Projects in the mailing lists"
     FIELD_NAME = 'project' # field used to list projects
-
-
-    def get_list(self):
-        return super(type(self), self).get_list(self.FIELD_NAME)

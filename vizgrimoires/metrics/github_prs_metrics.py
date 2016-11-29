@@ -22,7 +22,6 @@
 ##   Alvaro del Castillo <acs@bitergia.com>
 ##   Daniel Izquierdo <dizquierdo@bitergia.com>
 
-from esquery import ElasticQuery
 from metrics.metrics import Metrics
 
 
@@ -30,40 +29,19 @@ class SubmittedPR(Metrics):
     id = "submitted"
     name = "Submitted reviews"
     desc = "Number of submitted code review processes"
+    FIELD_NAME = 'id'
+    FIELD_COUNT = 'id'
     filters = {"pull_request":"true"}
-
-    def get_query(self, evolutionary=False):
-        if not evolutionary:
-            query = ElasticQuery.get_count(start=self.start, end=self.end, filters=self.esfilters)
-        else:
-            query = ElasticQuery.get_agg_count(date_field=self.FIELD_DATE, start=self.start,
-                                               end=self.end, filters=self.esfilters, agg_type="count",
-                                               interval=self.interval)
-        return query
-
-    def get_list(self):
-        field = "url"
-        return super(type(self), self).get_list(field)
 
 
 class ClosedPR(Metrics):
     id = "closed"
     name = "Closed reviews"
     desc = "Number of closed review processes (merged or abandoned)"
+    FIELD_NAME = 'id'
+    FIELD_COUNT = 'id'
     filters = {"pull_request":"true", "state":"closed"}
 
-    def get_query(self, evolutionary=False):
-        if not evolutionary:
-            query = ElasticQuery.get_count(start=self.start, end=self.end, filters=self.esfilters)
-        else:
-            query = ElasticQuery.get_agg_count(date_field=self.FIELD_DATE, start=self.start,
-                                               end=self.end, filters=self.esfilters,
-                                               agg_type="count", interval=self.interval)
-        return query
-
-    def get_list(self):
-        field = "url"
-        return super(type(self), self).get_list(field)
 
 class ProjectsPR(Metrics):
     """ Projects in the review code management system """
@@ -72,10 +50,6 @@ class ProjectsPR(Metrics):
     name = "Projects"
     desc = "Projects in the review code management system"
     FIELD_NAME = 'project' # field used to list projects
-
-    def get_list(self):
-        return super(type(self), self).get_list(self.FIELD_NAME)
-
 
 class Reviewers(Metrics):
     """ People assigned to pull requests """

@@ -86,10 +86,11 @@ class Report():
         tsc = commits.get_ts()
         tsa = authors.get_ts()
 
-        self.ts_chart("Authors", tsa['unixtime'], tsa['value'], "authors")
+        self.ts_chart("Commits", tsc['unixtime'], tsc['value'], "commits.eps")
+        self.ts_chart("Authors", tsa['unixtime'], tsa['value'], "authors.eps")
 
         self.bar_chart("Authors", tsa['date'][0:2], tsa['value'][0:2],
-                       "authors-bar", tsc['value'][2:4],
+                       "authors-bar.eps", tsc['value'][2:4],
                        legend=["authors","commits"])
 
 
@@ -464,9 +465,6 @@ class Report():
         file_name: openedclosed_issues_<project_name>.csv
         columns: labels,opened,closed
         """
-
-
-        pass
 
 
     def sections(self):

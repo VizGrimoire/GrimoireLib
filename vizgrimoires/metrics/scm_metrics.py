@@ -24,7 +24,6 @@
 ##   Alvaro del Castillo  <acs@bitergia.com>
 ##
 
-from esquery import ElasticQuery
 from metrics.metrics import Metrics
 
 class Commits(Metrics):
@@ -33,21 +32,9 @@ class Commits(Metrics):
     id = "commits"
     name = "Commits"
     desc = "Changes to the source code"
+    FIELD_COUNT = 'hash' # field used to count commits
+    FIELD_NAME = 'hash' # field used to list commits
 
-    def get_query(self, evolutionary=False):
-        if not evolutionary:
-            query = ElasticQuery.get_count(start=self.start, end=self.end,
-                                           filters=self.esfilters)
-        else:
-            query = ElasticQuery.get_agg_count(field=None, date_field=self.FIELD_DATE,
-                                               start=self.start, end=self.end, agg_type='count',
-                                               interval=self.interval,
-                                               filters=self.esfilters)
-        return query
-
-    def get_list(self):
-        field = "hash"
-        return super(type(self), self).get_list(field)
 
 class Authors(Metrics):
     """ Authors metric class for source code management systems """
@@ -58,19 +45,6 @@ class Authors(Metrics):
     FIELD_COUNT = 'author_uuid' # field used to count Authors
     FIELD_NAME = 'author_name' # field used to list Authors
 
-    def get_query(self, evolutionary):
-        if not evolutionary:
-            query = ElasticQuery.get_agg_count(field=self.FIELD_COUNT, start=self.start,
-                                               end=self.end, agg_type="count", interval=self.interval,
-                                               filters=self.esfilters)
-        else:
-            query = ElasticQuery.get_agg_count(field=self.FIELD_COUNT, start=self.start,
-                                               end=self.end, date_field=self.FIELD_DATE, agg_type="count",
-                                               interval=self.interval, filters=self.esfilters)
-        return query
-
-    def get_list(self):
-        return super(type(self), self).get_list(self.FIELD_NAME)
 
 class Committers(Metrics):
     """ Committers metric class for source code management systems """
@@ -81,21 +55,6 @@ class Committers(Metrics):
     FIELD_COUNT = 'Commit_uuid'
     FIELD_NAME = 'Commit_name'
 
-    def get_query(self, evolutionary):
-        if not evolutionary:
-            query = ElasticQuery.get_agg_count(self.FIELD_COUNT, start=self.start,
-                                               end=self.end, agg_type="count",
-                                               interval=self.interval,
-                                               filters=self.esfilters)
-        else:
-            query = ElasticQuery.get_agg_count(self.FIELD_COUNT, start=self.start,
-                                               end=self.end, date_field=self.FIELD_DATE,
-                                               agg_type="count", interval=self.interval,
-                                               filters=self.esfilters)
-        return query
-
-    def get_list(self):
-        return super(type(self), self).get_list(self.FIELD_NAME)
 
 class ProjectsSCM(Metrics):
     """ Projects in the source code management system """
@@ -104,7 +63,3 @@ class ProjectsSCM(Metrics):
     name = "Projects"
     desc = "Projects in the source code management system"
     FIELD_NAME = 'project' # field used to list projects
-
-
-    def get_list(self):
-        return super(type(self), self).get_list(self.FIELD_NAME)

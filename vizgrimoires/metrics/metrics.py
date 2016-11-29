@@ -46,7 +46,9 @@ class Metrics(object):
     id = None
     name = None
     desc = None
-    FIELD_DATE='metadata__updated_on'
+    FIELD_NAME = None  # Field used for metric lists
+    FIELD_COUNT = None  # Field used for metric count
+    FIELD_DATE = 'metadata__updated_on'
     filters = None  # fixed filters for the metric
 
     def __init__(self, es_url, es_index, start=None, end=None, esfilters=None,
@@ -75,15 +77,40 @@ class Metrics(object):
         return def_
 
     def get_query(self, evolutionary=False):
-        """Private method that returns a valid ElasticSearch query.
-
+        """
+        Private method that returns a valid ElasticSearch query for
+        computing the metric.
 
         :evolutionary: boolean
-            If True, an evolutionary analysis sql is provided
-            If False, an aggregated analysis sql is provided
-
+            If True, an evolutionary analysis is provided
+            If False, an aggregated analysis is provided
         """
-        raise NotImplementedError
+
+        if not evolutionary:
+            query = ElasticQuery.get_agg(field=self.FIELD_COUNT,
+                                               start=self.start, end=self.end,
+                                               filters=self.esfilters,
+                                               agg_type='count')
+        else:
+            query = ElasticQuery.get_agg(field=self.FIELD_COUNT,
+                                               date_field=self.FIELD_DATE,
+                                               start=self.start, end=self.end,
+                                               filters=self.esfilters,
+                                               agg_type='count',
+                                               interval=self.interval)
+
+        return query
+
+
+    def get_list(self):
+        field = self.FIELD_NAME
+        query = ElasticQuery.get_agg(field, filters=self.esfilters)
+        res = self.get_metrics_data(query)
+        l = {field:[],"value":[]}
+        for bucket in res['aggregations'][str(ElasticQuery.AGGREGATION_ID)]['buckets']:
+            l[field].append(bucket['key'])
+            l['value'].append(bucket['doc_count'])
+        return l
 
     def get_metrics_data(self, query):
         """ Get the metrics data from ES """
@@ -91,7 +118,6 @@ class Metrics(object):
         r = requests.post(url, query)
         r.raise_for_status()
         return r.json()
-
 
     def get_ts (self):
         """Returns a time series of a specific class
@@ -130,6 +156,7 @@ class Metrics(object):
         return agg
 
     def get_trends(self, interval='quarter'):
+        """ Legacy: It is better implemented using ts intervals """
 
         intervalS = {'day':1, 'week':7, 'month':30, 'quarter':90, 'year':365}
 
@@ -159,13 +186,3 @@ class Metrics(object):
             trend_percent = int((trend/val_last_interval)*100)
 
         return (val_last_interval, trend_percent)
-
-
-    def get_list(self, field):
-        query = ElasticQuery.get_agg_count(field, filters=self.esfilters)
-        res = self.get_metrics_data(query)
-        l = {field:[],"value":[]}
-        for bucket in res['aggregations'][str(ElasticQuery.AGGREGATION_ID)]['buckets']:
-            l[field].append(bucket['key'])
-            l['value'].append(bucket['doc_count'])
-        return l

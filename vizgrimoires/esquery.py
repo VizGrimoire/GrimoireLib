@@ -23,16 +23,14 @@
 #   Alvaro del Castillo San Felix <acs@bitergia.com>
 #
 
-DEFAULT_TS_FIELD = 'metadata__updated_on'
-
 class ElasticQuery():
     """ Helper class for building Elastic queries """
 
-    AGGREGATION_ID = 1
-    AGG_SIZE = 100
+    AGGREGATION_ID = 1  # min aggregation identifier
+    AGG_SIZE = 100  # Default max number of buckets
 
     @classmethod
-    def get_query_filters(cls, filters=None):
+    def __get_query_filters(cls, filters=None):
         """ {"name1":"value1", "name2":"value2"} """
 
         query_filters = ''
@@ -58,7 +56,7 @@ class ElasticQuery():
         return query_filters
 
     @classmethod
-    def get_query_range(cls, field=DEFAULT_TS_FIELD, start=None, end=None):
+    def __get_query_range(cls, date_field, start=None, end=None):
 
         if not start and not end:
             return ''
@@ -78,19 +76,21 @@ class ElasticQuery():
             }
           }
         }
-        """ % (field, start_end)
+        """ % (date_field, start_end)
 
         return query_range
 
     @classmethod
-    def get_query_basic(cls, field=None, start=None, end=None, filters=None):
-        if not field:
-            field=DEFAULT_TS_FIELD
-        query_range = cls.get_query_range(field, start, end)
-        if query_range:
-            query_range = ", " +  query_range
+    def __get_query_basic(cls, date_field=None, start=None, end=None,
+                          filters=None):
+        if not date_field:
+            query_range = ''
+        else:
+            query_range = cls.__get_query_range(date_field, start, end)
+            if query_range:
+                query_range = ", " +  query_range
 
-        query_filters = cls.get_query_filters(filters)
+        query_filters = cls.__get_query_filters(filters)
         if query_filters:
             query_filters = ", " +  query_filters
 
@@ -114,7 +114,7 @@ class ElasticQuery():
 
 
     @classmethod
-    def get_query_agg_terms(cls, field, interval=None, time_zone=None):
+    def __get_query_agg_terms(cls, field):
         query_agg = """
           "aggs": {
             "%i": {
@@ -131,7 +131,7 @@ class ElasticQuery():
         return query_agg
 
     @classmethod
-    def get_query_agg_max(cls, field):
+    def __get_query_agg_max(cls, field):
         query_agg = """
           "aggs": {
             "%i": {
@@ -145,7 +145,7 @@ class ElasticQuery():
         return query_agg
 
     @classmethod
-    def get_query_agg_count(cls, field, agg_id=None):
+    def __get_query_agg_count(cls, field, agg_id=None):
         if not agg_id:
             agg_id=cls.AGGREGATION_ID
         query_agg = """
@@ -161,7 +161,7 @@ class ElasticQuery():
         return query_agg
 
     @classmethod
-    def get_query_agg_count_ts(cls, field, time_field, interval=None, time_zone=None):
+    def __get_query_agg_count_ts(cls, field, time_field, interval=None, time_zone=None):
         """ Time series for an aggregation metric """
         if not interval:
             interval = '1M'
@@ -171,7 +171,7 @@ class ElasticQuery():
         if not field:
             count_agg = ''
         else:
-            count_agg = cls.get_query_agg_count(field, agg_id=cls.AGGREGATION_ID+1)
+            count_agg = cls.__get_query_agg_count(field, agg_id=cls.AGGREGATION_ID+1)
             count_agg = ", " + count_agg
 
         query_agg = """
@@ -192,9 +192,11 @@ class ElasticQuery():
 
 
     @classmethod
-    def get_count(cls, start=None, end=None, filters=None):
-        query_basic = cls.get_query_basic(start=start, end=end, filters=filters)
-
+    def get_count(cls, date_field=None, start=None, end=None, filters=None):
+        """ Total number of items """
+        query_basic = cls.__get_query_basic(date_field=date_field,
+                                            start=start, end=end,
+                                            filters=filters)
         query = """
             {
               "size": 0,
@@ -207,24 +209,26 @@ class ElasticQuery():
 
 
     @classmethod
-    def get_agg_count(cls, field=None, date_field=None, start=None, end=None,
-                      filters=None, agg_type="terms", interval=None):
-        """ if field and date_field the time series of the agg is collected """
+    def get_agg(cls, field=None, date_field=None, start=None, end=None,
+                filters=None, agg_type="terms", interval=None):
+        """ if field and date_field the date_histogram of the agg is collected """
 
-        query_basic = cls.get_query_basic(field=date_field, start=start, end=end, filters=filters)
+        query_basic = cls.__get_query_basic(date_field=date_field,
+                                            start=start, end=end,
+                                            filters=filters)
 
         if not date_field:
             if agg_type == "terms":
-                query_agg = ElasticQuery.get_query_agg_terms(field)
+                query_agg = ElasticQuery.__get_query_agg_terms(field)
             elif agg_type == "max":
-                query_agg = ElasticQuery.get_query_agg_max(field)
+                query_agg = ElasticQuery.__get_query_agg_max(field)
             elif agg_type == "count":
-                query_agg = ElasticQuery.get_query_agg_count(field)
+                query_agg = ElasticQuery.__get_query_agg_count(field)
             else:
                 raise RuntimeError("Aggregation of %s not supported" % agg_type)
         else:
             if agg_type == "count":
-                query_agg = ElasticQuery.get_query_agg_count_ts(field, date_field, interval=interval)
+                query_agg = ElasticQuery.__get_query_agg_count_ts(field, date_field, interval=interval)
             else:
                 raise RuntimeError("Aggregation of %s in ts not supported" % agg_type)
 

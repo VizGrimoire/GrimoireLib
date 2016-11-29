@@ -23,8 +23,6 @@
 
 """ Metrics for the issue tracking system """
 
-import logging
-from esquery import ElasticQuery
 from metrics.metrics import Metrics
 
 class Opened(Metrics):
@@ -33,19 +31,9 @@ class Opened(Metrics):
     id = "opened"
     name = "Opened tickets"
     desc = "Number of opened tickets"
+    FIELD_COUNT="id"
+    FIELD_NAME="url"
 
-    def get_query(self, evolutionary=False):
-        if not evolutionary:
-            query = ElasticQuery.get_count(start=self.start, end=self.end)
-        else:
-            query = ElasticQuery.get_agg_count(date_field=self.FIELD_DATE, start=self.start,
-                                               end=self.end, agg_type="count",
-                                               interval=self.interval)
-        return query
-
-    def get_list(self):
-        field = "url"
-        return super(type(self), self).get_list(field)
 
 class Openers(Metrics):
     """ Tickets Openers metric class for issue tracking systems """
@@ -63,22 +51,8 @@ class Closed(Metrics):
     name = "Ticket closed"
     desc = "Number of closed tickets"
     filters = {"state":"closed"}
-
-
-    def get_query(self, evolutionary=False):
-        if not evolutionary:
-            query = ElasticQuery.get_count(start=self.start, end=self.end,
-                                           filters=self.filters)
-        else:
-            query = ElasticQuery.get_agg_count(date_field=self.FIELD_DATE, start=self.start,
-                                               end=self.end, filters=self.filters, agg_type="count",
-                                               interval=self.interval)
-        return query
-
-    def get_list(self):
-        field = "url"
-        return super(type(self), self).get_list(field, self.filters)
-
+    FIELD_COUNT="id"
+    FIELD_NAME="url"
 
 
 class TimeToClose(Metrics):
@@ -122,7 +96,3 @@ class ProjectsITS(Metrics):
     name = "Projects"
     desc = "Number of distinct projects active in the ticketing system"
     FIELD_NAME = 'project' # field used to list projects
-
-
-    def get_list(self):
-        return super(type(self), self).get_list(self.FIELD_NAME)
