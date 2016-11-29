@@ -31,6 +31,7 @@ import matplotlib as mpl
 mpl.use('Agg')
 import matplotlib.pyplot as plt
 import prettyplotlib as ppl
+import numpy as np
 
 from datetime import datetime
 from dateutil import parser
@@ -60,7 +61,7 @@ class Report():
         logging.info("Generating the report data ...")
 
         self.get_metrics()
-        # self.get_vis()
+        self.get_vis()
 
     def get_vis(self):
         logging.info("Generating the vis ...")
@@ -69,9 +70,14 @@ class Report():
         commits = Commits(self.es_url, scm_index)
         authors = Authors(self.es_url, scm_index)
 
-        ts = authors.get_ts()
+        tsc = commits.get_ts()
+        tsa = authors.get_ts()
 
-        self.ts_chart("Authors", ts['unixtime'], ts['value'], "authors")
+        self.ts_chart("Authors", tsa['unixtime'], tsa['value'], "authors")
+
+        self.bar_chart("Authors", tsa['date'][0:2], tsa['value'][0:2],
+                       "authors-bar", tsc['value'][2:4],
+                       legend=["authors","commits"])
 
 
     def bar3_chart(self, title, labels, data1, file_name, data2, data3, legend=["", ""]):
@@ -132,13 +138,9 @@ class Report():
         for unixdate in unixtime_dates:
             dates.append(datetime.fromtimestamp(float(unixdate)))
 
-        print(dates)
-        print(data)
         ppl.plot(dates, data)
         fig.autofmt_xdate()
         fig.savefig(file_name + ".eps")
-
-
 
     def __get_metrics_git(self):
         period = 'quarter'
