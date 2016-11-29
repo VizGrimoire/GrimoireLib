@@ -245,6 +245,18 @@ class Report():
 
         return metric2index[metric_cls]
 
+    def get_metric_ds(self, metric_cls):
+        metric2index = {
+            Commits: "Git",
+            Closed: "GitHub",
+            Opened: "GitHub",
+            PRClosed: "GitHub",
+            PRSubmitted: "GitHub",
+            EmailsSent: "MailingList"
+        }
+
+        return metric2index[metric_cls]
+
 
     def sec_overview(self):
         # Overview: Activity and Authors
@@ -266,15 +278,24 @@ class Report():
 
         metrics = [Commits, Closed, Opened, PRClosed, PRSubmitted, EmailsSent]
 
+        file_name = 'data_source_evolution.csv'
+
+        csv = 'metricsnames,netvalues,relativevalues,datasource\n'
         for metric in metrics:
             # commits comparing current month with previous month
             es_index = self.get_metric_index(metric)
+            ds = self.get_metric_ds(metric)
             m = metric(self.es_url, es_index, interval='month')
             ts = m.get_ts()
             last = ts['value'][len(ts['value'])-1]
             prev = ts['value'][len(ts['value'])-2]
-            print(metric.__name__, last, self.__get_trend_percent(last, prev))
-        raise
+            csv += "%s,%i,%i,%s" % (metric.__name__, last,
+                                    self.__get_trend_percent(last, prev),
+                                    ds)
+            csv += "\n"
+        with open(file_name, "w") as f:
+            f.write(csv)
+
 
     def sec_com_channels(self):
         pass
