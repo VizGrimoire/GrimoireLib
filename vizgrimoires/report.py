@@ -241,7 +241,8 @@ class Report():
             Opened: self.GITHUB_INDEX,
             PRClosed: self.GITHUB_INDEX,
             PRSubmitted: self.GITHUB_INDEX,
-            EmailsSent: self.EMAIL_INDEX
+            EmailsSent: self.EMAIL_INDEX,
+            EmailsSenders: self.EMAIL_INDEX
         }
 
         return metric2index[metric_cls]
@@ -327,12 +328,47 @@ class Report():
             f.write(csv)
 
 
-
-
-
-
     def sec_com_channels(self):
-        pass
+        """
+        Emails:
+            type: EPS
+            file_name: emails.eps
+            description: number of emails sent per period of analysis
+            type: CSV
+            file_name: emails.csv
+            columns: labels,emails
+        """
+        emails = EmailsSent(self.es_url, self.get_metric_index(EmailsSent),
+                           interval='month')
+        ts = emails.get_ts()
+        self.ts_chart("Emails", ts['unixtime'], ts['value'],
+                      "emails.eps")
+        csv = 'labels,emails\n'
+        for i in range(0, len(ts['value'])):
+            csv += ts['date'][i]+","+str(ts['value'][i])+"\n"
+        with open("emails.csv", "w") as f:
+            f.write(csv)
+
+        """
+        Email Senders:
+
+            type: EPS
+            file_name: emails_senders.eps
+            description: number of people sending emails per period of analysis
+            type: CSV
+            file_name: emails_senders.csv
+            columns: labels,emails
+        """
+        emails = EmailsSenders(self.es_url, self.get_metric_index(EmailsSenders),
+                               interval='month')
+        ts = emails.get_ts()
+        self.ts_chart("Email Senders", ts['unixtime'], ts['value'],
+                      "emails_senders.eps")
+        csv = 'labels,senders\n'
+        for i in range(0, len(ts['value'])):
+            csv += ts['date'][i]+","+str(ts['value'][i])+"\n"
+        with open("emails_senders.csv", "w") as f:
+            f.write(csv)
 
     def sec_project_activity(self):
         pass
