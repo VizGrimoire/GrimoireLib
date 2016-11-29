@@ -139,7 +139,7 @@ class Report():
 
         ppl.plot(dates, data)
         fig.autofmt_xdate()
-        fig.savefig(file_name + ".eps")
+        fig.savefig(file_name)
 
     def __get_metrics_git(self):
         interval = 'quarter'
@@ -236,6 +236,7 @@ class Report():
     def get_metric_index(self, metric_cls):
         metric2index = {
             Commits: self.GIT_INDEX,
+            Authors: self.GIT_INDEX,
             Closed: self.GITHUB_INDEX,
             Opened: self.GITHUB_INDEX,
             PRClosed: self.GITHUB_INDEX,
@@ -246,8 +247,9 @@ class Report():
         return metric2index[metric_cls]
 
     def get_metric_ds(self, metric_cls):
-        metric2index = {
+        metric2ds = {
             Commits: "Git",
+            Authors: "Git",
             Closed: "GitHub",
             Opened: "GitHub",
             PRClosed: "GitHub",
@@ -255,7 +257,7 @@ class Report():
             EmailsSent: "MailingList"
         }
 
-        return metric2index[metric_cls]
+        return metric2ds[metric_cls]
 
 
     def sec_overview(self):
@@ -295,6 +297,38 @@ class Report():
             csv += "\n"
         with open(file_name, "w") as f:
             f.write(csv)
+
+        """
+        Authors per month:
+
+        type: EPS
+        file_name: authors_month.eps
+        description: average number of developers per month by quarters
+        (so we have the average number of developers per month during
+        those three months). If the approach is to work at the level of month,
+        then just the number of developers per month.
+
+        type: CSV
+        file_name: authors_month.csv
+        columns: labels,authormonth
+        description: same as above
+        """
+
+        authors = Authors(self.es_url, self.get_metric_index(Authors),
+                          interval='month')
+        tsa = authors.get_ts()
+        self.ts_chart("Authors", tsa['unixtime'], tsa['value'],
+                      "authors_month.eps")
+
+        csv = 'labels,authormonth\n'
+        for i in range(0, len(tsa['value'])):
+            csv += tsa['date'][i]+","+str(tsa['value'][i])+"\n"
+        with open("authors_month.csv", "w") as f:
+            f.write(csv)
+
+
+
+
 
 
     def sec_com_channels(self):
