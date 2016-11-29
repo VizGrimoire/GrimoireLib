@@ -112,42 +112,22 @@ class ElasticQuery():
 
         return query_basic
 
-    @classmethod
-    def get_query_agg_interval_tz(cls, field, interval=None, timezone=None):
-        if interval:
-            # 1d, 1w, 1d, 1M, 1y
-            interval = '"interval": "%s",' % interval
-            size = ''
-        else:
-            interval =''
-            size = '"size": %i,' % cls.AGG_SIZE
-        if timezone:
-            # Europe/Berlin
-            timezone = '"timezone": "%s",' % timezone
-        else:
-            timezone = ''
-
-        return (interval, timezone, size)
-
-
 
     @classmethod
-    def get_query_agg_terms(cls, field, interval=None, timezone=None):
-        (interval, timezone, size) = cls.get_query_agg_interval_tz(field, interval, timezone)
+    def get_query_agg_terms(cls, field, interval=None, time_zone=None):
         query_agg = """
           "aggs": {
             "%i": {
               "terms": {
                 "field": "%s",
-                %s %s %s
+                "size": %i,
                 "order": {
-                  "_count": "desc"
+                    "_count": "desc"
                 }
               }
             }
           }
-        """ % (cls.AGGREGATION_ID, field, interval, timezone, size)
-
+        """ % (cls.AGGREGATION_ID, field, cls.AGG_SIZE)
         return query_agg
 
     @classmethod
@@ -165,7 +145,9 @@ class ElasticQuery():
         return query_agg
 
     @classmethod
-    def get_query_agg_count(cls, field):
+    def get_query_agg_count(cls, field, agg_id=None):
+        if not agg_id:
+            agg_id=cls.AGGREGATION_ID
         query_agg = """
           "aggs": {
             "%i": {
@@ -174,17 +156,24 @@ class ElasticQuery():
               }
             }
           }
-        """ % (cls.AGGREGATION_ID, field)
+        """ % (agg_id, field)
 
         return query_agg
 
     @classmethod
-    def get_query_agg_count_ts(cls, field, time_field, interval=None, timezone=None):
+    def get_query_agg_count_ts(cls, field, time_field, interval=None, time_zone=None):
         """ Time series for an aggregation metric """
         if not interval:
             interval = '1M'
-        if not timezone:
-            timezone = 'Europe/Berlin'
+        if not time_zone:
+            time_zone = 'Europe/Berlin'
+
+        if not field:
+            count_agg = ''
+        else:
+            count_agg = cls.get_query_agg_count(field, agg_id=cls.AGGREGATION_ID+1)
+            count_agg = ", " + count_agg
+
         query_agg = """
              "aggs": {
                 "%i": {
@@ -193,17 +182,11 @@ class ElasticQuery():
                     "interval": "%s",
                     "time_zone": "%s",
                     "min_doc_count": 1
-                  },
-                  "aggs": {
-                    "%i": {
-                      "cardinality": {
-                        "field": "%s"
-                      }
-                    }
                   }
+                  %s
                 }
             }
-        """ % (cls.AGGREGATION_ID, time_field, interval, timezone, cls.AGGREGATION_ID+1, field)
+        """ % (cls.AGGREGATION_ID, time_field, interval, time_zone, count_agg)
 
         return query_agg
 
@@ -224,7 +207,8 @@ class ElasticQuery():
 
 
     @classmethod
-    def get_agg_count(cls, field, date_field=None, start=None, end=None, filters=None, agg_type="terms"):
+    def get_agg_count(cls, field=None, date_field=None, start=None, end=None,
+                      filters=None, agg_type="terms"):
         """ if field and date_field the time series of the agg is collected """
 
         query_basic = cls.get_query_basic(field=date_field, start=start, end=end, filters=filters)
@@ -237,12 +221,12 @@ class ElasticQuery():
             elif agg_type == "count":
                 query_agg = ElasticQuery.get_query_agg_count(field)
             else:
-                RuntimeError("Aggregation of %s not supported", agg_type)
+                raise RuntimeError("Aggregation of %s not supported" % agg_type)
         else:
             if agg_type == "count":
                 query_agg = ElasticQuery.get_query_agg_count_ts(field, date_field)
             else:
-                RuntimeError("Aggregation of %s in ts not supported", agg_type)
+                raise RuntimeError("Aggregation of %s in ts not supported" % agg_type)
 
         query = """
             {

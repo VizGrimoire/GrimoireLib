@@ -38,8 +38,8 @@ class Opened(Metrics):
         if not evolutionary:
             query = ElasticQuery.get_count(start=self.start, end=self.end)
         else:
-            query = ElasticQuery.get_agg_count(self.FIELD_DATE, start=self.start,
-                                               end=self.end)
+            query = ElasticQuery.get_agg_count(date_field=self.FIELD_DATE, start=self.start,
+                                               end=self.end, agg_type="count")
         return query
 
     def get_list(self):
@@ -68,8 +68,8 @@ class Closed(Metrics):
         if not evolutionary:
             query = ElasticQuery.get_count(start=self.start, end=self.end, filters=self.filters)
         else:
-            query = ElasticQuery.get_agg_count(self.FIELD_DATE, start=self.start,
-                                               end=self.end, filters=self.filters)
+            query = ElasticQuery.get_agg_count(date_field=self.FIELD_DATE, start=self.start,
+                                               end=self.end, filters=self.filters, agg_type="count")
         return query
 
     def get_list(self):

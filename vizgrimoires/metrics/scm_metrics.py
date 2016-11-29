@@ -24,12 +24,8 @@
 ##   Alvaro del Castillo  <acs@bitergia.com>
 ##
 
-
 from esquery import ElasticQuery
 from metrics.metrics import Metrics
-
-
-
 
 class Commits(Metrics):
     """ Commits metric class for source code management systems """
@@ -42,13 +38,13 @@ class Commits(Metrics):
         if not evolutionary:
             query = ElasticQuery.get_count(start=self.start, end=self.end)
         else:
-            query = ElasticQuery.get_agg_count(self.FIELD_DATE, start=self.start,
-                                               end=self.end)
+            query = ElasticQuery.get_agg_count(field=None, date_field=self.FIELD_DATE,
+                                               start=self.start, end=self.end, agg_type='count')
         return query
 
     def get_list(self):
         field = "hash"
-        return super(Commits, self).get_list(field)
+        return super(type(self), self).get_list(field)
 
 class Authors(Metrics):
     """ Authors metric class for source code management systems """
@@ -61,10 +57,10 @@ class Authors(Metrics):
 
     def get_query(self, evolutionary):
         if not evolutionary:
-            query = ElasticQuery.get_agg_count(self.FIELD_COUNT, start=self.start,
+            query = ElasticQuery.get_agg_count(field=self.FIELD_COUNT, start=self.start,
                                                end=self.end, agg_type="count")
         else:
-            query = ElasticQuery.get_agg_count(self.FIELD_COUNT, start=self.start,
+            query = ElasticQuery.get_agg_count(field=self.FIELD_COUNT, start=self.start,
                                                end=self.end, date_field=self.FIELD_DATE, agg_type="count")
         return query
 

@@ -104,7 +104,8 @@ class Metrics(object):
                 ts['value'].append(bucket[str(ElasticQuery.AGGREGATION_ID+1)]['value'])
             else:
                 ts['value'].append(bucket['doc_count'])
-            ts['unixtime'].append(bucket['key'])
+            # unixtime comes in ms from ElasticSearch
+            ts['unixtime'].append(bucket['key']/1000)
         return ts
 
     def get_agg(self):
