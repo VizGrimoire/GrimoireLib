@@ -67,7 +67,8 @@ class Closed(Metrics):
 
     def get_query(self, evolutionary=False):
         if not evolutionary:
-            query = ElasticQuery.get_count(start=self.start, end=self.end, filters=self.filters)
+            query = ElasticQuery.get_count(start=self.start, end=self.end,
+                                           filters=self.filters)
         else:
             query = ElasticQuery.get_agg_count(date_field=self.FIELD_DATE, start=self.start,
                                                end=self.end, filters=self.filters, agg_type="count",
@@ -115,8 +116,13 @@ class BMIIndex(Metrics):
     desc = "Number of tickets closed out of the opened ones in a given interval"
 
 
-class Projects(Metrics):
+class ProjectsITS(Metrics):
     """ Projects metric class for issue tracking systems """
     id = "projects"
     name = "Projects"
     desc = "Number of distinct projects active in the ticketing system"
+    FIELD_NAME = 'project' # field used to list projects
+
+
+    def get_list(self):
+        return super(type(self), self).get_list(self.FIELD_NAME)

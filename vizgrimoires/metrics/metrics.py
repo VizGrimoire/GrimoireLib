@@ -47,15 +47,22 @@ class Metrics(object):
     name = None
     desc = None
     FIELD_DATE='metadata__updated_on'
+    filters = None  # fixed filters for the metric
 
-    def __init__(self, es_url, es_index, start=None, end=None, esfilter=None,
+    def __init__(self, es_url, es_index, start=None, end=None, esfilters=None,
                  interval=None):
         """es connection and filter to be used"""
         self.es_url = es_url
         self.es_index = es_index
         self.start = start
         self.end = end
-        self.filter = esfilter
+        self.esfilters = esfilters
+        # If there are class filters use them also
+        if self.filters:
+            if self.esfilters:
+                self.esfilters.update(self.filters)
+            else:
+                self.esfilters = self.filters
         self.interval = None  # interval in time series
 
 
@@ -154,8 +161,8 @@ class Metrics(object):
         return (val_last_interval, trend_percent)
 
 
-    def get_list(self, field, filters=None):
-        query = ElasticQuery.get_agg_count(field, filters=filters)
+    def get_list(self, field):
+        query = ElasticQuery.get_agg_count(field, filters=self.esfilters)
         res = self.get_metrics_data(query)
         l = {field:[],"value":[]}
         for bucket in res['aggregations'][str(ElasticQuery.AGGREGATION_ID)]['buckets']:

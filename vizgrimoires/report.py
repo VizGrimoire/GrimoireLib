@@ -38,11 +38,10 @@ from collections import OrderedDict
 from dateutil import parser
 from datetime import datetime
 
-from metrics.scm_metrics import Commits, Committers, Authors
-from metrics.its_metrics import Opened, Closed
-from metrics.mls_metrics import EmailsSent, EmailsSenders
-from metrics.github_prs_metrics import PRSubmitted, PRClosed
-
+from metrics.scm_metrics import Commits, Committers, Authors, ProjectsSCM
+from metrics.its_metrics import Opened, Closed, ProjectsITS
+from metrics.mls_metrics import EmailsSent, EmailsSenders, ProjectsMLS
+from metrics.github_prs_metrics import SubmittedPR, ClosedPR, ProjectsPR
 
 # Default values so it works without params
 ES_URL = 'http://localhost:9200'
@@ -54,6 +53,21 @@ class Report():
     GIT_INDEX = 'git_enrich'
     GITHUB_INDEX = 'github_issues_enrich'
     EMAIL_INDEX = 'mbox_enrich'
+
+    metric2index = {
+        Commits: GIT_INDEX,
+        Authors: GIT_INDEX,
+        ProjectsSCM: GIT_INDEX,
+        Closed: GITHUB_INDEX,
+        Opened: GITHUB_INDEX,
+        ProjectsITS: GITHUB_INDEX,
+        ClosedPR: GITHUB_INDEX,
+        SubmittedPR: GITHUB_INDEX,
+        ProjectsPR: GITHUB_INDEX,
+        EmailsSent: EMAIL_INDEX,
+        EmailsSenders: EMAIL_INDEX,
+        ProjectsMLS: EMAIL_INDEX
+    }
 
     def __init__(self, es_url=ES_URL, start=START, end=END):
         if not es_url:
@@ -100,8 +114,6 @@ class Report():
         plt.savefig(file_name + ".eps")
         plt.close()
 
-
-
     def bar_chart(self, title, labels, data1, file_name, data2 = None, legend=["", ""]):
 
         colors = ["orange", "grey"]
@@ -125,8 +137,6 @@ class Report():
 
         plt.savefig(file_name + ".eps")
         plt.close()
-
-
 
     def ts_chart(self, title, unixtime_dates, data, file_name):
 
@@ -181,8 +191,8 @@ class Report():
     def __get_metrics_github_prs(self):
         interval = 'quarter'
         github_index = 'github_issues_enrich'
-        submitted = PRSubmitted(self.es_url, github_index)
-        closed = PRClosed(self.es_url, github_index)
+        submitted = SubmittedPR(self.es_url, github_index)
+        closed = ClosedPR(self.es_url, github_index)
 
         # GitHub Issues
         logging.info("Closed total: %s", closed.get_agg())
@@ -234,18 +244,14 @@ class Report():
         return trend_percent
 
     def get_metric_index(self, metric_cls):
-        metric2index = {
-            Commits: self.GIT_INDEX,
-            Authors: self.GIT_INDEX,
-            Closed: self.GITHUB_INDEX,
-            Opened: self.GITHUB_INDEX,
-            PRClosed: self.GITHUB_INDEX,
-            PRSubmitted: self.GITHUB_INDEX,
-            EmailsSent: self.EMAIL_INDEX,
-            EmailsSenders: self.EMAIL_INDEX
-        }
+        return self.metric2index[metric_cls]
 
-        return metric2index[metric_cls]
+    def get_es_indexes(self, metric_cls):
+        indexes = []
+        for metric in self.metric2index:
+            if self.metric2index[metric] not in indexes:
+                indexes.append(self.metric2index[metric])
+        return indexes
 
     def get_metric_ds(self, metric_cls):
         metric2ds = {
@@ -253,8 +259,8 @@ class Report():
             Authors: "Git",
             Closed: "GitHub",
             Opened: "GitHub",
-            PRClosed: "GitHub",
-            PRSubmitted: "GitHub",
+            ClosedPR: "GitHub",
+            SubmittedPR: "GitHub",
             EmailsSent: "MailingList"
         }
 
@@ -279,7 +285,7 @@ class Report():
         open pull requests, sent emails
         """
 
-        metrics = [Commits, Closed, Opened, PRClosed, PRSubmitted, EmailsSent]
+        metrics = [Commits, Closed, Opened, ClosedPR, SubmittedPR, EmailsSent]
 
         file_name = 'data_source_evolution.csv'
 
@@ -370,7 +376,96 @@ class Report():
         with open("emails_senders.csv", "w") as f:
             f.write(csv)
 
-    def sec_project_activity(self):
+
+    def sec_projects(self):
+        """
+        This activity is displayed at the general level, aggregating all
+        of the projects, with the name 'general' and per project using
+        the name of each project. This activity is divided into three main
+        layers: activity, community and process.
+        """
+
+        # Just one level projects supported yet
+
+        # First we need to get the list of projects per data source and
+        # join all lists in the overall projects list
+
+        projects_scm = ProjectsSCM(self.es_url, self.get_metric_index(ProjectsSCM)).get_list()['project']
+        projects_its = ProjectsITS(self.es_url, self.get_metric_index(ProjectsITS)).get_list()['project']
+        projects_pr = ProjectsPR(self.es_url, self.get_metric_index(ProjectsPR)).get_list()['project']
+        projects_mls = ProjectsMLS(self.es_url, self.get_metric_index(ProjectsMLS)).get_list()['project']
+
+        projects = list(set(projects_scm+projects_its+projects_pr+projects_mls))
+
+        for project in projects:
+            self.sec_project_activity(project)
+
+
+    def sec_project_activity(self, project=None):
+        """
+        Activity
+
+        Commits and Pull Requests:
+
+        type: EPS
+        file_name: commitsreviews<project_name>.eps
+        description: number of commits and pull requests per project
+        type: CSV
+        file_name: commitsreviews<project_name>.csv
+        columns: commits,labels,submitted
+        """
+
+        commits = Commits(self.es_url, self.get_metric_index(Commits),
+                          interval='month', esfilters={"project": project})
+        commits_agg = commits.get_agg()
+
+        submitted = SubmittedPR(self.es_url, self.get_metric_index(SubmittedPR),
+                                interval='month', esfilters={"project": project})
+        submitted_agg = submitted.get_agg()
+
+        closed = ClosedPR(self.es_url, self.get_metric_index(SubmittedPR),
+                                interval='month', esfilters={"project": project})
+        closed_agg = closed.get_agg()
+
+
+        print(project, commits_agg, submitted_agg, closed_agg)
+
+
+        return
+
+
+        # self.ts_chart("Commits " + project, ts['unixtime'], ts['value'],
+        #               "commits"+project+".eps")
+        # csv = 'labels,commits\n'
+        # for i in range(0, len(ts['value'])):
+        #     csv += ts['date'][i]+","+str(ts['value'][i])+"\n"
+        # with open("emails.csv", "w") as f:
+        #     f.write(csv)
+
+
+        """
+        Opened and Closed Pull Requests:
+
+        type: EPS
+        file_name: openedclosed_pullrequests_<project_name>.eps
+        description: number of opened and closed pull requests per project
+        type: CSV
+        file_name: openedclosed_pullrequests_<project_name>.csv
+        columns: labels,opened,closed
+        """
+
+        """
+        Opened and Closed Issues:
+
+        type: EPS
+        file_name: openedclosed_issues_<project_name>.eps
+        description: number of opened and closed issues per project
+        type: CSV
+        file_name: openedclosed_issues_<project_name>.csv
+        columns: labels,opened,closed
+        """
+
+
         pass
 
 
@@ -378,7 +473,7 @@ class Report():
         secs = OrderedDict()
         secs['Overview'] = self.sec_overview
         secs['Communication Channels'] = self.sec_com_channels
-        secs['Detailed Activity by Project'] = self.sec_project_activity
+        secs['Detailed Activity by Project'] = self.sec_projects
 
         return secs
 
