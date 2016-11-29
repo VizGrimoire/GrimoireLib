@@ -33,8 +33,10 @@ import matplotlib.pyplot as plt
 import prettyplotlib as ppl
 import numpy as np
 
-from datetime import datetime
+from collections import OrderedDict
+
 from dateutil import parser
+from datetime import datetime
 
 from metrics.scm_metrics import Commits, Committers, Authors
 from metrics.its_metrics import Opened, Closed
@@ -49,6 +51,9 @@ START = parser.parse('1900-01-01')
 END = parser.parse('2100-01-01')
 
 class Report():
+    GIT_INDEX = 'git_enrich'
+    GITHUB_INDEX = 'github_issues_enrich'
+    EMAIL_INDEX = 'mbox_enrich'
 
     def __init__(self, es_url=ES_URL, start=START, end=END):
         if not es_url:
@@ -56,12 +61,6 @@ class Report():
         self.start = start
         self.end = end
         self.es_url = es_url
-
-    def create(self):
-        logging.info("Generating the report data ...")
-
-        self.get_metrics()
-        self.get_vis()
 
     def get_vis(self):
         logging.info("Generating the vis ...")
@@ -143,7 +142,7 @@ class Report():
         fig.savefig(file_name + ".eps")
 
     def __get_metrics_git(self):
-        period = 'quarter'
+        interval = 'quarter'
         scm_index = 'git_enrich'
         commits = Commits(self.es_url, scm_index)
         authors = Authors(self.es_url, scm_index)
@@ -152,18 +151,18 @@ class Report():
         logging.info("Commits total: %s", commits.get_agg())
         logging.info("Commits ts: %s", commits.get_ts())
         logging.info("Commits list: %s", commits.get_list())
-        logging.info("Commits trend: %s", commits.get_trends(period))
+        logging.info("Commits trend: %s", commits.get_trends(interval))
         logging.info("Authors total: %s", authors.get_agg())
         logging.info("Authors ts: %s", authors.get_ts())
         logging.info("Authors list: %s", authors.get_list())
-        logging.info("Authors trend: %s", authors.get_trends(period))
+        logging.info("Authors trend: %s", authors.get_trends(interval))
         logging.info("Committers total: %s", committers.get_agg())
         logging.info("Committers ts: %s", committers.get_ts())
         logging.info("Committers list: %s", committers.get_list())
-        logging.info("Committers trend: %s", committers.get_trends(period))
+        logging.info("Committers trend: %s", committers.get_trends(interval))
 
     def __get_metrics_github_issues(self):
-        period = 'quarter'
+        interval = 'quarter'
         github_index = 'github_issues_enrich'
         opened = Opened(self.es_url, github_index)
         closed = Closed(self.es_url, github_index)
@@ -172,15 +171,15 @@ class Report():
         logging.info("Closed total: %s", closed.get_agg())
         logging.info("Closed ts: %s", closed.get_ts())
         logging.info("Closed list: %s", closed.get_list())
-        logging.info("Closed trend: %s", closed.get_trends(period))
+        logging.info("Closed trend: %s", closed.get_trends(interval))
         logging.info("Opened total: %s", opened.get_agg())
         logging.info("Opened ts: %s", opened.get_ts())
         logging.info("Opened list: %s", opened.get_list())
-        logging.info("Opened trend: %s", opened.get_trends(period))
+        logging.info("Opened trend: %s", opened.get_trends(interval))
 
 
     def __get_metrics_github_prs(self):
-        period = 'quarter'
+        interval = 'quarter'
         github_index = 'github_issues_enrich'
         submitted = PRSubmitted(self.es_url, github_index)
         closed = PRClosed(self.es_url, github_index)
@@ -189,15 +188,15 @@ class Report():
         logging.info("Closed total: %s", closed.get_agg())
         logging.info("Closed ts: %s", closed.get_ts())
         logging.info("Closed list: %s", closed.get_list())
-        logging.info("Closed trend: %s", closed.get_trends(period))
+        logging.info("Closed trend: %s", closed.get_trends(interval))
         logging.info("Submitted total: %s", submitted.get_agg())
         logging.info("Submitted ts: %s", submitted.get_ts())
         logging.info("Submitted list: %s", submitted.get_list())
-        logging.info("Submitted trend: %s", submitted.get_trends(period))
+        logging.info("Submitted trend: %s", submitted.get_trends(interval))
 
 
     def __get_metrics_emails(self):
-        period = 'quarter'
+        interval = 'quarter'
         mbox_index = 'mbox_enrich'
         sent = EmailsSent(self.es_url, mbox_index)
         senders = EmailsSenders(self.es_url, mbox_index)
@@ -206,11 +205,11 @@ class Report():
         logging.info("Sent total: %s", sent.get_agg())
         logging.info("Sent ts: %s", sent.get_ts())
         logging.info("Sent list: %s", sent.get_list())
-        logging.info("Sent trend: %s", sent.get_trends(period))
+        logging.info("Sent trend: %s", sent.get_trends(interval))
         logging.info("Senders total: %s", senders.get_agg())
         logging.info("Senders ts: %s", senders.get_ts())
         logging.info("Senders list: %s", senders.get_list())
-        logging.info("Senders trend: %s", senders.get_trends(period))
+        logging.info("Senders trend: %s", senders.get_trends(interval))
 
 
     def get_metrics(self):
@@ -220,6 +219,89 @@ class Report():
         self.__get_metrics_github_issues()
         self.__get_metrics_emails()
         self.__get_metrics_github_prs()
+
+    def __get_trend_percent(self, last, prev):
+        trend = last - prev
+        trend_percent = None
+        if last == 0:
+            if prev > 0:
+                trend_percent = -100
+            else:
+                trend_percent = 0
+        else:
+            trend_percent = int((trend/last)*100)
+
+        return trend_percent
+
+    def get_metric_index(self, metric_cls):
+        metric2index = {
+            Commits: self.GIT_INDEX,
+            Closed: self.GITHUB_INDEX,
+            Opened: self.GITHUB_INDEX,
+            PRClosed: self.GITHUB_INDEX,
+            PRSubmitted: self.GITHUB_INDEX,
+            EmailsSent: self.EMAIL_INDEX
+        }
+
+        return metric2index[metric_cls]
+
+
+    def sec_overview(self):
+        # Overview: Activity and Authors
+
+        """
+        Activity during the last 90 days and its evolution
+
+        type: CSV
+        file_name: data_source_evolution.csv
+        columns: metricsnames, netvalues, relativevalues, datasource
+        description: for the specified data source, we need the main activity
+        metrics. This is the comparison of the last interval of
+        analysis (in the example 90 days) with the previous 90 days. Net values
+        are the total numbers, while the change is the percentage of such
+        number if compared to the previous interval of analysis.
+        commits, closed tickets, sent tickets, closed pull requests,
+        open pull requests, sent emails
+        """
+
+        metrics = [Commits, Closed, Opened, PRClosed, PRSubmitted, EmailsSent]
+
+        for metric in metrics:
+            # commits comparing current month with previous month
+            es_index = self.get_metric_index(metric)
+            m = metric(self.es_url, es_index, interval='month')
+            ts = m.get_ts()
+            last = ts['value'][len(ts['value'])-1]
+            prev = ts['value'][len(ts['value'])-2]
+            print(metric.__name__, last, self.__get_trend_percent(last, prev))
+        raise
+
+    def sec_com_channels(self):
+        pass
+
+    def sec_project_activity(self):
+        pass
+
+
+    def sections(self):
+        secs = OrderedDict()
+        secs['Overview'] = self.sec_overview
+        secs['Communication Channels'] = self.sec_com_channels
+        secs['Detailed Activity by Project'] = self.sec_project_activity
+
+        return secs
+
+    def create(self):
+        logging.info("Generating the report data ...")
+
+        # self.get_metrics()
+        # self.get_vis()
+
+        for section in self.sections():
+            logging.info("Generating %s", section)
+            self.sections()[section]()
+
+        logging.info("Done")
 
 
 def get_params():

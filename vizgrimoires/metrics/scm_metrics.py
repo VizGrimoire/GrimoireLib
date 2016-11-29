@@ -39,7 +39,8 @@ class Commits(Metrics):
             query = ElasticQuery.get_count(start=self.start, end=self.end)
         else:
             query = ElasticQuery.get_agg_count(field=None, date_field=self.FIELD_DATE,
-                                               start=self.start, end=self.end, agg_type='count')
+                                               start=self.start, end=self.end, agg_type='count',
+                                               interval=self.interval)
         return query
 
     def get_list(self):
@@ -58,10 +59,11 @@ class Authors(Metrics):
     def get_query(self, evolutionary):
         if not evolutionary:
             query = ElasticQuery.get_agg_count(field=self.FIELD_COUNT, start=self.start,
-                                               end=self.end, agg_type="count")
+                                               end=self.end, agg_type="count", interval=self.interval)
         else:
             query = ElasticQuery.get_agg_count(field=self.FIELD_COUNT, start=self.start,
-                                               end=self.end, date_field=self.FIELD_DATE, agg_type="count")
+                                               end=self.end, date_field=self.FIELD_DATE, agg_type="count",
+                                               interval=self.interval)
         return query
 
     def get_list(self):
@@ -79,10 +81,12 @@ class Committers(Metrics):
     def get_query(self, evolutionary):
         if not evolutionary:
             query = ElasticQuery.get_agg_count(self.FIELD_COUNT, start=self.start,
-                                               end=self.end, agg_type="count")
+                                               end=self.end, agg_type="count",
+                                               interval=self.interval)
         else:
             query = ElasticQuery.get_agg_count(self.FIELD_COUNT, start=self.start,
-                                               end=self.end, date_field=self.FIELD_DATE, agg_type="count")
+                                               end=self.end, date_field=self.FIELD_DATE,
+                                               agg_type="count", interval=self.interval)
         return query
 
     def get_list(self):

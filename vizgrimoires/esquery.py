@@ -208,7 +208,7 @@ class ElasticQuery():
 
     @classmethod
     def get_agg_count(cls, field=None, date_field=None, start=None, end=None,
-                      filters=None, agg_type="terms"):
+                      filters=None, agg_type="terms", interval=None):
         """ if field and date_field the time series of the agg is collected """
 
         query_basic = cls.get_query_basic(field=date_field, start=start, end=end, filters=filters)
@@ -224,7 +224,7 @@ class ElasticQuery():
                 raise RuntimeError("Aggregation of %s not supported" % agg_type)
         else:
             if agg_type == "count":
-                query_agg = ElasticQuery.get_query_agg_count_ts(field, date_field)
+                query_agg = ElasticQuery.get_query_agg_count_ts(field, date_field, interval=interval)
             else:
                 raise RuntimeError("Aggregation of %s in ts not supported" % agg_type)
 

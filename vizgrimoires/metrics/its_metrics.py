@@ -39,7 +39,8 @@ class Opened(Metrics):
             query = ElasticQuery.get_count(start=self.start, end=self.end)
         else:
             query = ElasticQuery.get_agg_count(date_field=self.FIELD_DATE, start=self.start,
-                                               end=self.end, agg_type="count")
+                                               end=self.end, agg_type="count",
+                                               interval=self.interval)
         return query
 
     def get_list(self):
@@ -69,7 +70,8 @@ class Closed(Metrics):
             query = ElasticQuery.get_count(start=self.start, end=self.end, filters=self.filters)
         else:
             query = ElasticQuery.get_agg_count(date_field=self.FIELD_DATE, start=self.start,
-                                               end=self.end, filters=self.filters, agg_type="count")
+                                               end=self.end, filters=self.filters, agg_type="count",
+                                               interval=self.interval)
         return query
 
     def get_list(self):
@@ -100,7 +102,7 @@ class BMIIndex(Metrics):
         Engineering. Chapter 4.3.1. By Stephen H. Kan.
 
         BMI is calculated as the number of closed tickets out of the opened
-        tickets in a given period. This metric aims at having an overview of
+        tickets in a given interval. This metric aims at having an overview of
         how the community deals with tickets. Continuous values under 1
         (or 100 if this is calculated as a percentage) shows low peformance
         given that the community leaves a lot of opened tickets. Continuous
@@ -110,7 +112,7 @@ class BMIIndex(Metrics):
 
     id = "bmitickets"
     name = "Backlog Management Index"
-    desc = "Number of tickets closed out of the opened ones in a given period"
+    desc = "Number of tickets closed out of the opened ones in a given interval"
 
 
 class Projects(Metrics):

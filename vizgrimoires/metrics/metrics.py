@@ -46,17 +46,18 @@ class Metrics(object):
     id = None
     name = None
     desc = None
-    filters = None
     FIELD_DATE='metadata__updated_on'
 
-
-    def __init__(self, es_url, es_index, start=None, end=None, esfilter=None):
+    def __init__(self, es_url, es_index, start=None, end=None, esfilter=None,
+                 interval=None):
         """es connection and filter to be used"""
         self.es_url = es_url
         self.es_index = es_index
         self.start = start
         self.end = end
         self.filter = esfilter
+        self.interval = None  # interval in time series
+
 
     def get_definition(self):
         def_ = {
@@ -90,7 +91,7 @@ class Metrics(object):
 
         A timeseries consists of a unixtime date, labels, some other
         fields and the data of the specific instantiated class per
-        period. This is built on a hash table.
+        interval. This is built on a hash table.
 
         """
         query = self.get_query(True)
@@ -121,36 +122,36 @@ class Metrics(object):
 
         return agg
 
-    def get_trends(self, period='quarter'):
+    def get_trends(self, interval='quarter'):
 
-        PERIODS = {'day':1, 'week':7, 'month':30, 'quarter':90, 'year':365}
+        intervalS = {'day':1, 'week':7, 'month':30, 'quarter':90, 'year':365}
 
-        if period not in PERIODS.keys():
-            raise RuntimeError('Period not supported: %s' % period)
+        if interval not in intervalS.keys():
+            raise RuntimeError('interval not supported: %s' % interval)
 
-        offset = PERIODS[period]
+        offset = intervalS[interval]
         # Last interval metrics
         end = datetime.utcnow().replace(tzinfo=pytz.utc)
         start = end - timedelta(days=offset)
 
         last_commits = type(self)(self.es_url, self.es_index, start, end)
-        val_last_period = last_commits.get_agg()
+        val_last_interval = last_commits.get_agg()
         # Previous interval metrics
         end = start
         start = end - timedelta(days=offset)
         prev_commits = type(self)(self.es_url, self.es_index, start, end)
-        val_previous_period = prev_commits.get_agg()
-        trend = val_last_period - val_previous_period
+        val_previous_interval = prev_commits.get_agg()
+        trend = val_last_interval - val_previous_interval
         trend_percent = None
-        if val_last_period == 0:
-            if val_previous_period > 0:
+        if val_last_interval == 0:
+            if val_previous_interval > 0:
                 trend_percent = -100
             else:
                 trend_percent = 0
         else:
-            trend_percent = int((trend/val_last_period)*100)
+            trend_percent = int((trend/val_last_interval)*100)
 
-        return (val_last_period, trend_percent)
+        return (val_last_interval, trend_percent)
 
 
     def get_list(self, field, filters=None):
