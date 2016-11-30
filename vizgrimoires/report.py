@@ -384,11 +384,13 @@ class Report():
         emails = EmailsSent(self.es_url, self.get_metric_index(EmailsSent),
                            interval='month', start=self.start)
         ts = emails.get_ts()
-        self.ts_chart("Emails", ts['unixtime'], ts['value'],
-                      "emails.eps")
+        file_name = os.path.join(self.data_dir, 'emails.eps')
+        x_val = [parser.parse(val).strftime("%Y-%m") for val in ts['date']]
+        self.bar_chart("Emails", x_val, ts['value'], file_name)
         csv = 'labels,emails\n'
         for i in range(0, len(ts['value'])):
-            csv += ts['date'][i]+","+str(ts['value'][i])+"\n"
+            date_str = parser.parse(ts['date'][i]).strftime("%Y-%m")
+            csv += date_str+","+str(ts['value'][i])+"\n"
         file_name = os.path.join(self.data_dir, 'emails.csv')
         with open(file_name, "w") as f:
             f.write(csv)
@@ -406,15 +408,16 @@ class Report():
         emails = EmailsSenders(self.es_url, self.get_metric_index(EmailsSenders),
                                interval='month', start=self.start)
         ts = emails.get_ts()
-        self.ts_chart("Email Senders", ts['unixtime'], ts['value'],
-                      "emails_senders.eps")
+        file_name = os.path.join(self.data_dir, 'emails_senders.eps')
+        x_val = [parser.parse(val).strftime("%Y-%m") for val in ts['date']]
+        self.bar_chart("Email Senders", x_val, ts['value'], file_name)
         csv = 'labels,senders\n'
         for i in range(0, len(ts['value'])):
-            csv += ts['date'][i]+","+str(ts['value'][i])+"\n"
+            date_str = parser.parse(ts['date'][i]).strftime("%Y-%m")
+            csv += date_str+","+str(ts['value'][i])+"\n"
         file_name = os.path.join(self.data_dir, 'emails_senders.csv')
         with open(file_name, "w") as f:
             f.write(csv)
-
 
     def sec_project_activity(self, project=None):
         """
@@ -562,7 +565,7 @@ class Report():
     def sections(self):
         secs = OrderedDict()
         secs['Overview'] = self.sec_overview
-        # secs['Communication Channels'] = self.sec_com_channels
+        secs['Communication Channels'] = self.sec_com_channels
         # secs['Detailed Activity by Project'] = self.sec_projects
 
         return secs
