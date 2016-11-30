@@ -378,30 +378,6 @@ class Report():
             f.write(csv)
 
 
-    def sec_projects(self):
-        """
-        This activity is displayed at the general level, aggregating all
-        of the projects, with the name 'general' and per project using
-        the name of each project. This activity is divided into three main
-        layers: activity, community and process.
-        """
-
-        # Just one level projects supported yet
-
-        # First we need to get the list of projects per data source and
-        # join all lists in the overall projects list
-
-        projects_scm = ProjectsSCM(self.es_url, self.get_metric_index(ProjectsSCM)).get_list()['project']
-        projects_its = ProjectsITS(self.es_url, self.get_metric_index(ProjectsITS)).get_list()['project']
-        projects_pr = ProjectsPR(self.es_url, self.get_metric_index(ProjectsPR)).get_list()['project']
-        projects_mls = ProjectsMLS(self.es_url, self.get_metric_index(ProjectsMLS)).get_list()['project']
-
-        projects = list(set(projects_scm+projects_its+projects_pr+projects_mls))
-
-        for project in projects:
-            self.sec_project_activity(project)
-
-
     def sec_project_activity(self, project=None):
         """
         Activity
@@ -424,15 +400,12 @@ class Report():
                                 interval='month', esfilters={"project": project})
         submitted_agg = submitted.get_agg()
 
-        closed = ClosedPR(self.es_url, self.get_metric_index(SubmittedPR),
+        closed = ClosedPR(self.es_url, self.get_metric_index(ClosedPR),
                                 interval='month', esfilters={"project": project})
         closed_agg = closed.get_agg()
 
 
         print(project, commits_agg, submitted_agg, closed_agg)
-
-
-        return
 
 
         # self.ts_chart("Commits " + project, ts['unixtime'], ts['value'],
@@ -465,6 +438,70 @@ class Report():
         file_name: openedclosed_issues_<project_name>.csv
         columns: labels,opened,closed
         """
+
+    def sec_project_community(self, project=None):
+        pass
+
+    def sec_project_process(self, project=None):
+        """
+        BMI Pull Requests
+
+        type: EPS
+        file_name: bmi_prs<project_name>.eps
+        description: closed PRs out of open PRs in a period of time
+        type: CSV
+        file_name: bmi_prs<project_name>.csv
+        columns: bmi,labels
+        """
+
+        closed = ClosedPR(self.es_url, self.get_metric_index(ClosedPR),
+                                interval='month', esfilters={"project": project})
+        closed_ts = closed.get_ts()
+
+        submitted = SubmittedPR(self.es_url, self.get_metric_index(SubmittedPR),
+                               interval='month', esfilters={"project": project})
+
+        submitted_ts = submitted.get_ts()
+
+        # Now we need to get the div between both time series
+        # Other approach is to create the BMIPR metric
+
+
+    def sec_projects(self):
+        """
+        This activity is displayed at the general level, aggregating all
+        of the projects, with the name 'general' and per project using
+        the name of each project. This activity is divided into three main
+        layers: activity, community and process.
+        """
+
+        #
+        # "general" project sectios
+        #
+
+        #
+        # per project sectios
+        #
+
+
+
+        # Just one level projects supported yet
+
+        # First we need to get the list of projects per data source and
+        # join all lists in the overall projects list
+
+        projects_scm = ProjectsSCM(self.es_url, self.get_metric_index(ProjectsSCM)).get_list()['project']
+        projects_its = ProjectsITS(self.es_url, self.get_metric_index(ProjectsITS)).get_list()['project']
+        projects_pr = ProjectsPR(self.es_url, self.get_metric_index(ProjectsPR)).get_list()['project']
+        projects_mls = ProjectsMLS(self.es_url, self.get_metric_index(ProjectsMLS)).get_list()['project']
+
+        projects = list(set(projects_scm+projects_its+projects_pr+projects_mls))
+
+        for project in projects:
+            self.sec_project_activity(project)
+            self.sec_project_community(project)
+            self.sec_project_process(project)
+
 
 
     def sections(self):
