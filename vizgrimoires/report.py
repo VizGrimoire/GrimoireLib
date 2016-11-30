@@ -441,7 +441,19 @@ class Report():
         """
 
     def sec_project_community(self, project=None):
-        pass
+        """
+        Main organizations
+
+        type: CSV
+        file_name: scm_top_organizations<project_name>.csv
+        columns: organization_commits,name
+        """
+        commits = Commits(self.es_url, self.get_metric_index(Commits),
+                          esfilters={"project": project})
+        commits.FIELD_NAME = 'author_org_name'
+
+        top = commits.get_list()
+
 
     def sec_project_process(self, project=None):
         """
@@ -460,9 +472,6 @@ class Report():
 
         ts = bmipr.get_ts()
         agg = bmipr.get_agg()
-
-        # Now we need to get the div between both time series
-        # Other approach is to create the BMIPR metric
 
 
     def sec_projects(self):
