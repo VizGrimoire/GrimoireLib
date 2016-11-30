@@ -86,8 +86,8 @@ class Report():
         logging.info("Generating the vis ...")
 
         scm_index = 'git_enrich'
-        commits = Commits(self.es_url, scm_index)
-        authors = Authors(self.es_url, scm_index)
+        commits = Commits(self.es_url, scm_index, start=self.start)
+        authors = Authors(self.es_url, scm_index, start=self.start)
 
         tsc = commits.get_ts()
         tsa = authors.get_ts()
@@ -118,7 +118,7 @@ class Report():
         plt.legend(legend, loc=2)
 
 
-        plt.savefig(file_name + ".eps")
+        plt.savefig(file_name)
         plt.close()
 
     def bar_chart(self, title, labels, data1, file_name, data2 = None, legend=["", ""]):
@@ -142,7 +142,7 @@ class Report():
             ppl.bar(xpos, data1, grid='y', annotate=True)
             plt.xticks(xpos+width, labels)
 
-        plt.savefig(file_name + ".eps")
+        plt.savefig(file_name)
         plt.close()
 
     def ts_chart(self, title, unixtime_dates, data, file_name):
@@ -161,9 +161,9 @@ class Report():
     def __get_metrics_git(self):
         interval = 'quarter'
         scm_index = 'git_enrich'
-        commits = Commits(self.es_url, scm_index)
-        authors = Authors(self.es_url, scm_index)
-        committers = Committers(self.es_url, scm_index)
+        commits = Commits(self.es_url, scm_index, start=self.start)
+        authors = Authors(self.es_url, scm_index, start=self.start)
+        committers = Committers(self.es_url, scm_index, start=self.start)
 
         logging.info("Commits total: %s", commits.get_agg())
         logging.info("Commits ts: %s", commits.get_ts())
@@ -181,8 +181,8 @@ class Report():
     def __get_metrics_github_issues(self):
         interval = 'quarter'
         github_index = 'github_issues_enrich'
-        opened = Opened(self.es_url, github_index)
-        closed = Closed(self.es_url, github_index)
+        opened = Opened(self.es_url, github_index, start=self.start)
+        closed = Closed(self.es_url, github_index, start=self.start)
 
         # GitHub Issues
         logging.info("Closed total: %s", closed.get_agg())
@@ -198,8 +198,8 @@ class Report():
     def __get_metrics_github_prs(self):
         interval = 'quarter'
         github_index = 'github_issues_enrich'
-        submitted = SubmittedPR(self.es_url, github_index)
-        closed = ClosedPR(self.es_url, github_index)
+        submitted = SubmittedPR(self.es_url, github_index, start=self.start)
+        closed = ClosedPR(self.es_url, github_index, start=self.start)
 
         # GitHub Issues
         logging.info("Closed total: %s", closed.get_agg())
@@ -215,8 +215,8 @@ class Report():
     def __get_metrics_emails(self):
         interval = 'quarter'
         mbox_index = 'mbox_enrich'
-        sent = EmailsSent(self.es_url, mbox_index)
-        senders = EmailsSenders(self.es_url, mbox_index)
+        sent = EmailsSent(self.es_url, mbox_index, start=self.start)
+        senders = EmailsSenders(self.es_url, mbox_index, start=self.start)
 
         # GitHub Issues
         logging.info("Sent total: %s", sent.get_agg())
@@ -301,7 +301,7 @@ class Report():
             # commits comparing current month with previous month
             es_index = self.get_metric_index(metric)
             ds = self.get_metric_ds(metric)
-            m = metric(self.es_url, es_index, interval='month')
+            m = metric(self.es_url, es_index, interval='month', start=self.start)
             ts = m.get_ts()
             last = ts['value'][len(ts['value'])-1]
             prev = ts['value'][len(ts['value'])-2]
@@ -329,10 +329,12 @@ class Report():
         """
 
         authors = Authors(self.es_url, self.get_metric_index(Authors),
-                          interval='month')
+                          interval='month', start=self.start)
         tsa = authors.get_ts()
-        self.ts_chart("Authors", tsa['unixtime'], tsa['value'],
-                      "authors_month.eps")
+        file_name = os.path.join(self.data_dir, "authors_month.eps")
+        x_val = [parser.parse(val).strftime("%Y-%m") for val in tsa['date']]
+        self.bar_chart("Authors", x_val, tsa['value'],
+                       file_name, legend=["Authors"])
 
         csv = 'labels,authormonth\n'
         for i in range(0, len(tsa['value'])):
@@ -348,27 +350,24 @@ class Report():
         of opened tickets (BMI) and median time to merge in Gerrit (TTM)
         (Potential title: Project Efficiency)
         type:CSV
-        file_name: efficienty.csv
+        file_name: efficiency.csv
         description: Closed PRs / Open PRs, Closed Issues / Open Issues,
         median time to close a PR, median time to close an Issue
         """
 
-        bmi = BMIPR(self.es_url, self.get_metric_index(BMIPR),
-                    interval='month')
-        bmi_p = bmi.get_agg()
-
-        bmi = BMITickets(self.es_url, self.get_metric_index(BMITickets),
-                         interval='month')
-        bmi_t = bmi.get_agg()
+        bmi_p = BMIPR(self.es_url, self.get_metric_index(BMIPR),
+                      interval='month', start=self.start).get_agg()
+        bmi_t = BMITickets(self.es_url, self.get_metric_index(BMITickets),
+                           interval='month', start=self.start).get_agg()
 
         ttc_p = DaysToClosePR(self.es_url, self.get_metric_index(DaysToClosePR),
-                              interval='month').get_agg()
+                              interval='month', start=self.start).get_agg()
         ttc_t = DaysToClose(self.es_url, self.get_metric_index(DaysToClosePR),
-                            interval='month').get_agg()
+                            interval='month', start=self.start).get_agg()
 
         csv = 'bmipullrequest,bmiissues,timeclosepullrequets,timecloseissues\n'
         csv += "%0.2f,%0.2f,%0.2f,%0.2f" % (bmi_p, bmi_t, ttc_p, ttc_t)
-        file_name = os.path.join(self.data_dir, 'efficienty.csv')
+        file_name = os.path.join(self.data_dir, 'efficiency.csv')
         with open(file_name, "w") as f:
             f.write(csv)
 
@@ -383,7 +382,7 @@ class Report():
             columns: labels,emails
         """
         emails = EmailsSent(self.es_url, self.get_metric_index(EmailsSent),
-                           interval='month')
+                           interval='month', start=self.start)
         ts = emails.get_ts()
         self.ts_chart("Emails", ts['unixtime'], ts['value'],
                       "emails.eps")
@@ -405,7 +404,7 @@ class Report():
             columns: labels,emails
         """
         emails = EmailsSenders(self.es_url, self.get_metric_index(EmailsSenders),
-                               interval='month')
+                               interval='month', start=self.start)
         ts = emails.get_ts()
         self.ts_chart("Email Senders", ts['unixtime'], ts['value'],
                       "emails_senders.eps")
@@ -432,15 +431,18 @@ class Report():
         """
 
         commits = Commits(self.es_url, self.get_metric_index(Commits),
-                          interval='month', esfilters={"project": project})
+                          interval='month', esfilters={"project": project},
+                          start=self.start)
         commits_agg = commits.get_agg()
 
         submitted = SubmittedPR(self.es_url, self.get_metric_index(SubmittedPR),
-                                interval='month', esfilters={"project": project})
+                                interval='month', esfilters={"project": project},
+                                start=self.start)
         submitted_agg = submitted.get_agg()
 
         closed = ClosedPR(self.es_url, self.get_metric_index(ClosedPR),
-                                interval='month', esfilters={"project": project})
+                                interval='month', esfilters={"project": project},
+                                start=self.start)
         closed_agg = closed.get_agg()
 
 
@@ -487,7 +489,7 @@ class Report():
         columns: organization_commits,name
         """
         commits = Commits(self.es_url, self.get_metric_index(Commits),
-                          esfilters={"project": project})
+                          esfilters={"project": project}, start=self.start)
         commits.FIELD_NAME = 'author_org_name'
 
         top = commits.get_list()
@@ -506,7 +508,8 @@ class Report():
         """
 
         bmipr = BMIPR(self.es_url, self.get_metric_index(BMIPR),
-                      interval='month', esfilters={"project": project})
+                      interval='month', esfilters={"project": project},
+                      start=self.start)
 
         ts = bmipr.get_ts()
         agg = bmipr.get_agg()
@@ -535,10 +538,18 @@ class Report():
         # First we need to get the list of projects per data source and
         # join all lists in the overall projects list
 
-        projects_scm = ProjectsSCM(self.es_url, self.get_metric_index(ProjectsSCM)).get_list()['project']
-        projects_its = ProjectsITS(self.es_url, self.get_metric_index(ProjectsITS)).get_list()['project']
-        projects_pr = ProjectsPR(self.es_url, self.get_metric_index(ProjectsPR)).get_list()['project']
-        projects_mls = ProjectsMLS(self.es_url, self.get_metric_index(ProjectsMLS)).get_list()['project']
+        projects_scm = ProjectsSCM(self.es_url,
+                                   self.get_metric_index(ProjectsSCM),
+                                   start=self.start).get_list()['project']
+        projects_its = ProjectsITS(self.es_url,
+                                   self.get_metric_index(ProjectsITS),
+                                   start=self.start).get_list()['project']
+        projects_pr = ProjectsPR(self.es_url,
+                                 self.get_metric_index(ProjectsPR),
+                                 start=self.start).get_list()['project']
+        projects_mls = ProjectsMLS(self.es_url,
+                                   self.get_metric_index(ProjectsMLS),
+                                   start=self.start).get_list()['project']
 
         projects = list(set(projects_scm+projects_its+projects_pr+projects_mls))
 
@@ -579,10 +590,10 @@ def get_params():
     parser.add_argument('-e', '--elastic-url', help="Elastic URL to get alerts from")
     parser.add_argument('-d', '--data-dir', default='data',
                         help="Directory to store the data results")
+    parser.add_argument('-s', '--start-date', default='2015-01-01',
+                        help="Start date for the report")
 
-    args = parser.parse_args()
-
-    return args
+    return parser.parse_args()
 
 if __name__ == '__main__':
 
@@ -599,5 +610,6 @@ if __name__ == '__main__':
     elastic = args.elastic_url
     data_dir = args.data_dir
 
-    report = Report(elastic, data_dir=data_dir)
+    report = Report(elastic, start=parser.parse(args.start_date),
+                    data_dir=data_dir)
     report.create()
