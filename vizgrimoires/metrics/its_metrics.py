@@ -23,6 +23,8 @@
 
 """ Metrics for the issue tracking system """
 
+import operator
+
 from metrics.metrics import Metrics
 
 class Opened(Metrics):
@@ -88,6 +90,38 @@ class BMIIndex(Metrics):
     id = "bmitickets"
     name = "Backlog Management Index"
     desc = "Number of tickets closed out of the opened ones in a given interval"
+
+    def __get_metrics(self):
+        closed = Closed(self.es_url, self.es_index,
+                        start=self.start, end=self.end,
+                        esfilters=self.esfilters.copy(), interval=self.interval)
+        opened = Opened(self.es_url, self.es_index,
+                        start=self.start, end=self.end,
+                        esfilters = self.esfilters.copy(),
+                        interval=self.interval)
+
+        return (closed, opened)
+
+    def get_agg(self):
+        (closed, opened) = self.__get_metrics()
+        closed_agg = closed.get_agg()
+        opened_agg = opened.get_agg()
+
+        return closed_agg/opened_agg
+
+
+    def get_ts(self):
+        bmi = {}
+        (closed, opened) = self.__get_metrics()
+        closed_ts = closed.get_ts()
+        opened_ts = opened.get_ts()
+
+        bmi['date'] = closed_ts['date']
+        bmi['unixtime'] = closed_ts['unixtime']
+        bmi['value'] = list(map(operator.truediv, closed_ts['value'],
+                                opened_ts['value']))
+        return bmi
+
 
 
 class ProjectsITS(Metrics):
