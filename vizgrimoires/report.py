@@ -41,7 +41,7 @@ from datetime import datetime
 from metrics.scm_metrics import Commits, Committers, Authors, ProjectsSCM
 from metrics.its_metrics import Opened, Closed, ProjectsITS
 from metrics.mls_metrics import EmailsSent, EmailsSenders, ProjectsMLS
-from metrics.github_prs_metrics import SubmittedPR, ClosedPR, ProjectsPR
+from metrics.github_prs_metrics import BMIPR, SubmittedPR, ClosedPR, ProjectsPR
 
 # Default values so it works without params
 ES_URL = 'http://localhost:9200'
@@ -61,6 +61,7 @@ class Report():
         Closed: GITHUB_INDEX,
         Opened: GITHUB_INDEX,
         ProjectsITS: GITHUB_INDEX,
+        BMIPR: GITHUB_INDEX,
         ClosedPR: GITHUB_INDEX,
         SubmittedPR: GITHUB_INDEX,
         ProjectsPR: GITHUB_INDEX,
@@ -454,14 +455,11 @@ class Report():
         columns: bmi,labels
         """
 
-        closed = ClosedPR(self.es_url, self.get_metric_index(ClosedPR),
-                                interval='month', esfilters={"project": project})
-        closed_ts = closed.get_ts()
+        bmipr = BMIPR(self.es_url, self.get_metric_index(BMIPR),
+                      interval='month', esfilters={"project": project})
 
-        submitted = SubmittedPR(self.es_url, self.get_metric_index(SubmittedPR),
-                               interval='month', esfilters={"project": project})
-
-        submitted_ts = submitted.get_ts()
+        ts = bmipr.get_ts()
+        agg = bmipr.get_agg()
 
         # Now we need to get the div between both time series
         # Other approach is to create the BMIPR metric

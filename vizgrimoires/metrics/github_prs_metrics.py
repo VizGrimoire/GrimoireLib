@@ -22,6 +22,8 @@
 ##   Alvaro del Castillo <acs@bitergia.com>
 ##   Daniel Izquierdo <dizquierdo@bitergia.com>
 
+import operator
+
 from metrics.metrics import Metrics
 
 
@@ -50,6 +52,50 @@ class ProjectsPR(Metrics):
     name = "Projects"
     desc = "Projects in the review code management system"
     FIELD_NAME = 'project' # field used to list projects
+
+class BMIPR(Metrics):
+    """This class calculates the efficiency closing reviews
+
+    It is calculated as the number of closed issues out of the total number
+    of opened ones in a period.
+    """
+
+    id = "bmipr"
+    name = "BMI Pull Requests"
+    desc = "Efficiency reviewing: (closed prs)/(submitted prs)"
+
+    def __get_metrics(self):
+        closed = ClosedPR(self.es_url, self.es_index,
+                          start=self.start, end=self.end,
+                          esfilters=self.esfilters.copy(), interval=self.interval)
+        submitted = SubmittedPR(self.es_url, self.es_index,
+                                start=self.start, end=self.end,
+                                esfilters = self.esfilters.copy(),
+                                interval=self.interval)
+
+        return (closed, submitted)
+
+    def get_agg(self):
+        (closed, submitted) = self.__get_metrics()
+        closed_agg = closed.get_agg()
+        submitted_agg = submitted.get_agg()
+
+        return closed_agg/submitted_agg
+
+
+    def get_ts(self):
+        bmi = {}
+        (closed, submitted) = self.__get_metrics()
+        closed_ts = closed.get_ts()
+        submitted_ts = submitted.get_ts()
+
+        bmi['date'] = closed_ts['date']
+        bmi['unixtime'] = closed_ts['unixtime']
+        bmi['value'] = list(map(operator.truediv, closed_ts['value'],
+                                submitted_ts['value']))
+
+        return bmi
+
 
 class Reviewers(Metrics):
     """ People assigned to pull requests """

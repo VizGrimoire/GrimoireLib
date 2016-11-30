@@ -99,6 +99,7 @@ class Metrics(object):
                                                agg_type='count',
                                                interval=self.interval)
 
+        # print(query)
         return query
 
 
