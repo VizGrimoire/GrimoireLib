@@ -40,9 +40,9 @@ from dateutil import parser
 from datetime import datetime
 
 from metrics.scm_metrics import Commits, Committers, Authors, ProjectsSCM
-from metrics.its_metrics import Opened, Closed, ProjectsITS
+from metrics.its_metrics import BMITickets, Closed, DaysToClose, Opened, ProjectsITS
 from metrics.mls_metrics import EmailsSent, EmailsSenders, ProjectsMLS
-from metrics.github_prs_metrics import BMIPR, SubmittedPR, ClosedPR, ProjectsPR
+from metrics.github_prs_metrics import BMIPR, ClosedPR, DaysToClosePR, ProjectsPR, SubmittedPR
 
 # Default values so it works without params
 ES_URL = 'http://localhost:9200'
@@ -59,11 +59,14 @@ class Report():
         Commits: GIT_INDEX,
         Authors: GIT_INDEX,
         ProjectsSCM: GIT_INDEX,
+        BMITickets: GITHUB_INDEX,
         Closed: GITHUB_INDEX,
+        DaysToClose: GITHUB_INDEX,
         Opened: GITHUB_INDEX,
         ProjectsITS: GITHUB_INDEX,
         BMIPR: GITHUB_INDEX,
         ClosedPR: GITHUB_INDEX,
+        DaysToClosePR: GITHUB_INDEX,
         SubmittedPR: GITHUB_INDEX,
         ProjectsPR: GITHUB_INDEX,
         EmailsSent: EMAIL_INDEX,
@@ -339,6 +342,35 @@ class Report():
         with open(file_name, "w") as f:
             f.write(csv)
 
+        """
+        Process
+        Closed changesets out of opened changesets (REI), closed ticket out
+        of opened tickets (BMI) and median time to merge in Gerrit (TTM)
+        (Potential title: Project Efficiency)
+        type:CSV
+        file_name: efficienty.csv
+        description: Closed PRs / Open PRs, Closed Issues / Open Issues,
+        median time to close a PR, median time to close an Issue
+        """
+
+        bmi = BMIPR(self.es_url, self.get_metric_index(BMIPR),
+                    interval='month')
+        bmi_p = bmi.get_agg()
+
+        bmi = BMITickets(self.es_url, self.get_metric_index(BMITickets),
+                         interval='month')
+        bmi_t = bmi.get_agg()
+
+        ttc_p = DaysToClosePR(self.es_url, self.get_metric_index(DaysToClosePR),
+                              interval='month').get_agg()
+        ttc_t = DaysToClose(self.es_url, self.get_metric_index(DaysToClosePR),
+                            interval='month').get_agg()
+
+        csv = 'bmipullrequest,bmiissues,timeclosepullrequets,timecloseissues\n'
+        csv += "%0.2f,%0.2f,%0.2f,%0.2f" % (bmi_p, bmi_t, ttc_p, ttc_t)
+        file_name = os.path.join(self.data_dir, 'efficienty.csv')
+        with open(file_name, "w") as f:
+            f.write(csv)
 
     def sec_com_channels(self):
         """

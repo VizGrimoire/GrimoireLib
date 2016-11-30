@@ -46,6 +46,7 @@ class Metrics(object):
     id = None
     name = None
     desc = None
+    AGG_TYPE = 'count'  # agg type for the metric
     FIELD_NAME = None  # Field used for metric lists
     FIELD_COUNT = None  # Field used for metric count
     FIELD_DATE = 'metadata__updated_on'
@@ -88,17 +89,16 @@ class Metrics(object):
 
         if not evolutionary:
             query = ElasticQuery.get_agg(field=self.FIELD_COUNT,
-                                               start=self.start, end=self.end,
-                                               filters=self.esfilters,
-                                               agg_type='count')
+                                         start=self.start, end=self.end,
+                                         filters=self.esfilters,
+                                         agg_type=self.AGG_TYPE)
         else:
             query = ElasticQuery.get_agg(field=self.FIELD_COUNT,
-                                               date_field=self.FIELD_DATE,
-                                               start=self.start, end=self.end,
-                                               filters=self.esfilters,
-                                               agg_type='count',
-                                               interval=self.interval)
-
+                                         date_field=self.FIELD_DATE,
+                                         start=self.start, end=self.end,
+                                         filters=self.esfilters,
+                                         agg_type=self.AGG_TYPE,
+                                         interval=self.interval)
         # print(query)
         return query
 
@@ -149,8 +149,14 @@ class Metrics(object):
         res = self.get_metrics_data(query)
         # We need to extract the data from the JSON res
         # If we have agg data use it
-        if 'aggregations' in res and res['aggregations'][str(ElasticQuery.AGGREGATION_ID)]['value']:
-            agg = res['aggregations'][str(ElasticQuery.AGGREGATION_ID)]['value']
+        agg_id = str(ElasticQuery.AGGREGATION_ID)
+        if 'aggregations' in res and 'values' in res['aggregations'][agg_id]:
+            if self.AGG_TYPE=='median':
+                agg = res['aggregations'][agg_id]['values']["50.0"]
+            else:
+                raise RuntimeError("Multivalue aggregation result not supported")
+        elif 'aggregations' in res and 'value' in res['aggregations'][agg_id]:
+            agg = res['aggregations'][agg_id]['value']
         else:
             agg = res['hits']['total']
 

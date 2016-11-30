@@ -56,14 +56,13 @@ class Closed(Metrics):
     FIELD_COUNT="id"
     FIELD_NAME="url"
 
-
-class TimeToClose(Metrics):
-    """ Time to close since an issue is opened till this is close
-
-    An issue is opened when this is submitted to the issue tracking system
-    and this is closed once in the status field this is identified as closed.
-
-    """
+class DaysToClose(Metrics):
+    id = "days_to_close"
+    name = "Days to close tickets (median)"
+    desc = "Number of days needed to close a ticket (median)"
+    FIELD_COUNT = 'time_to_close_days'
+    AGG_TYPE = 'median'
+    filters = {"state":"closed"}
 
 class Closers(Metrics):
     """ Tickets Closers metric class for issue tracking systems """
@@ -72,7 +71,7 @@ class Closers(Metrics):
     desc = "Number of persons closing tickets"
 
 
-class BMIIndex(Metrics):
+class BMITickets(Metrics):
     """ The Backlog Management Index measures efficiency dealing with tickets
 
         This is based on the book "Metrics and Models in Software Quality
@@ -92,13 +91,16 @@ class BMIIndex(Metrics):
     desc = "Number of tickets closed out of the opened ones in a given interval"
 
     def __get_metrics(self):
+        esfilters = None
+        if self.esfilters:
+            esfilters = self.esfilters.copy()
+
         closed = Closed(self.es_url, self.es_index,
                         start=self.start, end=self.end,
-                        esfilters=self.esfilters.copy(), interval=self.interval)
+                        esfilters=esfilters, interval=self.interval)
         opened = Opened(self.es_url, self.es_index,
                         start=self.start, end=self.end,
-                        esfilters = self.esfilters.copy(),
-                        interval=self.interval)
+                        esfilters=esfilters, interval=self.interval)
 
         return (closed, opened)
 

@@ -145,6 +145,20 @@ class ElasticQuery():
         return query_agg
 
     @classmethod
+    def __get_query_agg_percentiles(cls, field):
+        query_agg = """
+          "aggs": {
+            "%i": {
+              "percentiles": {
+                "field": "%s"
+              }
+            }
+          }
+        """ % (cls.AGGREGATION_ID, field)
+
+        return query_agg
+
+    @classmethod
     def __get_query_agg_count(cls, field, agg_id=None):
         if not agg_id:
             agg_id=cls.AGGREGATION_ID
@@ -224,6 +238,8 @@ class ElasticQuery():
                 query_agg = ElasticQuery.__get_query_agg_max(field)
             elif agg_type == "count":
                 query_agg = ElasticQuery.__get_query_agg_count(field)
+            elif agg_type == "median":
+                query_agg = ElasticQuery.__get_query_agg_percentiles(field)
             else:
                 raise RuntimeError("Aggregation of %s not supported" % agg_type)
         else:

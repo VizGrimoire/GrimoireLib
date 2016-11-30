@@ -44,6 +44,13 @@ class ClosedPR(Metrics):
     FIELD_COUNT = 'id'
     filters = {"pull_request":"true", "state":"closed"}
 
+class DaysToClosePR(Metrics):
+    id = "days_to_close_pr"
+    name = "Days to close reviews (median)"
+    desc = "Number of days needed to close a review (median)"
+    FIELD_COUNT = 'time_to_close_days'
+    AGG_TYPE = 'median'
+    filters = {"pull_request":"true", "state":"closed"}
 
 class ProjectsPR(Metrics):
     """ Projects in the review code management system """
@@ -65,12 +72,16 @@ class BMIPR(Metrics):
     desc = "Efficiency reviewing: (closed prs)/(submitted prs)"
 
     def __get_metrics(self):
+        esfilters = None
+        if self.esfilters:
+            esfilters = self.esfilters.copy()
+
         closed = ClosedPR(self.es_url, self.es_index,
                           start=self.start, end=self.end,
-                          esfilters=self.esfilters.copy(), interval=self.interval)
+                          esfilters=esfilters, interval=self.interval)
         submitted = SubmittedPR(self.es_url, self.es_index,
                                 start=self.start, end=self.end,
-                                esfilters = self.esfilters.copy(),
+                                esfilters = esfilters,
                                 interval=self.interval)
 
         return (closed, submitted)
