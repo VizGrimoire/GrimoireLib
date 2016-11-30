@@ -25,6 +25,7 @@
 
 import argparse
 import logging
+import os
 
 import matplotlib as mpl
 # This avoids the use of the $DISPLAY value for the charts
@@ -70,12 +71,13 @@ class Report():
         ProjectsMLS: EMAIL_INDEX
     }
 
-    def __init__(self, es_url=ES_URL, start=START, end=END):
+    def __init__(self, es_url=ES_URL, start=START, end=END, data_dir=None):
         if not es_url:
             es_url=ES_URL
+        self.es_url = es_url
         self.start = start
         self.end = end
-        self.es_url = es_url
+        self.data_dir = data_dir
 
     def get_vis(self):
         logging.info("Generating the vis ...")
@@ -289,7 +291,7 @@ class Report():
 
         metrics = [Commits, Closed, Opened, ClosedPR, SubmittedPR, EmailsSent]
 
-        file_name = 'data_source_evolution.csv'
+        file_name = os.path.join(self.data_dir, 'data_source_evolution.csv')
 
         csv = 'metricsnames,netvalues,relativevalues,datasource\n'
         for metric in metrics:
@@ -300,7 +302,7 @@ class Report():
             ts = m.get_ts()
             last = ts['value'][len(ts['value'])-1]
             prev = ts['value'][len(ts['value'])-2]
-            csv += "%s,%i,%i,%s" % (metric.__name__, last,
+            csv += "%s,%i,%i,%s" % (metric.name, last,
                                     self.__get_trend_percent(last, prev),
                                     ds)
             csv += "\n"
@@ -331,8 +333,10 @@ class Report():
 
         csv = 'labels,authormonth\n'
         for i in range(0, len(tsa['value'])):
-            csv += tsa['date'][i]+","+str(tsa['value'][i])+"\n"
-        with open("authors_month.csv", "w") as f:
+            date_str = parser.parse(tsa['date'][i]).strftime("%Y-%m")
+            csv += date_str+","+str(tsa['value'][i])+"\n"
+        file_name = os.path.join(self.data_dir, 'authors_month.csv')
+        with open(file_name, "w") as f:
             f.write(csv)
 
 
@@ -354,7 +358,8 @@ class Report():
         csv = 'labels,emails\n'
         for i in range(0, len(ts['value'])):
             csv += ts['date'][i]+","+str(ts['value'][i])+"\n"
-        with open("emails.csv", "w") as f:
+        file_name = os.path.join(self.data_dir, 'emails.csv')
+        with open(file_name, "w") as f:
             f.write(csv)
 
         """
@@ -375,7 +380,8 @@ class Report():
         csv = 'labels,senders\n'
         for i in range(0, len(ts['value'])):
             csv += ts['date'][i]+","+str(ts['value'][i])+"\n"
-        with open("emails_senders.csv", "w") as f:
+        file_name = os.path.join(self.data_dir, 'emails_senders.csv')
+        with open(file_name, "w") as f:
             f.write(csv)
 
 
@@ -510,12 +516,11 @@ class Report():
             self.sec_project_process(project)
 
 
-
     def sections(self):
         secs = OrderedDict()
         secs['Overview'] = self.sec_overview
-        secs['Communication Channels'] = self.sec_com_channels
-        secs['Detailed Activity by Project'] = self.sec_projects
+        # secs['Communication Channels'] = self.sec_com_channels
+        # secs['Detailed Activity by Project'] = self.sec_projects
 
         return secs
 
@@ -540,6 +545,8 @@ def get_params():
     parser.add_argument('-g', '--debug', dest='debug',
                         action='store_true')
     parser.add_argument('-e', '--elastic-url', help="Elastic URL to get alerts from")
+    parser.add_argument('-d', '--data-dir', default='data',
+                        help="Directory to store the data results")
 
     args = parser.parse_args()
 
@@ -558,6 +565,7 @@ if __name__ == '__main__':
     logging.getLogger("requests").setLevel(logging.WARNING)
 
     elastic = args.elastic_url
+    data_dir = args.data_dir
 
-    report = Report(elastic)
+    report = Report(elastic, data_dir=data_dir)
     report.create()

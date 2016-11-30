@@ -30,7 +30,7 @@ class EmailsSent(Metrics):
     """ Emails metric class for mailing lists analysis """
 
     id = "sent"
-    name = "Emails Sent"
+    name = "Sent Emails"
     desc = "Emails sent to mailing lists"
     FIELD_COUNT= "Message-ID"
     FIELD_NAME = "Message-ID"

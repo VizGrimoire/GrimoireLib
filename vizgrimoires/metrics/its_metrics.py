@@ -50,7 +50,7 @@ class Closed(Metrics):
        "state": "closed" is the filter to be used in GitHub
     """
     id = "closed"
-    name = "Ticket closed"
+    name = "Closed tickets"
     desc = "Number of closed tickets"
     filters = {"state":"closed"}
     FIELD_COUNT="id"
